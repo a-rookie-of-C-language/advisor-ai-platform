@@ -18,8 +18,11 @@ request.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout()
-      window.location.href = '/login'
+      // 只在非登录页时跳转，避免登录失败导致页面死循环
+      if (!window.location.pathname.includes('/login')) {
+        useAuthStore.getState().logout()
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error.response?.data?.message ?? '请求失败')
   },

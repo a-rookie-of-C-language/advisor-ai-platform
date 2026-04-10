@@ -1,34 +1,505 @@
+/* ===== Plus Jakarta Sans ===== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ===== 整体容器 ===== */
 .container {
   min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-family: 'Plus Jakarta Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ===== 左侧动画面板 ===== */
+.leftPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(to bottom right, #d1d5db, #9ca3af, #6b7280);
+  padding: 3rem;
+  overflow: hidden;
+}
+
+.logo {
+  position: relative;
+  z-index: 20;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 0.5px;
+}
+
+.charactersWrapper {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 500px;
+}
+
+.leftFooter {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  gap: 2rem;
+  font-size: 0.8125rem;
+}
+
+.leftFooter a {
+  color: #374151;
+  text-decoration: none;
+  transition: color 200ms ease;
+}
+
+.leftFooter a:hover {
+  color: #111827;
+}
+
+.bgBlur1 {
+  position: absolute;
+  top: 25%;
+  right: 25%;
+  width: 16rem;
+  height: 16rem;
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 50%;
+  filter: blur(3rem);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bgBlur2 {
+  position: absolute;
+  bottom: 25%;
+  left: 25%;
+  width: 24rem;
+  height: 24rem;
+  background: rgba(209, 213, 219, 0.2);
+  border-radius: 50%;
+  filter: blur(3rem);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== 右侧登录面板 ===== */
+.rightPanel {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0369A1 100%);
+  padding: 2rem;
+  background-color: #0F172A;
 }
 
-.card {
-  width: 420px;
+.formContainer {
+  width: 100%;
+  max-width: 400px;
+}
+
+.mobileLogo {
+  display: none;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 2.5rem;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Header ===== */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ===== 表单 ===== */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #CBD5E1;
+  letter-spacing: 0.01em;
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 1rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: #F1F5F9;
+  background-color: #1E293B;
+  border: 1.5px solid #334155;
   border-radius: 10px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.4);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+  -webkit-appearance: none;
+}
+
+.input::placeholder {
+  color: #475569;
+}
+
+.input:hover {
+  border-color: #475569;
+}
+
+.input:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+/* 密码输入框包装器 */
+.passwordWrapper {
+  position: relative;
+}
+
+.inputPassword {
+  padding-right: 3rem;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
+  color: #64748B;
+  cursor: pointer;
+  border-radius: 0 10px 10px 0;
+  transition: color 200ms ease;
+  /* 保证 44x44px 最小触摸目标 */
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.eyeBtn:hover {
+  color: #94A3B8;
+}
+
+.eyeBtn:focus-visible {
+  outline: 3px solid #6366F1;
+  outline-offset: -2px;
+  border-radius: 0 10px 10px 0;
+}
+
+/* ===== 错误提示 ===== */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #FCA5A5;
+  line-height: 1.4;
+}
+
+/* ===== 提交按钮 ===== */
+.submitBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 48px;
+  margin-top: 0.25rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: #6366F1;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background-color 200ms ease, transform 100ms ease, box-shadow 200ms ease;
+  min-height: 44px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background-color: #4F46E5;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+}
+
+.submitBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.submitBtn:focus-visible {
+  outline: 3px solid #6366F1;
+  outline-offset: 3px;
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* loading 旋转图标 */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 响应式（移动端）===== */
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1fr;
+    max-height: unset;
+    overflow: auto;
+  }
+
+  .leftPanel {
+    display: none;
+  }
+
+  .rightPanel {
+    min-height: 100vh;
+  }
+
+  .mobileLogo {
+    display: block;
+  }
+}
+
+/* 减少动效：尊重用户偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .submitBtn,
+  .eyeBtn {
+    transition: none;
+  }
+  .spinner {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+
+/* ===== 左侧动画面板 ===== */
+.leftPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(to bottom right, #d1d5db, #9ca3af, #6b7280);
+  padding: 3rem;
+  overflow: hidden;
+}
+
+.logo {
+  position: relative;
+  z-index: 20;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 1px;
+}
+
+.charactersWrapper {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 500px;
+}
+
+.leftFooter {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  gap: 2rem;
+  font-size: 0.875rem;
+}
+
+.leftFooter a {
+  color: #374151;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.leftFooter a:hover {
+  color: #111827;
+}
+
+/* 装饰性光晕 */
+.bgBlur1 {
+  position: absolute;
+  top: 25%;
+  right: 25%;
+  width: 16rem;
+  height: 16rem;
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 50%;
+  filter: blur(3rem);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bgBlur2 {
+  position: absolute;
+  bottom: 25%;
+  left: 25%;
+  width: 24rem;
+  height: 24rem;
+  background: rgba(209, 213, 219, 0.2);
+  border-radius: 50%;
+  filter: blur(3rem);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== 右侧登录面板 ===== */
+.rightPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #0F172A;
+}
+
+.formContainer {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* 移动端 Logo（桌面端隐藏） */
+.mobileLogo {
+  display: none;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 3rem;
+  letter-spacing: 1px;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 2.5rem;
 }
 
 .title {
-  font-family: 'Fira Code', monospace;
-  font-size: 26px;
+  font-size: 1.875rem;
   font-weight: 700;
-  color: #0F172A;
-  margin-bottom: 4px;
-  letter-spacing: 1px;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.5rem;
+  color: #f8fafc;
 }
 
 .subtitle {
-  font-size: 13px;
-  color: #64748B;
-  letter-spacing: 0.3px;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+/* 覆盖 Ant Design 输入框样式以适配暗色背景 */
+.input {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+  height: 48px;
+}
+
+.input:focus,
+.input:hover {
+  border-color: #6366f1 !important;
+}
+
+:global(.ant-input-affix-wrapper.ant-input-password).input {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+  height: 48px;
+}
+
+:global(.ant-input-affix-wrapper.ant-input-password).input:hover,
+:global(.ant-input-affix-wrapper.ant-input-password).input:focus-within {
+  border-color: #6366f1 !important;
+}
+
+:global(.ant-form-item-label > label) {
+  color: #e2e8f0 !important;
+  font-weight: 500;
+}
+
+:global(.ant-form-item-explain-error) {
+  color: #f87171 !important;
+}
+
+.loginBtn {
+  height: 48px !important;
+  font-size: 1rem !important;
+  background-color: #6366f1 !important;
+  border-color: #6366f1 !important;
+  border-radius: 8px !important;
+  margin-top: 4px;
+}
+
+.loginBtn:hover {
+  background-color: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+}
+
+/* ===== 响应式（移动端） ===== */
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .leftPanel {
+    display: none;
+  }
+
+  .mobileLogo {
+    display: block;
+  }
 }

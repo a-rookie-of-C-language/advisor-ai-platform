@@ -1,5 +1,6 @@
 package cn.edu.cqut.advisorplatform.config.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,7 +37,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        final String username = jwtUtil.extractUsername(jwt);
+        final String username;
+        try {
+            username = jwtUtil.extractUsername(jwt);
+        } catch (JwtException | IllegalArgumentException e) {
+            // token 无效或已过期，直接放行，由后续安全规则决定是否拒绝
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
