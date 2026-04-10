@@ -10,10 +10,10 @@ import { useAuthStore } from '../../store/authStore'
 const { Title, Paragraph } = Typography
 
 const stats = [
-  { title: '政策文件', value: 0, icon: <FileTextOutlined style={{ fontSize: 32, color: '#8B1A1A' }} />, color: '#fff0f0' },
-  { title: '典型案例', value: 0, icon: <SearchOutlined style={{ fontSize: 32, color: '#d46b08' }} />, color: '#fff7e6' },
-  { title: '工作方法', value: 0, icon: <BulbOutlined style={{ fontSize: 32, color: '#096dd9' }} />, color: '#e6f4ff' },
-  { title: '培训资源', value: 0, icon: <BookOutlined style={{ fontSize: 32, color: '#389e0d' }} />, color: '#f6ffed' },
+  { title: '政策文件', value: 0, icon: <FileTextOutlined style={{ fontSize: 32, color: '#0369A1' }} />, color: '#EFF6FF' },
+  { title: '典型案例', value: 0, icon: <SearchOutlined style={{ fontSize: 32, color: '#0284C7' }} />, color: '#F0F9FF' },
+  { title: '工作方法', value: 0, icon: <BulbOutlined style={{ fontSize: 32, color: '#334155' }} />, color: '#F1F5F9' },
+  { title: '培训资源', value: 0, icon: <BookOutlined style={{ fontSize: 32, color: '#0F172A' }} />, color: '#F8FAFC' },
 ]
 
 export default function Dashboard() {

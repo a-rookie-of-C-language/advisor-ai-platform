@@ -63,7 +63,7 @@ export default function MainLayout() {
           </Typography.Text>
           <Dropdown menu={userMenu} placement="bottomRight">
             <Space className={styles.userInfo} style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#8B1A1A' }} />
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#0369A1' }} />
               <span>{realName}</span>
             </Space>
           </Dropdown>

@@ -8,7 +8,17 @@ import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#8B1A1A' } }}>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        token: {
+          colorPrimary: '#0369A1',
+          colorBgBase: '#F8FAFC',
+          fontFamily: "'Fira Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+          borderRadius: 6,
+        },
+      }}
+    >
       <App />
     </ConfigProvider>
   </React.StrictMode>,

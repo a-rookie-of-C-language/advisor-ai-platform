@@ -1,5 +1,6 @@
 .sider {
-  background: #1a0a0a !important;
+  background: #0F172A !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
 }
 
 .logo {
@@ -7,14 +8,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 16px;
 }
 
 .logoText {
   color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 2px;
+  font-family: 'Fira Code', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menu {
@@ -24,21 +30,30 @@
 }
 
 .header {
-  background: #fff !important;
+  background: #ffffff !important;
   padding: 0 24px !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .headerTitle {
-  font-size: 15px;
-  color: #555;
+  font-size: 14px;
+  color: #64748B;
+  font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
 .userInfo {
-  color: #333;
+  color: #334155;
+  font-size: 14px;
+  transition: opacity 150ms ease;
+}
+
+.userInfo:hover {
+  opacity: 0.75;
 }
 
 .content {

@@ -3,13 +3,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6b0f0f 0%, #8B1A1A 50%, #a52a2a 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0369A1 100%);
 }
 
 .card {
   width: 420px;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.4);
+  border: none;
 }
 
 .header {
@@ -18,13 +19,16 @@
 }
 
 .title {
-  font-size: 28px;
+  font-family: 'Fira Code', monospace;
+  font-size: 26px;
   font-weight: 700;
-  color: #8B1A1A;
+  color: #0F172A;
   margin-bottom: 4px;
+  letter-spacing: 1px;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: #64748B;
+  letter-spacing: 0.3px;
 }
