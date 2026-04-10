@@ -1,0 +1,11 @@
+target/
+# 敏感配置文件，禁止提交
+**/application-local.yml
+__pycache__/
+*.pyc
+logs/
+*.log
+node_modules/
+dist/
+prompts/
+agents.md
