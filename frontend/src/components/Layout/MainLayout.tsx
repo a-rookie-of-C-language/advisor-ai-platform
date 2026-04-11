@@ -1,10 +1,8 @@
 import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd'
 import {
   DashboardOutlined,
-  FileTextOutlined,
-  SearchOutlined,
-  BulbOutlined,
-  BookOutlined,
+  DatabaseOutlined,
+  MessageOutlined,
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
@@ -16,10 +14,8 @@ const { Sider, Header, Content } = Layout
 
 const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
-  { key: '/policy', icon: <FileTextOutlined />, label: '政策解读' },
-  { key: '/case', icon: <SearchOutlined />, label: '案例检索' },
-  { key: '/method', icon: <BulbOutlined />, label: '方法推荐' },
-  { key: '/training', icon: <BookOutlined />, label: '培训支持' },
+  { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
+  { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
 ]
 
 export default function MainLayout() {
