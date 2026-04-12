@@ -11,3 +11,4 @@ prompts/
 agents.md
 .vscode/
 .idea/
+.venv/
