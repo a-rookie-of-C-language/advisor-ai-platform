@@ -29,6 +29,9 @@ public class RagDocument {
     @Column(nullable = false)
     private Long fileSize = 0L;
 
+    @Column(length = 512)
+    private String filePath;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private DocumentStatus status = DocumentStatus.PENDING;

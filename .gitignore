@@ -12,3 +12,4 @@ agents.md
 .vscode/
 .idea/
 .venv/
+.env

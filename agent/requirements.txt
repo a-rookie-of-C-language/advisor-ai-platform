@@ -1,4 +1,11 @@
 langchain
 langchain-openai
 langchain-core
+langchain-community
+langchain-ollama
 langgraph
+asyncpg
+psycopg2-binary
+pypdf
+python-docx
+python-dotenv
