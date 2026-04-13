@@ -8,15 +8,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 对话 Controller（骨架，当前返回 mock 数据）
- * 后续集成 Spring AI + LLM 服务时替换为真实流式实现
+ * AI 对话 Controller（骨架版本，当前返回 mock 数据）。
+ * 后续集成 Spring AI + LLM 服务时替换为真实流式实现。
  */
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatController {
 
-    // ── 会话 ──
+    // 会话
 
     @GetMapping("/sessions")
     public ApiResponse<List<Map<String, Object>>> listSessions() {
@@ -40,7 +40,7 @@ public class ChatController {
         return ApiResponse.success();
     }
 
-    // ── 消息 ──
+    // 消息
 
     @GetMapping("/sessions/{sessionId}/messages")
     public ApiResponse<List<Map<String, Object>>> listMessages(@PathVariable Long sessionId) {
@@ -51,7 +51,7 @@ public class ChatController {
     }
 
     /**
-     * 发送消息（暂为同步接口，后续改为 SSE 流式）
+     * 发送消息（暂为同步接口，后续改为 SSE 流式）。
      */
     @PostMapping("/sessions/{sessionId}/messages")
     public ApiResponse<Map<String, Object>> sendMessage(
