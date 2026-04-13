@@ -1,23 +1,36 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Set
 
 import psycopg2
+from psycopg2.pool import SimpleConnectionPool
 
 logger = logging.getLogger(__name__)
 
 
 class PgVectorDAO:
-    """基于 pgvector 的向量检索 DAO，替代 Chroma 的 RAG_DAO。
+    """基于 pgvector 的向量检索 DAO。"""
 
-    search() 返回与 Chroma 兼容的字典格式，使 RAG_service 无需大改。
-    """
-
-    def __init__(self, db_dsn: str) -> None:
+    def __init__(
+        self,
+        db_dsn: str,
+        minconn: int = 1,
+        maxconn: int = 5,
+        statement_timeout_sec: int = 10,
+        max_retries: int = 2,
+        retry_backoff_sec: float = 0.2,
+    ) -> None:
         self._db_dsn = db_dsn
-
-    # ── 向量检索 ──
+        self._statement_timeout_ms = statement_timeout_sec * 1000
+        self._max_retries = max_retries
+        self._retry_backoff_sec = retry_backoff_sec
+        self._pool: Optional[SimpleConnectionPool] = SimpleConnectionPool(
+            minconn=minconn,
+            maxconn=maxconn,
+            dsn=db_dsn,
+        )
 
     def search(
         self,
@@ -26,7 +39,7 @@ class PgVectorDAO:
         top_k: int,
         doc_ids: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
-        """执行 pgvector 余弦距离检索，返回 Chroma 兼容格式。"""
+        """执行 pgvector 检索，返回 Chroma 兼容格式。"""
         vector_str = "[" + ",".join(str(v) for v in query_vector) + "]"
 
         sql = """
@@ -53,26 +66,23 @@ class PgVectorDAO:
         sql += " ORDER BY distance ASC LIMIT %s"
         params.append(top_k)
 
-        ids, docs, metadatas, distances = [], [], [], []
+        rows = self._run_with_retry("search", self._query_rows, sql, params)
 
-        conn = psycopg2.connect(self._db_dsn)
-        try:
-            with conn.cursor() as cur:
-                cur.execute(sql, params)
-                for row in cur.fetchall():
-                    chunk_id, doc_id, content, chunk_index, file_name, file_type, distance = row
-                    ids.append(str(chunk_id))
-                    docs.append(content)
-                    distances.append(float(distance))
-                    metadatas.append({
-                        "document_id": str(doc_id),
-                        "source": file_name,
-                        "source_type": file_type,
-                        "doc_title": file_name,
-                        "chunk_index": chunk_index,
-                    })
-        finally:
-            conn.close()
+        ids, docs, metadatas, distances = [], [], [], []
+        for row in rows:
+            chunk_id, doc_id, content, chunk_index, file_name, file_type, distance = row
+            ids.append(str(chunk_id))
+            docs.append(content)
+            distances.append(float(distance))
+            metadatas.append(
+                {
+                    "document_id": str(doc_id),
+                    "source": file_name,
+                    "source_type": file_type,
+                    "doc_title": file_name,
+                    "chunk_index": chunk_index,
+                }
+            )
 
         return {
             "ids": [ids],
@@ -81,29 +91,66 @@ class PgVectorDAO:
             "distances": [distances],
         }
 
-    # ── 元数据查询 ──
-
     def get_doc_title_map(self, doc_ids: List[int]) -> Dict[int, str]:
         """返回 {doc_id: file_name} 映射。"""
         if not doc_ids:
             return {}
-        conn = psycopg2.connect(self._db_dsn)
-        try:
-            with conn.cursor() as cur:
-                placeholders = ",".join(["%s"] * len(doc_ids))
-                cur.execute(
-                    f"SELECT id, file_name FROM rag_document WHERE id IN ({placeholders})",
-                    doc_ids,
-                )
-                return {row[0]: row[1] for row in cur.fetchall()}
-        finally:
-            conn.close()
+
+        placeholders = ",".join(["%s"] * len(doc_ids))
+        rows = self._run_with_retry(
+            "get_doc_title_map",
+            self._query_rows,
+            f"SELECT id, file_name FROM rag_document WHERE id IN ({placeholders})",
+            doc_ids,
+        )
+        return {row[0]: row[1] for row in rows}
 
     def get_doc_category_and_title_map(
         self, doc_ids: List[int]
     ) -> tuple[Dict[int, Set[int]], Dict[int, str]]:
-        """本项目无文档分类，category map 始终为空，title map 正常返回。"""
+        """项目无文档分类，category map 固定返回空。"""
         return {}, self.get_doc_title_map(doc_ids)
 
     def close(self) -> None:
-        pass  # 每次操作独立连接，无需全局关闭
+        if self._pool is not None:
+            self._pool.closeall()
+            self._pool = None
+
+    def _query_rows(self, sql: str, params: list):
+        if self._pool is None:
+            raise RuntimeError("数据库连接池未初始化")
+
+        conn = self._pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SET LOCAL statement_timeout = %s", (self._statement_timeout_ms,))
+                cur.execute(sql, params)
+                return cur.fetchall()
+        finally:
+            self._pool.putconn(conn)
+
+    def _run_with_retry(self, op_name: str, fn, *args):
+        last_exc = None
+        transient_errors = (psycopg2.OperationalError, psycopg2.InterfaceError, psycopg2.errors.QueryCanceled)
+
+        for attempt in range(self._max_retries + 1):
+            try:
+                return fn(*args)
+            except transient_errors as exc:
+                last_exc = exc
+                if attempt >= self._max_retries:
+                    break
+                wait_sec = self._retry_backoff_sec * (attempt + 1)
+                logger.warning(
+                    "DAO 操作重试，op=%s, attempt=%s/%s, wait=%.1fs, error=%s",
+                    op_name,
+                    attempt + 1,
+                    self._max_retries + 1,
+                    wait_sec,
+                    exc,
+                )
+                time.sleep(wait_sec)
+
+        if last_exc:
+            raise last_exc
+        raise RuntimeError(f"DAO 操作失败: {op_name}")
