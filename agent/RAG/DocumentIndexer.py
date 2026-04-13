@@ -2,9 +2,10 @@ import asyncio
 import asyncpg
 import psycopg2
 import logging
+from pathlib import Path
 
-from RAG.chunk_engine.ChunkEngine import ChunkEngine
-from RAG.embedding_engine.EmbeddingEngine import EmbeddingEngine
+from RAG.chunk_engine.registry import ChunkEngineRegistry
+from RAG.embedding_engine.bge_embedding_engine import BgeEmbeddingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +20,10 @@ class DocumentIndexer:
     5. 更新 rag_document.status
     """
 
-    def __init__(self, db_dsn: str, ollama_base_url: str):
+    def __init__(self, db_dsn: str, ollama_base_url: str = "http://localhost:11434"):
         self.db_dsn = db_dsn
-        self._chunk_engine = ChunkEngine(chunk_size=500, chunk_overlap=50)
-        self._embedding_engine = EmbeddingEngine(
-            model="bge-m3",
-            ollama_base_url=ollama_base_url,
-        )
+        self._chunk_registry = ChunkEngineRegistry()
+        self._embedding_engine = BgeEmbeddingEngine()
 
     # ── 主循环 ──
 
@@ -60,21 +58,21 @@ class DocumentIndexer:
                 await self._set_status(document_id, "FAILED")
                 return
 
-            from pathlib import Path
             if not Path(file_path).exists():
                 logger.error(f"文件不存在: {file_path}")
                 await self._set_status(document_id, "FAILED")
                 return
 
-            # 切块
-            texts = self._chunk_engine.load_and_split(file_path, file_type)
+            # 使用 ChunkEngineRegistry 自动选择引擎切块
+            engine, _ = self._chunk_registry.select(Path(file_path), None)
+            texts = engine.chunk(Path(file_path))
             if not texts:
                 logger.warning(f"document_id={document_id} 切块结果为空")
                 await self._set_status(document_id, "FAILED")
                 return
 
-            # 向量化
-            vectors = self._embedding_engine.embed(texts)
+            # 向量化（BgeEmbeddingEngine 返回 List[List[float]]）
+            vectors = self._embedding_engine.embed_texts(texts)
 
             # 写入 DB
             await self._save_chunks(document_id, texts, vectors)
