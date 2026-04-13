@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 from RAG.chunk_engine.registry import ChunkEngineRegistry
-from RAG.embedding_engine.bge_embedding_engine import BgeEmbeddingEngine
+from RAG.embedding_engine.ollama_embedding_engine import OllamaEmbeddingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class DocumentIndexer:
     def __init__(self, db_dsn: str, ollama_base_url: str = "http://localhost:11434"):
         self.db_dsn = db_dsn
         self._chunk_registry = ChunkEngineRegistry()
-        self._embedding_engine = BgeEmbeddingEngine()
+        self._embedding_engine = OllamaEmbeddingEngine(model="bge-m3", base_url=ollama_base_url)
 
     # ── 主循环 ──
 
@@ -71,7 +71,7 @@ class DocumentIndexer:
                 await self._set_status(document_id, "FAILED")
                 return
 
-            # 向量化（BgeEmbeddingEngine 返回 List[List[float]]）
+            # 向量化（OllamaEmbeddingEngine 返回 List[List[float]]）
             vectors = self._embedding_engine.embed_texts(texts)
 
             # 写入 DB

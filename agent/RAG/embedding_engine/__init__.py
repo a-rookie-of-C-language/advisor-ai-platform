@@ -1,12 +1,10 @@
 from .base_embedding_engine import BaseEmbeddingEngine
-from .bge_embedding_engine import BgeEmbeddingEngine
-from .chroma_default_embedding_engine import ChromaDefaultEmbeddingEngine
+from .ollama_embedding_engine import OllamaEmbeddingEngine
 from .openai_embedding_engine import OpenAIEmbeddingEngine
 
 __all__ = [
     "BaseEmbeddingEngine",
-    "BgeEmbeddingEngine",
-    "ChromaDefaultEmbeddingEngine",
+    "OllamaEmbeddingEngine",
     "OpenAIEmbeddingEngine",
 ]
 
