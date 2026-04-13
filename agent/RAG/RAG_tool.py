@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from tools.base_tool import BaseTool
 from RAG.RAG_service import RAG_service
 from RAG.schema import RAGSearchRequest, SearchMode

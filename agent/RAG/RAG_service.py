@@ -4,7 +4,7 @@ import re
 import time
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from RAG.rag_dao import PgVectorDAO
@@ -20,7 +20,6 @@ from RAG.schema import (
     RAGChunkHit,
     RAGSearchDebugTrace,
     RAGSearchError,
-    RAGSearchFilters,
     RAGSearchRequest,
     RAGSearchResponse,
     ScoreType,
