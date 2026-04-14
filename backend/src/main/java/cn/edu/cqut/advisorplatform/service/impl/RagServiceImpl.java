@@ -64,7 +64,6 @@ public class RagServiceImpl implements RagService {
         if (!kb.getCreatedBy().getId().equals(currentUser.getId())) {
             throw new RuntimeException("无权限删除该知识库");
         }
-        // 删除本地文件目录
         Path kbDir = Paths.get(uploadDir, id.toString());
         deleteDirectoryQuietly(kbDir);
         knowledgeBaseDao.deleteById(id);
@@ -72,7 +71,6 @@ public class RagServiceImpl implements RagService {
 
     @Override
     public List<RagDocumentResponse> listDocuments(Long kbId, User currentUser) {
-        // 验证知识库归属
         knowledgeBaseDao.findById(kbId)
                 .filter(kb -> kb.getCreatedBy().getId().equals(currentUser.getId()))
                 .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
@@ -89,21 +87,31 @@ public class RagServiceImpl implements RagService {
                 .filter(k -> k.getCreatedBy().getId().equals(currentUser.getId()))
                 .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
 
-        // 获取文件扩展名
-        String originalFilename = file.getOriginalFilename();
-        String fileType = extractExtension(originalFilename);
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("上传文件不能为空");
+        }
 
-        // 保存文件到磁盘: uploads/{kbId}/{originalFilename}
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new RuntimeException("文件名不能为空");
+        }
+
+        String safeFilename = Paths.get(originalFilename).getFileName().toString();
+        if (safeFilename.trim().isEmpty()) {
+            throw new RuntimeException("非法文件名");
+        }
+
+        String fileType = extractExtension(safeFilename);
+
         Path dir = Paths.get(uploadDir, kbId.toString());
         try {
             Files.createDirectories(dir);
-            Path filePath = dir.resolve(originalFilename);
+            Path filePath = dir.resolve(safeFilename);
             file.transferTo(filePath.toFile());
 
-            // 写入数据库（status=PENDING，触发器自动 NOTIFY）
             RagDocument doc = new RagDocument();
             doc.setKnowledgeBase(kb);
-            doc.setFileName(originalFilename);
+            doc.setFileName(safeFilename);
             doc.setFileType(fileType);
             doc.setFileSize(file.getSize());
             doc.setFilePath(filePath.toAbsolutePath().toString());
@@ -113,7 +121,6 @@ public class RagServiceImpl implements RagService {
             doc.setUpdatedAt(LocalDateTime.now());
             RagDocument saved = documentDao.save(doc);
 
-            // 更新知识库文档数量
             kb.setDocCount(kb.getDocCount() + 1);
             kb.setUpdatedAt(LocalDateTime.now());
             knowledgeBaseDao.save(kb);
@@ -134,11 +141,10 @@ public class RagServiceImpl implements RagService {
         if (!doc.getUploadedBy().getId().equals(currentUser.getId())) {
             throw new RuntimeException("无权限删除该文档");
         }
-        // 删除物理文件
         if (doc.getFilePath() != null) {
             deleteFileQuietly(Paths.get(doc.getFilePath()));
         }
-        // 更新知识库文档数量
+
         RagKnowledgeBase kb = doc.getKnowledgeBase();
         kb.setDocCount(Math.max(0, kb.getDocCount() - 1));
         kb.setUpdatedAt(LocalDateTime.now());
@@ -146,8 +152,6 @@ public class RagServiceImpl implements RagService {
 
         documentDao.deleteById(id);
     }
-
-    // ── 工具方法 ──
 
     private String extractExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
@@ -170,7 +174,11 @@ public class RagServiceImpl implements RagService {
             Files.walk(dir)
                     .sorted(java.util.Comparator.reverseOrder())
                     .forEach(p -> {
-                        try { Files.delete(p); } catch (IOException e) { log.warn("删除失败: {}", p); }
+                        try {
+                            Files.delete(p);
+                        } catch (IOException e) {
+                            log.warn("删除失败: {}", p);
+                        }
                     });
         } catch (IOException e) {
             log.warn("删除目录失败: {}", dir, e);

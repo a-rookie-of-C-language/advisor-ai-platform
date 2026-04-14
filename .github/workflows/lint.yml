@@ -7,7 +7,6 @@ on:
     branches: ["master"]
 
 jobs:
-  # ── Python Lint ──────────────────────────────────────────────
   lint-python:
     name: Python (ruff)
     runs-on: ubuntu-latest
@@ -27,7 +26,6 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
-  # ── Frontend Lint ────────────────────────────────────────────
   lint-frontend:
     name: Frontend (ESLint)
     runs-on: ubuntu-latest
@@ -49,7 +47,6 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  # ── Java Lint (compile check) ────────────────────────────────
   lint-java:
     name: Java (Maven compile)
     runs-on: ubuntu-latest
