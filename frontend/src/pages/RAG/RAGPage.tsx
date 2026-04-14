@@ -10,7 +10,7 @@ import {
   Space,
   Typography,
   Upload,
-  message,
+  App,
   Popconfirm,
   Tooltip,
   Progress,
@@ -87,10 +87,12 @@ interface DocTableProps {
 }
 
 function DocTable({ kbId, kbName, onBack, onChanged }: DocTableProps) {
+  const { message: messageApi } = App.useApp()
   const [docs, setDocs] = useState<RagDocumentDTO[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const loadDocuments = async () => {
     setLoading(true)
@@ -98,7 +100,7 @@ function DocTable({ kbId, kbName, onBack, onChanged }: DocTableProps) {
       const res = await ragApi.listDocuments(kbId)
       setDocs(res.data)
     } catch (error) {
-      message.error(getErrorMessage(error))
+      messageApi.error(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -111,33 +113,28 @@ function DocTable({ kbId, kbName, onBack, onChanged }: DocTableProps) {
   const handleDelete = async (id: number) => {
     try {
       await ragApi.deleteDocument(id)
-      message.success('文档已删除')
+      messageApi.success('文档已删除')
       await Promise.all([loadDocuments(), onChanged()])
     } catch (error) {
-      message.error(getErrorMessage(error))
+      messageApi.error(getErrorMessage(error))
     }
   }
 
   const handleUpload = async () => {
-    if (!fileList.length) {
-      message.warning('请先选择文件')
-      return
-    }
-
-    const rawFile = fileList[0].originFileObj as File | undefined
-    if (!rawFile) {
-      message.error('文件读取失败，请重新选择')
+    if (!selectedFile) {
+      messageApi.warning('请先选择文件')
       return
     }
 
     setUploading(true)
     try {
-      await ragApi.uploadDocument(kbId, rawFile)
-      message.success('文件上传成功，正在索引中')
+      await ragApi.uploadDocument(kbId, selectedFile)
+      messageApi.success('文件上传成功，正在索引中')
       setFileList([])
+      setSelectedFile(null)
       await Promise.all([loadDocuments(), onChanged()])
     } catch (error) {
-      message.error(getErrorMessage(error))
+      messageApi.error(getErrorMessage(error))
     } finally {
       setUploading(false)
     }
@@ -210,17 +207,21 @@ function DocTable({ kbId, kbName, onBack, onChanged }: DocTableProps) {
               'text/plain',
             ]
             if (!allowed.includes(file.type)) {
-              message.error('仅支持 PDF / DOCX / TXT 格式')
+              messageApi.error('仅支持 PDF / DOCX / TXT 格式')
               return Upload.LIST_IGNORE
             }
             if (file.size > 50 * 1024 * 1024) {
-              message.error('文件不能超过 50 MB')
+              messageApi.error('文件不能超过 50 MB')
               return Upload.LIST_IGNORE
             }
+            setSelectedFile(file as File)
             setFileList([file])
             return false
           }}
-          onRemove={() => setFileList([])}
+          onRemove={() => {
+            setSelectedFile(null)
+            setFileList([])
+          }}
           style={{ background: '#F8FAFC' }}
         >
           <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#2563EB', fontSize: 40 }} /></p>
@@ -251,6 +252,7 @@ function DocTable({ kbId, kbName, onBack, onChanged }: DocTableProps) {
 }
 
 export default function RAGPage() {
+  const { message: messageApi } = App.useApp()
   const [kbs, setKbs] = useState<KnowledgeBaseDTO[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedKb, setSelectedKb] = useState<KnowledgeBaseDTO | null>(null)
@@ -264,7 +266,7 @@ export default function RAGPage() {
       const res = await ragApi.listKnowledgeBases()
       setKbs(res.data)
     } catch (error) {
-      message.error(getErrorMessage(error))
+      messageApi.error(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -282,7 +284,7 @@ export default function RAGPage() {
         name: values.name,
         description: values.description ?? '',
       })
-      message.success('知识库创建成功')
+      messageApi.success('知识库创建成功')
       setCreateOpen(false)
       form.resetFields()
       await loadKnowledgeBases()
@@ -290,7 +292,7 @@ export default function RAGPage() {
       if (typeof error === 'object' && error && 'errorFields' in error) {
         return
       }
-      message.error(getErrorMessage(error))
+      messageApi.error(getErrorMessage(error))
     } finally {
       setCreating(false)
     }
@@ -299,10 +301,10 @@ export default function RAGPage() {
   const handleDeleteKb = async (id: number) => {
     try {
       await ragApi.deleteKnowledgeBase(id)
-      message.success('知识库已删除')
+      messageApi.success('知识库已删除')
       await loadKnowledgeBases()
     } catch (error) {
-      message.error(getErrorMessage(error))
+      messageApi.error(getErrorMessage(error))
     }
   }
 
