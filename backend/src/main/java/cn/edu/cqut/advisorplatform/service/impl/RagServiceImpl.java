@@ -62,9 +62,9 @@ public class RagServiceImpl implements RagService {
     @Transactional
     public void deleteKnowledgeBase(Long id, User currentUser) {
         RagKnowledgeBase kb = knowledgeBaseDao.findById(id)
-                .orElseThrow(() -> new RuntimeException("知识库不存在"));
-        if (!kb.getCreatedBy().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("无权限删除该知识库");
+                .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
+        if (!isKnowledgeBaseOwner(kb, currentUser)) {
+            throw new RuntimeException("知识库不存在或无权限");
         }
         Path kbDir = resolveUploadBaseDir().resolve(id.toString()).normalize();
         deleteDirectoryQuietly(kbDir);
@@ -74,7 +74,7 @@ public class RagServiceImpl implements RagService {
     @Override
     public List<RagDocumentResponse> listDocuments(Long kbId, User currentUser) {
         knowledgeBaseDao.findById(kbId)
-                .filter(kb -> kb.getCreatedBy().getId().equals(currentUser.getId()))
+                .filter(kb -> isKnowledgeBaseOwner(kb, currentUser))
                 .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
         return documentDao.findByKnowledgeBaseIdOrderByCreatedAtDesc(kbId)
                 .stream()
@@ -86,7 +86,7 @@ public class RagServiceImpl implements RagService {
     @Transactional
     public RagDocumentResponse uploadDocument(Long kbId, MultipartFile file, User currentUser) {
         RagKnowledgeBase kb = knowledgeBaseDao.findById(kbId)
-                .filter(k -> k.getCreatedBy().getId().equals(currentUser.getId()))
+                .filter(k -> isKnowledgeBaseOwner(k, currentUser))
                 .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
 
         if (file == null || file.isEmpty()) {
@@ -147,9 +147,9 @@ public class RagServiceImpl implements RagService {
     @Transactional
     public void deleteDocument(Long id, User currentUser) {
         RagDocument doc = documentDao.findById(id)
-                .orElseThrow(() -> new RuntimeException("文档不存在"));
-        if (!doc.getUploadedBy().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("无权限删除该文档");
+                .orElseThrow(() -> new RuntimeException("文档不存在或无权限"));
+        if (!canDeleteDocument(doc, currentUser)) {
+            throw new RuntimeException("文档不存在或无权限");
         }
         if (doc.getFilePath() != null) {
             deleteFileQuietly(Paths.get(doc.getFilePath()));
@@ -161,6 +161,27 @@ public class RagServiceImpl implements RagService {
         knowledgeBaseDao.save(kb);
 
         documentDao.deleteById(id);
+    }
+
+    private boolean isKnowledgeBaseOwner(RagKnowledgeBase kb, User currentUser) {
+        if (kb == null || currentUser == null || currentUser.getId() == null) {
+            return false;
+        }
+        User owner = kb.getCreatedBy();
+        return owner != null && owner.getId() != null && owner.getId().equals(currentUser.getId());
+    }
+
+    private boolean canDeleteDocument(RagDocument doc, User currentUser) {
+        if (doc == null || currentUser == null || currentUser.getId() == null) {
+            return false;
+        }
+
+        User uploader = doc.getUploadedBy();
+        if (uploader != null && uploader.getId() != null) {
+            return uploader.getId().equals(currentUser.getId());
+        }
+
+        return isKnowledgeBaseOwner(doc.getKnowledgeBase(), currentUser);
     }
 
     private Path resolveUploadBaseDir() {
@@ -183,7 +204,9 @@ public class RagServiceImpl implements RagService {
     }
 
     private void deleteDirectoryQuietly(Path dir) {
-        if (!Files.exists(dir)) return;
+        if (!Files.exists(dir)) {
+            return;
+        }
         try {
             Files.walk(dir)
                     .sorted(java.util.Comparator.reverseOrder())
