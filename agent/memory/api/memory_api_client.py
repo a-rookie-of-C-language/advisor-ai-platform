@@ -1,0 +1,142 @@
+from __future__ import annotations
+
+import asyncio
+from datetime import datetime
+from typing import Any
+
+import httpx
+
+from memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
+
+
+class MemoryApiClient:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_sec: float = 8.0,
+        max_retries: int = 2,
+        retry_backoff_sec: float = 0.3,
+        bearer_token: str | None = None,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout_sec = timeout_sec
+        self._max_retries = max_retries
+        self._retry_backoff_sec = retry_backoff_sec
+        self._bearer_token = bearer_token
+
+    async def search_long_term(
+        self,
+        user_id: int,
+        kb_id: int,
+        query: str,
+        top_k: int,
+    ) -> list[MemoryItem]:
+        payload = {
+            "userId": user_id,
+            "kbId": kb_id,
+            "query": query,
+            "topK": top_k,
+        }
+        data = await self._request("POST", "/api/memory/long-term/search", json=payload)
+        raw_items = data.get("data", [])
+        return [self._to_memory_item(item) for item in raw_items]
+
+    async def upsert_candidates(
+        self,
+        user_id: int,
+        kb_id: int,
+        candidates: list[MemoryCandidate],
+    ) -> WritebackResult:
+        payload = {
+            "userId": user_id,
+            "kbId": kb_id,
+            "candidates": [
+                {
+                    "content": c.content,
+                    "confidence": c.confidence,
+                    "sourceTurnId": c.source_turn_id,
+                    "tags": c.tags,
+                }
+                for c in candidates
+            ],
+        }
+        data = await self._request("POST", "/api/memory/long-term/candidates", json=payload)
+        body = data.get("data", {})
+        return WritebackResult(
+            accepted=int(body.get("accepted", 0)),
+            rejected=int(body.get("rejected", 0)),
+            message=str(body.get("message", "ok")),
+        )
+
+    async def get_session_summary(self, session_id: int) -> SessionSummary | None:
+        data = await self._request("GET", f"/api/memory/session-summary/{session_id}")
+        body = data.get("data")
+        if not body:
+            return None
+        return SessionSummary(
+            session_id=int(body.get("sessionId", session_id)),
+            summary=str(body.get("summary", "")),
+            updated_at=self._parse_datetime(body.get("updatedAt")),
+        )
+
+    async def save_session_summary(self, session_id: int, summary: str) -> None:
+        payload = {"summary": summary}
+        await self._request("PUT", f"/api/memory/session-summary/{session_id}", json=payload)
+
+    async def health(self) -> bool:
+        try:
+            data = await self._request("GET", "/api/memory/health")
+            return bool(data.get("ok", True))
+        except Exception:
+            return False
+
+    async def _request(self, method: str, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        url = f"{self._base_url}{path}"
+        headers: dict[str, str] = {}
+        if self._bearer_token:
+            headers["Authorization"] = f"Bearer {self._bearer_token}"
+
+        last_error: Exception | None = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=self._timeout_sec) as client:
+                    response = await client.request(method=method, url=url, json=json, headers=headers)
+                    response.raise_for_status()
+                    if not response.content:
+                        return {"ok": True, "data": None}
+                    return response.json()
+            except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as exc:
+                last_error = exc
+                if attempt >= self._max_retries:
+                    break
+                await asyncio.sleep(self._retry_backoff_sec * (attempt + 1))
+
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Memory API request failed")
+
+    @staticmethod
+    def _to_memory_item(data: dict[str, Any]) -> MemoryItem:
+        return MemoryItem(
+            id=int(data.get("id", 0)),
+            user_id=int(data.get("userId", 0)),
+            kb_id=int(data.get("kbId", 0)),
+            content=str(data.get("content", "")),
+            confidence=float(data.get("confidence", 0.5)),
+            score=float(data.get("score", 0.0)),
+            created_at=MemoryApiClient._parse_datetime(data.get("createdAt")),
+            updated_at=MemoryApiClient._parse_datetime(data.get("updatedAt")),
+            expires_at=MemoryApiClient._parse_datetime(data.get("expiresAt")),
+            tags=data.get("tags") or {},
+        )
+
+    @staticmethod
+    def _parse_datetime(value: Any) -> datetime | None:
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            return value
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
