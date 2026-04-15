@@ -11,6 +11,7 @@ import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.RagService;
+import cn.edu.cqut.advisorplatform.utils.Assert;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -96,19 +97,14 @@ public class RagServiceImpl implements RagService {
             throw new ForbiddenException("无权限访问该知识库");
         }
 
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("上传文件不能为空");
-        }
+        Assert.notNull(file, () -> new BadRequestException("上传文件不能为空"));
+        Assert.isTrue(!file.isEmpty(), () -> new BadRequestException("上传文件不能为空"));
 
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.trim().isEmpty()) {
-            throw new BadRequestException("文件名不能为空");
-        }
+        Assert.notBlank(originalFilename, () -> new BadRequestException("文件名不能为空"));
 
         String safeFilename = Paths.get(originalFilename).getFileName().toString();
-        if (safeFilename.trim().isEmpty()) {
-            throw new BadRequestException("非法文件名");
-        }
+        Assert.notBlank(safeFilename, () -> new BadRequestException("非法文件名"));
 
         String fileType = extractExtension(safeFilename);
 
