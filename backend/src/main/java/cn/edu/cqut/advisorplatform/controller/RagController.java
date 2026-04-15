@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.controller;
 
-import cn.edu.cqut.advisorplatform.dto.response.ApiResponse;
-import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponse;
-import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponse;
-import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.RagService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,49 +23,49 @@ public class RagController {
     // ── 知识库 ──
 
     @GetMapping("/knowledge-bases")
-    public ApiResponse<List<KnowledgeBaseResponse>> listKnowledgeBases(
-            @AuthenticationPrincipal User currentUser) {
-        return ApiResponse.success(ragService.listKnowledgeBases(currentUser));
+    public ApiResponseDTO<List<KnowledgeBaseResponseDTO>> listKnowledgeBases(
+            @AuthenticationPrincipal UserDO currentUser) {
+        return ApiResponseDTO.success(ragService.listKnowledgeBases(currentUser));
     }
 
     @PostMapping("/knowledge-bases")
-    public ApiResponse<KnowledgeBaseResponse> createKnowledgeBase(
+    public ApiResponseDTO<KnowledgeBaseResponseDTO> createKnowledgeBase(
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal User currentUser) {
-        return ApiResponse.success(ragService.createKnowledgeBase(
+            @AuthenticationPrincipal UserDO currentUser) {
+        return ApiResponseDTO.success(ragService.createKnowledgeBase(
                 body.get("name"), body.get("description"), currentUser));
     }
 
     @DeleteMapping("/knowledge-bases/{id}")
-    public ApiResponse<Void> deleteKnowledgeBase(
+    public ApiResponseDTO<Void> deleteKnowledgeBase(
             @PathVariable Long id,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDO currentUser) {
         ragService.deleteKnowledgeBase(id, currentUser);
-        return ApiResponse.success();
+        return ApiResponseDTO.success();
     }
 
     // ── 文档 ──
 
     @GetMapping("/knowledge-bases/{kbId}/documents")
-    public ApiResponse<List<RagDocumentResponse>> listDocuments(
+    public ApiResponseDTO<List<RagDocumentResponseDTO>> listDocuments(
             @PathVariable Long kbId,
-            @AuthenticationPrincipal User currentUser) {
-        return ApiResponse.success(ragService.listDocuments(kbId, currentUser));
+            @AuthenticationPrincipal UserDO currentUser) {
+        return ApiResponseDTO.success(ragService.listDocuments(kbId, currentUser));
     }
 
     @PostMapping("/knowledge-bases/{kbId}/documents")
-    public ApiResponse<RagDocumentResponse> uploadDocument(
+    public ApiResponseDTO<RagDocumentResponseDTO> uploadDocument(
             @PathVariable Long kbId,
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal User currentUser) {
-        return ApiResponse.success(ragService.uploadDocument(kbId, file, currentUser));
+            @AuthenticationPrincipal UserDO currentUser) {
+        return ApiResponseDTO.success(ragService.uploadDocument(kbId, file, currentUser));
     }
 
     @DeleteMapping("/documents/{id}")
-    public ApiResponse<Void> deleteDocument(
+    public ApiResponseDTO<Void> deleteDocument(
             @PathVariable Long id,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDO currentUser) {
         ragService.deleteDocument(id, currentUser);
-        return ApiResponse.success();
+        return ApiResponseDTO.success();
     }
 }

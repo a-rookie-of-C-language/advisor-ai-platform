@@ -1,11 +1,11 @@
 package cn.edu.cqut.advisorplatform.dao;
 
-import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBase;
+import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface RagKnowledgeBaseDao extends JpaRepository<RagKnowledgeBase, Long> {
+public interface RagKnowledgeBaseDao extends JpaRepository<RagKnowledgeBaseDO, Long> {
 
-    List<RagKnowledgeBase> findByCreatedByIdOrderByCreatedAtDesc(Long userId);
+    List<RagKnowledgeBaseDO> findByCreatedByIdOrderByCreatedAtDesc(Long userId);
 }

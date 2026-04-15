@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.controller;
 
-import cn.edu.cqut.advisorplatform.dto.request.LoginRequest;
-import cn.edu.cqut.advisorplatform.dto.request.RegisterRequest;
-import cn.edu.cqut.advisorplatform.dto.response.ApiResponse;
-import cn.edu.cqut.advisorplatform.dto.response.LoginResponse;
+import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +20,13 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.success(authService.login(request));
+    public ApiResponseDTO<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        return ApiResponseDTO.success(authService.login(request));
     }
 
     @PostMapping("/register")
-    public ApiResponse<Void> register(@Valid @RequestBody RegisterRequest request) {
+    public ApiResponseDTO<Void> register(@Valid @RequestBody RegisterRequestDTO request) {
         authService.register(request);
-        return ApiResponse.success();
+        return ApiResponseDTO.success();
     }
 }

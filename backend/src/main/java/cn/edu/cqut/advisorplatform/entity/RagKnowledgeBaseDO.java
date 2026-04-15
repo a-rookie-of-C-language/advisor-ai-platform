@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "rag_knowledge_base")
-public class RagKnowledgeBase {
+public class RagKnowledgeBaseDO {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +31,7 @@ public class RagKnowledgeBase {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
-    private User createdBy;
+    private UserDO createdBy;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

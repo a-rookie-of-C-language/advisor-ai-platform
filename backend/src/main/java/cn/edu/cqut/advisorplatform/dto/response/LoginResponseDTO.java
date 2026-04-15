@@ -1,18 +1,18 @@
 package cn.edu.cqut.advisorplatform.dto.response;
 
-import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import lombok.Data;
 
 @Data
-public class LoginResponse {
+public class LoginResponseDTO {
 
     private String token;
     private String username;
     private String realName;
     private String role;
 
-    public static LoginResponse of(String token, User user) {
-        LoginResponse resp = new LoginResponse();
+    public static LoginResponseDTO of(String token, UserDO user) {
+        LoginResponseDTO resp = new LoginResponseDTO();
         resp.setToken(token);
         resp.setUsername(user.getUsername());
         resp.setRealName(user.getRealName());

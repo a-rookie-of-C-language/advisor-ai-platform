@@ -1,13 +1,13 @@
 package cn.edu.cqut.advisorplatform.dao;
 
-import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface UserDao extends JpaRepository<User, Long> {
+public interface UserDao extends JpaRepository<UserDO, Long> {
 
-    Optional<User> findByUsername(String username);
+    Optional<UserDO> findByUsername(String username);
 
     boolean existsByUsername(String username);
 }

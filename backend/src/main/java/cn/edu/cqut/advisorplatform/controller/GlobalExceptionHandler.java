@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.controller;
 
-import cn.edu.cqut.advisorplatform.dto.response.ApiResponse;
+import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
@@ -19,59 +19,59 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ApiResponse<Void> handleBadCredentials(BadCredentialsException e) {
-        return ApiResponse.error(401, "用户名或密码错误");
+    public ApiResponseDTO<Void> handleBadCredentials(BadCredentialsException e) {
+        return ApiResponseDTO.error(401, "用户名或密码错误");
     }
 
     @ExceptionHandler({DisabledException.class, LockedException.class})
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ApiResponse<Void> handleAccountStatus(AuthenticationException e) {
-        return ApiResponse.error(401, "账号已被禁用或锁定");
+    public ApiResponseDTO<Void> handleAccountStatus(AuthenticationException e) {
+        return ApiResponseDTO.error(401, "账号已被禁用或锁定");
     }
 
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ApiResponse<Void> handleAuthentication(AuthenticationException e) {
-        return ApiResponse.error(401, "认证失败: " + e.getMessage());
+    public ApiResponseDTO<Void> handleAuthentication(AuthenticationException e) {
+        return ApiResponseDTO.error(401, "认证失败: " + e.getMessage());
     }
 
     @ExceptionHandler(BadRequestException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiResponse<Void> handleBadRequest(BadRequestException e) {
-        return ApiResponse.error(400, e.getMessage());
+    public ApiResponseDTO<Void> handleBadRequest(BadRequestException e) {
+        return ApiResponseDTO.error(400, e.getMessage());
     }
 
     @ExceptionHandler(ForbiddenException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ApiResponse<Void> handleForbidden(ForbiddenException e) {
-        return ApiResponse.error(403, e.getMessage());
+    public ApiResponseDTO<Void> handleForbidden(ForbiddenException e) {
+        return ApiResponseDTO.error(403, e.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiResponse<Void> handleNotFound(NotFoundException e) {
-        return ApiResponse.error(404, e.getMessage());
+    public ApiResponseDTO<Void> handleNotFound(NotFoundException e) {
+        return ApiResponseDTO.error(404, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiResponse<Void> handleValidation(MethodArgumentNotValidException e) {
+    public ApiResponseDTO<Void> handleValidation(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .findFirst()
                 .orElse("参数校验失败");
-        return ApiResponse.error(400, msg);
+        return ApiResponseDTO.error(400, msg);
     }
 
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ApiResponse<Void> handleRuntime(RuntimeException e) {
-        return ApiResponse.error(500, "服务器内部错误");
+    public ApiResponseDTO<Void> handleRuntime(RuntimeException e) {
+        return ApiResponseDTO.error(500, "服务器内部错误");
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ApiResponse<Void> handleException(Exception e) {
-        return ApiResponse.error(500, "服务器内部错误");
+    public ApiResponseDTO<Void> handleException(Exception e) {
+        return ApiResponseDTO.error(500, "服务器内部错误");
     }
 }

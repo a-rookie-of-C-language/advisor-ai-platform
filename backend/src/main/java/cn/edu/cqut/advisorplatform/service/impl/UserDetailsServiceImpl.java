@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.UserDao;
-import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

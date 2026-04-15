@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class RegisterRequest {
+public class RegisterRequestDTO {
 
     @NotBlank(message = "用户名不能为空")
     @Size(min = 3, max = 64)

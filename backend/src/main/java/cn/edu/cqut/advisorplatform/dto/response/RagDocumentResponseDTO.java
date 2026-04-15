@@ -1,12 +1,12 @@
 package cn.edu.cqut.advisorplatform.dto.response;
 
-import cn.edu.cqut.advisorplatform.entity.RagDocument;
+import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-public class RagDocumentResponse {
+public class RagDocumentResponseDTO {
 
     private Long id;
     private String fileName;
@@ -15,8 +15,8 @@ public class RagDocumentResponse {
     private String status;
     private LocalDateTime createdAt;
 
-    public static RagDocumentResponse from(RagDocument doc) {
-        RagDocumentResponse r = new RagDocumentResponse();
+    public static RagDocumentResponseDTO from(RagDocumentDO doc) {
+        RagDocumentResponseDTO r = new RagDocumentResponseDTO();
         r.setId(doc.getId());
         r.setFileName(doc.getFileName());
         r.setFileType(doc.getFileType());

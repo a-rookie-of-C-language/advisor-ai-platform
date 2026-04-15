@@ -2,10 +2,10 @@ package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.config.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
-import cn.edu.cqut.advisorplatform.dto.request.LoginRequest;
-import cn.edu.cqut.advisorplatform.dto.request.RegisterRequest;
-import cn.edu.cqut.advisorplatform.dto.response.LoginResponse;
-import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuthService;
@@ -25,28 +25,28 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
 
     @Override
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponseDTO login(LoginRequestDTO request) {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
-        User user = userDao.findByUsername(request.getUsername())
+        UserDO user = userDao.findByUsername(request.getUsername())
             .orElseThrow(() -> new NotFoundException("用户不存在"));
         String token = jwtUtil.generateToken(user);
-        return LoginResponse.of(token, user);
+        return LoginResponseDTO.of(token, user);
     }
 
     @Override
-    public void register(RegisterRequest request) {
+    public void register(RegisterRequestDTO request) {
         if (userDao.existsByUsername(request.getUsername())) {
             throw new BadRequestException("用户名已存在");
         }
-        User user = new User();
+        UserDO user = new UserDO();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRealName(request.getRealName());
         user.setPhone(request.getPhone());
         user.setEmail(request.getEmail());
-        user.setRole(User.UserRole.ADVISOR);
+        user.setRole(UserDO.UserRole.ADVISOR);
         userDao.save(user);
     }
 }

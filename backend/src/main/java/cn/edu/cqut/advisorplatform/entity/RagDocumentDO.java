@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "rag_document")
-public class RagDocument {
+public class RagDocumentDO {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,7 +18,7 @@ public class RagDocument {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "knowledge_base_id", nullable = false)
-    private RagKnowledgeBase knowledgeBase;
+    private RagKnowledgeBaseDO knowledgeBase;
 
     @Column(nullable = false, length = 256)
     private String fileName;
@@ -38,7 +38,7 @@ public class RagDocument {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by")
-    private User uploadedBy;
+    private UserDO uploadedBy;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

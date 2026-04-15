@@ -1,23 +1,23 @@
 package cn.edu.cqut.advisorplatform.service;
 
-import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponse;
-import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponse;
-import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface RagService {
 
-    List<KnowledgeBaseResponse> listKnowledgeBases(User currentUser);
+    List<KnowledgeBaseResponseDTO> listKnowledgeBases(UserDO currentUser);
 
-    KnowledgeBaseResponse createKnowledgeBase(String name, String description, User currentUser);
+    KnowledgeBaseResponseDTO createKnowledgeBase(String name, String description, UserDO currentUser);
 
-    void deleteKnowledgeBase(Long id, User currentUser);
+    void deleteKnowledgeBase(Long id, UserDO currentUser);
 
-    List<RagDocumentResponse> listDocuments(Long kbId, User currentUser);
+    List<RagDocumentResponseDTO> listDocuments(Long kbId, UserDO currentUser);
 
-    RagDocumentResponse uploadDocument(Long kbId, MultipartFile file, User currentUser);
+    RagDocumentResponseDTO uploadDocument(Long kbId, MultipartFile file, UserDO currentUser);
 
-    void deleteDocument(Long id, User currentUser);
+    void deleteDocument(Long id, UserDO currentUser);
 }

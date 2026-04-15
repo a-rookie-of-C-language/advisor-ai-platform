@@ -1,12 +1,12 @@
 package cn.edu.cqut.advisorplatform.dto.response;
 
-import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBase;
+import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-public class KnowledgeBaseResponse {
+public class KnowledgeBaseResponseDTO {
 
     private Long id;
     private String name;
@@ -15,8 +15,8 @@ public class KnowledgeBaseResponse {
     private String status;
     private LocalDateTime createdAt;
 
-    public static KnowledgeBaseResponse from(RagKnowledgeBase kb) {
-        KnowledgeBaseResponse r = new KnowledgeBaseResponse();
+    public static KnowledgeBaseResponseDTO from(RagKnowledgeBaseDO kb) {
+        KnowledgeBaseResponseDTO r = new KnowledgeBaseResponseDTO();
         r.setId(kb.getId());
         r.setName(kb.getName());
         r.setDescription(kb.getDescription());

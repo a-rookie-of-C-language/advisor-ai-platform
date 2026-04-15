@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "chat_message")
-public class ChatMessage {
+public class ChatMessageDO {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +21,7 @@ public class ChatMessage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
-    private ChatSession session;
+    private ChatSessionDO session;
 
     @Column(nullable = false, length = 16)
     private String role;

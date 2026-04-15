@@ -15,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "sys_user")
-public class User implements UserDetails {
+public class UserDO implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

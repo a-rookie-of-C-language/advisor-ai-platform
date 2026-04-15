@@ -1,11 +1,11 @@
 package cn.edu.cqut.advisorplatform.dao;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessage;
+import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface ChatMessageDao extends JpaRepository<ChatMessage, Long> {
+public interface ChatMessageDao extends JpaRepository<ChatMessageDO, Long> {
 
-    List<ChatMessage> findBySessionIdOrderByCreatedAtAsc(Long sessionId);
+    List<ChatMessageDO> findBySessionIdOrderByCreatedAtAsc(Long sessionId);
 }
