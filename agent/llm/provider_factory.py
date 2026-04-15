@@ -14,11 +14,6 @@ def _read_required_env(name: str) -> str:
 
 
 def build_provider_from_env() -> BaseLLMProvider:
-    provider_name = os.getenv("LLM_PROVIDER", "openai").strip().lower()
-
-    if provider_name != "openai":
-        raise RuntimeError(f"Unsupported LLM_PROVIDER: {provider_name}")
-
     api_key = _read_required_env("OPENAI_API_KEY")
     model = _read_required_env("OPENAI_MODEL")
     base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
