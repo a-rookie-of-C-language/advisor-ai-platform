@@ -1,6 +1,9 @@
 package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponse;
+import cn.edu.cqut.advisorplatform.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
+import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -29,13 +32,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ApiResponse<Void> handleAuthentication(AuthenticationException e) {
-        return ApiResponse.error(401, "认证失败：" + e.getMessage());
+        return ApiResponse.error(401, "认证失败: " + e.getMessage());
     }
 
-    @ExceptionHandler(RuntimeException.class)
+    @ExceptionHandler(BadRequestException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiResponse<Void> handleRuntime(RuntimeException e) {
+    public ApiResponse<Void> handleBadRequest(BadRequestException e) {
         return ApiResponse.error(400, e.getMessage());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> handleForbidden(ForbiddenException e) {
+        return ApiResponse.error(403, e.getMessage());
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<Void> handleNotFound(NotFoundException e) {
+        return ApiResponse.error(404, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -46,5 +61,17 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .orElse("参数校验失败");
         return ApiResponse.error(400, msg);
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiResponse<Void> handleRuntime(RuntimeException e) {
+        return ApiResponse.error(500, "服务器内部错误");
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiResponse<Void> handleException(Exception e) {
+        return ApiResponse.error(500, "服务器内部错误");
     }
 }

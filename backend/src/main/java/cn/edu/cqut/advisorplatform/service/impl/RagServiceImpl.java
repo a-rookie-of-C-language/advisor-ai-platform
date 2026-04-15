@@ -7,6 +7,9 @@ import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponse;
 import cn.edu.cqut.advisorplatform.entity.RagDocument;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBase;
 import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
+import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.RagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,9 +65,9 @@ public class RagServiceImpl implements RagService {
     @Transactional
     public void deleteKnowledgeBase(Long id, User currentUser) {
         RagKnowledgeBase kb = knowledgeBaseDao.findById(id)
-                .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
+                .orElseThrow(() -> new NotFoundException("知识库不存在"));
         if (!isKnowledgeBaseOwner(kb, currentUser)) {
-            throw new RuntimeException("知识库不存在或无权限");
+            throw new ForbiddenException("无权限访问该知识库");
         }
         Path kbDir = resolveUploadBaseDir().resolve(id.toString()).normalize();
         deleteDirectoryQuietly(kbDir);
@@ -73,9 +76,11 @@ public class RagServiceImpl implements RagService {
 
     @Override
     public List<RagDocumentResponse> listDocuments(Long kbId, User currentUser) {
-        knowledgeBaseDao.findById(kbId)
-                .filter(kb -> isKnowledgeBaseOwner(kb, currentUser))
-                .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
+        RagKnowledgeBase kb = knowledgeBaseDao.findById(kbId)
+                .orElseThrow(() -> new NotFoundException("知识库不存在"));
+        if (!isKnowledgeBaseOwner(kb, currentUser)) {
+            throw new ForbiddenException("无权限访问该知识库");
+        }
         return documentDao.findByKnowledgeBaseIdOrderByCreatedAtDesc(kbId)
                 .stream()
                 .map(RagDocumentResponse::from)
@@ -86,21 +91,23 @@ public class RagServiceImpl implements RagService {
     @Transactional
     public RagDocumentResponse uploadDocument(Long kbId, MultipartFile file, User currentUser) {
         RagKnowledgeBase kb = knowledgeBaseDao.findById(kbId)
-                .filter(k -> isKnowledgeBaseOwner(k, currentUser))
-                .orElseThrow(() -> new RuntimeException("知识库不存在或无权限"));
+                .orElseThrow(() -> new NotFoundException("知识库不存在"));
+        if (!isKnowledgeBaseOwner(kb, currentUser)) {
+            throw new ForbiddenException("无权限访问该知识库");
+        }
 
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("上传文件不能为空");
+            throw new BadRequestException("上传文件不能为空");
         }
 
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.trim().isEmpty()) {
-            throw new RuntimeException("文件名不能为空");
+            throw new BadRequestException("文件名不能为空");
         }
 
         String safeFilename = Paths.get(originalFilename).getFileName().toString();
         if (safeFilename.trim().isEmpty()) {
-            throw new RuntimeException("非法文件名");
+            throw new BadRequestException("非法文件名");
         }
 
         String fileType = extractExtension(safeFilename);
@@ -110,7 +117,7 @@ public class RagServiceImpl implements RagService {
         Path filePath = dir.resolve(safeFilename).normalize();
 
         if (!filePath.startsWith(baseDir)) {
-            throw new RuntimeException("非法文件路径");
+            throw new BadRequestException("非法文件路径");
         }
 
         try {
@@ -139,7 +146,7 @@ public class RagServiceImpl implements RagService {
             return RagDocumentResponse.from(saved);
 
         } catch (IOException e) {
-            throw new RuntimeException("文件保存失败: " + e.getMessage(), e);
+            throw new BadRequestException("文件保存失败: " + e.getMessage());
         }
     }
 
@@ -147,12 +154,14 @@ public class RagServiceImpl implements RagService {
     @Transactional
     public void deleteDocument(Long id, User currentUser) {
         RagDocument doc = documentDao.findById(id)
-                .orElseThrow(() -> new RuntimeException("文档不存在或无权限"));
+                .orElseThrow(() -> new NotFoundException("文档不存在"));
         if (!canDeleteDocument(doc, currentUser)) {
-            throw new RuntimeException("文档不存在或无权限");
+            throw new ForbiddenException("无权限删除该文档");
         }
-        if (doc.getFilePath() != null) {
-            deleteFileQuietly(Paths.get(doc.getFilePath()));
+
+        Path safeFilePath = resolveSafeStoredFilePath(doc.getFilePath());
+        if (safeFilePath != null) {
+            deleteFileQuietly(safeFilePath);
         }
 
         RagKnowledgeBase kb = doc.getKnowledgeBase();
@@ -186,6 +195,21 @@ public class RagServiceImpl implements RagService {
 
     private Path resolveUploadBaseDir() {
         return Paths.get(uploadDir).toAbsolutePath().normalize();
+    }
+
+    private Path resolveSafeStoredFilePath(String storedPath) {
+        if (storedPath == null || storedPath.trim().isEmpty()) {
+            return null;
+        }
+
+        Path baseDir = resolveUploadBaseDir();
+        Path resolvedPath = Paths.get(storedPath).toAbsolutePath().normalize();
+        if (!resolvedPath.startsWith(baseDir)) {
+            log.warn("跳过删除越界文件路径: {}", resolvedPath);
+            return null;
+        }
+
+        return resolvedPath;
     }
 
     private String extractExtension(String filename) {

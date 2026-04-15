@@ -9,7 +9,6 @@ import {
   Collapse,
   Tag,
   Space,
-  message,
 } from 'antd'
 import {
   PlusOutlined,
@@ -22,6 +21,7 @@ import {
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import styles from './ChatPage.module.css'
+import { globalMessage } from '../../utils/globalMessage'
 
 const { Text, Title } = Typography
 
@@ -178,12 +178,12 @@ export default function ChatPage() {
       const remaining = sessions.filter((s) => s.id !== id)
       setActiveId(remaining[0]?.id ?? -1)
     }
-    message.success('对话已删除')
+    globalMessage.success('对话已删除')
   }
 
   const handleSend = () => {
     if (!inputText.trim() || sending) return
-    if (!activeSession) { message.warning('请先选择或新建一个对话'); return }
+    if (!activeSession) { globalMessage.warning('请先选择或新建一个对话'); return }
 
     const userMsg: ChatMessage = { id: Date.now(), role: 'user', content: inputText.trim() }
     const aiMsgId = Date.now() + 1

@@ -6,6 +6,8 @@ import cn.edu.cqut.advisorplatform.dto.request.LoginRequest;
 import cn.edu.cqut.advisorplatform.dto.request.RegisterRequest;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponse;
 import cn.edu.cqut.advisorplatform.entity.User;
+import cn.edu.cqut.advisorplatform.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
             new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
         User user = userDao.findByUsername(request.getUsername())
-            .orElseThrow(() -> new RuntimeException("用户不存在"));
+            .orElseThrow(() -> new NotFoundException("用户不存在"));
         String token = jwtUtil.generateToken(user);
         return LoginResponse.of(token, user);
     }
@@ -36,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void register(RegisterRequest request) {
         if (userDao.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("用户名已存在");
+            throw new BadRequestException("用户名已存在");
         }
         User user = new User();
         user.setUsername(request.getUsername());
