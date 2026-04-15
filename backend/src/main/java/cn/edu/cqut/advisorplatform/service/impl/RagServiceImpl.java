@@ -16,9 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,7 +66,7 @@ public class RagServiceImpl implements RagService {
         if (!kb.getCreatedBy().getId().equals(currentUser.getId())) {
             throw new RuntimeException("无权限删除该知识库");
         }
-        Path kbDir = Paths.get(uploadDir, id.toString());
+        Path kbDir = resolveUploadBaseDir().resolve(id.toString()).normalize();
         deleteDirectoryQuietly(kbDir);
         knowledgeBaseDao.deleteById(id);
     }
@@ -103,11 +105,19 @@ public class RagServiceImpl implements RagService {
 
         String fileType = extractExtension(safeFilename);
 
-        Path dir = Paths.get(uploadDir, kbId.toString());
+        Path baseDir = resolveUploadBaseDir();
+        Path dir = baseDir.resolve(kbId.toString()).normalize();
+        Path filePath = dir.resolve(safeFilename).normalize();
+
+        if (!filePath.startsWith(baseDir)) {
+            throw new RuntimeException("非法文件路径");
+        }
+
         try {
             Files.createDirectories(dir);
-            Path filePath = dir.resolve(safeFilename);
-            file.transferTo(filePath.toFile());
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
 
             RagDocument doc = new RagDocument();
             doc.setKnowledgeBase(kb);
@@ -151,6 +161,10 @@ public class RagServiceImpl implements RagService {
         knowledgeBaseDao.save(kb);
 
         documentDao.deleteById(id);
+    }
+
+    private Path resolveUploadBaseDir() {
+        return Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
     private String extractExtension(String filename) {
