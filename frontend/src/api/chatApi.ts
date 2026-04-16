@@ -18,6 +18,13 @@ export interface ChatStreamMessageDTO {
   content: string
 }
 
+export interface ChatSendResponseDTO {
+  id: number
+  role: 'assistant'
+  content: string
+  sources?: Array<{ id: number; docName: string; snippet: string }>
+}
+
 interface ApiResponse<T> {
   code: number
   message: string
@@ -40,7 +47,7 @@ interface StreamHandlers {
 function getAuthHeaders(): HeadersInit {
   const token = useAuthStore.getState().token
   if (!token) {
-    throw new Error('鏈櫥褰曪紝璇峰厛鐧诲綍鍚庡啀鍙戣捣瀵硅瘽')
+    throw new Error('未登录，请先登录后再发起对话')
   }
   return {
     'Content-Type': 'application/json',
@@ -81,6 +88,12 @@ export const chatApi = {
 
   listMessages: (sessionId: number) =>
     request.get<unknown, ApiResponse<ChatMessageDTO[]>>(`/chat/sessions/${sessionId}/messages`),
+
+  sendMessage: (sessionId: number, content: string, kbId: number) =>
+    request.post<unknown, ApiResponse<ChatSendResponseDTO>>(`/chat/sessions/${sessionId}/messages`, {
+      content,
+      kbId: String(kbId),
+    }),
 
   streamChat: async (payload: StreamPayload, handlers: StreamHandlers): Promise<void> => {
     const response = await fetch('/api/chat/stream', {

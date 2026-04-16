@@ -84,7 +84,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
                 label: (
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     <FileTextOutlined style={{ marginRight: 4 }} />
-                    参考来源（{msg.sources.length}）
+                    鍙傝€冩潵婧愶紙{msg.sources.length}锛?
                   </Text>
                 ),
                 children: (
@@ -147,7 +147,7 @@ export default function ChatPage() {
           setActiveId(nextSessions[0].id)
         }
       } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载会话失败')
+        globalMessage.error(typeof error === 'string' ? error : '鍔犺浇浼氳瘽澶辫触')
       }
     })()
   }, [])
@@ -167,7 +167,7 @@ export default function ChatPage() {
             : session
         )))
       } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载消息失败')
+        globalMessage.error(typeof error === 'string' ? error : '鍔犺浇娑堟伅澶辫触')
       }
     })()
   }, [activeId])
@@ -185,7 +185,7 @@ export default function ChatPage() {
       setSessions((prev) => [newSession, ...prev])
       setActiveId(newSession.id)
     } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '创建会话失败')
+      globalMessage.error(typeof error === 'string' ? error : '鍒涘缓浼氳瘽澶辫触')
     }
   }
 
@@ -199,9 +199,9 @@ export default function ChatPage() {
         }
         return next
       })
-      globalMessage.success('对话已删除')
+      globalMessage.success('瀵硅瘽宸插垹闄?)
     } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '删除会话失败')
+      globalMessage.error(typeof error === 'string' ? error : '鍒犻櫎浼氳瘽澶辫触')
     }
   }
 
@@ -237,7 +237,7 @@ export default function ChatPage() {
         setSessions((prev) => [targetSession!, ...prev])
         setActiveId(targetSession.id)
       } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
+        globalMessage.error(typeof error === 'string' ? error : '鍒涘缓浼氳瘽澶辫触锛屾棤娉曞彂閫佹秷鎭?)
         return
       }
     }
@@ -286,6 +286,9 @@ export default function ChatPage() {
     })
 
     try {
+      let streamFailed = false
+      let streamError = ''
+
       await chatApi.streamChat(
         {
           messages: historyMessages,
@@ -312,29 +315,44 @@ export default function ChatPage() {
             updateAssistantMessage(sessionId, aiMsgId, { streaming: false })
           },
           onError: (message) => {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              streaming: false,
-              content: message ? `请求失败：${message}` : '请求失败，请稍后重试。',
-            })
+            streamFailed = true
+            streamError = message ?? 'stream error'
           },
         },
       )
+
+      if (streamFailed) {
+        globalMessage.warning('网络波动，已切换为非流式回复')
+        const fallbackResp = await chatApi.sendMessage(sessionId, text, kbId)
+        updateAssistantMessage(sessionId, aiMsgId, {
+          streaming: false,
+          content: fallbackResp.data?.content ?? (streamError || '请求失败，请稍后重试。'),
+        })
+      }
     } catch (error) {
-      updateAssistantMessage(sessionId, aiMsgId, {
-        streaming: false,
-        content: typeof error === 'string' ? `请求失败：${error}` : '请求失败，请稍后重试。',
-      })
+      globalMessage.warning('网络波动，已切换为非流式回复')
+      try {
+        const fallbackResp = await chatApi.sendMessage(sessionId, text, kbId)
+        updateAssistantMessage(sessionId, aiMsgId, {
+          streaming: false,
+          content: fallbackResp.data?.content ?? '请求失败，请稍后重试。',
+        })
+      } catch (fallbackError) {
+        updateAssistantMessage(sessionId, aiMsgId, {
+          streaming: false,
+          content: typeof fallbackError === 'string' ? `请求失败：${fallbackError}` : '请求失败，请稍后重试。',
+        })
+      }
     } finally {
       setSending(false)
-    }
-  }
+    }}
 
   return (
     <div className={styles.container}>
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <Title level={5} style={{ margin: 0, color: '#fff' }}>对话列表</Title>
-          <Tooltip title="新建对话">
+          <Title level={5} style={{ margin: 0, color: '#fff' }}>瀵硅瘽鍒楄〃</Title>
+          <Tooltip title="鏂板缓瀵硅瘽">
             <Button
               type="text"
               icon={<PlusOutlined />}
@@ -347,7 +365,7 @@ export default function ChatPage() {
         <div className={styles.sessionList}>
           {sessions.length === 0 && (
             <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>暂无对话</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>鏆傛棤瀵硅瘽</Text>
             </div>
           )}
 
@@ -361,7 +379,7 @@ export default function ChatPage() {
               <div className={styles.sessionMeta}>
                 <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
                 <Popconfirm
-                  title="删除该对话？"
+                  title="鍒犻櫎璇ュ璇濓紵"
                   onConfirm={(event) => {
                     event?.stopPropagation()
                     void handleDeleteSession(session.id)
@@ -387,8 +405,8 @@ export default function ChatPage() {
           ? (
             <div className={styles.emptyChat}>
               <RobotOutlined style={{ fontSize: 52, color: '#CBD5E1', marginBottom: 16 }} />
-              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>智小理 · AI 助手</Title>
-              <Text type="secondary">向 AI 助手提问，它会基于知识库进行回答。</Text>
+              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>鏅哄皬鐞?路 AI 鍔╂墜</Title>
+              <Text type="secondary">鍚?AI 鍔╂墜鎻愰棶锛屽畠浼氬熀浜庣煡璇嗗簱杩涜鍥炵瓟銆?/Text>
             </div>
             )
           : (
@@ -402,14 +420,14 @@ export default function ChatPage() {
 
         <div className={styles.inputArea}>
           {!activeSession && (
-            <Empty description={<span>请先新建或选择一个对话</span>} style={{ marginBottom: 12 }} />
+            <Empty description={<span>璇峰厛鏂板缓鎴栭€夋嫨涓€涓璇?/span>} style={{ marginBottom: 12 }} />
           )}
 
           <div className={styles.inputRow}>
             <Input.TextArea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="输入问题，按 Ctrl+Enter 发送"
+              placeholder="杈撳叆闂锛屾寜 Ctrl+Enter 鍙戦€?
               autoSize={{ minRows: 1, maxRows: 5 }}
               disabled={sending}
               onKeyDown={(e) => {
@@ -427,12 +445,12 @@ export default function ChatPage() {
               onClick={() => void handleSend()}
               style={{ height: 40, paddingInline: 20, borderRadius: 8 }}
             >
-              发送
+              鍙戦€?
             </Button>
           </div>
 
           <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block', textAlign: 'center' }}>
-            AI 回答仅供参考，请结合实际情况进行判断。
+            AI 鍥炵瓟浠呬緵鍙傝€冿紝璇风粨鍚堝疄闄呮儏鍐佃繘琛屽垽鏂€?
           </Text>
         </div>
       </main>

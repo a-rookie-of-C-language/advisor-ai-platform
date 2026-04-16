@@ -1,4 +1,4 @@
-﻿import type { MessageInstance } from 'antd/es/message/interface'
+import type { MessageInstance } from 'antd/es/message/interface'
 
 type MessageContent = Parameters<MessageInstance['open']>[0] | Parameters<MessageInstance['success']>[0]
 
