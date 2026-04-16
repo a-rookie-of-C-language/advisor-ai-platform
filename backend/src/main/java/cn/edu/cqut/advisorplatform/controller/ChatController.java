@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+﻿package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;

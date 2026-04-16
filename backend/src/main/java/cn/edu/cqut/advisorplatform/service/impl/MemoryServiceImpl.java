@@ -43,7 +43,7 @@ public class MemoryServiceImpl implements MemoryService {
 
     @Override
     public List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request) {
-        validateKbOwnership(request.getUserId(), request.getKbId());
+        // 演示阶段放开 kb 访问限制，后续再接入身份与权限体系
 
         int topK = request.getTopK() == null ? 6 : Math.max(1, Math.min(request.getTopK(), 50));
         String query = Optional.ofNullable(request.getQuery()).orElse("").trim();
@@ -62,7 +62,7 @@ public class MemoryServiceImpl implements MemoryService {
     @Override
     @Transactional
     public MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request) {
-        validateKbOwnership(request.getUserId(), request.getKbId());
+        // 演示阶段放开 kb 访问限制，后续再接入身份与权限体系
 
         List<MemoryCandidateItemDTO> candidates = request.getCandidates();
         if (candidates == null || candidates.isEmpty()) {
