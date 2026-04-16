@@ -6,3 +6,5 @@ spring:
 advisor:
   jwt:
     secret: your_base64_encoded_jwt_secret
+  memory:
+    api-token: your_memory_api_token

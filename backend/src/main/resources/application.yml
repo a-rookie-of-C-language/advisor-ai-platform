@@ -34,6 +34,8 @@ advisor:
     expiration: 86400000
   rag:
     upload-dir: ${RAG_UPLOAD_DIR:uploads}
+  memory:
+    api-token: ${MEMORY_API_TOKEN}
 
 logging:
   level:
