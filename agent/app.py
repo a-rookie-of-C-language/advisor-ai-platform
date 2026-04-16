@@ -57,9 +57,9 @@ def _get_memory_orchestrator() -> MemoryOrchestrator | None:
 
 @lru_cache(maxsize=1)
 def _get_llm_extractor() -> OpenAILLMExtractor | None:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("api_key", "").strip()
-    model = os.getenv("OPENAI_MODEL", "").strip() or os.getenv("model_id", "").strip()
-    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or os.getenv("base_url", "").strip() or None
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    model = os.getenv("OPENAI_MODEL", "").strip()
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
 
     if not api_key or not model:
         return None
@@ -131,7 +131,7 @@ def _read_float_env(name: str, default: float) -> float:
         return default
 
 
-def run_indexer() -> None:
+def _build_indexer_from_env() -> DocumentIndexer:
     db_dsn = os.getenv("DATABASE_URL")
     if not db_dsn:
         raise RuntimeError("Missing DATABASE_URL")
@@ -143,7 +143,15 @@ def run_indexer() -> None:
     max_retries = _read_int_env("INDEX_DB_MAX_RETRIES", 2)
     retry_backoff_sec = _read_float_env("INDEX_DB_RETRY_BACKOFF_SEC", 0.5)
 
-    indexer = DocumentIndexer(
+    logger.info(
+        "Agent indexer started. pool=%s-%s, timeout=%ss, retries=%s",
+        db_pool_minconn,
+        db_pool_maxconn,
+        db_statement_timeout_sec,
+        max_retries,
+    )
+
+    return DocumentIndexer(
         db_dsn=db_dsn,
         ollama_base_url=ollama_base_url,
         db_pool_minconn=db_pool_minconn,
@@ -153,14 +161,9 @@ def run_indexer() -> None:
         retry_backoff_sec=retry_backoff_sec,
     )
 
-    logger.info(
-        "Agent indexer started. pool=%s-%s, timeout=%ss, retries=%s",
-        db_pool_minconn,
-        db_pool_maxconn,
-        db_statement_timeout_sec,
-        max_retries,
-    )
 
+def run_indexer() -> None:
+    indexer = _build_indexer_from_env()
     try:
         asyncio.run(indexer.listen())
     except KeyboardInterrupt:
@@ -176,13 +179,67 @@ def run_api() -> None:
     uvicorn.run("app:app", host=host, port=port, reload=False)
 
 
+async def _run_all_async() -> None:
+    import uvicorn
+
+    host = os.getenv("AGENT_API_HOST", "0.0.0.0")
+    port = _read_int_env("AGENT_API_PORT", 8001)
+    logger.info("Agent all-mode started. API at http://%s:%s", host, port)
+
+    indexer = _build_indexer_from_env()
+    config = uvicorn.Config(app, host=host, port=port, reload=False)
+    server = uvicorn.Server(config)
+
+    api_task = asyncio.create_task(server.serve(), name="api-server")
+    indexer_task = asyncio.create_task(indexer.listen(), name="indexer-listener")
+
+    try:
+        while True:
+            if api_task.done():
+                exc = api_task.exception()
+                if exc:
+                    raise exc
+                break
+
+            if indexer_task.done():
+                exc = indexer_task.exception()
+                if exc:
+                    raise exc
+                logger.warning("Indexer exited unexpectedly, stopping API server")
+                server.should_exit = True
+                await api_task
+                break
+
+            await asyncio.sleep(0.5)
+    finally:
+        if not api_task.done():
+            server.should_exit = True
+            await api_task
+
+        if not indexer_task.done():
+            indexer_task.cancel()
+            try:
+                await indexer_task
+            except asyncio.CancelledError:
+                pass
+
+        await indexer.close()
+
+
+def run_all() -> None:
+    try:
+        asyncio.run(_run_all_async())
+    except KeyboardInterrupt:
+        logger.info("All-mode stopped by keyboard interrupt")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Advisor AI Agent")
     parser.add_argument(
         "--mode",
-        choices=["indexer", "api"],
-        default=os.getenv("AGENT_MODE", "indexer"),
-        help="Run mode: indexer or api",
+        choices=["all", "indexer", "api"],
+        default=os.getenv("AGENT_MODE", "all"),
+        help="Run mode: all or indexer or api",
     )
     args = parser.parse_args()
 
@@ -190,7 +247,11 @@ def main() -> None:
         run_api()
         return
 
-    run_indexer()
+    if args.mode == "indexer":
+        run_indexer()
+        return
+
+    run_all()
 
 
 if __name__ == "__main__":
