@@ -252,7 +252,9 @@ export default function ChatPage() {
     const historyMessages = [
       ...targetSession.messages,
       userMessage,
-    ].map((msg) => ({ role: msg.role, content: msg.content }))
+    ]
+      .map((msg) => ({ role: msg.role, content: msg.content.trim() }))
+      .filter((msg) => msg.content.length > 0)
 
     setInputText('')
     setSending(true)
