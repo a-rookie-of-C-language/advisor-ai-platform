@@ -222,12 +222,27 @@ export default function ChatPage() {
     if (!text || sending) {
       return
     }
-    if (!activeSession) {
-      globalMessage.warning('请先选择或新建一个对话')
-      return
+
+    let targetSession = activeSession
+    if (!targetSession) {
+      try {
+        const response = await chatApi.createSession()
+        const created = response.data
+        targetSession = {
+          id: created.id,
+          title: created.title,
+          updatedAt: created.updatedAt,
+          messages: [],
+        }
+        setSessions((prev) => [targetSession!, ...prev])
+        setActiveId(targetSession.id)
+      } catch (error) {
+        globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
+        return
+      }
     }
 
-    const sessionId = activeSession.id
+    const sessionId = targetSession.id
     const userMsgId = Date.now()
     const aiMsgId = userMsgId + 1
 
@@ -235,23 +250,38 @@ export default function ChatPage() {
     const assistantPlaceholder: ChatMessage = { id: aiMsgId, role: 'assistant', content: '', streaming: true }
 
     const historyMessages = [
-      ...activeSession.messages,
+      ...targetSession.messages,
       userMessage,
     ].map((msg) => ({ role: msg.role, content: msg.content }))
 
     setInputText('')
     setSending(true)
-    setSessions((prev) => prev.map((session) => {
-      if (session.id !== sessionId) {
-        return session
+    setSessions((prev) => {
+      let matched = false
+      const mapped = prev.map((session) => {
+        if (session.id !== sessionId) {
+          return session
+        }
+        matched = true
+        const nextTitle = session.messages.length === 0 ? text.slice(0, 5) : session.title
+        return {
+          ...session,
+          title: nextTitle,
+          messages: [...session.messages, userMessage, assistantPlaceholder],
+        }
+      })
+
+      if (matched) {
+        return mapped
       }
-      const nextTitle = session.messages.length === 0 ? text.slice(0, 20) : session.title
-      return {
-        ...session,
-        title: nextTitle,
-        messages: [...session.messages, userMessage, assistantPlaceholder],
-      }
-    }))
+
+      return [{
+        id: sessionId,
+        title: text.slice(0, 5),
+        updatedAt: targetSession!.updatedAt,
+        messages: [userMessage, assistantPlaceholder],
+      }, ...mapped]
+    })
 
     try {
       await chatApi.streamChat(
@@ -379,7 +409,7 @@ export default function ChatPage() {
               onChange={(e) => setInputText(e.target.value)}
               placeholder="输入问题，按 Ctrl+Enter 发送"
               autoSize={{ minRows: 1, maxRows: 5 }}
-              disabled={!activeSession || sending}
+              disabled={sending}
               onKeyDown={(e) => {
                 if (e.ctrlKey && e.key === 'Enter') {
                   void handleSend()
@@ -391,7 +421,7 @@ export default function ChatPage() {
             <Button
               type="primary"
               icon={sending ? <LoadingOutlined /> : <SendOutlined />}
-              disabled={!inputText.trim() || !activeSession}
+              disabled={!inputText.trim() || sending}
               onClick={() => void handleSend()}
               style={{ height: 40, paddingInline: 20, borderRadius: 8 }}
             >

@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class AgentProxyServiceImpl implements AgentProxyService {
 
@@ -73,10 +75,30 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             byte[] buffer = new byte[8192];
             int read;
             while ((read = bodyStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, read);
-                outputStream.flush();
+                try {
+                    outputStream.write(buffer, 0, read);
+                    outputStream.flush();
+                } catch (IOException io) {
+                    if (isClientAbort(io)) {
+                        log.warn("Client disconnected during stream forwarding: {}", io.getMessage());
+                        return;
+                    }
+                    throw io;
+                }
             }
         }
+    }
+
+    private boolean isClientAbort(IOException io) {
+        String msg = io.getMessage();
+        if (msg == null) {
+            return false;
+        }
+        String lower = msg.toLowerCase();
+        return lower.contains("broken pipe")
+                || lower.contains("connection reset")
+                || lower.contains("forcibly closed")
+                || lower.contains("stream closed");
     }
 
     private String buildPayloadJson(ChatStreamRequestDTO request, Long userId) throws IOException {

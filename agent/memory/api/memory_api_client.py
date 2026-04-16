@@ -69,7 +69,13 @@ class MemoryApiClient:
         )
 
     async def get_session_summary(self, session_id: int) -> SessionSummary | None:
-        data = await self._request("GET", f"/api/memory/session-summary/{session_id}")
+        try:
+            data = await self._request("GET", f"/api/memory/session-summary/{session_id}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code == 404:
+                return None
+            raise
+
         body = data.get("data")
         if not body:
             return None
@@ -140,3 +146,4 @@ class MemoryApiClient:
             return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         except ValueError:
             return None
+

@@ -40,7 +40,7 @@ interface StreamHandlers {
 function getAuthHeaders(): HeadersInit {
   const token = useAuthStore.getState().token
   if (!token) {
-    return { 'Content-Type': 'application/json' }
+    throw new Error('未登录，请先登录后再发起对话')
   }
   return {
     'Content-Type': 'application/json',
@@ -135,5 +135,3 @@ export const chatApi = {
     }
   },
 }
-
-
