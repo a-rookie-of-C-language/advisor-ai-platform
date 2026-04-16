@@ -1,9 +1,12 @@
-server:
+﻿server:
   port: 8080
 
 spring:
   profiles:
     active: local
+  mvc:
+    async:
+      request-timeout: 600000
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: ${DB_USERNAME}
@@ -44,3 +47,4 @@ advisor:
 logging:
   level:
     cn.edu.cqut.advisorplatform: DEBUG
+

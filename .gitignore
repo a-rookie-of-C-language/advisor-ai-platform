@@ -13,3 +13,4 @@ agents.md
 .idea/
 .venv/
 .env
+log.txt

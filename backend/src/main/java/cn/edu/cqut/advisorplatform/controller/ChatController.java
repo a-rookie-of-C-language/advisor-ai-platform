@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+﻿package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
@@ -7,13 +7,21 @@ import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +29,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
+@Slf4j
 public class ChatController {
 
     private final AgentProxyService agentProxyService;
@@ -77,13 +86,33 @@ public class ChatController {
             throw new ForbiddenException("未登录或登录已失效");
         }
 
-        StreamingResponseBody body = outputStream ->
+        StreamingResponseBody body = outputStream -> {
+            try {
                 agentProxyService.proxyChatStream(request, currentUser.getId(), outputStream);
+            } catch (Exception ex) {
+                String message = safeJson(ex.getMessage());
+                String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
+                outputStream.write(sseError.getBytes(StandardCharsets.UTF_8));
+                outputStream.flush();
+                log.warn("chat stream proxy failed, sessionId={}, userId={}, error={}",
+                        request.getSessionId(), currentUser.getId(), ex.getMessage());
+            }
+        };
 
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_EVENT_STREAM)
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
                 .header("X-Accel-Buffering", "no")
                 .body(body);
+    }
+
+    private String safeJson(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "stream failed";
+        }
+        return raw.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", " ")
+                .replace("\n", " ");
     }
 }
