@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import asyncio
@@ -51,7 +51,17 @@ def _get_memory_orchestrator() -> MemoryOrchestrator | None:
         logger.error("MEMORY_API_TOKEN is required when MEMORY_API_BASE_URL is configured.")
         raise RuntimeError("Missing MEMORY_API_TOKEN for memory API access")
 
-    api_client = MemoryApiClient(base_url=memory_api_base_url, bearer_token=token)
+    timeout_sec = _read_float_env("MEMORY_API_TIMEOUT_SEC", 30.0)
+    max_retries = _read_int_env("MEMORY_API_MAX_RETRIES", 2)
+    retry_backoff_sec = _read_float_env("MEMORY_API_RETRY_BACKOFF_SEC", 0.3)
+
+    api_client = MemoryApiClient(
+        base_url=memory_api_base_url,
+        timeout_sec=timeout_sec,
+        max_retries=max_retries,
+        retry_backoff_sec=retry_backoff_sec,
+        bearer_token=token,
+    )
     return MemoryOrchestrator(api_client=api_client)
 
 

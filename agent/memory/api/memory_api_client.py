@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from datetime import datetime
@@ -111,11 +111,18 @@ class MemoryApiClient:
                     if not response.content:
                         return {"ok": True, "data": None}
                     return response.json()
-            except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as exc:
+            except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code if exc.response is not None else None
+                # 4xx 一般属于业务或权限问题，立即抛出避免无效重试；仅 429 可继续重试
+                if status_code is not None and 400 <= status_code < 500 and status_code != 429:
+                    raise
                 last_error = exc
-                if attempt >= self._max_retries:
-                    break
-                await asyncio.sleep(self._retry_backoff_sec * (attempt + 1))
+            except (httpx.RequestError, ValueError) as exc:
+                last_error = exc
+
+            if attempt >= self._max_retries:
+                break
+            await asyncio.sleep(self._retry_backoff_sec * (attempt + 1))
 
         if last_error is not None:
             raise last_error
@@ -146,4 +153,3 @@ class MemoryApiClient:
             return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         except ValueError:
             return None
-
