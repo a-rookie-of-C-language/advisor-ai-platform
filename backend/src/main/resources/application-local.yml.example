@@ -7,4 +7,11 @@ advisor:
   jwt:
     secret: your_base64_encoded_jwt_secret
   memory:
-    api-token: your_memory_api_token
+    api-token: arookieofc
+
+  agent:
+    base-url: http://127.0.0.1:8001
+    api-token: arookieofc
+    timeout-ms: 600000
+
+

@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.config;
+package cn.edu.cqut.advisorplatform.config;
 
 import cn.edu.cqut.advisorplatform.config.security.JwtAuthenticationFilter;
 import cn.edu.cqut.advisorplatform.config.security.MemoryApiTokenFilter;
