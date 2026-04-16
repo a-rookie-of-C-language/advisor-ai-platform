@@ -3,6 +3,7 @@ package cn.edu.cqut.advisorplatform.service.impl;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
+import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +53,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     }
 
     @Override
-    public void proxyChatStream(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
+    public ChatStreamProxyResult proxyChatStream(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
         String payload = buildPayloadJson(request, userId);
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
@@ -95,6 +96,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
         StringBuilder sseBuffer = new StringBuilder();
         StringBuilder deltaPreview = new StringBuilder();
+        StringBuilder assistantText = new StringBuilder();
         int deltaCount = 0;
 
         if (debugStream) {
@@ -109,15 +111,13 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                     outputStream.write(buffer, 0, read);
                     outputStream.flush();
 
-                    if (debugStream) {
-                        String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
-                        sseBuffer.append(chunk);
-                        deltaCount += collectDeltaPreview(sseBuffer, deltaPreview);
-                    }
+                    String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
+                    sseBuffer.append(chunk);
+                    deltaCount += collectDeltaAndAnswer(sseBuffer, deltaPreview, assistantText);
                 } catch (IOException io) {
                     if (isClientAbort(io)) {
                         log.warn("Client disconnected during stream forwarding: {}", io.getMessage());
-                        return;
+                        return new ChatStreamProxyResult(assistantText.toString());
                     }
                     throw io;
                 }
@@ -127,9 +127,11 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 log.info("debug_stream java done: deltas={}, answer_preview={}", deltaCount, deltaPreview);
             }
         }
+
+        return new ChatStreamProxyResult(assistantText.toString());
     }
 
-    private int collectDeltaPreview(StringBuilder sseBuffer, StringBuilder deltaPreview) {
+    private int collectDeltaAndAnswer(StringBuilder sseBuffer, StringBuilder deltaPreview, StringBuilder assistantText) {
         int count = 0;
         int blockEnd;
         while ((blockEnd = sseBuffer.indexOf("\n\n")) >= 0) {
@@ -140,11 +142,11 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 continue;
             }
             count++;
-            if (deltaPreview.length() >= DEBUG_PREVIEW_LIMIT) {
-                continue;
+            assistantText.append(delta);
+            if (debugStream && deltaPreview.length() < DEBUG_PREVIEW_LIMIT) {
+                int remain = DEBUG_PREVIEW_LIMIT - deltaPreview.length();
+                deltaPreview.append(delta, 0, Math.min(remain, delta.length()));
             }
-            int remain = DEBUG_PREVIEW_LIMIT - deltaPreview.length();
-            deltaPreview.append(delta, 0, Math.min(remain, delta.length()));
         }
         return count;
     }

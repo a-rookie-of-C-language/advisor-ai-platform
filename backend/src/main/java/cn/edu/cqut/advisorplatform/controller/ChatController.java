@@ -1,11 +1,14 @@
 package cn.edu.cqut.advisorplatform.controller;
 
+import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
+import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
+import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +35,11 @@ import java.util.Map;
 @Slf4j
 public class ChatController {
 
+    private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
+
     private final AgentProxyService agentProxyService;
     private final ChatService chatService;
+    private final ChatMessageService chatMessageService;
 
     @GetMapping("/sessions")
     public ApiResponseDTO<List<Map<String, Object>>> listSessions(@AuthenticationPrincipal UserDO currentUser) {
@@ -81,9 +87,15 @@ public class ChatController {
             throw new ForbiddenException("未登录或登录已失效");
         }
 
+        String userText = extractLastUserMessage(request);
+
         StreamingResponseBody body = outputStream -> {
+            String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
             try {
-                agentProxyService.proxyChatStream(request, currentUser.getId(), outputStream);
+                ChatStreamProxyResult proxyResult = agentProxyService.proxyChatStream(request, currentUser.getId(), outputStream);
+                if (proxyResult != null && proxyResult.getAssistantText() != null && !proxyResult.getAssistantText().isBlank()) {
+                    assistantText = proxyResult.getAssistantText().trim();
+                }
             } catch (Exception ex) {
                 String message = safeJson(ex.getMessage());
                 String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
@@ -91,6 +103,9 @@ public class ChatController {
                 outputStream.flush();
                 log.warn("chat stream proxy failed, sessionId={}, userId={}, error={}",
                         request.getSessionId(), currentUser.getId(), ex.getMessage());
+                assistantText = "请求失败：" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
+            } finally {
+                saveTurnQuietly(request.getSessionId(), currentUser.getId(), userText, assistantText);
             }
         };
 
@@ -99,6 +114,30 @@ public class ChatController {
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
                 .header("X-Accel-Buffering", "no")
                 .body(body);
+    }
+
+    private void saveTurnQuietly(Long sessionId, Long userId, String userText, String assistantText) {
+        try {
+            chatMessageService.saveTurn(sessionId, userId, userText, assistantText);
+        } catch (Exception e) {
+            log.warn("save chat turn failed, sessionId={}, userId={}, error={}", sessionId, userId, e.getMessage());
+        }
+    }
+
+    private String extractLastUserMessage(ChatStreamRequestDTO request) {
+        if (request == null || request.getMessages() == null || request.getMessages().isEmpty()) {
+            return "";
+        }
+        for (int i = request.getMessages().size() - 1; i >= 0; i--) {
+            ChatStreamMessageDTO message = request.getMessages().get(i);
+            if (message == null || message.getRole() == null || message.getContent() == null) {
+                continue;
+            }
+            if ("user".equalsIgnoreCase(message.getRole().trim())) {
+                return message.getContent().trim();
+            }
+        }
+        return "";
     }
 
     private String safeJson(String raw) {
