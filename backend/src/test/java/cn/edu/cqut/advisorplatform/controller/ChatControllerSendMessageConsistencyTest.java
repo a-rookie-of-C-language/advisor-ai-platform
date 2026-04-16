@@ -44,7 +44,8 @@ class ChatControllerSendMessageConsistencyTest {
     @Test
     void sendMessage_shouldReturnCachedAnswerWithoutCallingAgent() throws Exception {
         UserDO user = buildUser();
-        Map<String, String> body = Map.of("content", "hello", "kbId", "1");
+        Map<String, String> body = Map.of("content", "hello", "kbId", "999");
+        when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
         when(chatService.listMessages(1001L, user))
                 .thenReturn(List.of(Map.of("role", "user", "content", "history")));
         when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn("cached answer");
@@ -60,9 +61,10 @@ class ChatControllerSendMessageConsistencyTest {
     }
 
     @Test
-    void sendMessage_shouldCallAgentAndPersistOnCacheMiss() throws Exception {
+    void sendMessage_shouldIgnoreClientKbIdAndUseSessionKbId() throws Exception {
         UserDO user = buildUser();
-        Map<String, String> body = Map.of("content", "hello", "kbId", "1");
+        Map<String, String> body = Map.of("content", "hello", "kbId", "999");
+        when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
         when(chatService.listMessages(1001L, user))
                 .thenReturn(List.of(Map.of("role", "user", "content", "history")));
         when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn(null);
@@ -74,6 +76,10 @@ class ChatControllerSendMessageConsistencyTest {
         assertThat(response.getCode()).isEqualTo(200);
         assertThat(response.getData()).isNotNull();
         assertThat(String.valueOf(response.getData().get("content"))).isEqualTo("assistant reply");
+
+        ArgumentCaptor<ChatStreamRequestDTO> requestCaptor = ArgumentCaptor.forClass(ChatStreamRequestDTO.class);
+        verify(agentProxyService).proxyChatOnce(requestCaptor.capture(), eq(1L));
+        assertThat(requestCaptor.getValue().getKbId()).isEqualTo(0L);
 
         ArgumentCaptor<String> userContent = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> assistantContent = ArgumentCaptor.forClass(String.class);
@@ -91,7 +97,8 @@ class ChatControllerSendMessageConsistencyTest {
     @Test
     void sendMessage_shouldPersistFailurePlaceholderWhenAgentThrows() throws Exception {
         UserDO user = buildUser();
-        Map<String, String> body = Map.of("content", "hello", "kbId", "1");
+        Map<String, String> body = Map.of("content", "hello", "kbId", "999");
+        when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
         when(chatService.listMessages(1001L, user))
                 .thenReturn(List.of(Map.of("role", "user", "content", "history")));
         when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn(null);

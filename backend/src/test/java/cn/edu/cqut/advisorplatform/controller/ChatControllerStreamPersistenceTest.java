@@ -46,12 +46,21 @@ class ChatControllerStreamPersistenceTest {
     void streamChat_shouldPersistAssistantOnSuccess() throws Exception {
         ChatStreamRequestDTO request = buildRequest();
         UserDO user = buildUser();
+        when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
         when(agentProxyService.proxyChatStream(any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class)))
                 .thenReturn(new ChatStreamProxyResult("\u4f60\u597d\uff0c\u6d4b\u8bd5\u56de\u590d"));
 
         StreamingResponseBody body = chatController.streamChat(request, user).getBody();
         assertThat(body).isNotNull();
-        body.writeTo(new ByteArrayOutputStream());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        body.writeTo(out);
+
+        String sse = out.toString(StandardCharsets.UTF_8);
+        assertThat(sse).contains("event:done");
+
+        ArgumentCaptor<ChatStreamRequestDTO> reqCaptor = ArgumentCaptor.forClass(ChatStreamRequestDTO.class);
+        verify(agentProxyService).proxyChatStream(reqCaptor.capture(), anyLong(), any(OutputStream.class));
+        assertThat(reqCaptor.getValue().getKbId()).isEqualTo(0L);
 
         ArgumentCaptor<String> assistantCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatMessageService).saveTurn(anyLong(), anyLong(), any(String.class), any(String.class), assistantCaptor.capture());
@@ -62,6 +71,7 @@ class ChatControllerStreamPersistenceTest {
     void streamChat_shouldPersistErrorPlaceholderOnFailure() throws Exception {
         ChatStreamRequestDTO request = buildRequest();
         UserDO user = buildUser();
+        when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
         doThrow(new RuntimeException("agent boom"))
                 .when(agentProxyService)
                 .proxyChatStream(any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class));
@@ -73,6 +83,7 @@ class ChatControllerStreamPersistenceTest {
 
         String sse = out.toString(StandardCharsets.UTF_8);
         assertThat(sse).contains("event:error");
+        assertThat(sse).contains("event:done");
 
         ArgumentCaptor<String> assistantCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatMessageService).saveTurn(anyLong(), anyLong(), any(String.class), any(String.class), assistantCaptor.capture());
@@ -86,7 +97,7 @@ class ChatControllerStreamPersistenceTest {
 
         ChatStreamRequestDTO request = new ChatStreamRequestDTO();
         request.setSessionId(1001L);
-        request.setKbId(1L);
+        request.setKbId(999L);
         request.setMessages(List.of(user));
         return request;
     }
