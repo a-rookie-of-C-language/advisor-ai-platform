@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryItem
 
@@ -28,12 +30,14 @@ class MemoryRetrieval:
 
     def rerank(self, items: list[MemoryItem], query: str) -> list[MemoryItem]:
         query_tokens = self._tokens(query)
+        now = datetime.now(timezone.utc)
 
         def score(item: MemoryItem) -> float:
             content_tokens = self._tokens(item.content)
             overlap = len(query_tokens.intersection(content_tokens))
             lexical = overlap / max(len(query_tokens), 1)
-            return 0.65 * item.confidence + 0.25 * item.score + 0.10 * lexical
+            decay = self._governance.compute_time_decay(item, now=now)
+            return 0.50 * item.score + 0.30 * item.confidence + 0.20 * decay + 0.10 * lexical
 
         return sorted(items, key=score, reverse=True)
 

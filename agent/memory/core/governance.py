@@ -10,9 +10,29 @@ class MemoryGovernance:
         self,
         min_confidence: float = 0.65,
         max_candidates_per_turn: int = 6,
+        summary_turn_threshold: int = 10,
+        summary_token_threshold: int = 2400,
+        llm_extract_enabled: bool = True,
+        memory_half_life_days: float = 30.0,
     ) -> None:
         self._min_confidence = min_confidence
         self._max_candidates_per_turn = max_candidates_per_turn
+        self._summary_turn_threshold = summary_turn_threshold
+        self._summary_token_threshold = summary_token_threshold
+        self._llm_extract_enabled = llm_extract_enabled
+        self._memory_half_life_days = max(memory_half_life_days, 1.0)
+
+    @property
+    def summary_turn_threshold(self) -> int:
+        return self._summary_turn_threshold
+
+    @property
+    def summary_token_threshold(self) -> int:
+        return self._summary_token_threshold
+
+    @property
+    def llm_extract_enabled(self) -> bool:
+        return self._llm_extract_enabled
 
     def should_write_candidate(self, candidate: MemoryCandidate) -> bool:
         return bool(candidate.content.strip()) and candidate.confidence >= self._min_confidence
@@ -48,6 +68,19 @@ class MemoryGovernance:
             ):
                 grouped[key] = item
         return list(grouped.values())
+
+    def compute_time_decay(self, item: MemoryItem, now: datetime | None = None) -> float:
+        reference = item.updated_at or item.created_at
+        if reference is None:
+            return 0.5
+
+        if reference.tzinfo is None:
+            reference = reference.replace(tzinfo=timezone.utc)
+
+        now_utc = now or datetime.now(timezone.utc)
+        age_seconds = max((now_utc - reference).total_seconds(), 0.0)
+        age_days = age_seconds / 86400.0
+        return pow(0.5, age_days / self._memory_half_life_days)
 
     @staticmethod
     def _normalize_text(value: str) -> str:
