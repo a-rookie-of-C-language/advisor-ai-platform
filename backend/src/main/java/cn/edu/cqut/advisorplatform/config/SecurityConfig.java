@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.config;
+﻿package cn.edu.cqut.advisorplatform.config;
 
 import cn.edu.cqut.advisorplatform.config.security.JwtAuthenticationFilter;
 import cn.edu.cqut.advisorplatform.config.security.MemoryApiTokenFilter;
@@ -50,8 +50,8 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(memoryApiTokenFilter, JwtAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(memoryApiTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter, MemoryApiTokenFilter.class);
 
         return http.build();
     }
