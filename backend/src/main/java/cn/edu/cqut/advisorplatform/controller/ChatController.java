@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +91,7 @@ public class ChatController {
         }
 
         String userText = extractLastUserMessage(request);
+        String turnId = buildTurnId(request, currentUser.getId());
 
         StreamingResponseBody body = outputStream -> {
             String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
@@ -105,7 +109,7 @@ public class ChatController {
                         request.getSessionId(), currentUser.getId(), ex.getMessage());
                 assistantText = "请求失败：" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
             } finally {
-                saveTurnQuietly(request.getSessionId(), currentUser.getId(), userText, assistantText);
+                saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText);
             }
         };
 
@@ -116,11 +120,12 @@ public class ChatController {
                 .body(body);
     }
 
-    private void saveTurnQuietly(Long sessionId, Long userId, String userText, String assistantText) {
+    private void saveTurnQuietly(Long sessionId, Long userId, String turnId, String userText, String assistantText) {
         try {
-            chatMessageService.saveTurn(sessionId, userId, userText, assistantText);
+            chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
         } catch (Exception e) {
-            log.warn("save chat turn failed, sessionId={}, userId={}, error={}", sessionId, userId, e.getMessage());
+            log.warn("save chat turn failed, sessionId={}, userId={}, turnId={}, error={}",
+                    sessionId, userId, turnId, e.getMessage());
         }
     }
 
@@ -138,6 +143,32 @@ public class ChatController {
             }
         }
         return "";
+    }
+
+    private String buildTurnId(ChatStreamRequestDTO request, Long userId) {
+        StringBuilder normalized = new StringBuilder();
+        normalized.append(userId == null ? 0 : userId).append('|');
+        normalized.append(request.getSessionId() == null ? 0 : request.getSessionId()).append('|');
+        normalized.append(request.getKbId() == null ? 0 : request.getKbId()).append('|');
+
+        if (request.getMessages() != null) {
+            for (ChatStreamMessageDTO message : request.getMessages()) {
+                if (message == null) {
+                    continue;
+                }
+                String role = message.getRole() == null ? "" : message.getRole().trim().toLowerCase();
+                String content = message.getContent() == null ? "" : message.getContent().trim();
+                normalized.append(role).append(':').append(content).append('|');
+            }
+        }
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(normalized.toString().getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 
     private String safeJson(String raw) {

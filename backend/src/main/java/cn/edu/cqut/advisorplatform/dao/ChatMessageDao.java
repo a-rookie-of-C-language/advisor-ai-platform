@@ -8,4 +8,6 @@ import java.util.List;
 public interface ChatMessageDao extends JpaRepository<ChatMessageDO, Long> {
 
     List<ChatMessageDO> findBySessionIdOrderByCreatedAtAsc(Long sessionId);
+
+    boolean existsBySessionIdAndTurnIdAndRole(Long sessionId, String turnId, String role);
 }
