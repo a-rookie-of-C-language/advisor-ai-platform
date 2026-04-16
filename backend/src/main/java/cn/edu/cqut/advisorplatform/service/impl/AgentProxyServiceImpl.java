@@ -54,6 +54,15 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
     @Override
     public ChatStreamProxyResult proxyChatStream(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
+        return proxyInternal(request, userId, outputStream);
+    }
+
+    @Override
+    public ChatStreamProxyResult proxyChatOnce(ChatStreamRequestDTO request, Long userId) throws IOException {
+        return proxyInternal(request, userId, null);
+    }
+
+    private ChatStreamProxyResult proxyInternal(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
         String payload = buildPayloadJson(request, userId);
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
@@ -107,19 +116,21 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             byte[] buffer = new byte[8192];
             int read;
             while ((read = bodyStream.read(buffer)) != -1) {
-                try {
-                    outputStream.write(buffer, 0, read);
-                    outputStream.flush();
+                String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
+                sseBuffer.append(chunk);
+                deltaCount += collectDeltaAndAnswer(sseBuffer, deltaPreview, assistantText);
 
-                    String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
-                    sseBuffer.append(chunk);
-                    deltaCount += collectDeltaAndAnswer(sseBuffer, deltaPreview, assistantText);
-                } catch (IOException io) {
-                    if (isClientAbort(io)) {
-                        log.warn("Client disconnected during stream forwarding: {}", io.getMessage());
-                        return new ChatStreamProxyResult(assistantText.toString());
+                if (outputStream != null) {
+                    try {
+                        outputStream.write(buffer, 0, read);
+                        outputStream.flush();
+                    } catch (IOException io) {
+                        if (isClientAbort(io)) {
+                            log.warn("Client disconnected during stream forwarding: {}", io.getMessage());
+                            return new ChatStreamProxyResult(assistantText.toString());
+                        }
+                        throw io;
                     }
-                    throw io;
                 }
             }
         } finally {

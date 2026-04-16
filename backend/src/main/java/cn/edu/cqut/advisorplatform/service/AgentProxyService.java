@@ -9,4 +9,6 @@ import java.io.OutputStream;
 public interface AgentProxyService {
 
     ChatStreamProxyResult proxyChatStream(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException;
+
+    ChatStreamProxyResult proxyChatOnce(ChatStreamRequestDTO request, Long userId) throws IOException;
 }

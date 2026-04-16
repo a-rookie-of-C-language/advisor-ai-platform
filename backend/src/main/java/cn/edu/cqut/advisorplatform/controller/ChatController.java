@@ -4,6 +4,7 @@ import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
@@ -28,6 +29,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -71,14 +73,46 @@ public class ChatController {
     @PostMapping("/sessions/{sessionId}/messages")
     public ApiResponseDTO<Map<String, Object>> sendMessage(
             @PathVariable Long sessionId,
-            @RequestBody Map<String, String> body) {
-        String userContent = body.getOrDefault("content", "");
-        return ApiResponseDTO.success(Map.of(
-                "id", System.currentTimeMillis(),
-                "role", "assistant",
-                "content", "这是来自后端的 mock 回答，您的问题是：" + userContent,
-                "sources", List.of()
-        ));
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDO currentUser
+    ) {
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new ForbiddenException("未登录或登录已失效");
+        }
+
+        String userContent = body.getOrDefault("content", "").trim();
+        if (userContent.isBlank()) {
+            throw new BadRequestException("content is blank");
+        }
+
+        long kbId = parseKbId(body.get("kbId"));
+        List<ChatStreamMessageDTO> history = buildHistoryMessages(sessionId, currentUser, userContent);
+
+        ChatStreamRequestDTO request = new ChatStreamRequestDTO();
+        request.setSessionId(sessionId);
+        request.setKbId(kbId);
+        request.setMessages(history);
+
+        String turnId = buildTurnId(request, currentUser.getId());
+        String cached = chatMessageService.findAssistantContent(sessionId, currentUser.getId(), turnId);
+        if (cached != null && !cached.isBlank()) {
+            return ApiResponseDTO.success(buildAssistantResponse(cached));
+        }
+
+        String assistantText;
+        try {
+            ChatStreamProxyResult result = agentProxyService.proxyChatOnce(request, currentUser.getId());
+            assistantText = result == null ? "" : result.getAssistantText();
+        } catch (Exception e) {
+            assistantText = "请求失败：" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
+        }
+
+        if (assistantText == null || assistantText.trim().isBlank()) {
+            assistantText = ASSISTANT_ERROR_PLACEHOLDER;
+        }
+
+        chatMessageService.saveTurn(sessionId, currentUser.getId(), turnId, userContent, assistantText);
+        return ApiResponseDTO.success(buildAssistantResponse(assistantText));
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -118,6 +152,57 @@ public class ChatController {
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
                 .header("X-Accel-Buffering", "no")
                 .body(body);
+    }
+
+    private Map<String, Object> buildAssistantResponse(String assistantText) {
+        return Map.of(
+                "id", System.currentTimeMillis(),
+                "role", "assistant",
+                "content", assistantText,
+                "sources", List.of()
+        );
+    }
+
+    private List<ChatStreamMessageDTO> buildHistoryMessages(Long sessionId, UserDO currentUser, String userContent) {
+        List<Map<String, Object>> persisted = chatService.listMessages(sessionId, currentUser);
+        List<ChatStreamMessageDTO> result = new ArrayList<>();
+
+        for (Map<String, Object> row : persisted) {
+            Object roleObj = row.get("role");
+            Object contentObj = row.get("content");
+            if (roleObj == null || contentObj == null) {
+                continue;
+            }
+            String role = String.valueOf(roleObj).trim();
+            String content = String.valueOf(contentObj).trim();
+            if (content.isBlank()) {
+                continue;
+            }
+            if (!"user".equals(role) && !"assistant".equals(role) && !"system".equals(role)) {
+                continue;
+            }
+            ChatStreamMessageDTO dto = new ChatStreamMessageDTO();
+            dto.setRole(role);
+            dto.setContent(content);
+            result.add(dto);
+        }
+
+        ChatStreamMessageDTO user = new ChatStreamMessageDTO();
+        user.setRole("user");
+        user.setContent(userContent);
+        result.add(user);
+        return result;
+    }
+
+    private long parseKbId(String rawKbId) {
+        if (rawKbId == null || rawKbId.trim().isEmpty()) {
+            return 1L;
+        }
+        try {
+            return Long.parseLong(rawKbId.trim());
+        } catch (NumberFormatException e) {
+            return 1L;
+        }
     }
 
     private void saveTurnQuietly(Long sessionId, Long userId, String turnId, String userText, String assistantText) {
