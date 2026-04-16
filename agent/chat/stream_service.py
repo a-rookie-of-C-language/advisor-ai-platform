@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
 from llm.base_provider import BaseLLMProvider, ChatMessage
@@ -10,6 +11,7 @@ from memory.pipeline.work_memory import WorkMemory
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
+logger = logging.getLogger(__name__)
 
 
 class ChatStreamService:
@@ -106,16 +108,19 @@ class ChatStreamService:
 
             answer = "".join(answer_parts).strip()
             if memory_enabled and answer:
-                await self._memory_orchestrator.flush(
-                    user_id=user_id,
-                    session_id=session_id,
-                    kb_id=kb_id,
-                    user_text=user_query,
-                    assistant_text=answer,
-                    recent_messages=self._to_memory_messages(validated_messages)
-                    + [{"role": "assistant", "content": answer}],
-                    llm_extractor=self._llm_extractor,
-                )
+                try:
+                    await self._memory_orchestrator.flush(
+                        user_id=user_id,
+                        session_id=session_id,
+                        kb_id=kb_id,
+                        user_text=user_query,
+                        assistant_text=answer,
+                        recent_messages=self._to_memory_messages(validated_messages)
+                        + [{"role": "assistant", "content": answer}],
+                        llm_extractor=self._llm_extractor,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Memory flush failed, skip writeback: %s", exc)
 
             yield self._serialize_event("end", {"message": "stream_finished"})
         except Exception as exc:  # noqa: BLE001
