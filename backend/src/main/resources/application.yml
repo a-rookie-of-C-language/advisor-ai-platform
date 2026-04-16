@@ -43,8 +43,8 @@ advisor:
     base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
     api-token: ${MEMORY_API_TOKEN:arookieofc}
     timeout-ms: ${AGENT_TIMEOUT_MS:600000}
+    debug-stream: ${DEBUG_STREAM:false}
 
 logging:
   level:
     cn.edu.cqut.advisorplatform: DEBUG
-

@@ -1,7 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
 from llm.base_provider import BaseLLMProvider, ChatMessage
@@ -25,6 +26,12 @@ class ChatStreamService:
         self._memory_orchestrator = memory_orchestrator
         self._work_memory = WorkMemory()
         self._llm_extractor = llm_extractor
+        self._debug_stream = self._read_debug_stream()
+
+    @staticmethod
+    def _read_debug_stream() -> bool:
+        raw = os.getenv("DEBUG_STREAM", "").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:
@@ -101,12 +108,30 @@ class ChatStreamService:
         yield self._serialize_event("start", {"message": "stream_started"})
 
         answer_parts: list[str] = []
+        debug_preview: list[str] = []
+        debug_chars = 0
+        debug_limit = 200
+        debug_delta_count = 0
         try:
             async for delta in self._provider.stream_chat(model_messages):
                 answer_parts.append(delta)
+                if self._debug_stream and debug_chars < debug_limit:
+                    remain = debug_limit - debug_chars
+                    piece = delta[:remain]
+                    if piece:
+                        debug_preview.append(piece)
+                        debug_chars += len(piece)
+                if self._debug_stream:
+                    debug_delta_count += 1
                 yield self._serialize_event("delta", {"text": delta})
 
             answer = "".join(answer_parts).strip()
+            if self._debug_stream:
+                logger.info(
+                    "debug_stream python done: deltas=%s, answer_preview=%s",
+                    debug_delta_count,
+                    "".join(debug_preview),
+                )
             if memory_enabled and answer:
                 try:
                     await self._memory_orchestrator.flush(
@@ -124,4 +149,11 @@ class ChatStreamService:
 
             yield self._serialize_event("end", {"message": "stream_finished"})
         except Exception as exc:  # noqa: BLE001
+            if self._debug_stream:
+                logger.warning(
+                    "debug_stream python error: deltas=%s, answer_preview=%s, error=%s",
+                    debug_delta_count,
+                    "".join(debug_preview),
+                    exc,
+                )
             yield self._serialize_event("error", {"message": str(exc)})

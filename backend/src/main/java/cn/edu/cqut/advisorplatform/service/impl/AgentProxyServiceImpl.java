@@ -4,6 +4,7 @@ import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,20 +27,25 @@ import java.util.Map;
 @Service
 public class AgentProxyServiceImpl implements AgentProxyService {
 
+    private static final int DEBUG_PREVIEW_LIMIT = 200;
+
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final String agentBaseUrl;
     private final String agentApiToken;
+    private final boolean debugStream;
 
     public AgentProxyServiceImpl(
             ObjectMapper objectMapper,
             @Value("${advisor.agent.base-url:http://127.0.0.1:8001}") String agentBaseUrl,
             @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:arookieofc}}") String agentApiToken,
-            @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs
+            @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs,
+            @Value("${advisor.agent.debug-stream:${DEBUG_STREAM:false}}") boolean debugStream
     ) {
         this.objectMapper = objectMapper;
         this.agentBaseUrl = agentBaseUrl;
         this.agentApiToken = agentApiToken;
+        this.debugStream = debugStream;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(Math.max(timeoutMs, 1000L)))
                 .build();
@@ -71,6 +77,14 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             throw new BadRequestException("agent stream failed: http " + response.statusCode());
         }
 
+        StringBuilder sseBuffer = new StringBuilder();
+        StringBuilder deltaPreview = new StringBuilder();
+        int deltaCount = 0;
+
+        if (debugStream) {
+            log.info("debug_stream java start: sessionId={}, userId={}", request.getSessionId(), userId);
+        }
+
         try (InputStream bodyStream = response.body()) {
             byte[] buffer = new byte[8192];
             int read;
@@ -78,6 +92,12 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 try {
                     outputStream.write(buffer, 0, read);
                     outputStream.flush();
+
+                    if (debugStream) {
+                        String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
+                        sseBuffer.append(chunk);
+                        deltaCount += collectDeltaPreview(sseBuffer, deltaPreview);
+                    }
                 } catch (IOException io) {
                     if (isClientAbort(io)) {
                         log.warn("Client disconnected during stream forwarding: {}", io.getMessage());
@@ -86,6 +106,56 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                     throw io;
                 }
             }
+        } finally {
+            if (debugStream) {
+                log.info("debug_stream java done: deltas={}, answer_preview={}", deltaCount, deltaPreview);
+            }
+        }
+    }
+
+    private int collectDeltaPreview(StringBuilder sseBuffer, StringBuilder deltaPreview) {
+        int count = 0;
+        int blockEnd;
+        while ((blockEnd = sseBuffer.indexOf("\n\n")) >= 0) {
+            String block = sseBuffer.substring(0, blockEnd);
+            sseBuffer.delete(0, blockEnd + 2);
+            String delta = extractDelta(block);
+            if (delta == null || delta.isBlank()) {
+                continue;
+            }
+            count++;
+            if (deltaPreview.length() >= DEBUG_PREVIEW_LIMIT) {
+                continue;
+            }
+            int remain = DEBUG_PREVIEW_LIMIT - deltaPreview.length();
+            deltaPreview.append(delta, 0, Math.min(remain, delta.length()));
+        }
+        return count;
+    }
+
+    private String extractDelta(String sseBlock) {
+        String[] lines = sseBlock.split("\n");
+        String event = "message";
+        StringBuilder dataBuilder = new StringBuilder();
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("event:")) {
+                event = trimmed.substring(6).trim();
+            } else if (trimmed.startsWith("data:")) {
+                dataBuilder.append(trimmed.substring(5).trim());
+            }
+        }
+
+        if (!"delta".equals(event) || dataBuilder.isEmpty()) {
+            return null;
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(dataBuilder.toString());
+            return node.path("text").asText("");
+        } catch (Exception e) {
+            return null;
         }
     }
 
