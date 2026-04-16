@@ -46,7 +46,11 @@ def _get_memory_orchestrator() -> MemoryOrchestrator | None:
     if not memory_api_base_url:
         return None
 
-    token = os.getenv("MEMORY_API_TOKEN", "").strip() or None
+    token = os.getenv("MEMORY_API_TOKEN", "").strip()
+    if not token:
+        logger.error("MEMORY_API_TOKEN is required when MEMORY_API_BASE_URL is configured.")
+        raise RuntimeError("Missing MEMORY_API_TOKEN for memory API access")
+
     api_client = MemoryApiClient(base_url=memory_api_base_url, bearer_token=token)
     return MemoryOrchestrator(api_client=api_client)
 
