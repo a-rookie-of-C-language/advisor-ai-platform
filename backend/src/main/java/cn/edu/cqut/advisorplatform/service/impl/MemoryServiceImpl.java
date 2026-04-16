@@ -1,7 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.dao.SessionSummaryDao;
 import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateItemDTO;
@@ -12,11 +11,9 @@ import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO
 import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
-import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.MemoryService;
 import cn.edu.cqut.advisorplatform.utils.Assert;
@@ -38,13 +35,10 @@ public class MemoryServiceImpl implements MemoryService {
 
     private final UserMemoryDao userMemoryDao;
     private final SessionSummaryDao sessionSummaryDao;
-    private final RagKnowledgeBaseDao knowledgeBaseDao;
     private final ChatSessionDao chatSessionDao;
 
     @Override
     public List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request) {
-        // 演示阶段放开 kb 访问限制，后续再接入身份与权限体系
-
         int topK = request.getTopK() == null ? 6 : Math.max(1, Math.min(request.getTopK(), 50));
         String query = Optional.ofNullable(request.getQuery()).orElse("").trim();
 
@@ -62,8 +56,6 @@ public class MemoryServiceImpl implements MemoryService {
     @Override
     @Transactional
     public MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request) {
-        // 演示阶段放开 kb 访问限制，后续再接入身份与权限体系
-
         List<MemoryCandidateItemDTO> candidates = request.getCandidates();
         if (candidates == null || candidates.isEmpty()) {
             return MemoryCandidateUpsertResponseDTO.of(0, 0, "no_candidates");
@@ -133,15 +125,7 @@ public class MemoryServiceImpl implements MemoryService {
 
     @Override
     public void healthCheck() {
-        // no-op, endpoint availability only
-    }
-
-    private void validateKbOwnership(Long userId, Long kbId) {
-        RagKnowledgeBaseDO kb = knowledgeBaseDao.findById(kbId)
-                .orElseThrow(() -> new NotFoundException("knowledge base not found"));
-        if (kb.getCreatedBy() == null || kb.getCreatedBy().getId() == null || !kb.getCreatedBy().getId().equals(userId)) {
-            throw new ForbiddenException("forbidden knowledge base access");
-        }
+        // no-op
     }
 
     private String extractMemoryKey(Map<String, Object> tags) {

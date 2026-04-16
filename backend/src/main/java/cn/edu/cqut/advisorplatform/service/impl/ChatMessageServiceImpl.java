@@ -23,8 +23,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     private static final String ROLE_USER = "user";
     private static final String ROLE_ASSISTANT = "assistant";
-    private static final String DEFAULT_TITLE = "新对话";
-    private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
+    private static final String DEFAULT_TITLE = "\u65b0\u5bf9\u8bdd";
+    private static final String ASSISTANT_ERROR_PLACEHOLDER = "\u8bf7\u6c42\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
 
     private final ChatMessageDao chatMessageDao;
     private final ChatSessionDao chatSessionDao;
@@ -96,10 +96,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     private ChatSessionDO getOwnedSession(Long sessionId, Long userId) {
         ChatSessionDO session = chatSessionDao.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("会话不存在"));
+                .orElseThrow(() -> new NotFoundException("\u4f1a\u8bdd\u4e0d\u5b58\u5728"));
         Long ownerId = session.getUser() == null ? null : session.getUser().getId();
         if (ownerId == null || !ownerId.equals(userId)) {
-            throw new ForbiddenException("无权访问该会话");
+            throw new ForbiddenException("\u65e0\u6743\u8bbf\u95ee\u8be5\u4f1a\u8bdd");
         }
         return session;
     }

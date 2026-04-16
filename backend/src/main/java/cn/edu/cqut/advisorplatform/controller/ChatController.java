@@ -45,7 +45,7 @@ import java.util.Map;
 public class ChatController {
 
     private static final String TRACE_HEADER = "X-Trace-Id";
-    private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
+    private static final String ASSISTANT_ERROR_PLACEHOLDER = "\u8bf7\u6c42\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
 
     private final AgentProxyService agentProxyService;
     private final ChatService chatService;
@@ -80,9 +80,9 @@ public class ChatController {
             @PathVariable Long sessionId,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDO currentUser
-    ) {
+    ) throws java.io.IOException {
         if (currentUser == null || currentUser.getId() == null) {
-            throw new ForbiddenException("未登录或登录已失效");
+            throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
         }
 
         String userContent = body.getOrDefault("content", "").trim();
@@ -121,7 +121,7 @@ public class ChatController {
                 ChatStreamProxyResult result = agentProxyService.proxyChatOnce(request, currentUser.getId());
                 assistantText = result == null ? "" : result.getAssistantText();
             } catch (Exception e) {
-                assistantText = "请求失败：" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
+                assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
                 log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
             }
 
@@ -143,7 +143,7 @@ public class ChatController {
             @AuthenticationPrincipal UserDO currentUser
     ) {
         if (currentUser == null || currentUser.getId() == null) {
-            throw new ForbiddenException("未登录或登录已失效");
+            throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
         }
 
         String userText = extractLastUserMessage(request);
@@ -176,7 +176,7 @@ public class ChatController {
                 outputStream.write(sseError.getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();
                 log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(ex.getMessage()));
-                assistantText = "请求失败：" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
+                assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
             } finally {
                 saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText);
                 log.info("chat_stream done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
