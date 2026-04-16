@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+﻿package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
@@ -163,6 +163,7 @@ public class ChatController {
             long startAt = System.currentTimeMillis();
             LogTraceUtil.put(traceId, request.getSessionId(), turnId, currentUser.getId());
             String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
+            String finishReason = "stop";
             try {
                 log.info("chat_stream start");
                 ChatStreamProxyResult proxyResult = agentProxyService.proxyChatStream(request, currentUser.getId(), outputStream);
@@ -171,13 +172,12 @@ public class ChatController {
                 }
                 log.info("chat_stream proxy_done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
             } catch (Exception ex) {
-                String message = safeJson(ex.getMessage());
-                String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
-                outputStream.write(sseError.getBytes(StandardCharsets.UTF_8));
-                outputStream.flush();
+                finishReason = "error";
+                writeErrorEvent(outputStream, ex.getMessage());
                 log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(ex.getMessage()));
                 assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
             } finally {
+                writeDoneEvent(outputStream, finishReason, turnId, traceId);
                 saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText);
                 log.info("chat_stream done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
                 LogTraceUtil.clear();
@@ -300,6 +300,32 @@ public class ChatController {
                 .replace("\"", "\\\"")
                 .replace("\r", " ")
                 .replace("\n", " ");
+    }
+
+    private void writeErrorEvent(java.io.OutputStream outputStream, String rawMessage) {
+        String message = safeJson(rawMessage);
+        String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
+        try {
+            outputStream.write(sseError.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        } catch (Exception ignored) {
+            // client might already disconnect
+        }
+    }
+
+    private void writeDoneEvent(java.io.OutputStream outputStream, String finishReason, String turnId, String traceId) {
+        String safeFinishReason = safeJson(finishReason);
+        String safeTurnId = safeJson(turnId);
+        String safeTraceId = safeJson(traceId);
+        String sseDone = "event:done\ndata:{\"finish_reason\":\"" + safeFinishReason
+                + "\",\"turnId\":\"" + safeTurnId
+                + "\",\"traceId\":\"" + safeTraceId + "\"}\n\n";
+        try {
+            outputStream.write(sseDone.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        } catch (Exception ignored) {
+            // client might already disconnect
+        }
     }
 
     private String resolveTraceIdFromRequest() {

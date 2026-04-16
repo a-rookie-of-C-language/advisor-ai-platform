@@ -1,4 +1,4 @@
-import request from './request'
+﻿import request from './request'
 import { useAuthStore } from '../store/authStore'
 
 export interface ChatSessionDTO {
@@ -44,10 +44,13 @@ interface StreamHandlers {
   onError?: (message: string) => void
 }
 
+const FIRST_PACKET_TIMEOUT_MS = 30_000
+const IDLE_TIMEOUT_MS = 60_000
+
 function getAuthHeaders(): HeadersInit {
   const token = useAuthStore.getState().token
   if (!token) {
-    throw new Error('未登录，请先登录后再发起对话')
+    throw new Error('auth token missing')
   }
   return {
     'Content-Type': 'application/json',
@@ -96,74 +99,135 @@ export const chatApi = {
     }),
 
   streamChat: async (payload: StreamPayload, handlers: StreamHandlers): Promise<void> => {
-    const response = await fetch('/api/chat/stream', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    })
+    const controller = new AbortController()
+    let timeoutType: 'first_packet' | 'idle' | null = null
+    let firstPacketTimer: ReturnType<typeof setTimeout> | null = null
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
 
-    if (!response.ok || !response.body) {
-      throw new Error(`stream failed: http ${response.status}`)
+    const clearFirstPacketTimer = () => {
+      if (firstPacketTimer) {
+        clearTimeout(firstPacketTimer)
+        firstPacketTimer = null
+      }
     }
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder('utf-8')
-    let buffer = ''
-    let streamFinished = false
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) {
-        break
+    const clearIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer)
+        idleTimer = null
       }
-      buffer += decoder.decode(value, { stream: true })
-      buffer = buffer.replace(/\r/g, '')
+    }
 
-      let splitIndex = buffer.indexOf('\n\n')
-      while (splitIndex >= 0) {
-        const rawBlock = buffer.slice(0, splitIndex)
-        buffer = buffer.slice(splitIndex + 2)
+    const startFirstPacketTimer = () => {
+      clearFirstPacketTimer()
+      firstPacketTimer = setTimeout(() => {
+        timeoutType = 'first_packet'
+        controller.abort()
+      }, FIRST_PACKET_TIMEOUT_MS)
+    }
 
-        const parsed = parseSseBlock(rawBlock)
-        if (parsed) {
-          try {
-            const data = JSON.parse(parsed.data) as { text?: string; message?: string }
+    const resetIdleTimer = () => {
+      clearIdleTimer()
+      idleTimer = setTimeout(() => {
+        timeoutType = 'idle'
+        controller.abort()
+      }, IDLE_TIMEOUT_MS)
+    }
+
+    startFirstPacketTimer()
+
+    try {
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      })
+
+      if (!response.ok || !response.body) {
+        throw new Error(`stream failed: http ${response.status}`)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
+      let sawAnyEvent = false
+      let sawDone = false
+      let sawError = false
+      let latestError = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) {
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+        buffer = buffer.replace(/\r/g, '')
+
+        let splitIndex = buffer.indexOf('\n\n')
+        while (splitIndex >= 0) {
+          const rawBlock = buffer.slice(0, splitIndex)
+          buffer = buffer.slice(splitIndex + 2)
+
+          const parsed = parseSseBlock(rawBlock)
+          if (parsed) {
+            if (!sawAnyEvent) {
+              sawAnyEvent = true
+              clearFirstPacketTimer()
+            }
+            resetIdleTimer()
+
+            let data: { text?: string; message?: string } = {}
+            try {
+              data = JSON.parse(parsed.data) as { text?: string; message?: string }
+            } catch {
+              data = { message: parsed.data }
+            }
+
             if (parsed.event === 'start') {
               handlers.onStart?.()
             } else if (parsed.event === 'delta' && data.text) {
               handlers.onDelta?.(data.text)
-            } else if (parsed.event === 'end') {
-              handlers.onEnd?.()
-              streamFinished = true
-              await reader.cancel()
-              return
             } else if (parsed.event === 'error') {
-              handlers.onError?.(data.message ?? 'stream error')
-              streamFinished = true
-              await reader.cancel()
-              return
-            }
-          } catch {
-            if (parsed.event === 'error') {
-              handlers.onError?.(parsed.data)
-              streamFinished = true
+              sawError = true
+              latestError = data.message ?? 'stream error'
+              handlers.onError?.(latestError)
+            } else if (parsed.event === 'done' || parsed.event === 'end') {
+              sawDone = true
+              handlers.onEnd?.()
               await reader.cancel()
               return
             }
           }
+
+          splitIndex = buffer.indexOf('\n\n')
         }
-
-        splitIndex = buffer.indexOf('\n\n')
       }
-    }
 
-    if (!streamFinished && buffer.trim().length > 0) {
-      const parsed = parseSseBlock(buffer)
-      if (parsed?.event === 'end') {
-        handlers.onEnd?.()
-      } else if (parsed?.event === 'error') {
-        handlers.onError?.(parsed.data)
+      if (sawDone) {
+        return
       }
+
+      if (sawError) {
+        throw new Error(latestError || 'stream error without done')
+      }
+
+      throw new Error('stream closed without done event')
+    } catch (error) {
+      if (timeoutType === 'first_packet') {
+        throw new Error('stream timeout: first packet > 30s')
+      }
+      if (timeoutType === 'idle') {
+        throw new Error('stream timeout: idle > 60s')
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('stream aborted')
+      }
+      throw error
+    } finally {
+      clearFirstPacketTimer()
+      clearIdleTimer()
     }
   },
 }
