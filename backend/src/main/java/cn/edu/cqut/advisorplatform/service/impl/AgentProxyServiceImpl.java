@@ -54,6 +54,11 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     @Override
     public void proxyChatStream(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
         String payload = buildPayloadJson(request, userId);
+        if (debugStream) {
+            log.info("debug_stream java request: sessionId={}, userId={}, payload_preview={}",
+                    request.getSessionId(), userId, preview(payload));
+        }
+
         HttpRequest httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(agentBaseUrl + "/chat/stream"))
                 .timeout(Duration.ofMinutes(10))
@@ -74,6 +79,13 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         }
 
         if (response.statusCode() >= 400) {
+            String errorBody = "";
+            try (InputStream err = response.body()) {
+                errorBody = new String(err.readAllBytes(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                log.warn("Failed to read agent error body: {}", e.getMessage());
+            }
+            log.warn("Agent stream failed: status={}, body_preview={}", response.statusCode(), preview(errorBody));
             throw new BadRequestException("agent stream failed: http " + response.statusCode());
         }
 
@@ -173,8 +185,14 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
     private String buildPayloadJson(ChatStreamRequestDTO request, Long userId) throws IOException {
         List<Map<String, String>> messages = request.getMessages().stream()
-                .map(this::toMap)
+                .filter(message -> message != null && message.getRole() != null && message.getContent() != null)
+                .map(message -> toMap(message.getRole(), message.getContent()))
+                .filter(message -> !message.get("content").isBlank())
                 .toList();
+
+        if (messages.isEmpty()) {
+            throw new BadRequestException("agent stream failed: no valid messages");
+        }
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("messages", messages);
@@ -184,10 +202,21 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         return objectMapper.writeValueAsString(payload);
     }
 
-    private Map<String, String> toMap(ChatStreamMessageDTO message) {
+    private Map<String, String> toMap(String role, String content) {
         Map<String, String> data = new HashMap<>();
-        data.put("role", message.getRole());
-        data.put("content", message.getContent());
+        data.put("role", role.trim());
+        data.put("content", content.trim());
         return data;
+    }
+
+    private String preview(String text) {
+        if (text == null) {
+            return "";
+        }
+        String normalized = text.replace("\r", " ").replace("\n", " ");
+        if (normalized.length() <= DEBUG_PREVIEW_LIMIT) {
+            return normalized;
+        }
+        return normalized.substring(0, DEBUG_PREVIEW_LIMIT);
     }
 }
