@@ -1,6 +1,5 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
@@ -47,6 +46,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         this.agentApiToken = agentApiToken;
         this.debugStream = debugStream;
         this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofMillis(Math.max(timeoutMs, 1000L)))
                 .build();
     }
@@ -54,20 +54,23 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     @Override
     public void proxyChatStream(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
         String payload = buildPayloadJson(request, userId);
+        byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
+
         if (debugStream) {
-            log.info("debug_stream java request: sessionId={}, userId={}, payload_preview={}",
-                    request.getSessionId(), userId, preview(payload));
+            log.info("debug_stream java request: sessionId={}, userId={}, payload_length={}, payload_preview={}",
+                    request.getSessionId(), userId, payloadBytes.length, preview(payload));
         }
 
         HttpRequest httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(agentBaseUrl + "/chat/stream"))
+                .version(HttpClient.Version.HTTP_1_1)
                 .timeout(Duration.ofMinutes(10))
                 .header("Content-Type", "application/json")
                 .header("Accept", "text/event-stream")
                 .header("Cache-Control", "no-cache")
                 .header("X-Memory-Token", agentApiToken)
                 .header("Authorization", "Bearer " + agentApiToken)
-                .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+                .POST(HttpRequest.BodyPublishers.ofByteArray(payloadBytes))
                 .build();
 
         HttpResponse<InputStream> response;
@@ -85,7 +88,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             } catch (IOException e) {
                 log.warn("Failed to read agent error body: {}", e.getMessage());
             }
-            log.warn("Agent stream failed: status={}, body_preview={}", response.statusCode(), preview(errorBody));
+            log.warn("Agent stream failed: status={}, payload_length={}, body_preview={}",
+                    response.statusCode(), payloadBytes.length, preview(errorBody));
             throw new BadRequestException("agent stream failed: http " + response.statusCode());
         }
 

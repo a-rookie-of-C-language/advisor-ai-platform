@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import logging
@@ -35,7 +35,7 @@ class ChatStreamService:
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:
-        return f"event: {event}\\ndata: {json.dumps(data, ensure_ascii=False)}\\n\\n"
+        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
     @staticmethod
     def _validate_messages(messages: Iterable[ChatMessage]) -> list[ChatMessage]:

@@ -43,7 +43,7 @@ advisor:
     base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
     api-token: ${MEMORY_API_TOKEN:arookieofc}
     timeout-ms: ${AGENT_TIMEOUT_MS:600000}
-    debug-stream: ${DEBUG_STREAM:false}
+    debug-stream: ${DEBUG_STREAM:true}
 
 logging:
   level:

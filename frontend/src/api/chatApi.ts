@@ -40,7 +40,7 @@ interface StreamHandlers {
 function getAuthHeaders(): HeadersInit {
   const token = useAuthStore.getState().token
   if (!token) {
-    throw new Error('未登录，请先登录后再发起对话')
+    throw new Error('鏈櫥褰曪紝璇峰厛鐧诲綍鍚庡啀鍙戣捣瀵硅瘽')
   }
   return {
     'Content-Type': 'application/json',
@@ -96,6 +96,7 @@ export const chatApi = {
     const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
+    let streamFinished = false
 
     while (true) {
       const { done, value } = await reader.read()
@@ -120,17 +121,35 @@ export const chatApi = {
               handlers.onDelta?.(data.text)
             } else if (parsed.event === 'end') {
               handlers.onEnd?.()
+              streamFinished = true
+              await reader.cancel()
+              return
             } else if (parsed.event === 'error') {
               handlers.onError?.(data.message ?? 'stream error')
+              streamFinished = true
+              await reader.cancel()
+              return
             }
           } catch {
             if (parsed.event === 'error') {
               handlers.onError?.(parsed.data)
+              streamFinished = true
+              await reader.cancel()
+              return
             }
           }
         }
 
         splitIndex = buffer.indexOf('\n\n')
+      }
+    }
+
+    if (!streamFinished && buffer.trim().length > 0) {
+      const parsed = parseSseBlock(buffer)
+      if (parsed?.event === 'end') {
+        handlers.onEnd?.()
+      } else if (parsed?.event === 'error') {
+        handlers.onError?.(parsed.data)
       }
     }
   },
