@@ -91,7 +91,7 @@ public class ChatController {
         }
 
         long startAt = System.currentTimeMillis();
-        long kbId = parseKbId(body.get("kbId"));
+        long kbId = chatService.getSessionKbId(sessionId, currentUser);
         List<ChatStreamMessageDTO> history = buildHistoryMessages(sessionId, currentUser, userContent);
 
         ChatStreamRequestDTO request = new ChatStreamRequestDTO();
@@ -146,6 +146,9 @@ public class ChatController {
             throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
         }
 
+        long sessionKbId = chatService.getSessionKbId(request.getSessionId(), currentUser);
+        request.setKbId(sessionKbId);
+
         String userText = extractLastUserMessage(request);
         String turnId = buildTurnId(request, currentUser.getId());
         String traceId = resolveTraceIdFromRequest();
@@ -155,7 +158,7 @@ public class ChatController {
                 request.getSessionId(),
                 turnId,
                 currentUser.getId(),
-                request.getKbId(),
+                sessionKbId,
                 userText.length(),
                 LogTraceUtil.preview(userText));
 
@@ -229,17 +232,6 @@ public class ChatController {
         user.setContent(userContent);
         result.add(user);
         return result;
-    }
-
-    private long parseKbId(String rawKbId) {
-        if (rawKbId == null || rawKbId.trim().isEmpty()) {
-            return 1L;
-        }
-        try {
-            return Long.parseLong(rawKbId.trim());
-        } catch (NumberFormatException e) {
-            return 1L;
-        }
     }
 
     private void saveTurnQuietly(Long sessionId, Long userId, String turnId, String userText, String assistantText) {

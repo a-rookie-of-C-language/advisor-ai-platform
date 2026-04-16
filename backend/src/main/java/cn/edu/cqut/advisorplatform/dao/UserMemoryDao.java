@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dao;
+﻿package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +14,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
     @Query("""
             SELECT m FROM UserMemoryDO m
             WHERE m.userId = :userId
-              AND m.kbId = :kbId
+              AND (:kbId = 0 OR m.kbId = :kbId)
               AND m.isDeleted = false
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
               AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
@@ -28,3 +28,4 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             Pageable pageable
     );
 }
+

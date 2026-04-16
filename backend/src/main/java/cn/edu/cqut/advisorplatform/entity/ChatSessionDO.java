@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.entity;
+﻿package cn.edu.cqut.advisorplatform.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -17,7 +17,10 @@ public class ChatSessionDO {
     private Long id;
 
     @Column(nullable = false, length = 256)
-    private String title = "新对话";
+    private String title = "\u65b0\u5bf9\u8bdd";
+
+    @Column(nullable = false)
+    private Long kbId = 0L;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

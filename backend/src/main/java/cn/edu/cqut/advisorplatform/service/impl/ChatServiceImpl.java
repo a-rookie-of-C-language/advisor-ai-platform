@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+﻿package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
@@ -21,7 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
-    private static final String DEFAULT_SESSION_TITLE = "新对话";
+    private static final String DEFAULT_SESSION_TITLE = "\u65b0\u5bf9\u8bdd";
+    private static final long DEFAULT_KB_ID = 0L;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final ChatSessionDao chatSessionDao;
@@ -42,6 +43,7 @@ public class ChatServiceImpl implements ChatService {
         ChatSessionDO session = new ChatSessionDO();
         session.setUser(requireUser(currentUser));
         session.setTitle(DEFAULT_SESSION_TITLE);
+        session.setKbId(DEFAULT_KB_ID);
         LocalDateTime now = LocalDateTime.now();
         session.setCreatedAt(now);
         session.setUpdatedAt(now);
@@ -65,13 +67,20 @@ public class ChatServiceImpl implements ChatService {
                 .toList();
     }
 
+    @Override
+    public long getSessionKbId(Long sessionId, UserDO currentUser) {
+        ChatSessionDO session = getOwnedSession(sessionId, currentUser);
+        Long kbId = session.getKbId();
+        return kbId == null ? DEFAULT_KB_ID : kbId;
+    }
+
     private ChatSessionDO getOwnedSession(Long sessionId, UserDO currentUser) {
         ChatSessionDO session = chatSessionDao.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("会话不存在"));
+                .orElseThrow(() -> new NotFoundException("\u4f1a\u8bdd\u4e0d\u5b58\u5728"));
         Long currentUserId = requireUserId(currentUser);
         Long ownerId = session.getUser() == null ? null : session.getUser().getId();
         if (ownerId == null || !ownerId.equals(currentUserId)) {
-            throw new ForbiddenException("无权访问该会话");
+            throw new ForbiddenException("\u65e0\u6743\u8bbf\u95ee\u8be5\u4f1a\u8bdd");
         }
         return session;
     }
@@ -81,9 +90,11 @@ public class ChatServiceImpl implements ChatService {
         String title = session.getTitle() == null || session.getTitle().isBlank()
                 ? DEFAULT_SESSION_TITLE
                 : session.getTitle();
+        long kbId = session.getKbId() == null ? DEFAULT_KB_ID : session.getKbId();
         return Map.of(
                 "id", session.getId(),
                 "title", title,
+                "kbId", kbId,
                 "updatedAt", formatTime(time)
         );
     }
@@ -105,7 +116,7 @@ public class ChatServiceImpl implements ChatService {
 
     private UserDO requireUser(UserDO currentUser) {
         if (currentUser == null || currentUser.getId() == null) {
-            throw new ForbiddenException("未登录或登录已失效");
+            throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
         }
         return currentUser;
     }

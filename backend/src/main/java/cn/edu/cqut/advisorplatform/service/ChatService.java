@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service;
+﻿package cn.edu.cqut.advisorplatform.service;
 
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 
@@ -14,4 +14,6 @@ public interface ChatService {
     void deleteSession(Long sessionId, UserDO currentUser);
 
     List<Map<String, Object>> listMessages(Long sessionId, UserDO currentUser);
+
+    long getSessionKbId(Long sessionId, UserDO currentUser);
 }

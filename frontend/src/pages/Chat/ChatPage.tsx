@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Collapse,
@@ -120,7 +120,6 @@ export default function ChatPage() {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
-  const [kbId] = useState<number>(1)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const activeSession = useMemo(
@@ -293,7 +292,6 @@ export default function ChatPage() {
         {
           messages: historyMessages,
           sessionId,
-          kbId,
         },
         {
           onDelta: (chunk) => {
@@ -323,7 +321,7 @@ export default function ChatPage() {
 
       if (streamFailed) {
         globalMessage.warning('网络波动，已切换为非流式回复')
-        const fallbackResp = await chatApi.sendMessage(sessionId, text, kbId)
+        const fallbackResp = await chatApi.sendMessage(sessionId, text)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
           content: fallbackResp.data?.content ?? (streamError || '请求失败，请稍后重试。'),
@@ -332,7 +330,7 @@ export default function ChatPage() {
     } catch {
       globalMessage.warning('网络波动，已切换为非流式回复')
       try {
-        const fallbackResp = await chatApi.sendMessage(sessionId, text, kbId)
+        const fallbackResp = await chatApi.sendMessage(sessionId, text)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
           content: fallbackResp.data?.content ?? '请求失败，请稍后重试。',

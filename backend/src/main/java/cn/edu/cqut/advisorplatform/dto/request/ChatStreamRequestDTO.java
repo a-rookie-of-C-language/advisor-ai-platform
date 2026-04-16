@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.request;
+﻿package cn.edu.cqut.advisorplatform.dto.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,6 +17,5 @@ public class ChatStreamRequestDTO {
     @NotNull
     private Long sessionId;
 
-    @NotNull
     private Long kbId;
 }

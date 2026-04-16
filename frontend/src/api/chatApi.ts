@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 export interface ChatSessionDTO {
   id: number
   title: string
+  kbId?: number
   updatedAt: string
 }
 
@@ -34,7 +35,6 @@ interface ApiResponse<T> {
 interface StreamPayload {
   messages: ChatStreamMessageDTO[]
   sessionId: number
-  kbId: number
 }
 
 interface StreamHandlers {
@@ -92,10 +92,9 @@ export const chatApi = {
   listMessages: (sessionId: number) =>
     request.get<unknown, ApiResponse<ChatMessageDTO[]>>(`/chat/sessions/${sessionId}/messages`),
 
-  sendMessage: (sessionId: number, content: string, kbId: number) =>
+  sendMessage: (sessionId: number, content: string) =>
     request.post<unknown, ApiResponse<ChatSendResponseDTO>>(`/chat/sessions/${sessionId}/messages`, {
       content,
-      kbId: String(kbId),
     }),
 
   streamChat: async (payload: StreamPayload, handlers: StreamHandlers): Promise<void> => {
