@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
@@ -7,7 +7,9 @@ import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
+import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChatMessageServiceImpl implements ChatMessageService {
 
     private static final String ROLE_USER = "user";
@@ -33,10 +36,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         String safeTurnId = turnId == null ? "" : turnId.trim();
         if (safeTurnId.isBlank()) {
+            log.warn("chat_persist skip_blank_turn");
             return;
         }
 
         if (chatMessageDao.existsBySessionIdAndTurnIdAndRole(sessionId, safeTurnId, ROLE_ASSISTANT)) {
+            log.info("chat_persist idempotent_hit, role=assistant");
             return;
         }
 
@@ -63,10 +68,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
 
         if (shouldInitTitle) {
-            session.setTitle(buildTitle(safeUserContent));
+            String title = buildTitle(safeUserContent);
+            session.setTitle(title);
+            log.info("chat_persist update_title, titlePreview={}", LogTraceUtil.preview(title));
         }
         session.setUpdatedAt(now);
         chatSessionDao.save(session);
+        log.info("chat_persist done, userLen={}, assistantLen={}", safeUserContent.length(), safeAssistantContent.length());
     }
 
     @Override
@@ -77,9 +85,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         if (safeTurnId.isBlank()) {
             return null;
         }
-        return chatMessageDao.findFirstBySessionIdAndTurnIdAndRole(session.getId(), safeTurnId, ROLE_ASSISTANT)
+        String content = chatMessageDao.findFirstBySessionIdAndTurnIdAndRole(session.getId(), safeTurnId, ROLE_ASSISTANT)
                 .map(ChatMessageDO::getContent)
                 .orElse(null);
+        if (content != null && !content.isBlank()) {
+            log.info("chat_persist cache_hit, assistantLen={}", content.length());
+        }
+        return content;
     }
 
     private ChatSessionDO getOwnedSession(Long sessionId, Long userId) {
@@ -101,8 +113,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         message.setCreatedAt(now);
         try {
             chatMessageDao.save(message);
+            log.info("chat_persist save_message, role={}, contentLen={}, preview={}",
+                    role,
+                    content == null ? 0 : content.length(),
+                    LogTraceUtil.preview(content));
         } catch (DataIntegrityViolationException ignored) {
-            // 并发重试导致唯一键冲突时视为幂等成功
+            log.info("chat_persist idempotent_conflict, role={}", role);
         }
     }
 

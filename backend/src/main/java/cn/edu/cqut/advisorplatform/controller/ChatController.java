@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.controller;
+package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
@@ -10,6 +10,8 @@ import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
+import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.charset.StandardCharsets;
@@ -40,6 +44,7 @@ import java.util.Map;
 @Slf4j
 public class ChatController {
 
+    private static final String TRACE_HEADER = "X-Trace-Id";
     private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
 
     private final AgentProxyService agentProxyService;
@@ -85,6 +90,7 @@ public class ChatController {
             throw new BadRequestException("content is blank");
         }
 
+        long startAt = System.currentTimeMillis();
         long kbId = parseKbId(body.get("kbId"));
         List<ChatStreamMessageDTO> history = buildHistoryMessages(sessionId, currentUser, userContent);
 
@@ -94,25 +100,41 @@ public class ChatController {
         request.setMessages(history);
 
         String turnId = buildTurnId(request, currentUser.getId());
-        String cached = chatMessageService.findAssistantContent(sessionId, currentUser.getId(), turnId);
-        if (cached != null && !cached.isBlank()) {
-            return ApiResponseDTO.success(buildAssistantResponse(cached));
-        }
+        String traceId = resolveTraceIdFromRequest();
 
-        String assistantText;
+        LogTraceUtil.put(traceId, sessionId, turnId, currentUser.getId());
         try {
-            ChatStreamProxyResult result = agentProxyService.proxyChatOnce(request, currentUser.getId());
-            assistantText = result == null ? "" : result.getAssistantText();
-        } catch (Exception e) {
-            assistantText = "请求失败：" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
-        }
+            log.info("chat_send start, kbId={}, messageCount={}, userLen={}, userPreview={}",
+                    kbId,
+                    history.size(),
+                    userContent.length(),
+                    LogTraceUtil.preview(userContent));
 
-        if (assistantText == null || assistantText.trim().isBlank()) {
-            assistantText = ASSISTANT_ERROR_PLACEHOLDER;
-        }
+            String cached = chatMessageService.findAssistantContent(sessionId, currentUser.getId(), turnId);
+            if (cached != null && !cached.isBlank()) {
+                log.info("chat_send cache_hit, assistantLen={}, elapsedMs={}", cached.length(), elapsedSince(startAt));
+                return ApiResponseDTO.success(buildAssistantResponse(cached));
+            }
 
-        chatMessageService.saveTurn(sessionId, currentUser.getId(), turnId, userContent, assistantText);
-        return ApiResponseDTO.success(buildAssistantResponse(assistantText));
+            String assistantText;
+            try {
+                ChatStreamProxyResult result = agentProxyService.proxyChatOnce(request, currentUser.getId());
+                assistantText = result == null ? "" : result.getAssistantText();
+            } catch (Exception e) {
+                assistantText = "请求失败：" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
+                log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
+            }
+
+            if (assistantText == null || assistantText.trim().isBlank()) {
+                assistantText = ASSISTANT_ERROR_PLACEHOLDER;
+            }
+
+            chatMessageService.saveTurn(sessionId, currentUser.getId(), turnId, userContent, assistantText);
+            log.info("chat_send done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
+            return ApiResponseDTO.success(buildAssistantResponse(assistantText));
+        } finally {
+            LogTraceUtil.clear();
+        }
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -126,24 +148,39 @@ public class ChatController {
 
         String userText = extractLastUserMessage(request);
         String turnId = buildTurnId(request, currentUser.getId());
+        String traceId = resolveTraceIdFromRequest();
+
+        log.info("chat_stream accepted, traceId={}, sessionId={}, turnId={}, userId={}, kbId={}, userLen={}, userPreview={}",
+                traceId,
+                request.getSessionId(),
+                turnId,
+                currentUser.getId(),
+                request.getKbId(),
+                userText.length(),
+                LogTraceUtil.preview(userText));
 
         StreamingResponseBody body = outputStream -> {
+            long startAt = System.currentTimeMillis();
+            LogTraceUtil.put(traceId, request.getSessionId(), turnId, currentUser.getId());
             String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
             try {
+                log.info("chat_stream start");
                 ChatStreamProxyResult proxyResult = agentProxyService.proxyChatStream(request, currentUser.getId(), outputStream);
                 if (proxyResult != null && proxyResult.getAssistantText() != null && !proxyResult.getAssistantText().isBlank()) {
                     assistantText = proxyResult.getAssistantText().trim();
                 }
+                log.info("chat_stream proxy_done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
             } catch (Exception ex) {
                 String message = safeJson(ex.getMessage());
                 String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
                 outputStream.write(sseError.getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();
-                log.warn("chat stream proxy failed, sessionId={}, userId={}, error={}",
-                        request.getSessionId(), currentUser.getId(), ex.getMessage());
+                log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(ex.getMessage()));
                 assistantText = "请求失败：" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
             } finally {
                 saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText);
+                log.info("chat_stream done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
+                LogTraceUtil.clear();
             }
         };
 
@@ -209,8 +246,7 @@ public class ChatController {
         try {
             chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
         } catch (Exception e) {
-            log.warn("save chat turn failed, sessionId={}, userId={}, turnId={}, error={}",
-                    sessionId, userId, turnId, e.getMessage());
+            log.warn("chat_stream save_turn_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
         }
     }
 
@@ -264,5 +300,18 @@ public class ChatController {
                 .replace("\"", "\\\"")
                 .replace("\r", " ")
                 .replace("\n", " ");
+    }
+
+    private String resolveTraceIdFromRequest() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return LogTraceUtil.resolveTraceId(null);
+        }
+        HttpServletRequest request = attributes.getRequest();
+        return LogTraceUtil.resolveTraceId(request == null ? null : request.getHeader(TRACE_HEADER));
+    }
+
+    private long elapsedSince(long startAt) {
+        return Math.max(0L, System.currentTimeMillis() - startAt);
     }
 }

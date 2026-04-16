@@ -4,6 +4,7 @@ import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
+import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -63,8 +64,17 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     }
 
     private ChatStreamProxyResult proxyInternal(ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
+        long startAt = System.currentTimeMillis();
         String payload = buildPayloadJson(request, userId);
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
+
+        log.info("agent_proxy start, traceId={}, sessionId={}, turnId={}, userId={}, payloadBytes={}, streamMode={}",
+                LogTraceUtil.get(LogTraceUtil.TRACE_ID),
+                request.getSessionId(),
+                LogTraceUtil.get(LogTraceUtil.TURN_ID),
+                userId,
+                payloadBytes.length,
+                outputStream != null);
 
         if (debugStream) {
             log.info("debug_stream java request: sessionId={}, userId={}, payload_length={}, payload_preview={}",
@@ -96,10 +106,13 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             try (InputStream err = response.body()) {
                 errorBody = new String(err.readAllBytes(), StandardCharsets.UTF_8);
             } catch (IOException e) {
-                log.warn("Failed to read agent error body: {}", e.getMessage());
+                log.warn("agent_proxy read_error_body_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
             }
-            log.warn("Agent stream failed: status={}, payload_length={}, body_preview={}",
-                    response.statusCode(), payloadBytes.length, preview(errorBody));
+            log.warn("agent_proxy failed, status={}, payloadBytes={}, bodyPreview={}, elapsedMs={}",
+                    response.statusCode(),
+                    payloadBytes.length,
+                    LogTraceUtil.preview(errorBody),
+                    elapsedSince(startAt));
             throw new BadRequestException("agent stream failed: http " + response.statusCode());
         }
 
@@ -107,6 +120,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         StringBuilder deltaPreview = new StringBuilder();
         StringBuilder assistantText = new StringBuilder();
         int deltaCount = 0;
+        boolean firstDeltaLogged = false;
 
         if (debugStream) {
             log.info("debug_stream java start: sessionId={}, userId={}", request.getSessionId(), userId);
@@ -118,7 +132,13 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             while ((read = bodyStream.read(buffer)) != -1) {
                 String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
                 sseBuffer.append(chunk);
+
+                int before = deltaCount;
                 deltaCount += collectDeltaAndAnswer(sseBuffer, deltaPreview, assistantText);
+                if (!firstDeltaLogged && deltaCount > before) {
+                    firstDeltaLogged = true;
+                    log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
+                }
 
                 if (outputStream != null) {
                     try {
@@ -126,7 +146,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                         outputStream.flush();
                     } catch (IOException io) {
                         if (isClientAbort(io)) {
-                            log.warn("Client disconnected during stream forwarding: {}", io.getMessage());
+                            log.warn("agent_proxy client_disconnected, reason={}", LogTraceUtil.preview(io.getMessage()));
                             return new ChatStreamProxyResult(assistantText.toString());
                         }
                         throw io;
@@ -138,6 +158,11 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 log.info("debug_stream java done: deltas={}, answer_preview={}", deltaCount, deltaPreview);
             }
         }
+
+        log.info("agent_proxy done, deltas={}, answerLen={}, elapsedMs={}",
+                deltaCount,
+                assistantText.length(),
+                elapsedSince(startAt));
 
         return new ChatStreamProxyResult(assistantText.toString());
     }
@@ -235,5 +260,9 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             return normalized;
         }
         return normalized.substring(0, DEBUG_PREVIEW_LIMIT);
+    }
+
+    private long elapsedSince(long startAt) {
+        return Math.max(0L, System.currentTimeMillis() - startAt);
     }
 }
