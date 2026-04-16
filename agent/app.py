@@ -15,6 +15,9 @@ from RAG.DocumentIndexer import DocumentIndexer
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
+from memory.api.memory_api_client import MemoryApiClient
+from memory.pipeline.llm_extractor import OpenAILLMExtractor
+from memory.pipeline.orchestrator import MemoryOrchestrator
 
 load_dotenv()
 
@@ -32,12 +35,41 @@ class ChatMessageDTO(BaseModel):
 
 class ChatStreamRequestDTO(BaseModel):
     messages: list[ChatMessageDTO] = Field(..., min_length=1)
+    userId: int | None = None
+    sessionId: int | None = None
+    kbId: int | None = None
+
+
+@lru_cache(maxsize=1)
+def _get_memory_orchestrator() -> MemoryOrchestrator | None:
+    memory_api_base_url = os.getenv("MEMORY_API_BASE_URL", "").strip()
+    if not memory_api_base_url:
+        return None
+
+    token = os.getenv("MEMORY_API_TOKEN", "").strip() or None
+    api_client = MemoryApiClient(base_url=memory_api_base_url, bearer_token=token)
+    return MemoryOrchestrator(api_client=api_client)
+
+
+@lru_cache(maxsize=1)
+def _get_llm_extractor() -> OpenAILLMExtractor | None:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("api_key", "").strip()
+    model = os.getenv("OPENAI_MODEL", "").strip() or os.getenv("model_id", "").strip()
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or os.getenv("base_url", "").strip() or None
+
+    if not api_key or not model:
+        return None
+    return OpenAILLMExtractor(api_key=api_key, model=model, base_url=base_url)
 
 
 @lru_cache(maxsize=1)
 def _get_chat_stream_service() -> ChatStreamService:
     provider = build_provider_from_env()
-    return ChatStreamService(provider)
+    return ChatStreamService(
+        provider=provider,
+        memory_orchestrator=_get_memory_orchestrator(),
+        llm_extractor=_get_llm_extractor(),
+    )
 
 
 def create_api_app() -> FastAPI:
@@ -53,7 +85,12 @@ def create_api_app() -> FastAPI:
         messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
 
         return StreamingResponse(
-            service.stream_events(messages),
+            service.stream_events(
+                messages,
+                user_id=request.userId,
+                session_id=request.sessionId,
+                kb_id=request.kbId,
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
