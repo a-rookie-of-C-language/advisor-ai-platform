@@ -8,4 +8,6 @@ import java.util.List;
 public interface RagKnowledgeBaseDao extends JpaRepository<RagKnowledgeBaseDO, Long> {
 
     List<RagKnowledgeBaseDO> findByCreatedByIdOrderByCreatedAtDesc(Long userId);
+
+    List<RagKnowledgeBaseDO> findAllByOrderByCreatedAtDesc();
 }

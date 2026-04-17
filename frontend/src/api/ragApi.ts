@@ -6,12 +6,14 @@ export interface ApiResponse<T> {
   data: T
 }
 
+export type KnowledgeBaseStatus = 'READY' | 'INDEXING' | 'FAILED'
+
 export interface KnowledgeBaseDTO {
   id: number
   name: string
   description: string
   docCount: number
-  status: 'READY' | 'INDEXING'
+  status: KnowledgeBaseStatus
   createdAt: string
 }
 

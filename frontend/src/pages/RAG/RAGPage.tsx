@@ -58,11 +58,13 @@ function getFileIcon(type: string) {
 const kbStatusColor: Record<KnowledgeBaseDTO['status'], string> = {
   READY: 'green',
   INDEXING: 'orange',
+  FAILED: 'red',
 }
 
 const kbStatusLabel: Record<KnowledgeBaseDTO['status'], string> = {
   READY: '就绪',
   INDEXING: '索引中',
+  FAILED: '失败',
 }
 
 const docStatusColor: Record<RagDocumentDTO['status'], string> = {

@@ -46,7 +46,7 @@ public class RagServiceImpl implements RagService {
         if (currentUser == null || currentUser.getId() == null) {
             throw new ForbiddenException("未登录或登录已失效");
         }
-        return knowledgeBaseDao.findByCreatedByIdOrderByCreatedAtDesc(currentUser.getId())
+        return knowledgeBaseDao.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(KnowledgeBaseResponseDTO::from)
                 .collect(Collectors.toList());
@@ -84,11 +84,8 @@ public class RagServiceImpl implements RagService {
 
     @Override
     public List<RagDocumentResponseDTO> listDocuments(Long kbId, UserDO currentUser) {
-        RagKnowledgeBaseDO kb = knowledgeBaseDao.findById(kbId)
+        knowledgeBaseDao.findById(kbId)
                 .orElseThrow(() -> new NotFoundException("知识库不存在"));
-        if (!isKnowledgeBaseOwner(kb, currentUser)) {
-            throw new ForbiddenException("无权限访问该知识库");
-        }
         return documentDao.findByKnowledgeBaseIdOrderByCreatedAtDesc(kbId)
                 .stream()
                 .map(RagDocumentResponseDTO::from)
@@ -100,9 +97,6 @@ public class RagServiceImpl implements RagService {
     public RagDocumentResponseDTO uploadDocument(Long kbId, MultipartFile file, @Nullable UserDO currentUser) {
         RagKnowledgeBaseDO kb = knowledgeBaseDao.findById(kbId)
                 .orElseThrow(() -> new NotFoundException("知识库不存在"));
-        if (!isKnowledgeBaseOwner(kb, currentUser)) {
-            throw new ForbiddenException("无权限访问该知识库");
-        }
 
         Assert.notNull(file, () -> new BadRequestException("上传文件不能为空"));
         Assert.isTrue(!file.isEmpty(), () -> new BadRequestException("上传文件不能为空"));

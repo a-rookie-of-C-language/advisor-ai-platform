@@ -142,6 +142,13 @@ export default function ChatPage() {
     [sessions, activeId],
   )
 
+  const getKnowledgeBaseName = (kbId: number) => {
+    if (!kbId) {
+      return '不使用知识库'
+    }
+    return knowledgeBases.find((kb) => kb.id === kbId)?.name ?? `知识库 #${kbId}`
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [activeSession?.messages])
@@ -431,7 +438,12 @@ export default function ChatPage() {
             >
               <div className={styles.sessionTitle}>{session.title}</div>
               <div className={styles.sessionMeta}>
-                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
+                <Space size={6} wrap>
+                  <Tag color={session.kbId > 0 ? 'blue' : 'default'} style={{ marginInlineEnd: 0 }}>
+                    {getKnowledgeBaseName(session.kbId)}
+                  </Tag>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
+                </Space>
                 <Popconfirm
                   title="确认删除该会话吗？"
                   onConfirm={(event) => {

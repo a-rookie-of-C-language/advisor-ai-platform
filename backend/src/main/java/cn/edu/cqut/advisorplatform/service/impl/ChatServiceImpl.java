@@ -69,13 +69,8 @@ public class ChatServiceImpl implements ChatService {
         if (kbId == null || kbId <= 0) {
             session.setKbId(DEFAULT_KB_ID);
         } else {
-            RagKnowledgeBaseDO kb = ragKnowledgeBaseDao.findById(kbId)
+            ragKnowledgeBaseDao.findById(kbId)
                     .orElseThrow(() -> new NotFoundException("知识库不存在"));
-            Long currentUserId = requireUserId(currentUser);
-            Long ownerId = kb.getCreatedBy() == null ? null : kb.getCreatedBy().getId();
-            if (ownerId == null || !ownerId.equals(currentUserId)) {
-                throw new ForbiddenException("无权访问该知识库");
-            }
             session.setKbId(kbId);
         }
         session.setUpdatedAt(LocalDateTime.now());
