@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.lang.Nullable;
 
 import java.util.List;
 
@@ -17,5 +18,6 @@ public class ChatStreamRequestDTO {
     @NotNull
     private Long sessionId;
 
+    @Nullable
     private Long kbId;
 }

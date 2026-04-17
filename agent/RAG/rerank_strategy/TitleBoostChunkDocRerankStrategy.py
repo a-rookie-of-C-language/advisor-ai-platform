@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import List
 
 from .BaseRerankStrategy import BaseRerankStrategy
+from .ChunkDocTwoStageRerankStrategy import ChunkDocTwoStageRerankStrategy
 from .RetrievalCandidate import RetrievalCandidate
 from .TitleBoostRerankStrategy import TitleBoostRerankStrategy
-from .ChunkDocTwoStageRerankStrategy import ChunkDocTwoStageRerankStrategy
 
 
 class TitleBoostChunkDocRerankStrategy(BaseRerankStrategy):

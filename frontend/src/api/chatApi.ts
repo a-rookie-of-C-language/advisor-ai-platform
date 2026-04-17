@@ -1,4 +1,4 @@
-﻿import request from './request'
+import request from './request'
 import { useAuthStore } from '../store/authStore'
 
 export interface ChatSessionDTO {
@@ -37,9 +37,17 @@ interface StreamPayload {
   sessionId: number
 }
 
+export interface StreamSourceItem {
+  id: number
+  docName: string
+  snippet: string
+  score?: number
+}
+
 interface StreamHandlers {
   onStart?: () => void
   onDelta?: (text: string) => void
+  onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
   onEnd?: () => void
   onError?: (message: string) => void
 }
@@ -88,6 +96,9 @@ export const chatApi = {
   createSession: () => request.post<unknown, ApiResponse<ChatSessionDTO>>('/chat/sessions'),
 
   deleteSession: (id: number) => request.delete<unknown, ApiResponse<null>>(`/chat/sessions/${id}`),
+
+  updateSessionKb: (sessionId: number, kbId: number) =>
+    request.patch<unknown, ApiResponse<ChatSessionDTO>>(`/chat/sessions/${sessionId}/kb`, { kbId }),
 
   listMessages: (sessionId: number) =>
     request.get<unknown, ApiResponse<ChatMessageDTO[]>>(`/chat/sessions/${sessionId}/messages`),
@@ -154,6 +165,7 @@ export const chatApi = {
       let sawDone = false
       let sawError = false
       let latestError = ''
+      let doneReason = ''
       let streamClosed = false
 
       while (!streamClosed) {
@@ -179,9 +191,14 @@ export const chatApi = {
             }
             resetIdleTimer()
 
-            let data: { text?: string; message?: string } = {}
+            let data: { text?: string; message?: string; status?: string; items?: StreamSourceItem[] } = {}
             try {
-              data = JSON.parse(parsed.data) as { text?: string; message?: string }
+              data = JSON.parse(parsed.data) as {
+                text?: string
+                message?: string
+                status?: string
+                items?: StreamSourceItem[]
+              }
             } catch {
               data = { message: parsed.data }
             }
@@ -190,12 +207,15 @@ export const chatApi = {
               handlers.onStart?.()
             } else if (parsed.event === 'delta' && data.text) {
               handlers.onDelta?.(data.text)
+            } else if (parsed.event === 'sources') {
+              handlers.onSources?.(data.items ?? [], data.status, data.message)
             } else if (parsed.event === 'error') {
               sawError = true
               latestError = data.message ?? 'stream error'
               handlers.onError?.(latestError)
             } else if (parsed.event === 'done' || parsed.event === 'end') {
               sawDone = true
+              doneReason = data.message ?? parsed.event
               handlers.onEnd?.()
               await reader.cancel()
               return
@@ -211,10 +231,10 @@ export const chatApi = {
       }
 
       if (sawError) {
-        throw new Error(latestError || 'stream error without done')
+        throw new Error(latestError || 'stream_error_without_done')
       }
 
-      throw new Error('stream closed without done event')
+      throw new Error(doneReason ? `stream_closed_without_done:${doneReason}` : 'stream_closed_without_done')
     } catch (error) {
       if (timeoutType === 'first_packet') {
         throw new Error('stream timeout: first packet > 30s')

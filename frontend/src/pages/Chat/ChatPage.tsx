@@ -5,6 +5,7 @@ import {
   Empty,
   Input,
   Popconfirm,
+  Select,
   Space,
   Tag,
   Tooltip,
@@ -20,7 +21,8 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
-import { chatApi } from '../../api/chatApi'
+import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
+import { ragApi, type KnowledgeBaseDTO } from '../../api/ragApi'
 import { globalMessage } from '../../utils/globalMessage'
 import styles from './ChatPage.module.css'
 
@@ -30,6 +32,7 @@ interface Source {
   id: number
   docName: string
   snippet: string
+  score?: number
 }
 
 interface ChatMessage {
@@ -44,6 +47,7 @@ interface ChatSession {
   id: number
   title: string
   updatedAt: string
+  kbId: number
   messages: ChatMessage[]
 }
 
@@ -73,7 +77,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
               </div>
             )}
 
-        {!msg.streaming && msg.sources?.length
+        {msg.sources?.length
           ? (
             <Collapse
               ghost
@@ -84,7 +88,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
                 label: (
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     <FileTextOutlined style={{ marginRight: 4 }} />
-                    参考来源（{msg.sources.length}）
+                    引用来源 {msg.sources.length} 条
                   </Text>
                 ),
                 children: (
@@ -106,17 +110,34 @@ function MsgBubble({ msg }: MsgBubbleProps) {
   )
 }
 
-function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string }): ChatMessage {
+function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string; sources?: StreamSourceItem[] }): ChatMessage {
   return {
     id: data.id,
     role: data.role,
     content: data.content,
+    sources: data.sources?.map((item, index) => ({
+      id: item.id || index + 1,
+      docName: item.docName || '未命名文档',
+      snippet: item.snippet || '',
+      score: item.score,
+    })),
     streaming: false,
+  }
+}
+
+function toChatSession(data: ChatSessionDTO): ChatSession {
+  return {
+    id: data.id,
+    title: data.title,
+    updatedAt: data.updatedAt,
+    kbId: data.kbId ?? 0,
+    messages: [],
   }
 }
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseDTO[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
@@ -127,6 +148,13 @@ export default function ChatPage() {
     [sessions, activeId],
   )
 
+  const getKnowledgeBaseName = (kbId: number) => {
+    if (!kbId) {
+      return '不使用知识库'
+    }
+    return knowledgeBases.find((kb) => kb.id === kbId)?.name ?? `知识库 #${kbId}`
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [activeSession?.messages])
@@ -135,18 +163,24 @@ export default function ChatPage() {
     void (async () => {
       try {
         const response = await chatApi.listSessions()
-        const nextSessions: ChatSession[] = (response.data ?? []).map((item) => ({
-          id: item.id,
-          title: item.title,
-          updatedAt: item.updatedAt,
-          messages: [],
-        }))
+        const nextSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
         setSessions(nextSessions)
         if (nextSessions.length > 0) {
           setActiveId(nextSessions[0].id)
         }
       } catch (error) {
         globalMessage.error(typeof error === 'string' ? error : '加载会话失败')
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await ragApi.listKnowledgeBases()
+        setKnowledgeBases(response.data ?? [])
+      } catch (error) {
+        globalMessage.error(typeof error === 'string' ? error : '加载知识库失败')
       }
     })()
   }, [])
@@ -175,16 +209,29 @@ export default function ChatPage() {
     try {
       const response = await chatApi.createSession()
       const created = response.data
-      const newSession: ChatSession = {
-        id: created.id,
-        title: created.title,
-        updatedAt: created.updatedAt,
-        messages: [],
-      }
+      const newSession = toChatSession(created)
       setSessions((prev) => [newSession, ...prev])
       setActiveId(newSession.id)
     } catch (error) {
       globalMessage.error(typeof error === 'string' ? error : '创建会话失败')
+    }
+  }
+
+  const handleSelectKb = async (kbId: number) => {
+    if (!activeSession) {
+      return
+    }
+    try {
+      const response = await chatApi.updateSessionKb(activeSession.id, kbId)
+      const updated = response.data
+      setSessions((prev) => prev.map((session) => (
+        session.id === activeSession.id
+          ? { ...session, kbId: updated.kbId ?? 0, updatedAt: updated.updatedAt }
+          : session
+      )))
+      globalMessage.success(kbId > 0 ? '知识库已绑定到当前会话' : '已取消当前会话的知识库绑定')
+    } catch (error) {
+      globalMessage.error(typeof error === 'string' ? error : '更新会话知识库失败')
     }
   }
 
@@ -198,7 +245,7 @@ export default function ChatPage() {
         }
         return next
       })
-      globalMessage.success('对话已删除')
+      globalMessage.success('会话已删除')
     } catch (error) {
       globalMessage.error(typeof error === 'string' ? error : '删除会话失败')
     }
@@ -216,6 +263,22 @@ export default function ChatPage() {
     }))
   }
 
+  const toDisplaySources = (items: StreamSourceItem[], message?: string): Source[] => {
+    if (items.length > 0) {
+      return items.map((item, index) => ({
+        id: item.id || index + 1,
+        docName: item.docName || '未命名文档',
+        snippet: item.snippet || '',
+        score: item.score,
+      }))
+    }
+    return [{
+      id: -1,
+      docName: '检索提示',
+      snippet: message || '未返回可展示来源',
+    }]
+  }
+
   const handleSend = async () => {
     const text = inputText.trim()
     if (!text || sending) {
@@ -224,21 +287,20 @@ export default function ChatPage() {
 
     let targetSession = activeSession
     if (!targetSession) {
-      try {
+        try {
         const response = await chatApi.createSession()
         const created = response.data
-        targetSession = {
-          id: created.id,
-          title: created.title,
-          updatedAt: created.updatedAt,
-          messages: [],
-        }
+        targetSession = toChatSession(created)
         setSessions((prev) => [targetSession!, ...prev])
         setActiveId(targetSession.id)
       } catch (error) {
         globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
         return
       }
+    }
+
+    if (!targetSession) {
+      return
     }
 
     const sessionId = targetSession.id
@@ -279,7 +341,8 @@ export default function ChatPage() {
       return [{
         id: sessionId,
         title: text.slice(0, 5),
-        updatedAt: targetSession!.updatedAt,
+        updatedAt: targetSession.updatedAt,
+        kbId: targetSession.kbId,
         messages: [userMessage, assistantPlaceholder],
       }, ...mapped]
     })
@@ -312,6 +375,11 @@ export default function ChatPage() {
           onEnd: () => {
             updateAssistantMessage(sessionId, aiMsgId, { streaming: false })
           },
+          onSources: (items, _status, message) => {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              sources: toDisplaySources(items, message),
+            })
+          },
           onError: (message) => {
             streamFailed = true
             streamError = message ?? 'stream error'
@@ -320,7 +388,7 @@ export default function ChatPage() {
       )
 
       if (streamFailed) {
-        globalMessage.warning('网络波动，已切换为非流式回复')
+        globalMessage.warning('流式失败，已自动降级为非流式请求')
         const fallbackResp = await chatApi.sendMessage(sessionId, text)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
@@ -328,7 +396,7 @@ export default function ChatPage() {
         })
       }
     } catch {
-      globalMessage.warning('网络波动，已切换为非流式回复')
+      globalMessage.warning('流式失败，已自动降级为非流式请求')
       try {
         const fallbackResp = await chatApi.sendMessage(sessionId, text)
         updateAssistantMessage(sessionId, aiMsgId, {
@@ -364,7 +432,7 @@ export default function ChatPage() {
         <div className={styles.sessionList}>
           {sessions.length === 0 && (
             <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>暂无对话</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>暂无会话</Text>
             </div>
           )}
 
@@ -376,9 +444,14 @@ export default function ChatPage() {
             >
               <div className={styles.sessionTitle}>{session.title}</div>
               <div className={styles.sessionMeta}>
-                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
+                <Space size={6} wrap>
+                  <Tag color={session.kbId > 0 ? 'blue' : 'default'} style={{ marginInlineEnd: 0 }}>
+                    {getKnowledgeBaseName(session.kbId)}
+                  </Tag>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
+                </Space>
                 <Popconfirm
-                  title="删除该对话？"
+                  title="确认删除该会话吗？"
                   onConfirm={(event) => {
                     event?.stopPropagation()
                     void handleDeleteSession(session.id)
@@ -400,12 +473,29 @@ export default function ChatPage() {
       </aside>
 
       <main className={styles.main}>
+        {activeSession && (
+          <div style={{ padding: '16px 20px 0' }}>
+            <Space align="center" wrap>
+              <Text type="secondary">当前知识库</Text>
+              <Select
+                value={activeSession.kbId}
+                style={{ minWidth: 240 }}
+                disabled={sending}
+                onChange={(value) => void handleSelectKb(value)}
+                options={[
+                  { value: 0, label: '不使用知识库' },
+                  ...knowledgeBases.map((kb) => ({ value: kb.id, label: kb.name })),
+                ]}
+              />
+            </Space>
+          </div>
+        )}
         {!activeSession || activeSession.messages.length === 0
           ? (
             <div className={styles.emptyChat}>
               <RobotOutlined style={{ fontSize: 52, color: '#CBD5E1', marginBottom: 16 }} />
-              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>智小咨 · AI 助手</Title>
-              <Text type="secondary">向 AI 助手提问，它会基于知识库进行回答。</Text>
+              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>开始和 AI 助手对话</Title>
+              <Text type="secondary">输入问题后发送，系统会按流式返回答案。</Text>
             </div>
             )
           : (
@@ -419,7 +509,7 @@ export default function ChatPage() {
 
         <div className={styles.inputArea}>
           {!activeSession && (
-            <Empty description={<span>请先新建或选择一个对话</span>} style={{ marginBottom: 12 }} />
+            <Empty description={<span>请先创建会话后再发送消息</span>} style={{ marginBottom: 12 }} />
           )}
 
           <div className={styles.inputRow}>

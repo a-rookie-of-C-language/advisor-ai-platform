@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -7,9 +7,42 @@ on:
     branches: [master]
 
 jobs:
+  encoding-guard:
+    name: Encoding Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect UTF-8 BOM in text sources
+        shell: bash
+        run: |
+          set -e
+          found=0
+          while IFS= read -r -d '' f; do
+            bom=$(xxd -p -l 3 "$f" | tr -d '\n')
+            if [ "$bom" = "efbbbf" ]; then
+              echo "::error file=$f::UTF-8 BOM detected"
+              found=1
+            fi
+          done < <(
+            find agent backend frontend scripts \
+              -type f \
+              \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.ts' -o -name '*.tsx' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' -o -name '*.java' \) \
+              -print0
+          )
+          if [ "$found" -ne 0 ]; then
+            echo "BOM check failed."
+            exit 1
+          fi
+
+      - name: Dry-run text cleanup guard
+        shell: pwsh
+        run: ./scripts/clean_text_encoding.ps1 -DryRun
+
   build-java:
     name: Java (Maven)
     runs-on: ubuntu-latest
+    needs: [encoding-guard]
     defaults:
       run:
         working-directory: backend
@@ -48,6 +81,7 @@ jobs:
   build-frontend:
     name: Frontend (Node)
     runs-on: ubuntu-latest
+    needs: [encoding-guard]
     defaults:
       run:
         working-directory: frontend
@@ -67,8 +101,9 @@ jobs:
         run: npm run build
 
   build-python:
-    name: Python (compileall)
+    name: Python (tests)
     runs-on: ubuntu-latest
+    needs: [encoding-guard]
     defaults:
       run:
         working-directory: agent
@@ -84,6 +119,9 @@ jobs:
 
       - name: Syntax check
         run: python -m compileall . -q
+
+      - name: Run tests
+        run: pytest -q
 
   e2e-chat:
     name: E2E Chat Drill (all)
@@ -109,6 +147,7 @@ jobs:
       DB_PASSWORD: postgres
       JWT_SECRET: Y2lqd3RzZWNyZXRmb3JlMmVvbmx5Y25lZHVjcXV0YXJvb2tpZW9mYw==
       MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
       AGENT_BASE_URL: http://127.0.0.1:8001
       AGENT_TIMEOUT_MS: 600000
       DEBUG_STREAM: 'false'
@@ -211,8 +250,8 @@ jobs:
             sleep 2
           done
 
-      - name: Run chat e2e drill (all)
-        run: node scripts/chat_e2e_drill.mjs all http://localhost:8080
+      - name: Run chat e2e drill (full)
+        run: node scripts/chat_e2e_drill.mjs full http://localhost:8080 http://127.0.0.1:8001
 
       - name: Print logs on failure
         if: failure()

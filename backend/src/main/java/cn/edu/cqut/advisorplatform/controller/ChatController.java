@@ -3,6 +3,7 @@ package cn.edu.cqut.advisorplatform.controller;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -52,25 +55,38 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
 
     @GetMapping("/sessions")
-    public ApiResponseDTO<List<Map<String, Object>>> listSessions(@AuthenticationPrincipal UserDO currentUser) {
+    public ApiResponseDTO<List<Map<String, Object>>> listSessions(@AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(chatService.listSessions(currentUser));
     }
 
     @PostMapping("/sessions")
-    public ApiResponseDTO<Map<String, Object>> createSession(@AuthenticationPrincipal UserDO currentUser) {
+    public ApiResponseDTO<Map<String, Object>> createSession(@AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(chatService.createSession(currentUser));
     }
 
     @DeleteMapping("/sessions/{id}")
-    public ApiResponseDTO<Void> deleteSession(@PathVariable Long id, @AuthenticationPrincipal UserDO currentUser) {
+    public ApiResponseDTO<Void> deleteSession(@PathVariable Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
         chatService.deleteSession(id, currentUser);
         return ApiResponseDTO.success();
+    }
+
+    @PatchMapping("/sessions/{id}/kb")
+    public ApiResponseDTO<Map<String, Object>> updateSessionKb(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal @Nullable UserDO currentUser
+    ) {
+        Object kbIdValue = body == null ? null : body.get("kbId");
+        if (!(kbIdValue instanceof Number kbIdNumber)) {
+            throw new BadRequestException("kbId is required");
+        }
+        return ApiResponseDTO.success(chatService.updateSessionKb(id, kbIdNumber.longValue(), currentUser));
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
     public ApiResponseDTO<List<Map<String, Object>>> listMessages(
             @PathVariable Long sessionId,
-            @AuthenticationPrincipal UserDO currentUser
+            @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
         return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
     }
@@ -79,7 +95,7 @@ public class ChatController {
     public ApiResponseDTO<Map<String, Object>> sendMessage(
             @PathVariable Long sessionId,
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserDO currentUser
+            @AuthenticationPrincipal @Nullable UserDO currentUser
     ) throws java.io.IOException {
         if (currentUser == null || currentUser.getId() == null) {
             throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
@@ -113,25 +129,32 @@ public class ChatController {
             String cached = chatMessageService.findAssistantContent(sessionId, currentUser.getId(), turnId);
             if (cached != null && !cached.isBlank()) {
                 log.info("chat_send cache_hit, assistantLen={}, elapsedMs={}", cached.length(), elapsedSince(startAt));
-                return ApiResponseDTO.success(buildAssistantResponse(cached));
+                return ApiResponseDTO.success(buildAssistantResponse(cached, List.of()));
             }
 
             String assistantText;
+            List<ChatMessageDO.SourceReference> sources = List.of();
             try {
                 ChatStreamProxyResult result = agentProxyService.proxyChatOnce(request, currentUser.getId());
                 assistantText = result == null ? "" : result.getAssistantText();
+                sources = result == null || result.getSources() == null ? List.of() : result.getSources();
             } catch (Exception e) {
-                assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
-                log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
+                String errorMessage = safeMessage(e);
+                assistantText = "请求失败：" + errorMessage;
+                log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
             }
 
             if (assistantText == null || assistantText.trim().isBlank()) {
                 assistantText = ASSISTANT_ERROR_PLACEHOLDER;
             }
 
-            chatMessageService.saveTurn(sessionId, currentUser.getId(), turnId, userContent, assistantText);
+            if (sources == null || sources.isEmpty()) {
+                chatMessageService.saveTurn(sessionId, currentUser.getId(), turnId, userContent, assistantText);
+            } else {
+                chatMessageService.saveTurn(sessionId, currentUser.getId(), turnId, userContent, assistantText, sources);
+            }
             log.info("chat_send done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
-            return ApiResponseDTO.success(buildAssistantResponse(assistantText));
+            return ApiResponseDTO.success(buildAssistantResponse(assistantText, sources));
         } finally {
             LogTraceUtil.clear();
         }
@@ -140,7 +163,7 @@ public class ChatController {
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamChat(
             @Valid @RequestBody ChatStreamRequestDTO request,
-            @AuthenticationPrincipal UserDO currentUser
+            @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
         if (currentUser == null || currentUser.getId() == null) {
             throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
@@ -166,6 +189,7 @@ public class ChatController {
             long startAt = System.currentTimeMillis();
             LogTraceUtil.put(traceId, request.getSessionId(), turnId, currentUser.getId());
             String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
+            List<ChatMessageDO.SourceReference> sources = List.of();
             String finishReason = "stop";
             try {
                 log.info("chat_stream start");
@@ -173,15 +197,19 @@ public class ChatController {
                 if (proxyResult != null && proxyResult.getAssistantText() != null && !proxyResult.getAssistantText().isBlank()) {
                     assistantText = proxyResult.getAssistantText().trim();
                 }
+                if (proxyResult != null && proxyResult.getSources() != null) {
+                    sources = proxyResult.getSources();
+                }
                 log.info("chat_stream proxy_done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
             } catch (Exception ex) {
+                String errorMessage = safeMessage(ex);
                 finishReason = "error";
-                writeErrorEvent(outputStream, ex.getMessage());
-                log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(ex.getMessage()));
-                assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
+                writeErrorEvent(outputStream, errorMessage);
+                log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
+                assistantText = "请求失败：" + errorMessage;
             } finally {
                 writeDoneEvent(outputStream, finishReason, turnId, traceId);
-                saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText);
+                saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText, sources);
                 log.info("chat_stream done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
                 LogTraceUtil.clear();
             }
@@ -194,12 +222,12 @@ public class ChatController {
                 .body(body);
     }
 
-    private Map<String, Object> buildAssistantResponse(String assistantText) {
+    private Map<String, Object> buildAssistantResponse(String assistantText, List<ChatMessageDO.SourceReference> sources) {
         return Map.of(
                 "id", System.currentTimeMillis(),
                 "role", "assistant",
                 "content", assistantText,
-                "sources", List.of()
+                "sources", sources == null ? List.of() : sources
         );
     }
 
@@ -234,9 +262,20 @@ public class ChatController {
         return result;
     }
 
-    private void saveTurnQuietly(Long sessionId, Long userId, String turnId, String userText, String assistantText) {
+    private void saveTurnQuietly(
+            Long sessionId,
+            Long userId,
+            String turnId,
+            String userText,
+            String assistantText,
+            List<ChatMessageDO.SourceReference> sources
+    ) {
         try {
-            chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
+            if (sources == null || sources.isEmpty()) {
+                chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
+            } else {
+                chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText, sources);
+            }
         } catch (Exception e) {
             log.warn("chat_stream save_turn_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
         }
@@ -284,7 +323,7 @@ public class ChatController {
         }
     }
 
-    private String safeJson(String raw) {
+    private String safeJson(@Nullable String raw) {
         if (raw == null || raw.isBlank()) {
             return "stream failed";
         }
@@ -294,7 +333,12 @@ public class ChatController {
                 .replace("\n", " ");
     }
 
-    private void writeErrorEvent(java.io.OutputStream outputStream, String rawMessage) {
+    private String safeMessage(Exception exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? ASSISTANT_ERROR_PLACEHOLDER : message;
+    }
+
+    private void writeErrorEvent(java.io.OutputStream outputStream, @Nullable String rawMessage) {
         String message = safeJson(rawMessage);
         String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
         try {

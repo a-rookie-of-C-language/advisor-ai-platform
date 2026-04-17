@@ -1,25 +1,29 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Any
 
+from llm.base_provider import ToolSpec
+
 
 class BaseTool(ABC):
-    """所有 Tool 的抽象父类。
+    """Base contract for all agent tools."""
 
-    子类必须实现 run 方法，并通过 name/description 描述工具用途，
-    以便 Agent 在工具选择时使用。
-    """
-
-    def __init__(self, name: str, description: str):
+    def __init__(self, name: str, description: str, parameters: dict[str, Any]) -> None:
         self.name = name
         self.description = description
+        self.parameters = parameters
 
     @abstractmethod
-    def run(self, *args: Any, **kwargs: Any) -> Any:
-        """执行工具逻辑，子类必须实现。"""
+    async def execute(self, tool_args: dict[str, Any], context: dict[str, Any]) -> str:
+        """Execute tool and return JSON string payload."""
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """支持直接调用实例：tool(...)"""
-        return self.run(*args, **kwargs)
+    def to_tool_spec(self) -> ToolSpec:
+        return ToolSpec(
+            name=self.name,
+            description=self.description,
+            parameters=self.parameters,
+        )
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.name!r})"

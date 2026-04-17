@@ -3,6 +3,7 @@ package cn.edu.cqut.advisorplatform.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.lang.Nullable;
 
 @Data
 public class RegisterRequestDTO {

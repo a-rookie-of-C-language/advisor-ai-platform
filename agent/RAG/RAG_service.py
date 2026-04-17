@@ -12,8 +12,8 @@ from RAG.rag_dao import PgVectorDAO
 from RAG.rerank_strategy import (
     ChunkDocTwoStageRerankStrategy,
     ChunkScoreRerankStrategy,
-    RetrievalCandidate,
     RerankStrategyRegistry,
+    RetrievalCandidate,
     TitleBoostChunkDocRerankStrategy,
 )
 from RAG.schema import (

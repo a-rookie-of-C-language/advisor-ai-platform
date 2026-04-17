@@ -4,20 +4,22 @@ import argparse
 import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
-from RAG.DocumentIndexer import DocumentIndexer
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
 from memory.api.memory_api_client import MemoryApiClient
 from memory.pipeline.llm_extractor import OpenAILLMExtractor
 from memory.pipeline.orchestrator import MemoryOrchestrator
+from RAG.DocumentIndexer import DocumentIndexer
+from RAG.RAG_service import RAG_service
 
 load_dotenv()
 
@@ -77,24 +79,84 @@ def _get_llm_extractor() -> OpenAILLMExtractor | None:
 
 
 @lru_cache(maxsize=1)
+def _get_rag_service() -> RAG_service | None:
+    db_dsn = os.getenv("DATABASE_URL", "").strip()
+    if not db_dsn:
+        logger.warning("DATABASE_URL is not set, RAG service will be disabled.")
+        return None
+
+    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+    embedding_model = os.getenv("EMBEDDING_MODEL", "bge-m3").strip()
+
+    try:
+        return RAG_service(
+            db_dsn=db_dsn,
+            ollama_base_url=ollama_base_url,
+            embedding_model=embedding_model,
+        )
+    except Exception as exc:
+        logger.error("Failed to initialize RAG service: %s", exc)
+        return None
+
+
+@lru_cache(maxsize=1)
 def _get_chat_stream_service() -> ChatStreamService:
     provider = build_provider_from_env()
     return ChatStreamService(
         provider=provider,
         memory_orchestrator=_get_memory_orchestrator(),
         llm_extractor=_get_llm_extractor(),
+        rag_service=_get_rag_service(),
     )
 
 
+@asynccontextmanager
+async def _app_lifespan(_: FastAPI):
+    try:
+        yield
+    finally:
+        rag = _get_rag_service()
+        if rag:
+            logger.info("Closing RAG service...")
+            rag.close()
+
+
+def _require_agent_api_token_for_server_mode(mode: str) -> str:
+    token = os.getenv("AGENT_API_TOKEN", "").strip()
+    if token:
+        return token
+    raise RuntimeError(f"AGENT_API_TOKEN is required when running in {mode} mode")
+
+
 def create_api_app() -> FastAPI:
-    app = FastAPI(title="advisor-ai-agent", version="1.0.0")
+    app = FastAPI(title="advisor-ai-agent", version="1.0.0", lifespan=_app_lifespan)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/graph/health")
+    async def graph_health() -> dict:
+        service = _get_chat_stream_service()
+        return {
+            "status": "ok",
+            "graph_health": service.get_graph_health(),
+        }
+
+    def _resolve_agent_token(request: Request) -> str:
+        auth_header = request.headers.get("Authorization", "").strip()
+        if auth_header.lower().startswith("bearer "):
+            return auth_header[7:].strip()
+        return request.headers.get("X-Agent-Token", "").strip()
+
     @app.post("/chat/stream")
-    async def chat_stream(request: ChatStreamRequestDTO) -> StreamingResponse:
+    async def chat_stream(request: ChatStreamRequestDTO, raw_request: Request) -> StreamingResponse:
+        expected_agent_token = os.getenv("AGENT_API_TOKEN", "").strip()
+        if expected_agent_token:
+            got_token = _resolve_agent_token(raw_request)
+            if got_token != expected_agent_token:
+                raise HTTPException(status_code=401, detail="invalid agent token")
+
         service = _get_chat_stream_service()
         messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
 
@@ -183,6 +245,7 @@ def run_indexer() -> None:
 def run_api() -> None:
     import uvicorn
 
+    _require_agent_api_token_for_server_mode("api")
     host = os.getenv("AGENT_API_HOST", "0.0.0.0")
     port = _read_int_env("AGENT_API_PORT", 8001)
     logger.info("Agent API started at http://%s:%s", host, port)
@@ -192,6 +255,7 @@ def run_api() -> None:
 async def _run_all_async() -> None:
     import uvicorn
 
+    _require_agent_api_token_for_server_mode("all")
     host = os.getenv("AGENT_API_HOST", "0.0.0.0")
     port = _read_int_env("AGENT_API_PORT", 8001)
     logger.info("Agent all-mode started. API at http://%s:%s", host, port)

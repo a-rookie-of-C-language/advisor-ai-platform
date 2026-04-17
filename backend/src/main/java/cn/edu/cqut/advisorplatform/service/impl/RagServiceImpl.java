@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,8 +42,11 @@ public class RagServiceImpl implements RagService {
     private String uploadDir;
 
     @Override
-    public List<KnowledgeBaseResponseDTO> listKnowledgeBases(UserDO currentUser) {
-        return knowledgeBaseDao.findByCreatedByIdOrderByCreatedAtDesc(currentUser.getId())
+    public List<KnowledgeBaseResponseDTO> listKnowledgeBases(@Nullable UserDO currentUser) {
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new ForbiddenException("未登录或登录已失效");
+        }
+        return knowledgeBaseDao.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(KnowledgeBaseResponseDTO::from)
                 .collect(Collectors.toList());
@@ -50,7 +54,10 @@ public class RagServiceImpl implements RagService {
 
     @Override
     @Transactional
-    public KnowledgeBaseResponseDTO createKnowledgeBase(String name, String description, UserDO currentUser) {
+    public KnowledgeBaseResponseDTO createKnowledgeBase(String name, String description, @Nullable UserDO currentUser) {
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new ForbiddenException("未登录或登录已失效");
+        }
         RagKnowledgeBaseDO kb = new RagKnowledgeBaseDO();
         kb.setName(name);
         kb.setDescription(description);
@@ -64,7 +71,7 @@ public class RagServiceImpl implements RagService {
 
     @Override
     @Transactional
-    public void deleteKnowledgeBase(Long id, UserDO currentUser) {
+    public void deleteKnowledgeBase(Long id, @Nullable UserDO currentUser) {
         RagKnowledgeBaseDO kb = knowledgeBaseDao.findById(id)
                 .orElseThrow(() -> new NotFoundException("知识库不存在"));
         if (!isKnowledgeBaseOwner(kb, currentUser)) {
@@ -77,11 +84,8 @@ public class RagServiceImpl implements RagService {
 
     @Override
     public List<RagDocumentResponseDTO> listDocuments(Long kbId, UserDO currentUser) {
-        RagKnowledgeBaseDO kb = knowledgeBaseDao.findById(kbId)
+        knowledgeBaseDao.findById(kbId)
                 .orElseThrow(() -> new NotFoundException("知识库不存在"));
-        if (!isKnowledgeBaseOwner(kb, currentUser)) {
-            throw new ForbiddenException("无权限访问该知识库");
-        }
         return documentDao.findByKnowledgeBaseIdOrderByCreatedAtDesc(kbId)
                 .stream()
                 .map(RagDocumentResponseDTO::from)
@@ -90,20 +94,18 @@ public class RagServiceImpl implements RagService {
 
     @Override
     @Transactional
-    public RagDocumentResponseDTO uploadDocument(Long kbId, MultipartFile file, UserDO currentUser) {
+    public RagDocumentResponseDTO uploadDocument(Long kbId, MultipartFile file, @Nullable UserDO currentUser) {
         RagKnowledgeBaseDO kb = knowledgeBaseDao.findById(kbId)
                 .orElseThrow(() -> new NotFoundException("知识库不存在"));
-        if (!isKnowledgeBaseOwner(kb, currentUser)) {
-            throw new ForbiddenException("无权限访问该知识库");
-        }
 
         Assert.notNull(file, () -> new BadRequestException("上传文件不能为空"));
         Assert.isTrue(!file.isEmpty(), () -> new BadRequestException("上传文件不能为空"));
 
         String originalFilename = file.getOriginalFilename();
         Assert.notBlank(originalFilename, () -> new BadRequestException("文件名不能为空"));
+        String safeOriginalFilename = originalFilename == null ? "" : originalFilename;
 
-        String safeFilename = Paths.get(originalFilename).getFileName().toString();
+        String safeFilename = Paths.get(safeOriginalFilename).getFileName().toString();
         Assert.notBlank(safeFilename, () -> new BadRequestException("非法文件名"));
 
         String fileType = extractExtension(safeFilename);
@@ -148,7 +150,7 @@ public class RagServiceImpl implements RagService {
 
     @Override
     @Transactional
-    public void deleteDocument(Long id, UserDO currentUser) {
+    public void deleteDocument(Long id, @Nullable UserDO currentUser) {
         RagDocumentDO doc = documentDao.findById(id)
                 .orElseThrow(() -> new NotFoundException("文档不存在"));
         if (!canDeleteDocument(doc, currentUser)) {
@@ -168,7 +170,7 @@ public class RagServiceImpl implements RagService {
         documentDao.deleteById(id);
     }
 
-    private boolean isKnowledgeBaseOwner(RagKnowledgeBaseDO kb, UserDO currentUser) {
+    private boolean isKnowledgeBaseOwner(RagKnowledgeBaseDO kb, @Nullable UserDO currentUser) {
         if (kb == null || currentUser == null || currentUser.getId() == null) {
             return false;
         }
@@ -176,7 +178,7 @@ public class RagServiceImpl implements RagService {
         return owner != null && owner.getId() != null && owner.getId().equals(currentUser.getId());
     }
 
-    private boolean canDeleteDocument(RagDocumentDO doc, UserDO currentUser) {
+    private boolean canDeleteDocument(RagDocumentDO doc, @Nullable UserDO currentUser) {
         if (doc == null || currentUser == null || currentUser.getId() == null) {
             return false;
         }

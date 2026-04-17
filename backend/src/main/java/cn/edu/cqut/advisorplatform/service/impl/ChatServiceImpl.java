@@ -2,12 +2,15 @@ package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.ChatService;
+import org.springframework.lang.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,9 +30,10 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatSessionDao chatSessionDao;
     private final ChatMessageDao chatMessageDao;
+    private final RagKnowledgeBaseDao ragKnowledgeBaseDao;
 
     @Override
-    public List<Map<String, Object>> listSessions(UserDO currentUser) {
+    public List<Map<String, Object>> listSessions(@Nullable UserDO currentUser) {
         Long userId = requireUserId(currentUser);
         return chatSessionDao.findByUserIdOrderByUpdatedAtDesc(userId)
                 .stream()
@@ -39,7 +43,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public Map<String, Object> createSession(UserDO currentUser) {
+    public Map<String, Object> createSession(@Nullable UserDO currentUser) {
         ChatSessionDO session = new ChatSessionDO();
         session.setUser(requireUser(currentUser));
         session.setTitle(DEFAULT_SESSION_TITLE);
@@ -53,22 +57,38 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public void deleteSession(Long sessionId, UserDO currentUser) {
+    public void deleteSession(Long sessionId, @Nullable UserDO currentUser) {
         ChatSessionDO session = getOwnedSession(sessionId, currentUser);
         chatSessionDao.deleteById(session.getId());
     }
 
     @Override
-    public List<Map<String, Object>> listMessages(Long sessionId, UserDO currentUser) {
+    @Transactional
+    public Map<String, Object> updateSessionKb(Long sessionId, Long kbId, @Nullable UserDO currentUser) {
+        ChatSessionDO session = chatSessionDao.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("会话不存在"));
+        if (kbId == null || kbId <= 0) {
+            session.setKbId(DEFAULT_KB_ID);
+        } else {
+            ragKnowledgeBaseDao.findById(kbId)
+                    .orElseThrow(() -> new NotFoundException("知识库不存在"));
+            session.setKbId(kbId);
+        }
+        session.setUpdatedAt(LocalDateTime.now());
+        return toSessionMap(chatSessionDao.save(session));
+    }
+
+    @Override
+    public List<Map<String, Object>> listMessages(Long sessionId, @Nullable UserDO currentUser) {
         getOwnedSession(sessionId, currentUser);
-        return chatMessageDao.findBySessionIdOrderByCreatedAtAsc(sessionId)
+        return chatMessageDao.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId)
                 .stream()
                 .map(this::toMessageMap)
                 .toList();
     }
 
     @Override
-    public long getSessionKbId(Long sessionId, UserDO currentUser) {
+    public long getSessionKbId(Long sessionId, @Nullable UserDO currentUser) {
         ChatSessionDO session = getOwnedSession(sessionId, currentUser);
         Long kbId = session.getKbId();
         return kbId == null ? DEFAULT_KB_ID : kbId;
@@ -103,7 +123,8 @@ public class ChatServiceImpl implements ChatService {
         return Map.of(
                 "id", message.getId(),
                 "role", message.getRole(),
-                "content", message.getContent()
+                "content", message.getContent(),
+                "sources", message.getSources() == null ? List.of() : message.getSources()
         );
     }
 
@@ -121,7 +142,12 @@ public class ChatServiceImpl implements ChatService {
         return currentUser;
     }
 
-    private Long requireUserId(UserDO currentUser) {
-        return requireUser(currentUser).getId();
+    private Long requireUserId(@Nullable UserDO currentUser) {
+        UserDO safeUser = requireUser(currentUser);
+        Long userId = safeUser.getId();
+        if (userId == null) {
+            throw new ForbiddenException("未登录或登录已失效");
+        }
+        return userId;
     }
 }

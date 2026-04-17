@@ -15,3 +15,5 @@ agents.md
 .env
 log.txt
 java-upgrade/
+pytest**/
+**cache**/

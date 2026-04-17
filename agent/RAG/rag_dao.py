@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Any, Dict, List, Optional, Set
 
 import psycopg2
-from psycopg2.pool import SimpleConnectionPool
+from psycopg2.pool import ThreadedConnectionPool
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,8 @@ class PgVectorDAO:
         self._statement_timeout_ms = statement_timeout_sec * 1000
         self._max_retries = max_retries
         self._retry_backoff_sec = retry_backoff_sec
-        self._pool: Optional[SimpleConnectionPool] = SimpleConnectionPool(
+        self._lock = threading.Lock()
+        self._pool: Optional[ThreadedConnectionPool] = ThreadedConnectionPool(
             minconn=minconn,
             maxconn=maxconn,
             dsn=db_dsn,
@@ -112,9 +114,10 @@ class PgVectorDAO:
         return {}, self.get_doc_title_map(doc_ids)
 
     def close(self) -> None:
-        if self._pool is not None:
-            self._pool.closeall()
-            self._pool = None
+        with self._lock:
+            if self._pool is not None:
+                self._pool.closeall()
+                self._pool = None
 
     def _query_rows(self, sql: str, params: list):
         if self._pool is None:
@@ -126,8 +129,15 @@ class PgVectorDAO:
                 cur.execute("SET LOCAL statement_timeout = %s", (self._statement_timeout_ms,))
                 cur.execute(sql, params)
                 return cur.fetchall()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
         finally:
-            self._pool.putconn(conn)
+            with self._lock:
+                self._pool.putconn(conn)
 
     def _run_with_retry(self, op_name: str, fn, *args):
         last_exc = None

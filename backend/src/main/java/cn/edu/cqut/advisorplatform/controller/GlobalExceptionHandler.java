@@ -5,8 +5,10 @@ import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -75,7 +78,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<?> handleRuntime(RuntimeException e, HttpServletRequest request) {
+    public ResponseEntity<?> handleRuntime(RuntimeException e, @Nullable HttpServletRequest request) {
+        log.error("Unhandled runtime exception", e);
         if (isSseRequest(request)) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -84,7 +88,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleException(Exception e, HttpServletRequest request) {
+    public ResponseEntity<?> handleException(Exception e, @Nullable HttpServletRequest request) {
+        log.error("Unhandled checked exception", e);
         if (isSseRequest(request)) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -92,7 +97,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponseDTO.error(500, "服务器内部错误"));
     }
 
-    private boolean isSseRequest(HttpServletRequest request) {
+    private boolean isSseRequest(@Nullable HttpServletRequest request) {
         if (request == null) {
             return false;
         }
@@ -102,5 +107,10 @@ public class GlobalExceptionHandler {
         return (accept != null && accept.contains("text/event-stream"))
                 || (contentType != null && contentType.contains("text/event-stream"))
                 || "/api/chat/stream".equals(uri);
+    }
+
+    private String safeMessage(Exception exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? "未知错误" : message;
     }
 }

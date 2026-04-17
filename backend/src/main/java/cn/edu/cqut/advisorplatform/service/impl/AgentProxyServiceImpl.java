@@ -10,7 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import java.util.Objects;
+import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 
+import java.util.ArrayList;
+import java.util.Collections.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,6 +27,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -121,6 +126,10 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         StringBuilder assistantText = new StringBuilder();
         int deltaCount = 0;
         boolean firstDeltaLogged = false;
+        AtomicBoolean sawDoneEvent = new AtomicBoolean(false);
+        AtomicBoolean sawEndEvent = new AtomicBoolean(false);
+        AtomicBoolean sawErrorEvent = new AtomicBoolean(false);
+        List<ChatMessageDO.SourceReference> sources = new ArrayList<>();
 
         if (debugStream) {
             log.info("debug_stream java start: sessionId={}, userId={}", request.getSessionId(), userId);
@@ -134,7 +143,15 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 sseBuffer.append(chunk);
 
                 int before = deltaCount;
-                deltaCount += collectDeltaAndAnswer(sseBuffer, deltaPreview, assistantText);
+                deltaCount += collectDeltaAndAnswer(
+                        sseBuffer,
+                        deltaPreview,
+                        assistantText,
+                        sources,
+                        sawDoneEvent,
+                        sawEndEvent,
+                        sawErrorEvent
+                );
                 if (!firstDeltaLogged && deltaCount > before) {
                     firstDeltaLogged = true;
                     log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
@@ -147,7 +164,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                     } catch (IOException io) {
                         if (isClientAbort(io)) {
                             log.warn("agent_proxy client_disconnected, reason={}", LogTraceUtil.preview(io.getMessage()));
-                            return new ChatStreamProxyResult(assistantText.toString());
+                            return new ChatStreamProxyResult(assistantText.toString(), List.copyOf(sources));
                         }
                         throw io;
                     }
@@ -155,24 +172,55 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             }
         } finally {
             if (debugStream) {
-                log.info("debug_stream java done: deltas={}, answer_preview={}", deltaCount, deltaPreview);
+                log.info(
+                        "debug_stream java done: deltas={}, sawDone={}, sawEnd={}, sawError={}, answer_preview={}",
+                        deltaCount,
+                        sawDoneEvent.get(),
+                        sawEndEvent.get(),
+                        sawErrorEvent.get(),
+                        deltaPreview
+                );
             }
         }
 
-        log.info("agent_proxy done, deltas={}, answerLen={}, elapsedMs={}",
+        String finishReason = sawDoneEvent.get() ? "done" : (sawEndEvent.get() ? "end" : (sawErrorEvent.get() ? "error" : "stream_closed"));
+        log.info("agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawEnd={}, sawError={}, elapsedMs={}",
                 deltaCount,
                 assistantText.length(),
+                finishReason,
+                sawDoneEvent.get(),
+                sawEndEvent.get(),
+                sawErrorEvent.get(),
                 elapsedSince(startAt));
 
-        return new ChatStreamProxyResult(assistantText.toString());
+        return new ChatStreamProxyResult(assistantText.toString(), sources);
     }
 
-    private int collectDeltaAndAnswer(StringBuilder sseBuffer, StringBuilder deltaPreview, StringBuilder assistantText) {
+    private int collectDeltaAndAnswer(
+            StringBuilder sseBuffer,
+            StringBuilder deltaPreview,
+            StringBuilder assistantText,
+            List<ChatMessageDO.SourceReference> sources,
+            AtomicBoolean sawDoneEvent,
+            AtomicBoolean sawEndEvent,
+            AtomicBoolean sawErrorEvent
+    ) {
         int count = 0;
         int blockEnd;
         while ((blockEnd = sseBuffer.indexOf("\n\n")) >= 0) {
             String block = sseBuffer.substring(0, blockEnd);
             sseBuffer.delete(0, blockEnd + 2);
+            String eventName = extractEventName(block);
+            if ("done".equals(eventName)) {
+                sawDoneEvent.set(true);
+            } else if ("end".equals(eventName)) {
+                sawEndEvent.set(true);
+            } else if ("error".equals(eventName)) {
+                sawErrorEvent.set(true);
+            } else if ("sources".equals(eventName)) {
+                sources.clear();
+                sources.addAll(extractSources(block));
+            }
             String delta = extractDelta(block);
             if (delta == null || delta.isBlank()) {
                 continue;
@@ -185,6 +233,19 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             }
         }
         return count;
+    }
+
+    private String extractEventName(String sseBlock) {
+        String[] lines = sseBlock.split("\n");
+        String event = "message";
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("event:")) {
+                event = trimmed.substring(6).trim();
+                break;
+            }
+        }
+        return event;
     }
 
     private String extractDelta(String sseBlock) {
@@ -210,6 +271,44 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             return node.path("text").asText("");
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private List<ChatMessageDO.SourceReference> extractSources(String sseBlock) {
+        String[] lines = sseBlock.split("\n");
+        String event = "message";
+        StringBuilder dataBuilder = new StringBuilder();
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("event:")) {
+                event = trimmed.substring(6).trim();
+            } else if (trimmed.startsWith("data:")) {
+                dataBuilder.append(trimmed.substring(5).trim());
+            }
+        }
+
+        if (!"sources".equals(event) || dataBuilder.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(dataBuilder.toString());
+            JsonNode items = node.path("items");
+            if (!items.isArray()) {
+                return List.of();
+            }
+            List<ChatMessageDO.SourceReference> results = new ArrayList<>();
+            for (JsonNode item : items) {
+                ChatMessageDO.SourceReference source = new ChatMessageDO.SourceReference();
+                source.setDocumentId(item.path("id").isMissingNode() ? null : item.path("id").asLong());
+                source.setDocName(item.path("docName").asText(""));
+                source.setSnippet(item.path("snippet").asText(""));
+                results.add(source);
+            }
+            return results;
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

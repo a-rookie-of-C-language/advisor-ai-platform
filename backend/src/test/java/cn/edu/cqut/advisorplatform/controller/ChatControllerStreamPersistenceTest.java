@@ -48,7 +48,7 @@ class ChatControllerStreamPersistenceTest {
         UserDO user = buildUser();
         when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
         when(agentProxyService.proxyChatStream(any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class)))
-                .thenReturn(new ChatStreamProxyResult("\u4f60\u597d\uff0c\u6d4b\u8bd5\u56de\u590d"));
+                .thenReturn(new ChatStreamProxyResult("\u4f60\u597d\uff0c\u6d4b\u8bd5\u56de\u590d", null));
 
         StreamingResponseBody body = chatController.streamChat(request, user).getBody();
         assertThat(body).isNotNull();
