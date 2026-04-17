@@ -102,7 +102,7 @@ class ChatStreamService:
         }
         try:
             return await self._tools.execute(tool_name, tool_args, context)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return json.dumps(
                 {
                     "ok": False,
