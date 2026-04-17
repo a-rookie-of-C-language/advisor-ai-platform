@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 import app as app_module
+from llm import provider_factory
 
 
 class _FakeChatService:
@@ -78,3 +80,60 @@ def test_graph_health_endpoint(monkeypatch):
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["graph_health"]["use_langgraph"] is True
+
+
+def test_app_lifespan_closes_rag_service(monkeypatch):
+    class _FakeRagService:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    fake_rag = _FakeRagService()
+    monkeypatch.setattr(app_module, "_get_rag_service", lambda: fake_rag)
+    monkeypatch.setattr(app_module, "_get_chat_stream_service", lambda: _FakeChatService())
+
+    with TestClient(app_module.create_api_app()) as client:
+        response = client.get("/health")
+        assert response.status_code == 200
+
+    assert fake_rag.closed is True
+
+
+def test_run_api_requires_agent_token(monkeypatch):
+    monkeypatch.delenv("AGENT_API_TOKEN", raising=False)
+
+    with pytest.raises(RuntimeError, match="AGENT_API_TOKEN is required"):
+        app_module.run_api()
+
+
+@pytest.mark.asyncio
+async def test_run_all_requires_agent_token(monkeypatch):
+    monkeypatch.delenv("AGENT_API_TOKEN", raising=False)
+
+    with pytest.raises(RuntimeError, match="AGENT_API_TOKEN is required"):
+        await app_module._run_all_async()
+
+
+def test_build_provider_from_env_falls_back_on_invalid_float(monkeypatch):
+    captured: dict[str, float | str | None] = {}
+
+    class _FakeProvider:
+        def __init__(self, api_key, model, base_url=None, temperature=0.2, timeout=60.0):
+            captured["api_key"] = api_key
+            captured["model"] = model
+            captured["base_url"] = base_url
+            captured["temperature"] = temperature
+            captured["timeout"] = timeout
+
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    monkeypatch.setenv("OPENAI_MODEL", "m")
+    monkeypatch.setenv("OPENAI_TEMPERATURE", "bad-temp")
+    monkeypatch.setenv("OPENAI_TIMEOUT_SEC", "bad-timeout")
+    monkeypatch.setattr(provider_factory, "OpenAIProvider", _FakeProvider)
+
+    provider_factory.build_provider_from_env()
+
+    assert captured["temperature"] == 0.2
+    assert captured["timeout"] == 60.0

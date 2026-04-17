@@ -121,6 +121,13 @@ async def _app_lifespan(_: FastAPI):
             rag.close()
 
 
+def _require_agent_api_token_for_server_mode(mode: str) -> str:
+    token = os.getenv("AGENT_API_TOKEN", "").strip()
+    if token:
+        return token
+    raise RuntimeError(f"AGENT_API_TOKEN is required when running in {mode} mode")
+
+
 def create_api_app() -> FastAPI:
     app = FastAPI(title="advisor-ai-agent", version="1.0.0", lifespan=_app_lifespan)
 
@@ -238,6 +245,7 @@ def run_indexer() -> None:
 def run_api() -> None:
     import uvicorn
 
+    _require_agent_api_token_for_server_mode("api")
     host = os.getenv("AGENT_API_HOST", "0.0.0.0")
     port = _read_int_env("AGENT_API_PORT", 8001)
     logger.info("Agent API started at http://%s:%s", host, port)
@@ -247,6 +255,7 @@ def run_api() -> None:
 async def _run_all_async() -> None:
     import uvicorn
 
+    _require_agent_api_token_for_server_mode("all")
     host = os.getenv("AGENT_API_HOST", "0.0.0.0")
     port = _read_int_env("AGENT_API_PORT", 8001)
     logger.info("Agent all-mode started. API at http://%s:%s", host, port)
