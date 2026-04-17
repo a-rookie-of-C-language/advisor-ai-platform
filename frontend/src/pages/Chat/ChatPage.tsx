@@ -5,6 +5,7 @@ import {
   Empty,
   Input,
   Popconfirm,
+  Select,
   Space,
   Tag,
   Tooltip,
@@ -20,7 +21,8 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
-import { chatApi, type StreamSourceItem } from '../../api/chatApi'
+import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
+import { ragApi, type KnowledgeBaseDTO } from '../../api/ragApi'
 import { globalMessage } from '../../utils/globalMessage'
 import styles from './ChatPage.module.css'
 
@@ -45,6 +47,7 @@ interface ChatSession {
   id: number
   title: string
   updatedAt: string
+  kbId: number
   messages: ChatMessage[]
 }
 
@@ -116,8 +119,19 @@ function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: 
   }
 }
 
+function toChatSession(data: ChatSessionDTO): ChatSession {
+  return {
+    id: data.id,
+    title: data.title,
+    updatedAt: data.updatedAt,
+    kbId: data.kbId ?? 0,
+    messages: [],
+  }
+}
+
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseDTO[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
@@ -136,18 +150,24 @@ export default function ChatPage() {
     void (async () => {
       try {
         const response = await chatApi.listSessions()
-        const nextSessions: ChatSession[] = (response.data ?? []).map((item) => ({
-          id: item.id,
-          title: item.title,
-          updatedAt: item.updatedAt,
-          messages: [],
-        }))
+        const nextSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
         setSessions(nextSessions)
         if (nextSessions.length > 0) {
           setActiveId(nextSessions[0].id)
         }
       } catch (error) {
         globalMessage.error(typeof error === 'string' ? error : '加载会话失败')
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await ragApi.listKnowledgeBases()
+        setKnowledgeBases(response.data ?? [])
+      } catch (error) {
+        globalMessage.error(typeof error === 'string' ? error : '加载知识库失败')
       }
     })()
   }, [])
@@ -176,16 +196,29 @@ export default function ChatPage() {
     try {
       const response = await chatApi.createSession()
       const created = response.data
-      const newSession: ChatSession = {
-        id: created.id,
-        title: created.title,
-        updatedAt: created.updatedAt,
-        messages: [],
-      }
+      const newSession = toChatSession(created)
       setSessions((prev) => [newSession, ...prev])
       setActiveId(newSession.id)
     } catch (error) {
       globalMessage.error(typeof error === 'string' ? error : '创建会话失败')
+    }
+  }
+
+  const handleSelectKb = async (kbId: number) => {
+    if (!activeSession) {
+      return
+    }
+    try {
+      const response = await chatApi.updateSessionKb(activeSession.id, kbId)
+      const updated = response.data
+      setSessions((prev) => prev.map((session) => (
+        session.id === activeSession.id
+          ? { ...session, kbId: updated.kbId ?? 0, updatedAt: updated.updatedAt }
+          : session
+      )))
+      globalMessage.success(kbId > 0 ? '知识库已绑定到当前会话' : '已取消当前会话的知识库绑定')
+    } catch (error) {
+      globalMessage.error(typeof error === 'string' ? error : '更新会话知识库失败')
     }
   }
 
@@ -241,21 +274,20 @@ export default function ChatPage() {
 
     let targetSession = activeSession
     if (!targetSession) {
-      try {
+        try {
         const response = await chatApi.createSession()
         const created = response.data
-        targetSession = {
-          id: created.id,
-          title: created.title,
-          updatedAt: created.updatedAt,
-          messages: [],
-        }
+        targetSession = toChatSession(created)
         setSessions((prev) => [targetSession!, ...prev])
         setActiveId(targetSession.id)
       } catch (error) {
         globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
         return
       }
+    }
+
+    if (!targetSession) {
+      return
     }
 
     const sessionId = targetSession.id
@@ -296,7 +328,8 @@ export default function ChatPage() {
       return [{
         id: sessionId,
         title: text.slice(0, 5),
-        updatedAt: targetSession!.updatedAt,
+        updatedAt: targetSession.updatedAt,
+        kbId: targetSession.kbId,
         messages: [userMessage, assistantPlaceholder],
       }, ...mapped]
     })
@@ -422,6 +455,23 @@ export default function ChatPage() {
       </aside>
 
       <main className={styles.main}>
+        {activeSession && (
+          <div style={{ padding: '16px 20px 0' }}>
+            <Space align="center" wrap>
+              <Text type="secondary">当前知识库</Text>
+              <Select
+                value={activeSession.kbId}
+                style={{ minWidth: 240 }}
+                disabled={sending}
+                onChange={(value) => void handleSelectKb(value)}
+                options={[
+                  { value: 0, label: '不使用知识库' },
+                  ...knowledgeBases.map((kb) => ({ value: kb.id, label: kb.name })),
+                ]}
+              />
+            </Space>
+          </div>
+        )}
         {!activeSession || activeSession.messages.length === 0
           ? (
             <div className={styles.emptyChat}>

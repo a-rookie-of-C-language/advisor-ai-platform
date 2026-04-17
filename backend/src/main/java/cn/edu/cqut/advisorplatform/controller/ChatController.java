@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -66,6 +67,19 @@ public class ChatController {
     public ApiResponseDTO<Void> deleteSession(@PathVariable Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
         chatService.deleteSession(id, currentUser);
         return ApiResponseDTO.success();
+    }
+
+    @PatchMapping("/sessions/{id}/kb")
+    public ApiResponseDTO<Map<String, Object>> updateSessionKb(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal @Nullable UserDO currentUser
+    ) {
+        Object kbIdValue = body == null ? null : body.get("kbId");
+        if (!(kbIdValue instanceof Number kbIdNumber)) {
+            throw new BadRequestException("kbId is required");
+        }
+        return ApiResponseDTO.success(chatService.updateSessionKb(id, kbIdNumber.longValue(), currentUser));
     }
 
     @GetMapping("/sessions/{sessionId}/messages")

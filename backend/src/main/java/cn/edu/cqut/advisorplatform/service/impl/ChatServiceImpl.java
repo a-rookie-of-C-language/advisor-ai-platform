@@ -2,8 +2,10 @@ package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
@@ -28,6 +30,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatSessionDao chatSessionDao;
     private final ChatMessageDao chatMessageDao;
+    private final RagKnowledgeBaseDao ragKnowledgeBaseDao;
 
     @Override
     public List<Map<String, Object>> listSessions(UserDO currentUser) {
@@ -54,13 +57,33 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public void deleteSession(Long sessionId, UserDO currentUser) {
+    public void deleteSession(Long sessionId, @Nullable UserDO currentUser) {
         ChatSessionDO session = getOwnedSession(sessionId, currentUser);
         chatSessionDao.deleteById(session.getId());
     }
 
     @Override
-    public List<Map<String, Object>> listMessages(Long sessionId, UserDO currentUser) {
+    @Transactional
+    public Map<String, Object> updateSessionKb(Long sessionId, Long kbId, @Nullable UserDO currentUser) {
+        ChatSessionDO session = getOwnedSession(sessionId, currentUser);
+        if (kbId == null || kbId <= 0) {
+            session.setKbId(DEFAULT_KB_ID);
+        } else {
+            RagKnowledgeBaseDO kb = ragKnowledgeBaseDao.findById(kbId)
+                    .orElseThrow(() -> new NotFoundException("知识库不存在"));
+            Long currentUserId = requireUserId(currentUser);
+            Long ownerId = kb.getCreatedBy() == null ? null : kb.getCreatedBy().getId();
+            if (ownerId == null || !ownerId.equals(currentUserId)) {
+                throw new ForbiddenException("无权访问该知识库");
+            }
+            session.setKbId(kbId);
+        }
+        session.setUpdatedAt(LocalDateTime.now());
+        return toSessionMap(chatSessionDao.save(session));
+    }
+
+    @Override
+    public List<Map<String, Object>> listMessages(Long sessionId, @Nullable UserDO currentUser) {
         getOwnedSession(sessionId, currentUser);
         return chatMessageDao.findBySessionIdOrderByCreatedAtAsc(sessionId)
                 .stream()
