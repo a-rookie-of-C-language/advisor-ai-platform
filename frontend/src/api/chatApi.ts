@@ -162,6 +162,7 @@ export const chatApi = {
       let sawDone = false
       let sawError = false
       let latestError = ''
+      let doneReason = ''
       let streamClosed = false
 
       while (!streamClosed) {
@@ -211,6 +212,7 @@ export const chatApi = {
               handlers.onError?.(latestError)
             } else if (parsed.event === 'done' || parsed.event === 'end') {
               sawDone = true
+              doneReason = data.message ?? parsed.event
               handlers.onEnd?.()
               await reader.cancel()
               return
@@ -226,10 +228,10 @@ export const chatApi = {
       }
 
       if (sawError) {
-        throw new Error(latestError || 'stream error without done')
+        throw new Error(latestError || 'stream_error_without_done')
       }
 
-      throw new Error('stream closed without done event')
+      throw new Error(doneReason ? `stream_closed_without_done:${doneReason}` : 'stream_closed_without_done')
     } catch (error) {
       if (timeoutType === 'first_packet') {
         throw new Error('stream timeout: first packet > 30s')

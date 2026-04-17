@@ -35,6 +35,10 @@ jobs:
             exit 1
           fi
 
+      - name: Dry-run text cleanup guard
+        shell: pwsh
+        run: ./scripts/clean_text_encoding.ps1 -DryRun
+
   build-java:
     name: Java (Maven)
     runs-on: ubuntu-latest

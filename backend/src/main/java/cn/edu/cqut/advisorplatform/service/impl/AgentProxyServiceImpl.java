@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -121,6 +122,9 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         StringBuilder assistantText = new StringBuilder();
         int deltaCount = 0;
         boolean firstDeltaLogged = false;
+        AtomicBoolean sawDoneEvent = new AtomicBoolean(false);
+        AtomicBoolean sawEndEvent = new AtomicBoolean(false);
+        AtomicBoolean sawErrorEvent = new AtomicBoolean(false);
 
         if (debugStream) {
             log.info("debug_stream java start: sessionId={}, userId={}", request.getSessionId(), userId);
@@ -134,7 +138,14 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 sseBuffer.append(chunk);
 
                 int before = deltaCount;
-                deltaCount += collectDeltaAndAnswer(sseBuffer, deltaPreview, assistantText);
+                deltaCount += collectDeltaAndAnswer(
+                        sseBuffer,
+                        deltaPreview,
+                        assistantText,
+                        sawDoneEvent,
+                        sawEndEvent,
+                        sawErrorEvent
+                );
                 if (!firstDeltaLogged && deltaCount > before) {
                     firstDeltaLogged = true;
                     log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
@@ -155,24 +166,51 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             }
         } finally {
             if (debugStream) {
-                log.info("debug_stream java done: deltas={}, answer_preview={}", deltaCount, deltaPreview);
+                log.info(
+                        "debug_stream java done: deltas={}, sawDone={}, sawEnd={}, sawError={}, answer_preview={}",
+                        deltaCount,
+                        sawDoneEvent.get(),
+                        sawEndEvent.get(),
+                        sawErrorEvent.get(),
+                        deltaPreview
+                );
             }
         }
 
-        log.info("agent_proxy done, deltas={}, answerLen={}, elapsedMs={}",
+        String finishReason = sawDoneEvent.get() ? "done" : (sawEndEvent.get() ? "end" : (sawErrorEvent.get() ? "error" : "stream_closed"));
+        log.info("agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawEnd={}, sawError={}, elapsedMs={}",
                 deltaCount,
                 assistantText.length(),
+                finishReason,
+                sawDoneEvent.get(),
+                sawEndEvent.get(),
+                sawErrorEvent.get(),
                 elapsedSince(startAt));
 
         return new ChatStreamProxyResult(assistantText.toString());
     }
 
-    private int collectDeltaAndAnswer(StringBuilder sseBuffer, StringBuilder deltaPreview, StringBuilder assistantText) {
+    private int collectDeltaAndAnswer(
+            StringBuilder sseBuffer,
+            StringBuilder deltaPreview,
+            StringBuilder assistantText,
+            AtomicBoolean sawDoneEvent,
+            AtomicBoolean sawEndEvent,
+            AtomicBoolean sawErrorEvent
+    ) {
         int count = 0;
         int blockEnd;
         while ((blockEnd = sseBuffer.indexOf("\n\n")) >= 0) {
             String block = sseBuffer.substring(0, blockEnd);
             sseBuffer.delete(0, blockEnd + 2);
+            String eventName = extractEventName(block);
+            if ("done".equals(eventName)) {
+                sawDoneEvent.set(true);
+            } else if ("end".equals(eventName)) {
+                sawEndEvent.set(true);
+            } else if ("error".equals(eventName)) {
+                sawErrorEvent.set(true);
+            }
             String delta = extractDelta(block);
             if (delta == null || delta.isBlank()) {
                 continue;
@@ -185,6 +223,19 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             }
         }
         return count;
+    }
+
+    private String extractEventName(String sseBlock) {
+        String[] lines = sseBlock.split("\n");
+        String event = "message";
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("event:")) {
+                event = trimmed.substring(6).trim();
+                break;
+            }
+        }
+        return event;
     }
 
     private String extractDelta(String sseBlock) {

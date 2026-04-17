@@ -85,7 +85,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
                 label: (
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     <FileTextOutlined style={{ marginRight: 4 }} />
-                    参考来源（{msg.sources.length}）
+                    Sources {msg.sources.length}
                   </Text>
                 ),
                 children: (
@@ -147,7 +147,7 @@ export default function ChatPage() {
           setActiveId(nextSessions[0].id)
         }
       } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载会话失败')
+        globalMessage.error(typeof error === 'string' ? error : 'Failed to load sessions')
       }
     })()
   }, [])
@@ -167,7 +167,7 @@ export default function ChatPage() {
             : session
         )))
       } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载消息失败')
+        globalMessage.error(typeof error === 'string' ? error : 'Failed to load messages')
       }
     })()
   }, [activeId])
@@ -185,7 +185,7 @@ export default function ChatPage() {
       setSessions((prev) => [newSession, ...prev])
       setActiveId(newSession.id)
     } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '创建会话失败')
+      globalMessage.error(typeof error === 'string' ? error : 'Failed to create session')
     }
   }
 
@@ -199,9 +199,9 @@ export default function ChatPage() {
         }
         return next
       })
-      globalMessage.success('对话已删除')
+      globalMessage.success('Session deleted')
     } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '删除会话失败')
+      globalMessage.error(typeof error === 'string' ? error : 'Failed to delete session')
     }
   }
 
@@ -221,15 +221,15 @@ export default function ChatPage() {
     if (items.length > 0) {
       return items.map((item, index) => ({
         id: item.id || index + 1,
-        docName: item.docName || '未知文档',
+        docName: item.docName || 'Untitled',
         snippet: item.snippet || '',
         score: item.score,
       }))
     }
     return [{
       id: -1,
-      docName: '知识库检索',
-      snippet: message || '未命中',
+      docName: 'Search info',
+      snippet: message || 'No source returned',
     }]
   }
 
@@ -253,7 +253,7 @@ export default function ChatPage() {
         setSessions((prev) => [targetSession!, ...prev])
         setActiveId(targetSession.id)
       } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
+        globalMessage.error(typeof error === 'string' ? error : 'Failed to create session, cannot send')
         return
       }
     }
@@ -342,25 +342,25 @@ export default function ChatPage() {
       )
 
       if (streamFailed) {
-        globalMessage.warning('网络波动，已切换为非流式回复')
+        globalMessage.warning('Stream failed, fallback to non-stream mode')
         const fallbackResp = await chatApi.sendMessage(sessionId, text)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
-          content: fallbackResp.data?.content ?? (streamError || '请求失败，请稍后重试。'),
+          content: fallbackResp.data?.content ?? (streamError || 'Request failed, please retry later.'),
         })
       }
     } catch {
-      globalMessage.warning('网络波动，已切换为非流式回复')
+      globalMessage.warning('Stream failed, fallback to non-stream mode')
       try {
         const fallbackResp = await chatApi.sendMessage(sessionId, text)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
-          content: fallbackResp.data?.content ?? '请求失败，请稍后重试。',
+          content: fallbackResp.data?.content ?? 'Request failed, please retry later.',
         })
       } catch (fallbackError) {
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
-          content: typeof fallbackError === 'string' ? `请求失败：${fallbackError}` : '请求失败，请稍后重试。',
+          content: typeof fallbackError === 'string' ? `Request failed: ${fallbackError}` : 'Request failed, please retry later.',
         })
       }
     } finally {
@@ -372,8 +372,8 @@ export default function ChatPage() {
     <div className={styles.container}>
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <Title level={5} style={{ margin: 0, color: '#fff' }}>对话列表</Title>
-          <Tooltip title="新建对话">
+          <Title level={5} style={{ margin: 0, color: '#fff' }}>Chats</Title>
+          <Tooltip title="New chat">
             <Button
               type="text"
               icon={<PlusOutlined />}
@@ -386,7 +386,7 @@ export default function ChatPage() {
         <div className={styles.sessionList}>
           {sessions.length === 0 && (
             <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>暂无对话</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>No session</Text>
             </div>
           )}
 
@@ -400,7 +400,7 @@ export default function ChatPage() {
               <div className={styles.sessionMeta}>
                 <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
                 <Popconfirm
-                  title="删除该对话？"
+                  title="Delete this session?"
                   onConfirm={(event) => {
                     event?.stopPropagation()
                     void handleDeleteSession(session.id)
@@ -426,8 +426,8 @@ export default function ChatPage() {
           ? (
             <div className={styles.emptyChat}>
               <RobotOutlined style={{ fontSize: 52, color: '#CBD5E1', marginBottom: 16 }} />
-              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>智小咨 · AI 助手</Title>
-              <Text type="secondary">向 AI 助手提问，它会基于知识库进行回答。</Text>
+              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>Start chatting with AI</Title>
+              <Text type="secondary">Type your question and send it.</Text>
             </div>
             )
           : (
@@ -441,14 +441,14 @@ export default function ChatPage() {
 
         <div className={styles.inputArea}>
           {!activeSession && (
-            <Empty description={<span>请先新建或选择一个对话</span>} style={{ marginBottom: 12 }} />
+            <Empty description={<span>Create a session first</span>} style={{ marginBottom: 12 }} />
           )}
 
           <div className={styles.inputRow}>
             <Input.TextArea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="输入问题，按 Ctrl+Enter 发送"
+              placeholder="Type message. Ctrl+Enter to send"
               autoSize={{ minRows: 1, maxRows: 5 }}
               disabled={sending}
               onKeyDown={(e) => {
@@ -466,12 +466,12 @@ export default function ChatPage() {
               onClick={() => void handleSend()}
               style={{ height: 40, paddingInline: 20, borderRadius: 8 }}
             >
-              发送
+              Send
             </Button>
           </div>
 
           <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block', textAlign: 'center' }}>
-            AI 回答仅供参考，请结合实际情况进行判断。
+            AI output is for reference only.
           </Text>
         </div>
       </main>
