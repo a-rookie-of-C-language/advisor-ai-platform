@@ -14,6 +14,9 @@ class _FakeChatService:
         yield 'event: start\ndata: {"message":"stream_started"}\n\n'
         yield 'event: done\ndata: {"message":"stream_finished"}\n\n'
 
+    def get_graph_health(self):
+        return {"use_langgraph": True, "graph": {"compiled": True}}
+
 
 def test_chat_stream_requires_token_when_configured(monkeypatch):
     monkeypatch.setenv("AGENT_API_TOKEN", "test-token")
@@ -64,3 +67,14 @@ def test_chat_stream_no_token_required_when_not_configured(monkeypatch):
         json={"messages": [{"role": "user", "content": "hi"}], "userId": 1, "sessionId": 1001, "kbId": 1},
     )
     assert response.status_code == 200
+
+
+def test_graph_health_endpoint(monkeypatch):
+    monkeypatch.setattr(app_module, "_get_chat_stream_service", lambda: _FakeChatService())
+    client = TestClient(app_module.create_api_app())
+
+    response = client.get("/graph/health")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["graph_health"]["use_langgraph"] is True

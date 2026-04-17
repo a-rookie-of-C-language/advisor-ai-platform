@@ -351,3 +351,15 @@ class ChatStreamService:
                 yield self._serialize_event("done", {"message": "stream_finished_with_error"})
             except Exception as send_done_exc:  # noqa: BLE001
                 logger.warning("Failed to send stream done event after error: %s", send_done_exc)
+
+    def get_graph_health(self) -> dict:
+        return {
+            "use_langgraph": self._use_langgraph,
+            "enable_tool_use": self._enable_tool_use,
+            "debug_stream": self._debug_stream,
+            "enabled_tools": sorted(self._enabled_tools) if self._enabled_tools else [],
+            "registered_tools": [spec.name for spec in self._tools.specs()],
+            "memory_enabled": self._memory_orchestrator is not None,
+            "llm_extractor_enabled": self._llm_extractor is not None,
+            "graph": self._graph_runner.health_snapshot(),
+        }

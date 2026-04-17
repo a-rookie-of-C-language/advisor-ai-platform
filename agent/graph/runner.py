@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any, AsyncIterator
 
 from llm.base_provider import ChatMessage
@@ -32,6 +33,21 @@ class GraphRunner:
         self._debug_stream = debug_stream
         self._enable_tool_use = enable_tool_use
         self._compiled = build_chat_graph()
+        self._node_order = [
+            "load_memory",
+            "decide_tool",
+            "call_rag_tool",
+            "generate",
+            "flush_memory",
+            "finalize",
+        ]
+
+    def health_snapshot(self) -> dict[str, Any]:
+        return {
+            "compiled": self._compiled is not None,
+            "checkpoint": "inmemory",
+            "nodes": list(self._node_order),
+        }
 
     async def run_stream(
         self,
@@ -42,6 +58,7 @@ class GraphRunner:
         session_id: int | None,
         kb_id: int | None,
     ) -> AsyncIterator[dict[str, Any]]:
+        started_at = time.perf_counter()
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         runtime = GraphRuntime(
             queue=queue,
@@ -64,6 +81,15 @@ class GraphRunner:
         }
         done = asyncio.Event()
         invoke_error: list[Exception] = []
+        emitted_events = 0
+
+        logger.info(
+            "graph_run start: session_id=%s, user_id=%s, kb_id=%s, message_count=%s",
+            session_id,
+            user_id,
+            kb_id,
+            len(messages),
+        )
 
         async def _invoke() -> None:
             try:
@@ -80,6 +106,7 @@ class GraphRunner:
                     break
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=0.1)
+                    emitted_events += 1
                     yield event
                 except asyncio.TimeoutError:
                     continue
@@ -87,5 +114,12 @@ class GraphRunner:
             await task
             if invoke_error:
                 raise invoke_error[0]
+            logger.info(
+                "graph_run done: session_id=%s, user_id=%s, events=%s, elapsed_ms=%s",
+                session_id,
+                user_id,
+                emitted_events,
+                int((time.perf_counter() - started_at) * 1000),
+            )
         finally:
             reset_runtime(token)

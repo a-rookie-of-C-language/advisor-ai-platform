@@ -123,6 +123,14 @@ def create_api_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/graph/health")
+    async def graph_health() -> dict:
+        service = _get_chat_stream_service()
+        return {
+            "status": "ok",
+            "graph_health": service.get_graph_health(),
+        }
+
     def _resolve_agent_token(request: Request) -> str:
         auth_header = request.headers.get("Authorization", "").strip()
         if auth_header.lower().startswith("bearer "):

@@ -48,6 +48,12 @@ async def _emit(event: str, data: dict[str, Any]) -> None:
 
 async def load_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
+    logger.info(
+        "graph_node load_memory: session_id=%s, user_id=%s, kb_id=%s",
+        state.get("session_id"),
+        state.get("user_id"),
+        state.get("kb_id"),
+    )
     messages = list(state.get("messages", []))
     model_messages = list(messages)
     user_query = state.get("user_query", "")
@@ -102,6 +108,12 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     user_query = state.get("user_query", "")
     rag_enabled = bool(tools) and kb_id is not None and kb_id >= 0 and bool(user_query)
     use_tool = rag_enabled and runtime.enable_tool_use
+    logger.info(
+        "graph_node decide_tool: session_id=%s, rag_enabled=%s, use_tool=%s",
+        state.get("session_id"),
+        rag_enabled,
+        use_tool,
+    )
     return {
         "rag_enabled": rag_enabled,
         "use_tool": use_tool,
@@ -110,6 +122,12 @@ async def decide_tool_node(state: GraphState) -> GraphState:
 
 async def call_rag_tool_node(state: GraphState) -> GraphState:
     runtime = _runtime()
+    logger.info(
+        "graph_node call_rag_tool: session_id=%s, user_id=%s, kb_id=%s",
+        state.get("session_id"),
+        state.get("user_id"),
+        state.get("kb_id"),
+    )
     try:
         payload = await runtime.tools.execute(
             "rag_search",
@@ -164,6 +182,11 @@ async def call_rag_tool_node(state: GraphState) -> GraphState:
 
 async def generate_node(state: GraphState) -> GraphState:
     runtime = _runtime()
+    logger.info(
+        "graph_node generate: session_id=%s, use_tool=%s",
+        state.get("session_id"),
+        state.get("use_tool"),
+    )
     model_messages = list(state.get("model_messages", state.get("messages", [])))
     answer_parts: list[str] = []
     debug_preview_parts: list[str] = []
@@ -192,6 +215,11 @@ async def generate_node(state: GraphState) -> GraphState:
 
 async def flush_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
+    logger.info(
+        "graph_node flush_memory: session_id=%s, memory_enabled=%s",
+        state.get("session_id"),
+        state.get("memory_enabled"),
+    )
     answer = state.get("assistant_answer", "").strip()
     if not state.get("memory_enabled") or not answer or runtime.memory_orchestrator is None:
         return {}
@@ -215,6 +243,11 @@ async def flush_memory_node(state: GraphState) -> GraphState:
 
 async def finalize_node(state: GraphState) -> GraphState:
     runtime = _runtime()
+    logger.info(
+        "graph_node finalize: session_id=%s, answer_len=%s",
+        state.get("session_id"),
+        len(state.get("assistant_answer", "")),
+    )
     if runtime.debug_stream:
         logger.info(
             "debug_stream python done: deltas=%s, answer_preview=%s",
