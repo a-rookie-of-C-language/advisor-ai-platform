@@ -65,7 +65,8 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public Map<String, Object> updateSessionKb(Long sessionId, Long kbId, @Nullable UserDO currentUser) {
-        ChatSessionDO session = getOwnedSession(sessionId, currentUser);
+        ChatSessionDO session = chatSessionDao.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("会话不存在"));
         if (kbId == null || kbId <= 0) {
             session.setKbId(DEFAULT_KB_ID);
         } else {
