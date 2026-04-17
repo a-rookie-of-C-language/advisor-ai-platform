@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import org.springframework.data.domain.Pageable;

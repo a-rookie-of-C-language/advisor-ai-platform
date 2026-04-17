@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;

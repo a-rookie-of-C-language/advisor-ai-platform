@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.service;
+package cn.edu.cqut.advisorplatform.service;
 
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 

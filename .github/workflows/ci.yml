@@ -22,6 +22,23 @@ jobs:
           java-version: '17'
           cache: maven
 
+      - name: Detect UTF-8 BOM in Java sources
+        shell: bash
+        run: |
+          set -e
+          found=0
+          while IFS= read -r -d '' f; do
+            bom=$(xxd -p -l 3 "$f" | tr -d '\n')
+            if [ "$bom" = "efbbbf" ]; then
+              echo "::error file=$f::UTF-8 BOM detected in Java source"
+              found=1
+            fi
+          done < <(find src/main/java -name '*.java' -print0)
+          if [ "$found" -ne 0 ]; then
+            echo "BOM check failed."
+            exit 1
+          fi
+
       - name: Build
         run: mvn clean package -DskipTests -q
 

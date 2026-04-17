@@ -1,4 +1,4 @@
-﻿package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
