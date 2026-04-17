@@ -1,4 +1,4 @@
-﻿ALTER TABLE chat_session
+ALTER TABLE chat_session
     ADD COLUMN IF NOT EXISTS kb_id BIGINT;
 
 UPDATE chat_session

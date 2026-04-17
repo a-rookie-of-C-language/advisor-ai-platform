@@ -1,4 +1,4 @@
-﻿import request from './request'
+import request from './request'
 import { useAuthStore } from '../store/authStore'
 
 export interface ChatSessionDTO {
