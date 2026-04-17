@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
     branches: [master]
 
 jobs:
-  # ── Java Build & Test ─────────────────────────────────────────
   build-java:
     name: Java (Maven)
     runs-on: ubuntu-latest
@@ -19,9 +18,26 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "17"
-          cache: "maven"
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Detect UTF-8 BOM in Java sources
+        shell: bash
+        run: |
+          set -e
+          found=0
+          while IFS= read -r -d '' f; do
+            bom=$(xxd -p -l 3 "$f" | tr -d '\n')
+            if [ "$bom" = "efbbbf" ]; then
+              echo "::error file=$f::UTF-8 BOM detected in Java source"
+              found=1
+            fi
+          done < <(find src/main/java -name '*.java' -print0)
+          if [ "$found" -ne 0 ]; then
+            echo "BOM check failed."
+            exit 1
+          fi
 
       - name: Build
         run: mvn clean package -DskipTests -q
@@ -29,7 +45,6 @@ jobs:
       - name: Test
         run: mvn test -q
 
-  # ── Frontend Build ────────────────────────────────────────────
   build-frontend:
     name: Frontend (Node)
     runs-on: ubuntu-latest
@@ -41,8 +56,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
@@ -51,7 +66,6 @@ jobs:
       - name: Build
         run: npm run build
 
-  # ── Python Syntax Check ───────────────────────────────────────
   build-python:
     name: Python (compileall)
     runs-on: ubuntu-latest
@@ -63,10 +77,157 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Syntax check
         run: python -m compileall . -q
+
+  e2e-chat:
+    name: E2E Chat Drill (all)
+    runs-on: ubuntu-latest
+    needs: [build-java, build-frontend, build-python]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y2lqd3RzZWNyZXRmb3JlMmVvbmx5Y25lZHVjcXV0YXJvb2tpZW9mYw==
+      MEMORY_API_TOKEN: arookieofc
+      AGENT_BASE_URL: http://127.0.0.1:8001
+      AGENT_TIMEOUT_MS: 600000
+      DEBUG_STREAM: 'false'
+
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      AGENT_MODE: api
+      AGENT_API_HOST: 127.0.0.1
+      AGENT_API_PORT: 8001
+      MEMORY_API_BASE_URL: http://localhost:8080
+      MEMORY_API_TIMEOUT_SEC: 30
+      MEMORY_API_MAX_RETRIES: 2
+      MEMORY_API_RETRY_BACKOFF_SEC: 0.3
+
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+      OPENAI_TEMPERATURE: 0.2
+      OPENAI_TIMEOUT_SEC: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate LLM secrets
+        shell: bash
+        run: |
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "::error::OPENAI_API_KEY secret is required for e2e-chat"
+            exit 1
+          fi
+          if [ -z "${OPENAI_BASE_URL}" ]; then
+            echo "OPENAI_BASE_URL=https://api.openai.com/v1" >> "$GITHUB_ENV"
+          fi
+          if [ -z "${OPENAI_MODEL}" ]; then
+            echo "OPENAI_MODEL=gpt-4o-mini" >> "$GITHUB_ENV"
+          fi
+
+      - name: Prepare frontend deps (for node cache consistency)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Start backend
+        shell: bash
+        run: |
+          cd backend
+          nohup mvn -q spring-boot:run > ../backend-e2e.log 2>&1 &
+
+      - name: Start agent (venv)
+        shell: bash
+        run: |
+          cd agent
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          nohup .venv/bin/python app.py --mode api > ../agent-e2e.log 2>&1 &
+
+      - name: Wait for backend and agent health
+        shell: bash
+        run: |
+          set -e
+          echo "Waiting backend http://localhost:8080 ..."
+          for i in {1..90}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/chat/sessions || true)
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              echo "backend is ready (status=$code)"
+              break
+            fi
+            if [ "$i" = "90" ]; then
+              echo "backend not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting agent http://localhost:8001/health ..."
+          for i in {1..90}; do
+            if curl -fsS http://localhost:8001/health >/dev/null; then
+              echo "agent is ready"
+              break
+            fi
+            if [ "$i" = "90" ]; then
+              echo "agent not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Run chat e2e drill (all)
+        run: node scripts/chat_e2e_drill.mjs all http://localhost:8080
+
+      - name: Print logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "===== backend-e2e.log (tail 300) ====="
+          tail -n 300 backend-e2e.log || true
+          echo "===== agent-e2e.log (tail 300) ====="
+          tail -n 300 agent-e2e.log || true
+
+      - name: Upload e2e logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-chat-logs
+          path: |
+            backend-e2e.log
+            agent-e2e.log

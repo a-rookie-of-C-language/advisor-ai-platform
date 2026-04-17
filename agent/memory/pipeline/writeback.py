@@ -1,46 +1,40 @@
 from __future__ import annotations
 
+import inspect
 import re
+from typing import Awaitable, Callable
 
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryCandidate, WritebackResult
+
+Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 
 
 class MemoryWriteback:
     def __init__(self, governance: MemoryGovernance | None = None) -> None:
         self._governance = governance or MemoryGovernance()
 
-    def extract_candidates(
+    async def extract_candidates(
         self,
         user_text: str,
         assistant_text: str,
         source_turn_id: str | None = None,
+        llm_extractor: Extractor | None = None,
     ) -> list[MemoryCandidate]:
-        candidates: list[MemoryCandidate] = []
-        for sentence in self._split_sentences(user_text):
-            confidence = self._estimate_confidence(sentence)
-            if confidence <= 0:
-                continue
-            candidates.append(
-                MemoryCandidate(
-                    content=sentence,
-                    confidence=confidence,
-                    source_turn_id=source_turn_id,
-                    tags={"source": "user"},
-                )
-            )
+        candidates = self._extract_rule_candidates(user_text, assistant_text, source_turn_id)
 
-        for sentence in self._split_sentences(assistant_text):
-            if not sentence.startswith("user"):
-                continue
-            candidates.append(
-                MemoryCandidate(
-                    content=sentence,
-                    confidence=0.7,
-                    source_turn_id=source_turn_id,
-                    tags={"source": "assistant_summary"},
+        if self._governance.llm_extract_enabled and llm_extractor is not None:
+            llm_candidates = llm_extractor(user_text, assistant_text)
+            if inspect.isawaitable(llm_candidates):
+                llm_candidates = await llm_candidates
+            for candidate in llm_candidates:
+                normalized = MemoryCandidate(
+                    content=candidate.content,
+                    confidence=candidate.confidence,
+                    source_turn_id=candidate.source_turn_id or source_turn_id,
+                    tags={**candidate.tags, "source": candidate.tags.get("source", "llm")},
                 )
-            )
+                candidates.append(normalized)
 
         candidates = [candidate for candidate in candidates if self._governance.should_write_candidate(candidate)]
         return self._governance.deduplicate(candidates)
@@ -57,6 +51,42 @@ class MemoryWriteback:
             return WritebackResult(accepted=0, rejected=0, message="no_candidates")
         return await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=filtered)
 
+    def _extract_rule_candidates(
+        self,
+        user_text: str,
+        assistant_text: str,
+        source_turn_id: str | None,
+    ) -> list[MemoryCandidate]:
+        candidates: list[MemoryCandidate] = []
+
+        for sentence in self._split_sentences(user_text):
+            confidence = self._estimate_confidence(sentence)
+            if confidence <= 0:
+                continue
+            candidates.append(
+                MemoryCandidate(
+                    content=sentence,
+                    confidence=confidence,
+                    source_turn_id=source_turn_id,
+                    tags={"source": "rule_user"},
+                )
+            )
+
+        for sentence in self._split_sentences(assistant_text):
+            lowered = sentence.lower()
+            if not (lowered.startswith("user") or lowered.startswith("preference") or lowered.startswith("constraint")):
+                continue
+            candidates.append(
+                MemoryCandidate(
+                    content=sentence,
+                    confidence=0.70,
+                    source_turn_id=source_turn_id,
+                    tags={"source": "rule_assistant"},
+                )
+            )
+
+        return candidates
+
     @staticmethod
     def _split_sentences(text: str) -> list[str]:
         chunks = re.split(r"[.!?\n]", text)
@@ -64,11 +94,33 @@ class MemoryWriteback:
 
     @staticmethod
     def _estimate_confidence(sentence: str) -> float:
-        keywords = ["i like", "i dislike", "i prefer", "i am", "i work", "my preference", "remember"]
         lowered = sentence.lower()
-        for keyword in keywords:
-            if keyword in lowered:
+        strong_patterns = [
+            "i like",
+            "i dislike",
+            "i prefer",
+            "i am",
+            "i work",
+            "my preference",
+            "must",
+            "cannot",
+            "remember",
+            "long term",
+        ]
+        weak_patterns = [
+            "i want",
+            "please",
+            "usually",
+            "often",
+        ]
+
+        for pattern in strong_patterns:
+            if pattern in lowered:
                 return 0.8
-        if len(sentence) >= 12:
+        for pattern in weak_patterns:
+            if pattern in lowered:
+                return 0.65
+
+        if len(sentence) >= 18:
             return 0.65
         return 0.0

@@ -13,3 +13,5 @@ agents.md
 .idea/
 .venv/
 .env
+log.txt
+java-upgrade/

@@ -1,9 +1,12 @@
-server:
+﻿server:
   port: 8080
 
 spring:
   profiles:
     active: local
+  mvc:
+    async:
+      request-timeout: 600000
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: ${DB_USERNAME}
@@ -34,6 +37,13 @@ advisor:
     expiration: 86400000
   rag:
     upload-dir: ${RAG_UPLOAD_DIR:uploads}
+  memory:
+    api-token: ${MEMORY_API_TOKEN:arookieofc}
+  agent:
+    base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
+    api-token: ${MEMORY_API_TOKEN:arookieofc}
+    timeout-ms: ${AGENT_TIMEOUT_MS:600000}
+    debug-stream: ${DEBUG_STREAM:true}
 
 logging:
   level:

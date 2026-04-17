@@ -15,6 +15,9 @@ from RAG.DocumentIndexer import DocumentIndexer
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
+from memory.api.memory_api_client import MemoryApiClient
+from memory.pipeline.llm_extractor import OpenAILLMExtractor
+from memory.pipeline.orchestrator import MemoryOrchestrator
 
 load_dotenv()
 
@@ -32,12 +35,55 @@ class ChatMessageDTO(BaseModel):
 
 class ChatStreamRequestDTO(BaseModel):
     messages: list[ChatMessageDTO] = Field(..., min_length=1)
+    userId: int | None = None
+    sessionId: int | None = None
+    kbId: int | None = None
+
+
+@lru_cache(maxsize=1)
+def _get_memory_orchestrator() -> MemoryOrchestrator | None:
+    memory_api_base_url = os.getenv("MEMORY_API_BASE_URL", "").strip()
+    if not memory_api_base_url:
+        return None
+
+    token = os.getenv("MEMORY_API_TOKEN", "").strip()
+    if not token:
+        logger.error("MEMORY_API_TOKEN is required when MEMORY_API_BASE_URL is configured.")
+        raise RuntimeError("Missing MEMORY_API_TOKEN for memory API access")
+
+    timeout_sec = _read_float_env("MEMORY_API_TIMEOUT_SEC", 30.0)
+    max_retries = _read_int_env("MEMORY_API_MAX_RETRIES", 2)
+    retry_backoff_sec = _read_float_env("MEMORY_API_RETRY_BACKOFF_SEC", 0.3)
+
+    api_client = MemoryApiClient(
+        base_url=memory_api_base_url,
+        timeout_sec=timeout_sec,
+        max_retries=max_retries,
+        retry_backoff_sec=retry_backoff_sec,
+        bearer_token=token,
+    )
+    return MemoryOrchestrator(api_client=api_client)
+
+
+@lru_cache(maxsize=1)
+def _get_llm_extractor() -> OpenAILLMExtractor | None:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    model = os.getenv("OPENAI_MODEL", "").strip()
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
+
+    if not api_key or not model:
+        return None
+    return OpenAILLMExtractor(api_key=api_key, model=model, base_url=base_url)
 
 
 @lru_cache(maxsize=1)
 def _get_chat_stream_service() -> ChatStreamService:
     provider = build_provider_from_env()
-    return ChatStreamService(provider)
+    return ChatStreamService(
+        provider=provider,
+        memory_orchestrator=_get_memory_orchestrator(),
+        llm_extractor=_get_llm_extractor(),
+    )
 
 
 def create_api_app() -> FastAPI:
@@ -53,7 +99,12 @@ def create_api_app() -> FastAPI:
         messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
 
         return StreamingResponse(
-            service.stream_events(messages),
+            service.stream_events(
+                messages,
+                user_id=request.userId,
+                session_id=request.sessionId,
+                kb_id=request.kbId,
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -90,7 +141,7 @@ def _read_float_env(name: str, default: float) -> float:
         return default
 
 
-def run_indexer() -> None:
+def _build_indexer_from_env() -> DocumentIndexer:
     db_dsn = os.getenv("DATABASE_URL")
     if not db_dsn:
         raise RuntimeError("Missing DATABASE_URL")
@@ -102,7 +153,15 @@ def run_indexer() -> None:
     max_retries = _read_int_env("INDEX_DB_MAX_RETRIES", 2)
     retry_backoff_sec = _read_float_env("INDEX_DB_RETRY_BACKOFF_SEC", 0.5)
 
-    indexer = DocumentIndexer(
+    logger.info(
+        "Agent indexer started. pool=%s-%s, timeout=%ss, retries=%s",
+        db_pool_minconn,
+        db_pool_maxconn,
+        db_statement_timeout_sec,
+        max_retries,
+    )
+
+    return DocumentIndexer(
         db_dsn=db_dsn,
         ollama_base_url=ollama_base_url,
         db_pool_minconn=db_pool_minconn,
@@ -112,14 +171,9 @@ def run_indexer() -> None:
         retry_backoff_sec=retry_backoff_sec,
     )
 
-    logger.info(
-        "Agent indexer started. pool=%s-%s, timeout=%ss, retries=%s",
-        db_pool_minconn,
-        db_pool_maxconn,
-        db_statement_timeout_sec,
-        max_retries,
-    )
 
+def run_indexer() -> None:
+    indexer = _build_indexer_from_env()
     try:
         asyncio.run(indexer.listen())
     except KeyboardInterrupt:
@@ -135,13 +189,67 @@ def run_api() -> None:
     uvicorn.run("app:app", host=host, port=port, reload=False)
 
 
+async def _run_all_async() -> None:
+    import uvicorn
+
+    host = os.getenv("AGENT_API_HOST", "0.0.0.0")
+    port = _read_int_env("AGENT_API_PORT", 8001)
+    logger.info("Agent all-mode started. API at http://%s:%s", host, port)
+
+    indexer = _build_indexer_from_env()
+    config = uvicorn.Config(app, host=host, port=port, reload=False)
+    server = uvicorn.Server(config)
+
+    api_task = asyncio.create_task(server.serve(), name="api-server")
+    indexer_task = asyncio.create_task(indexer.listen(), name="indexer-listener")
+
+    try:
+        while True:
+            if api_task.done():
+                exc = api_task.exception()
+                if exc:
+                    raise exc
+                break
+
+            if indexer_task.done():
+                exc = indexer_task.exception()
+                if exc:
+                    raise exc
+                logger.warning("Indexer exited unexpectedly, stopping API server")
+                server.should_exit = True
+                await api_task
+                break
+
+            await asyncio.sleep(0.5)
+    finally:
+        if not api_task.done():
+            server.should_exit = True
+            await api_task
+
+        if not indexer_task.done():
+            indexer_task.cancel()
+            try:
+                await indexer_task
+            except asyncio.CancelledError:
+                pass
+
+        await indexer.close()
+
+
+def run_all() -> None:
+    try:
+        asyncio.run(_run_all_async())
+    except KeyboardInterrupt:
+        logger.info("All-mode stopped by keyboard interrupt")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Advisor AI Agent")
     parser.add_argument(
         "--mode",
-        choices=["indexer", "api"],
-        default=os.getenv("AGENT_MODE", "indexer"),
-        help="Run mode: indexer or api",
+        choices=["all", "indexer", "api"],
+        default=os.getenv("AGENT_MODE", "all"),
+        help="Run mode: all or indexer or api",
     )
     args = parser.parse_args()
 
@@ -149,7 +257,11 @@ def main() -> None:
         run_api()
         return
 
-    run_indexer()
+    if args.mode == "indexer":
+        run_indexer()
+        return
+
+    run_all()
 
 
 if __name__ == "__main__":

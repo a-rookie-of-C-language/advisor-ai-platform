@@ -1,4 +1,7 @@
-spring:
+﻿spring:
+  mvc:
+    async:
+      request-timeout: 600000
   datasource:
     username: your_db_username
     password: your_db_password
@@ -6,3 +9,10 @@ spring:
 advisor:
   jwt:
     secret: your_base64_encoded_jwt_secret
+  memory:
+    api-token: arookieofc
+  agent:
+    base-url: http://127.0.0.1:8001
+    api-token: arookieofc
+    timeout-ms: 600000
+    debug-stream: false

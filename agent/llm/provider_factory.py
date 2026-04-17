@@ -8,17 +8,19 @@ from llm.openai_provider import OpenAIProvider
 
 def _read_required_env(name: str) -> str:
     value = os.getenv(name)
-    if value is None or not value.strip():
-        raise RuntimeError(f"Missing required env: {name}")
-    return value.strip()
+    if value is not None and value.strip():
+        return value.strip()
+    raise RuntimeError(f"Missing required env: {name}")
 
 
 def build_provider_from_env() -> BaseLLMProvider:
-    api_key = _read_required_env("api_key")
-    model = _read_required_env("model_id")
-    base_url = os.getenv("base_url", "").strip() or None
-    temperature = float(os.getenv("temperature", "0.2"))
-    timeout = float(os.getenv("timeout", "60"))
+    api_key = _read_required_env("OPENAI_API_KEY")
+    model = _read_required_env("OPENAI_MODEL")
+
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
+    temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
+    timeout = float(os.getenv("OPENAI_TIMEOUT_SEC", "60"))
+
     return OpenAIProvider(
         api_key=api_key,
         model=model,
