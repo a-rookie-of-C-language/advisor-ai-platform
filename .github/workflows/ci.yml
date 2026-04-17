@@ -112,6 +112,7 @@ jobs:
       DB_PASSWORD: postgres
       JWT_SECRET: Y2lqd3RzZWNyZXRmb3JlMmVvbmx5Y25lZHVjcXV0YXJvb2tpZW9mYw==
       MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
       AGENT_BASE_URL: http://127.0.0.1:8001
       AGENT_TIMEOUT_MS: 600000
       DEBUG_STREAM: 'false'
@@ -214,8 +215,8 @@ jobs:
             sleep 2
           done
 
-      - name: Run chat e2e drill (all)
-        run: node scripts/chat_e2e_drill.mjs all http://localhost:8080
+      - name: Run chat e2e drill (full)
+        run: node scripts/chat_e2e_drill.mjs full http://localhost:8080 http://127.0.0.1:8001
 
       - name: Print logs on failure
         if: failure()

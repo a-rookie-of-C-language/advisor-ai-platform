@@ -1,8 +1,9 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 import http from 'node:http';
 
 const DEFAULT_BACKEND = 'http://localhost:8080';
+const DEFAULT_AGENT = 'http://127.0.0.1:8001';
 
 function ts() {
   return new Date().toISOString();
@@ -367,14 +368,36 @@ async function runTimeoutDrill() {
   }
 }
 
+async function runAgentAuthDrill(agentBaseUrl) {
+  log('agent auth drill expect 401 without token', { agentBaseUrl });
+  const payload = {
+    messages: [{ role: 'user', content: 'auth drill' }],
+    userId: 1,
+    sessionId: 1001,
+    kbId: 1,
+  };
+  const res = await fetch(`${agentBaseUrl}/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  const ok = res.status === 401;
+  if (!ok) {
+    throw new Error(`agent auth drill failed: expected 401, got ${res.status}, body=${text}`);
+  }
+  return { ok: true, status: res.status, bodyPreview: text.slice(0, 200) };
+}
+
 function parseArgs(argv) {
   const mode = argv[2] || 'smoke';
   const baseUrl = argv[3] || DEFAULT_BACKEND;
-  return { mode, baseUrl };
+  const agentBaseUrl = argv[4] || process.env.AGENT_BASE_URL || DEFAULT_AGENT;
+  return { mode, baseUrl, agentBaseUrl };
 }
 
 async function main() {
-  const { mode, baseUrl } = parseArgs(process.argv);
+  const { mode, baseUrl, agentBaseUrl } = parseArgs(process.argv);
 
   if (mode === 'smoke') {
     const result = await runSmoke(baseUrl);
@@ -392,8 +415,20 @@ async function main() {
     console.log(JSON.stringify({ ok: true, mode, smoke, timeout }, null, 2));
     return;
   }
+  if (mode === 'auth') {
+    const result = await runAgentAuthDrill(agentBaseUrl);
+    console.log(JSON.stringify({ ok: true, mode, result }, null, 2));
+    return;
+  }
+  if (mode === 'full') {
+    const smoke = await runSmoke(baseUrl);
+    const timeout = await runTimeoutDrill();
+    const auth = await runAgentAuthDrill(agentBaseUrl);
+    console.log(JSON.stringify({ ok: true, mode, smoke, timeout, auth }, null, 2));
+    return;
+  }
 
-  throw new Error('unknown mode, use smoke|timeout|all');
+  throw new Error('unknown mode, use smoke|timeout|all|auth|full');
 }
 
 main().catch((err) => {
