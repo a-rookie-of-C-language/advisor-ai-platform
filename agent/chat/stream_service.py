@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
-from typing import Any, AsyncIterator, Awaitable, Callable, Iterable
+from typing import AsyncIterator, Awaitable, Callable, Iterable
 
-from llm.base_provider import BaseLLMProvider, ChatMessage, LLMStreamEvent, ToolSpec
+from llm.base_provider import BaseLLMProvider, ChatMessage, LLMStreamEvent
 from memory.core.schema import MemoryCandidate
 from memory.pipeline.orchestrator import MemoryOrchestrator
 from memory.pipeline.work_memory import WorkMemory
-
-from RAG.RAG_service import RAG_service
-from RAG.schema import RAGSearchRequest, SearchMode
+from tools.rag_search_tool import RAGSearchTool
+from tools.tool_registry import ToolRegistry
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
@@ -25,15 +23,17 @@ class ChatStreamService:
         provider: BaseLLMProvider,
         memory_orchestrator: MemoryOrchestrator | None = None,
         llm_extractor: Extractor | None = None,
-        rag_service: RAG_service | None = None,
+        rag_service=None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
         self._work_memory = WorkMemory()
         self._llm_extractor = llm_extractor
-        self._rag_service = rag_service
         self._debug_stream = self._read_debug_stream()
         self._enable_tool_use = self._read_enable_tool_use()
+        self._tools = ToolRegistry()
+        if rag_service is not None:
+            self._tools.register(RAGSearchTool(rag_service))
 
     @staticmethod
     def _read_debug_stream() -> bool:
@@ -76,150 +76,32 @@ class ChatStreamService:
                 return message.content
         return ""
 
-    async def _run_rag_tool(
-        self,
-        user_query: str,
-        kb_id: int,
-        top_k: int,
-        max_retries: int,
-    ) -> str:
-        if self._rag_service is None:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "RAG 服务不可用",
-                    "items": [],
-                },
-                ensure_ascii=False,
-            )
-
-        for attempt in range(1, max_retries + 1):
-            try:
-                req = RAGSearchRequest(
-                    query=user_query,
-                    kb_id=kb_id,
-                    top_k=top_k,
-                    mode=SearchMode.dense,
-                    use_rerank=True,
-                )
-                result = await asyncio.to_thread(self._rag_service.rag_search, req)
-                if result.ok and result.items:
-                    items = [
-                        {
-                            "id": hit.doc_id,
-                            "docName": hit.doc_title,
-                            "snippet": hit.text[:200],
-                            "score": hit.score,
-                        }
-                        for hit in result.items
-                    ]
-                    return json.dumps(
-                        {
-                            "ok": True,
-                            "status": "hit",
-                            "message": "检索命中",
-                            "attempt": attempt,
-                            "items": items,
-                        },
-                        ensure_ascii=False,
-                    )
-
-                if result.ok:
-                    return json.dumps(
-                        {
-                            "ok": True,
-                            "status": "miss",
-                            "message": "未检索到相关知识",
-                            "attempt": attempt,
-                            "items": [],
-                        },
-                        ensure_ascii=False,
-                    )
-
-                return json.dumps(
-                    {
-                        "ok": False,
-                        "status": "error",
-                        "message": "RAG 检索失败",
-                        "attempt": attempt,
-                        "items": [],
-                    },
-                    ensure_ascii=False,
-                )
-            except Exception as exc:  # noqa: BLE001
-                if attempt >= max_retries:
-                    return json.dumps(
-                        {
-                            "ok": False,
-                            "status": "error",
-                            "message": f"RAG 执行异常: {exc}",
-                            "attempt": attempt,
-                            "items": [],
-                        },
-                        ensure_ascii=False,
-                    )
-                logger.warning("RAG tool execute failed, retry=%s/%s, error=%s", attempt, max_retries, exc)
-
-        return json.dumps(
-            {
-                "ok": False,
-                "status": "error",
-                "message": "RAG 检索失败",
-                "items": [],
-            },
-            ensure_ascii=False,
-        )
-
     async def _execute_tool(
         self,
         tool_name: str,
-        tool_args: dict[str, Any],
-        kb_id: int | None,
-        user_query: str,
+        tool_args: dict,
         user_id: int | None,
         session_id: int | None,
+        kb_id: int | None,
+        user_query: str,
     ) -> str:
-        if tool_name != "rag_search":
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": f"不支持的工具: {tool_name}",
-                    "items": [],
-                },
-                ensure_ascii=False,
-            )
-
-        if user_id is None or session_id is None:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "工具权限校验失败: 缺少用户或会话上下文",
-                    "items": [],
-                },
-                ensure_ascii=False,
-            )
-
-        if kb_id is None or kb_id < 0:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "工具权限校验失败: kb_id 非法",
-                    "items": [],
-                },
-                ensure_ascii=False,
-            )
-
-        query = str(tool_args.get("query") or user_query).strip()
-        top_k_raw = tool_args.get("top_k", 5)
+        context = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "kb_id": kb_id,
+            "user_query": user_query,
+        }
         try:
-            top_k = max(1, min(int(top_k_raw), 10))
-        except Exception:
-            top_k = 5
-        return await self._run_rag_tool(query, kb_id, top_k, max_retries=3)
+            return await self._tools.execute(tool_name, tool_args, context)
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps(
+                {
+                    "ok": False,
+                    "status": "error",
+                    "message": f"tool_execute_failed: {exc}",
+                    "items": [],
+                }
+            )
 
     async def stream_events(
         self,
@@ -240,12 +122,7 @@ class ChatStreamService:
             and bool(user_query)
         )
 
-        rag_enabled = (
-            self._rag_service is not None
-            and kb_id is not None
-            and kb_id >= 0
-            and bool(user_query)
-        )
+        rag_enabled = bool(self._tools.specs()) and kb_id is not None and kb_id >= 0 and bool(user_query)
 
         if memory_enabled:
             try:
@@ -286,29 +163,16 @@ class ChatStreamService:
         debug_delta_count = 0
         try:
             if rag_enabled and self._enable_tool_use:
-                tools = [
-                    ToolSpec(
-                        name="rag_search",
-                        description="在指定知识库中检索与用户问题最相关的文档片段。",
-                        parameters={
-                            "type": "object",
-                            "properties": {
-                                "query": {"type": "string", "description": "用户问题"},
-                                "top_k": {"type": "integer", "description": "返回条数，范围 1-10", "default": 5},
-                            },
-                            "required": ["query"],
-                        },
-                    )
-                ]
+                tools = self._tools.specs()
 
-                async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
+                async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(
                         tool_name=tool_name,
                         tool_args=tool_args,
-                        kb_id=kb_id,
-                        user_query=user_query,
                         user_id=user_id,
                         session_id=session_id,
+                        kb_id=kb_id,
+                        user_query=user_query,
                     )
 
                 async for event in self._provider.stream_chat_with_tools(
@@ -330,7 +194,7 @@ class ChatStreamService:
                                 "success": event.success,
                                 "attempt": event.attempt,
                                 "status": payload.get("status", "error"),
-                                "message": payload.get("message", "工具执行失败"),
+                                "message": payload.get("message", "tool execute failed"),
                                 "items": payload.get("items", []),
                             },
                         )
