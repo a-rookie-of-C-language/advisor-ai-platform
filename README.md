@@ -52,6 +52,44 @@ npm install
 npm run dev
 ```
 
+## 联调验证
+
+项目内置联调脚本： [chat_e2e_drill.mjs](file:///d:/code/advisor-ai-platform/scripts/chat_e2e_drill.mjs)
+
+### 联调前置条件
+- 后端服务已启动，默认地址 `http://localhost:8080`
+- Agent 服务已启动，默认地址 `http://127.0.0.1:8001`
+- Agent 已配置 `AGENT_API_TOKEN`
+- 如果执行聊天主链路联调，还需要保证后端数据库、JWT、Agent 的 `OPENAI_API_KEY` 与 `OPENAI_MODEL` 已正确配置
+
+### Agent 鉴权联调
+```bash
+node scripts/chat_e2e_drill.mjs auth http://localhost:8080 http://127.0.0.1:8001
+```
+
+通过标准：
+- `agent /chat/stream` 在未携带 token 时返回 `401`
+- 返回体包含 `{"detail":"invalid agent token"}`
+
+### 后端 + Agent 聊天主链路联调
+```bash
+node scripts/chat_e2e_drill.mjs smoke http://localhost:8080 http://127.0.0.1:8001
+```
+
+脚本会自动执行：
+1. 注册并登录测试用户
+2. 创建会话
+3. 发送非流式消息
+4. 发送流式消息并等待 `done`
+5. 查询消息列表并校验持久化结果
+
+通过标准：
+- `streamHasDone=true`
+- `streamHasDelta=true`
+- `streamHasError=false`
+- `messageCount >= 2`
+- `sessionKbId=0`
+
 ## 功能链路说明（RAG）
 1. 前端上传文档到后端。
 2. 后端写入 `rag_document`（`PENDING`）。

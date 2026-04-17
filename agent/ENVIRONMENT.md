@@ -7,10 +7,12 @@ This file documents the key runtime variables for `agent`.
 - `AGENT_MODE`: `all` | `api` | `indexer`
 - `AGENT_API_HOST`: API bind host
 - `AGENT_API_PORT`: API bind port
-- `AGENT_API_TOKEN`: optional direct-access token for `/chat/stream`
-  - If configured, request must include:
-    - `Authorization: Bearer <token>`, or
+- `AGENT_API_TOKEN`: direct-access token for `/chat/stream`
+  - 在 `api` / `all` 模式下为必填
+  - 请求必须携带以下任一 Header：
+    - `Authorization: Bearer <token>`
     - `X-Agent-Token: <token>`
+- `DEBUG_STREAM`: 是否输出流式调试日志，联调排障时可临时开启，默认建议关闭
 
 ## LLM
 
@@ -54,3 +56,14 @@ This file documents the key runtime variables for `agent`.
 - `ENABLE_TOOL_USE=true`
 - `ENABLED_TOOLS=rag_search`
 - `DEBUG_STREAM=false`
+
+## Local Integration Checklist
+
+- 启动 `api` / `all` 模式前，先确认 `AGENT_API_TOKEN` 已配置，否则服务会拒绝启动
+- 如果执行聊天主链路联调，还需要配置：
+  - `OPENAI_API_KEY`
+  - `OPENAI_MODEL`
+  - `DATABASE_URL`（涉及 RAG / 索引能力时）
+- 联调时可以使用以下 Header 调用 `/chat/stream`：
+  - `Authorization: Bearer <token>`
+  - `X-Agent-Token: <token>`
