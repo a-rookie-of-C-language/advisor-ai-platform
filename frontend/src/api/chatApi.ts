@@ -154,10 +154,12 @@ export const chatApi = {
       let sawDone = false
       let sawError = false
       let latestError = ''
+      let streamClosed = false
 
-      while (true) {
+      while (!streamClosed) {
         const { done, value } = await reader.read()
         if (done) {
+          streamClosed = true
           break
         }
 
