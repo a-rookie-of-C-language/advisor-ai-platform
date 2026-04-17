@@ -2,6 +2,7 @@ package cn.edu.cqut.advisorplatform.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.lang.Nullable;
 
 import java.util.List;
 
@@ -14,5 +15,6 @@ public class MemoryCandidateUpsertRequestDTO {
     @NotNull
     private Long kbId;
 
+    @Nullable
     private List<MemoryCandidateItemDTO> candidates;
 }

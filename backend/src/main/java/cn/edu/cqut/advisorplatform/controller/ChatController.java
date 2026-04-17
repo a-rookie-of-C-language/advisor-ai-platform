@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,17 +53,17 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
 
     @GetMapping("/sessions")
-    public ApiResponseDTO<List<Map<String, Object>>> listSessions(@AuthenticationPrincipal UserDO currentUser) {
+    public ApiResponseDTO<List<Map<String, Object>>> listSessions(@AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(chatService.listSessions(currentUser));
     }
 
     @PostMapping("/sessions")
-    public ApiResponseDTO<Map<String, Object>> createSession(@AuthenticationPrincipal UserDO currentUser) {
+    public ApiResponseDTO<Map<String, Object>> createSession(@AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(chatService.createSession(currentUser));
     }
 
     @DeleteMapping("/sessions/{id}")
-    public ApiResponseDTO<Void> deleteSession(@PathVariable Long id, @AuthenticationPrincipal UserDO currentUser) {
+    public ApiResponseDTO<Void> deleteSession(@PathVariable Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
         chatService.deleteSession(id, currentUser);
         return ApiResponseDTO.success();
     }
@@ -70,7 +71,7 @@ public class ChatController {
     @GetMapping("/sessions/{sessionId}/messages")
     public ApiResponseDTO<List<Map<String, Object>>> listMessages(
             @PathVariable Long sessionId,
-            @AuthenticationPrincipal UserDO currentUser
+            @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
         return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
     }
@@ -79,7 +80,7 @@ public class ChatController {
     public ApiResponseDTO<Map<String, Object>> sendMessage(
             @PathVariable Long sessionId,
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserDO currentUser
+            @AuthenticationPrincipal @Nullable UserDO currentUser
     ) throws java.io.IOException {
         if (currentUser == null || currentUser.getId() == null) {
             throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
@@ -121,8 +122,9 @@ public class ChatController {
                 ChatStreamProxyResult result = agentProxyService.proxyChatOnce(request, currentUser.getId());
                 assistantText = result == null ? "" : result.getAssistantText();
             } catch (Exception e) {
-                assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (e.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : e.getMessage());
-                log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
+                String errorMessage = safeMessage(e);
+                assistantText = "请求失败：" + errorMessage;
+                log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
             }
 
             if (assistantText == null || assistantText.trim().isBlank()) {
@@ -140,7 +142,7 @@ public class ChatController {
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamChat(
             @Valid @RequestBody ChatStreamRequestDTO request,
-            @AuthenticationPrincipal UserDO currentUser
+            @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
         if (currentUser == null || currentUser.getId() == null) {
             throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
@@ -175,10 +177,11 @@ public class ChatController {
                 }
                 log.info("chat_stream proxy_done, assistantLen={}, elapsedMs={}", assistantText.length(), elapsedSince(startAt));
             } catch (Exception ex) {
+                String errorMessage = safeMessage(ex);
                 finishReason = "error";
-                writeErrorEvent(outputStream, ex.getMessage());
-                log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(ex.getMessage()));
-                assistantText = "\u8bf7\u6c42\u5931\u8d25\uff1a" + (ex.getMessage() == null ? ASSISTANT_ERROR_PLACEHOLDER : ex.getMessage());
+                writeErrorEvent(outputStream, errorMessage);
+                log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
+                assistantText = "请求失败：" + errorMessage;
             } finally {
                 writeDoneEvent(outputStream, finishReason, turnId, traceId);
                 saveTurnQuietly(request.getSessionId(), currentUser.getId(), turnId, userText, assistantText);
@@ -284,7 +287,7 @@ public class ChatController {
         }
     }
 
-    private String safeJson(String raw) {
+    private String safeJson(@Nullable String raw) {
         if (raw == null || raw.isBlank()) {
             return "stream failed";
         }
@@ -294,7 +297,12 @@ public class ChatController {
                 .replace("\n", " ");
     }
 
-    private void writeErrorEvent(java.io.OutputStream outputStream, String rawMessage) {
+    private String safeMessage(Exception exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? ASSISTANT_ERROR_PLACEHOLDER : message;
+    }
+
+    private void writeErrorEvent(java.io.OutputStream outputStream, @Nullable String rawMessage) {
         String message = safeJson(rawMessage);
         String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
         try {

@@ -8,6 +8,7 @@ import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.ChatService;
+import org.springframework.lang.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +40,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public Map<String, Object> createSession(UserDO currentUser) {
+    public Map<String, Object> createSession(@Nullable UserDO currentUser) {
         ChatSessionDO session = new ChatSessionDO();
         session.setUser(requireUser(currentUser));
         session.setTitle(DEFAULT_SESSION_TITLE);
@@ -68,7 +69,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public long getSessionKbId(Long sessionId, UserDO currentUser) {
+    public long getSessionKbId(Long sessionId, @Nullable UserDO currentUser) {
         ChatSessionDO session = getOwnedSession(sessionId, currentUser);
         Long kbId = session.getKbId();
         return kbId == null ? DEFAULT_KB_ID : kbId;
@@ -121,7 +122,12 @@ public class ChatServiceImpl implements ChatService {
         return currentUser;
     }
 
-    private Long requireUserId(UserDO currentUser) {
-        return requireUser(currentUser).getId();
+    private Long requireUserId(@Nullable UserDO currentUser) {
+        UserDO safeUser = requireUser(currentUser);
+        Long userId = safeUser.getId();
+        if (userId == null) {
+            throw new ForbiddenException("未登录或登录已失效");
+        }
+        return userId;
     }
 }

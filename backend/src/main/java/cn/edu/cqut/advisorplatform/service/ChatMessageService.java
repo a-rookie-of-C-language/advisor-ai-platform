@@ -1,8 +1,11 @@
 package cn.edu.cqut.advisorplatform.service;
 
+import org.springframework.lang.Nullable;
+
 public interface ChatMessageService {
 
-    void saveTurn(Long sessionId, Long userId, String turnId, String userContent, String assistantContent);
+    void saveTurn(Long sessionId, Long userId, @Nullable String turnId, @Nullable String userContent, @Nullable String assistantContent);
 
-    String findAssistantContent(Long sessionId, Long userId, String turnId);
+    @Nullable
+    String findAssistantContent(Long sessionId, Long userId, @Nullable String turnId);
 }

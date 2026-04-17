@@ -6,6 +6,7 @@ import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.RagService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,7 +32,7 @@ public class RagController {
     @PostMapping("/knowledge-bases")
     public ApiResponseDTO<KnowledgeBaseResponseDTO> createKnowledgeBase(
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserDO currentUser) {
+            @AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(ragService.createKnowledgeBase(
                 body.get("name"), body.get("description"), currentUser));
     }
@@ -39,7 +40,7 @@ public class RagController {
     @DeleteMapping("/knowledge-bases/{id}")
     public ApiResponseDTO<Void> deleteKnowledgeBase(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserDO currentUser) {
+            @AuthenticationPrincipal @Nullable UserDO currentUser) {
         ragService.deleteKnowledgeBase(id, currentUser);
         return ApiResponseDTO.success();
     }
@@ -57,7 +58,7 @@ public class RagController {
     public ApiResponseDTO<RagDocumentResponseDTO> uploadDocument(
             @PathVariable Long kbId,
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal UserDO currentUser) {
+            @AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(ragService.uploadDocument(kbId, file, currentUser));
     }
 

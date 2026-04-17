@@ -11,6 +11,7 @@ import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     @Transactional
-    public void saveTurn(Long sessionId, Long userId, String turnId, String userContent, String assistantContent) {
+    public void saveTurn(Long sessionId, Long userId, @Nullable String turnId, @Nullable String userContent, @Nullable String assistantContent) {
         ChatSessionDO session = getOwnedSession(sessionId, userId);
 
         String safeTurnId = turnId == null ? "" : turnId.trim();
@@ -79,7 +80,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     @Transactional(readOnly = true)
-    public String findAssistantContent(Long sessionId, Long userId, String turnId) {
+    public String findAssistantContent(Long sessionId, Long userId, @Nullable String turnId) {
         ChatSessionDO session = getOwnedSession(sessionId, userId);
         String safeTurnId = turnId == null ? "" : turnId.trim();
         if (safeTurnId.isBlank()) {

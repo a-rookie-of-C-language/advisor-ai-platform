@@ -16,3 +16,4 @@ agents.md
 log.txt
 java-upgrade/
 pytest**/
+**cache**/

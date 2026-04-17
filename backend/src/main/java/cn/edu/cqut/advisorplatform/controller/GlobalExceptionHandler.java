@@ -7,6 +7,7 @@ import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -75,7 +76,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<?> handleRuntime(RuntimeException e, HttpServletRequest request) {
+    public ResponseEntity<?> handleRuntime(RuntimeException e, @Nullable HttpServletRequest request) {
         if (isSseRequest(request)) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -92,7 +93,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponseDTO.error(500, "服务器内部错误"));
     }
 
-    private boolean isSseRequest(HttpServletRequest request) {
+    private boolean isSseRequest(@Nullable HttpServletRequest request) {
         if (request == null) {
             return false;
         }
@@ -102,5 +103,10 @@ public class GlobalExceptionHandler {
         return (accept != null && accept.contains("text/event-stream"))
                 || (contentType != null && contentType.contains("text/event-stream"))
                 || "/api/chat/stream".equals(uri);
+    }
+
+    private String safeMessage(Exception exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? "未知错误" : message;
     }
 }
