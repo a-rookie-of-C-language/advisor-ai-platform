@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Any
 
 from RAG.RAG_service import RAG_service
 from RAG.schema import RAGSearchRequest, SearchMode
 from tools.base_tool import BaseTool
+
+logger = logging.getLogger(__name__)
 
 
 class RAGSearchTool(BaseTool):
@@ -115,11 +118,17 @@ class RAGSearchTool(BaseTool):
                 }
             )
         except Exception as exc:
+            logger.exception(
+                "rag_search tool failed: user_id=%s, session_id=%s, kb_id=%s",
+                user_id,
+                session_id,
+                kb_id,
+            )
             return json.dumps(
                 {
                     "ok": False,
                     "status": "error",
-                    "message": f"rag_search_exception: {exc}",
+                    "message": "rag_search_exception",
                     "items": [],
                 }
             )

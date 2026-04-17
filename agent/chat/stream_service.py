@@ -17,6 +17,8 @@ _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
 
+_STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
+
 
 class ChatStreamService:
     def __init__(
@@ -118,11 +120,18 @@ class ChatStreamService:
         try:
             return await self._tools.execute(tool_name, tool_args, context)
         except Exception as exc:
+            logger.exception(
+                "Tool execute failed: tool=%s, user_id=%s, session_id=%s, kb_id=%s",
+                tool_name,
+                user_id,
+                session_id,
+                kb_id,
+            )
             return json.dumps(
                 {
                     "ok": False,
                     "status": "error",
-                    "message": f"tool_execute_failed: {exc}",
+                    "message": "tool_execute_failed",
                     "items": [],
                 }
             )
@@ -174,10 +183,16 @@ class ChatStreamService:
                 yield self._serialize_event(event["event"], event["data"])
             yield self._serialize_event("done", {"message": "stream_finished"})
         except Exception as exc:  # noqa: BLE001
+            logger.exception(
+                "Graph stream failed: user_id=%s, session_id=%s, kb_id=%s",
+                user_id,
+                session_id,
+                kb_id,
+            )
             if self._debug_stream:
                 logger.warning("debug_stream python error(graph): error=%s", exc)
             try:
-                yield self._serialize_event("error", {"message": str(exc)})
+                yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
             except Exception as send_error_exc:  # noqa: BLE001
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
@@ -333,7 +348,13 @@ class ChatStreamService:
                     logger.warning("Memory flush failed, skip writeback: %s", exc)
 
             yield self._serialize_event("done", {"message": "stream_finished"})
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            logger.exception(
+                "Legacy stream failed: user_id=%s, session_id=%s, kb_id=%s",
+                user_id,
+                session_id,
+                kb_id,
+            )
             if self._debug_stream:
                 logger.warning(
                     "debug_stream python error: deltas=%s, answer_preview=%s, error=%s",
@@ -342,14 +363,14 @@ class ChatStreamService:
                     exc,
                 )
             try:
-                yield self._serialize_event("error", {"message": str(exc)})
-            except Exception as send_error_exc:  # noqa: BLE001
+                yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
+            except Exception as send_error_exc: 
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
 
             try:
                 yield self._serialize_event("done", {"message": "stream_finished_with_error"})
-            except Exception as send_done_exc:  # noqa: BLE001
+            except Exception as send_done_exc: 
                 logger.warning("Failed to send stream done event after error: %s", send_done_exc)
 
     def get_graph_health(self) -> dict:

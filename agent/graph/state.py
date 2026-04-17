@@ -16,5 +16,6 @@ class GraphState(TypedDict, total=False):
     rag_enabled: bool
     use_tool: bool
     assistant_answer: str
+    stream_failed: bool
     debug_delta_count: int
     debug_preview: str

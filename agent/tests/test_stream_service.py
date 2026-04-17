@@ -158,7 +158,7 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
     event_names = [name for name, _ in parsed]
 
     assert event_names == ["start", "error", "done"]
-    assert parsed[1][1]["message"] == "provider boom"
+    assert parsed[1][1]["message"] == "服务内部错误，请稍后重试"
 
 
 @pytest.mark.asyncio

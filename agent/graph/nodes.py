@@ -15,6 +15,7 @@ from .state import GraphState
 logger = logging.getLogger(__name__)
 
 _DEBUG_PREVIEW_LIMIT = 200
+_STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
 _runtime_var: ContextVar["GraphRuntime"] = ContextVar("graph_runtime")
 
 
@@ -193,21 +194,37 @@ async def generate_node(state: GraphState) -> GraphState:
     debug_chars = 0
     debug_count = 0
 
-    async for delta in runtime.provider.stream_chat(model_messages):
-        answer_parts.append(delta)
-        await _emit("delta", {"text": delta})
+    try:
+        async for delta in runtime.provider.stream_chat(model_messages):
+            answer_parts.append(delta)
+            await _emit("delta", {"text": delta})
 
-        if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
-            remain = _DEBUG_PREVIEW_LIMIT - debug_chars
-            piece = delta[:remain]
-            if piece:
-                debug_preview_parts.append(piece)
-                debug_chars += len(piece)
-        if runtime.debug_stream:
-            debug_count += 1
+            if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
+                remain = _DEBUG_PREVIEW_LIMIT - debug_chars
+                piece = delta[:remain]
+                if piece:
+                    debug_preview_parts.append(piece)
+                    debug_chars += len(piece)
+            if runtime.debug_stream:
+                debug_count += 1
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "graph_node generate failed: session_id=%s, user_id=%s, kb_id=%s",
+            state.get("session_id"),
+            state.get("user_id"),
+            state.get("kb_id"),
+        )
+        await _emit("error", {"message": _STREAM_ERROR_MESSAGE})
+        return {
+            "assistant_answer": "".join(answer_parts).strip(),
+            "stream_failed": True,
+            "debug_delta_count": debug_count,
+            "debug_preview": "".join(debug_preview_parts),
+        }
 
     return {
         "assistant_answer": "".join(answer_parts).strip(),
+        "stream_failed": False,
         "debug_delta_count": debug_count,
         "debug_preview": "".join(debug_preview_parts),
     }
@@ -221,6 +238,8 @@ async def flush_memory_node(state: GraphState) -> GraphState:
         state.get("memory_enabled"),
     )
     answer = state.get("assistant_answer", "").strip()
+    if state.get("stream_failed"):
+        return {}
     if not state.get("memory_enabled") or not answer or runtime.memory_orchestrator is None:
         return {}
 
