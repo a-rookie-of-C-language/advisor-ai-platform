@@ -10,7 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import java.util.Objects;
+import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 
+import java.util.ArrayList;
+import java.util.Collections.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -125,6 +129,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         AtomicBoolean sawDoneEvent = new AtomicBoolean(false);
         AtomicBoolean sawEndEvent = new AtomicBoolean(false);
         AtomicBoolean sawErrorEvent = new AtomicBoolean(false);
+        List<ChatMessageDO.SourceReference> sources = new ArrayList<>();
 
         if (debugStream) {
             log.info("debug_stream java start: sessionId={}, userId={}", request.getSessionId(), userId);
@@ -142,6 +147,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                         sseBuffer,
                         deltaPreview,
                         assistantText,
+                        sources,
                         sawDoneEvent,
                         sawEndEvent,
                         sawErrorEvent
@@ -158,7 +164,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                     } catch (IOException io) {
                         if (isClientAbort(io)) {
                             log.warn("agent_proxy client_disconnected, reason={}", LogTraceUtil.preview(io.getMessage()));
-                            return new ChatStreamProxyResult(assistantText.toString());
+                            return new ChatStreamProxyResult(assistantText.toString(), List.copyOf(sources));
                         }
                         throw io;
                     }
@@ -187,13 +193,14 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 sawErrorEvent.get(),
                 elapsedSince(startAt));
 
-        return new ChatStreamProxyResult(assistantText.toString());
+        return new ChatStreamProxyResult(assistantText.toString(), sources);
     }
 
     private int collectDeltaAndAnswer(
             StringBuilder sseBuffer,
             StringBuilder deltaPreview,
             StringBuilder assistantText,
+            List<ChatMessageDO.SourceReference> sources,
             AtomicBoolean sawDoneEvent,
             AtomicBoolean sawEndEvent,
             AtomicBoolean sawErrorEvent
@@ -210,6 +217,9 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 sawEndEvent.set(true);
             } else if ("error".equals(eventName)) {
                 sawErrorEvent.set(true);
+            } else if ("sources".equals(eventName)) {
+                sources.clear();
+                sources.addAll(extractSources(block));
             }
             String delta = extractDelta(block);
             if (delta == null || delta.isBlank()) {
@@ -261,6 +271,44 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             return node.path("text").asText("");
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private List<ChatMessageDO.SourceReference> extractSources(String sseBlock) {
+        String[] lines = sseBlock.split("\n");
+        String event = "message";
+        StringBuilder dataBuilder = new StringBuilder();
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("event:")) {
+                event = trimmed.substring(6).trim();
+            } else if (trimmed.startsWith("data:")) {
+                dataBuilder.append(trimmed.substring(5).trim());
+            }
+        }
+
+        if (!"sources".equals(event) || dataBuilder.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(dataBuilder.toString());
+            JsonNode items = node.path("items");
+            if (!items.isArray()) {
+                return List.of();
+            }
+            List<ChatMessageDO.SourceReference> results = new ArrayList<>();
+            for (JsonNode item : items) {
+                ChatMessageDO.SourceReference source = new ChatMessageDO.SourceReference();
+                source.setDocumentId(item.path("id").isMissingNode() ? null : item.path("id").asLong());
+                source.setDocName(item.path("docName").asText(""));
+                source.setSnippet(item.path("snippet").asText(""));
+                results.add(source);
+            }
+            return results;
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

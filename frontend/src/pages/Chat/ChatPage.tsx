@@ -110,11 +110,17 @@ function MsgBubble({ msg }: MsgBubbleProps) {
   )
 }
 
-function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string }): ChatMessage {
+function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string; sources?: StreamSourceItem[] }): ChatMessage {
   return {
     id: data.id,
     role: data.role,
     content: data.content,
+    sources: data.sources?.map((item, index) => ({
+      id: item.id || index + 1,
+      docName: item.docName || '未命名文档',
+      snippet: item.snippet || '',
+      score: item.score,
+    })),
     streaming: false,
   }
 }

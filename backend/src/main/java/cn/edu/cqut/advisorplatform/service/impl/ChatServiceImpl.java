@@ -33,7 +33,7 @@ public class ChatServiceImpl implements ChatService {
     private final RagKnowledgeBaseDao ragKnowledgeBaseDao;
 
     @Override
-    public List<Map<String, Object>> listSessions(UserDO currentUser) {
+    public List<Map<String, Object>> listSessions(@Nullable UserDO currentUser) {
         Long userId = requireUserId(currentUser);
         return chatSessionDao.findByUserIdOrderByUpdatedAtDesc(userId)
                 .stream()
@@ -81,7 +81,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public List<Map<String, Object>> listMessages(Long sessionId, @Nullable UserDO currentUser) {
         getOwnedSession(sessionId, currentUser);
-        return chatMessageDao.findBySessionIdOrderByCreatedAtAsc(sessionId)
+        return chatMessageDao.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId)
                 .stream()
                 .map(this::toMessageMap)
                 .toList();
@@ -123,7 +123,8 @@ public class ChatServiceImpl implements ChatService {
         return Map.of(
                 "id", message.getId(),
                 "role", message.getRole(),
-                "content", message.getContent()
+                "content", message.getContent(),
+                "sources", message.getSources() == null ? List.of() : message.getSources()
         );
     }
 

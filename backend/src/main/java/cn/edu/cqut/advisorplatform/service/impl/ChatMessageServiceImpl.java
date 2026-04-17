@@ -3,6 +3,7 @@ package cn.edu.cqut.advisorplatform.service.impl;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.ChatMessageDO.SourceReference;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +34,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     @Transactional
-    public void saveTurn(Long sessionId, Long userId, @Nullable String turnId, @Nullable String userContent, @Nullable String assistantContent) {
+    public void saveTurn(
+            Long sessionId,
+            Long userId,
+            @Nullable String turnId,
+            @Nullable String userContent,
+            @Nullable String assistantContent,
+            @Nullable List<SourceReference> sources
+    ) {
         ChatSessionDO session = getOwnedSession(sessionId, userId);
 
         String safeTurnId = turnId == null ? "" : turnId.trim();
@@ -53,6 +62,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime assistantCreatedAt = now.plusNanos(1);
 
         boolean firstUserMessage = !chatMessageDao.existsBySessionIdAndRole(sessionId, ROLE_USER);
         boolean shouldInitTitle = firstUserMessage
@@ -61,11 +71,11 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         if (!safeUserContent.isBlank()
                 && !chatMessageDao.existsBySessionIdAndTurnIdAndRole(sessionId, safeTurnId, ROLE_USER)) {
-            insertMessage(session, safeTurnId, ROLE_USER, safeUserContent, now);
+            insertMessage(session, safeTurnId, ROLE_USER, safeUserContent, null, now);
         }
 
         if (!chatMessageDao.existsBySessionIdAndTurnIdAndRole(sessionId, safeTurnId, ROLE_ASSISTANT)) {
-            insertMessage(session, safeTurnId, ROLE_ASSISTANT, safeAssistantContent, now);
+            insertMessage(session, safeTurnId, ROLE_ASSISTANT, safeAssistantContent, sources, assistantCreatedAt);
         }
 
         if (shouldInitTitle) {
@@ -105,13 +115,21 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         return session;
     }
 
-    private void insertMessage(ChatSessionDO session, String turnId, String role, String content, LocalDateTime now) {
+    private void insertMessage(
+            ChatSessionDO session,
+            String turnId,
+            String role,
+            String content,
+            @Nullable java.util.List<ChatMessageDO.SourceReference> sources,
+            LocalDateTime createdAt
+    ) {
         ChatMessageDO message = new ChatMessageDO();
         message.setSession(session);
         message.setTurnId(turnId);
         message.setRole(role);
         message.setContent(content);
-        message.setCreatedAt(now);
+        message.setSources(sources);
+        message.setCreatedAt(createdAt);
         try {
             chatMessageDao.save(message);
             log.info("chat_persist save_message, role={}, contentLen={}, preview={}",
@@ -134,5 +152,15 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private String buildTitle(String userContent) {
         int limit = Math.min(5, userContent.length());
         return userContent.substring(0, limit);
+    }
+
+    public void saveTurn(
+            Long sessionId,
+            Long userId,
+            @Nullable String turnId,
+            @Nullable String userContent,
+            @Nullable String assistantContent
+    ) {
+        saveTurn(sessionId, userId, turnId, userContent, assistantContent, null);
     }
 }
