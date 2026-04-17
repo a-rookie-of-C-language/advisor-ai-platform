@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -103,7 +104,7 @@ class ChatStreamService:
                     mode=SearchMode.dense,
                     use_rerank=True,
                 )
-                result = self._rag_service.rag_search(req)
+                result = await asyncio.to_thread(self._rag_service.rag_search, req)
                 if result.ok and result.items:
                     items = [
                         {
@@ -213,7 +214,7 @@ class ChatStreamService:
         rag_enabled = (
             self._rag_service is not None
             and kb_id is not None
-            and kb_id > 0
+            and kb_id >= 0
             and bool(user_query)
         )
 

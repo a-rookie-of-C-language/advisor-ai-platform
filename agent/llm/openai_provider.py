@@ -99,11 +99,6 @@ class OpenAIProvider(BaseLLMProvider):
 
         while True:
             tool_choice: dict[str, Any] | str = "auto"
-            if tool_call_count == 0 and max_tool_calls > 0:
-                tool_choice = {
-                    "type": "function",
-                    "function": {"name": tools[0].name},
-                }
 
             response = await self._client.chat.completions.create(
                 model=self._model,
