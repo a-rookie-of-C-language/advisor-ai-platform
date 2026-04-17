@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from dotenv import load_dotenv
@@ -109,15 +110,19 @@ def _get_chat_stream_service() -> ChatStreamService:
     )
 
 
-def create_api_app() -> FastAPI:
-    app = FastAPI(title="advisor-ai-agent", version="1.0.0")
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
+@asynccontextmanager
+async def _app_lifespan(_: FastAPI):
+    try:
+        yield
+    finally:
         rag = _get_rag_service()
         if rag:
             logger.info("Closing RAG service...")
             rag.close()
+
+
+def create_api_app() -> FastAPI:
+    app = FastAPI(title="advisor-ai-agent", version="1.0.0", lifespan=_app_lifespan)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
