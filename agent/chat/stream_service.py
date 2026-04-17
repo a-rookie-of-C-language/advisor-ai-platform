@@ -31,7 +31,8 @@ class ChatStreamService:
         self._llm_extractor = llm_extractor
         self._debug_stream = self._read_debug_stream()
         self._enable_tool_use = self._read_enable_tool_use()
-        self._tools = ToolRegistry()
+        self._enabled_tools = self._read_enabled_tools()
+        self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         if rag_service is not None:
             self._tools.register(RAGSearchTool(rag_service))
 
@@ -44,6 +45,14 @@ class ChatStreamService:
     def _read_enable_tool_use() -> bool:
         raw = os.getenv("ENABLE_TOOL_USE", "true").strip().lower()
         return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_enabled_tools() -> set[str] | None:
+        raw = os.getenv("ENABLED_TOOLS", "").strip()
+        if not raw:
+            return None
+        names = {name.strip() for name in raw.split(",") if name.strip()}
+        return names or None
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:

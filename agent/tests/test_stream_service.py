@@ -188,3 +188,19 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
     assert event_names == ["start", "sources", "delta", "done"]
     assert parsed[1][1]["status"] == "error"
     assert parsed[1][1]["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENABLED_TOOLS", "other_tool")
+    service = ChatStreamService(
+        provider=_ProviderOk(["fallback"]),
+        memory_orchestrator=None,
+        rag_service=_RagMustNotRun(),
+    )
+    messages = [ChatMessage(role="user", content="hi")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+
+    assert event_names == ["start", "delta", "done"]

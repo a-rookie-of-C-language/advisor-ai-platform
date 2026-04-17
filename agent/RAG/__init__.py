@@ -1,6 +1,5 @@
 from RAG.DocumentIndexer import DocumentIndexer
 from RAG.RAG_service import RAG_service
-from RAG.RAG_tool import RAGTool
 from RAG.schema import (
     RAGChunkHit,
     RAGSearchDebugTrace,
@@ -15,7 +14,6 @@ from RAG.schema import (
 __all__ = [
     "DocumentIndexer",
     "RAG_service",
-    "RAGTool",
     "RAGChunkHit",
     "RAGSearchDebugTrace",
     "RAGSearchError",

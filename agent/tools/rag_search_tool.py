@@ -114,7 +114,7 @@ class RAGSearchTool(BaseTool):
                     "items": [],
                 }
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return json.dumps(
                 {
                     "ok": False,
