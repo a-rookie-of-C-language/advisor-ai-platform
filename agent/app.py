@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
 from RAG.DocumentIndexer import DocumentIndexer
+from RAG.RAG_service import RAG_service
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
@@ -77,17 +78,46 @@ def _get_llm_extractor() -> OpenAILLMExtractor | None:
 
 
 @lru_cache(maxsize=1)
+def _get_rag_service() -> RAG_service | None:
+    db_dsn = os.getenv("DATABASE_URL", "").strip()
+    if not db_dsn:
+        logger.warning("DATABASE_URL is not set, RAG service will be disabled.")
+        return None
+
+    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+    embedding_model = os.getenv("EMBEDDING_MODEL", "bge-m3").strip()
+
+    try:
+        return RAG_service(
+            db_dsn=db_dsn,
+            ollama_base_url=ollama_base_url,
+            embedding_model=embedding_model,
+        )
+    except Exception as exc:
+        logger.error("Failed to initialize RAG service: %s", exc)
+        return None
+
+
+@lru_cache(maxsize=1)
 def _get_chat_stream_service() -> ChatStreamService:
     provider = build_provider_from_env()
     return ChatStreamService(
         provider=provider,
         memory_orchestrator=_get_memory_orchestrator(),
         llm_extractor=_get_llm_extractor(),
+        rag_service=_get_rag_service(),
     )
 
 
 def create_api_app() -> FastAPI:
     app = FastAPI(title="advisor-ai-agent", version="1.0.0")
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        rag = _get_rag_service()
+        if rag:
+            logger.info("Closing RAG service...")
+            rag.close()
 
     @app.get("/health")
     async def health() -> dict[str, str]:

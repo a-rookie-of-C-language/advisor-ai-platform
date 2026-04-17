@@ -20,7 +20,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
-import { chatApi } from '../../api/chatApi'
+import { chatApi, type StreamSourceItem } from '../../api/chatApi'
 import { globalMessage } from '../../utils/globalMessage'
 import styles from './ChatPage.module.css'
 
@@ -30,6 +30,7 @@ interface Source {
   id: number
   docName: string
   snippet: string
+  score?: number
 }
 
 interface ChatMessage {
@@ -73,7 +74,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
               </div>
             )}
 
-        {!msg.streaming && msg.sources?.length
+        {msg.sources?.length
           ? (
             <Collapse
               ghost
@@ -216,6 +217,22 @@ export default function ChatPage() {
     }))
   }
 
+  const toDisplaySources = (items: StreamSourceItem[], message?: string): Source[] => {
+    if (items.length > 0) {
+      return items.map((item, index) => ({
+        id: item.id || index + 1,
+        docName: item.docName || '未知文档',
+        snippet: item.snippet || '',
+        score: item.score,
+      }))
+    }
+    return [{
+      id: -1,
+      docName: '知识库检索',
+      snippet: message || '未命中',
+    }]
+  }
+
   const handleSend = async () => {
     const text = inputText.trim()
     if (!text || sending) {
@@ -311,6 +328,11 @@ export default function ChatPage() {
           },
           onEnd: () => {
             updateAssistantMessage(sessionId, aiMsgId, { streaming: false })
+          },
+          onSources: (items, _status, message) => {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              sources: toDisplaySources(items, message),
+            })
           },
           onError: (message) => {
             streamFailed = true

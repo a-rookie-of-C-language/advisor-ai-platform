@@ -37,9 +37,17 @@ interface StreamPayload {
   sessionId: number
 }
 
+export interface StreamSourceItem {
+  id: number
+  docName: string
+  snippet: string
+  score?: number
+}
+
 interface StreamHandlers {
   onStart?: () => void
   onDelta?: (text: string) => void
+  onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
   onEnd?: () => void
   onError?: (message: string) => void
 }
@@ -179,9 +187,14 @@ export const chatApi = {
             }
             resetIdleTimer()
 
-            let data: { text?: string; message?: string } = {}
+            let data: { text?: string; message?: string; status?: string; items?: StreamSourceItem[] } = {}
             try {
-              data = JSON.parse(parsed.data) as { text?: string; message?: string }
+              data = JSON.parse(parsed.data) as {
+                text?: string
+                message?: string
+                status?: string
+                items?: StreamSourceItem[]
+              }
             } catch {
               data = { message: parsed.data }
             }
@@ -190,6 +203,8 @@ export const chatApi = {
               handlers.onStart?.()
             } else if (parsed.event === 'delta' && data.text) {
               handlers.onDelta?.(data.text)
+            } else if (parsed.event === 'sources') {
+              handlers.onSources?.(data.items ?? [], data.status, data.message)
             } else if (parsed.event === 'error') {
               sawError = true
               latestError = data.message ?? 'stream error'

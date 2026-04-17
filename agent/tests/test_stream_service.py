@@ -6,7 +6,7 @@ from typing import AsyncIterator, Iterable
 import pytest
 
 from chat.stream_service import ChatStreamService
-from llm.base_provider import ChatMessage
+from llm.base_provider import ChatMessage, LLMStreamEvent, ToolSpec
 from memory.core.schema import MemoryContext
 
 
@@ -38,6 +38,40 @@ class _ProviderError:
         if False:
             yield ""
         raise RuntimeError("provider boom")
+
+
+class _ProviderToolUse:
+    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+        if False:
+            yield ""
+        return
+
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+    ) -> AsyncIterator[LLMStreamEvent]:
+        _ = messages
+        _ = tools
+        _ = max_tool_calls
+        _ = max_tool_retries
+        yield LLMStreamEvent(type="tool_call", tool_name="rag_search", tool_args={"query": "q"})
+        payload = await tool_executor("rag_search", {"query": "q", "top_k": 3})
+        yield LLMStreamEvent(type="tool_result", tool_name="rag_search", tool_output=payload, attempt=1, success=True)
+        yield LLMStreamEvent(type="delta", text="回答")
+
+
+class _RagMiss:
+    def rag_search(self, req):
+        _ = req
+        class _Res:
+            ok = True
+            items = []
+        return _Res()
 
 
 class _MemoryOkFlushError:
@@ -113,3 +147,19 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
     assert event_names == ["start", "error", "done"]
     assert parsed[1][1]["message"] == "provider boom"
 
+
+@pytest.mark.asyncio
+async def test_stream_tool_use_emits_sources_and_miss_message() -> None:
+    service = ChatStreamService(
+        provider=_ProviderToolUse(),
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    messages = [ChatMessage(role="user", content="hi")]
+    events = [event async for event in service.stream_events(messages, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+
+    assert event_names == ["start", "sources", "delta", "done"]
+    assert parsed[1][1]["status"] == "miss"
+    assert parsed[1][1]["message"] == "未命中"
