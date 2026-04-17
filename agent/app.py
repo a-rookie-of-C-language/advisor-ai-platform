@@ -7,7 +7,7 @@ import os
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
@@ -123,8 +123,20 @@ def create_api_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    def _resolve_agent_token(request: Request) -> str:
+        auth_header = request.headers.get("Authorization", "").strip()
+        if auth_header.lower().startswith("bearer "):
+            return auth_header[7:].strip()
+        return request.headers.get("X-Agent-Token", "").strip()
+
     @app.post("/chat/stream")
-    async def chat_stream(request: ChatStreamRequestDTO) -> StreamingResponse:
+    async def chat_stream(request: ChatStreamRequestDTO, raw_request: Request) -> StreamingResponse:
+        expected_agent_token = os.getenv("AGENT_API_TOKEN", "").strip()
+        if expected_agent_token:
+            got_token = _resolve_agent_token(raw_request)
+            if got_token != expected_agent_token:
+                raise HTTPException(status_code=401, detail="invalid agent token")
+
         service = _get_chat_stream_service()
         messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
 

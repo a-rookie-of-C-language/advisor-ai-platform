@@ -68,10 +68,18 @@ class _ProviderToolUse:
 class _RagMiss:
     def rag_search(self, req):
         _ = req
+
         class _Res:
             ok = True
             items = []
+
         return _Res()
+
+
+class _RagMustNotRun:
+    def rag_search(self, req):
+        _ = req
+        raise AssertionError("rag_search should not run without permission context")
 
 
 class _MemoryOkFlushError:
@@ -156,10 +164,27 @@ async def test_stream_tool_use_emits_sources_and_miss_message() -> None:
         rag_service=_RagMiss(),
     )
     messages = [ChatMessage(role="user", content="hi")]
-    events = [event async for event in service.stream_events(messages, kb_id=1)]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
     assert event_names == ["start", "sources", "delta", "done"]
     assert parsed[1][1]["status"] == "miss"
-    assert parsed[1][1]["message"] == "未命中"
+    assert parsed[1][1]["message"] == "未检索到相关知识"
+
+
+@pytest.mark.asyncio
+async def test_stream_tool_use_without_scope_returns_permission_error_and_continues() -> None:
+    service = ChatStreamService(
+        provider=_ProviderToolUse(),
+        memory_orchestrator=None,
+        rag_service=_RagMustNotRun(),
+    )
+    messages = [ChatMessage(role="user", content="hi")]
+    events = [event async for event in service.stream_events(messages, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+
+    assert event_names == ["start", "sources", "delta", "done"]
+    assert parsed[1][1]["status"] == "error"
+    assert "工具权限校验失败" in parsed[1][1]["message"]

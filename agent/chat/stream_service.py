@@ -63,7 +63,6 @@ class ChatStreamService:
 
         if not validated:
             raise ValueError("messages cannot be empty")
-
         return validated
 
     @staticmethod
@@ -89,7 +88,7 @@ class ChatStreamService:
                 {
                     "ok": False,
                     "status": "error",
-                    "message": "RAG service unavailable",
+                    "message": "RAG 服务不可用",
                     "items": [],
                 },
                 ensure_ascii=False,
@@ -119,7 +118,7 @@ class ChatStreamService:
                         {
                             "ok": True,
                             "status": "hit",
-                            "message": "命中",
+                            "message": "检索命中",
                             "attempt": attempt,
                             "items": items,
                         },
@@ -131,7 +130,7 @@ class ChatStreamService:
                         {
                             "ok": True,
                             "status": "miss",
-                            "message": "未命中",
+                            "message": "未检索到相关知识",
                             "attempt": attempt,
                             "items": [],
                         },
@@ -154,7 +153,7 @@ class ChatStreamService:
                         {
                             "ok": False,
                             "status": "error",
-                            "message": f"RAG 异常: {exc}",
+                            "message": f"RAG 执行异常: {exc}",
                             "attempt": attempt,
                             "items": [],
                         },
@@ -172,13 +171,43 @@ class ChatStreamService:
             ensure_ascii=False,
         )
 
-    async def _execute_tool(self, tool_name: str, tool_args: dict[str, Any], kb_id: int, user_query: str) -> str:
+    async def _execute_tool(
+        self,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        kb_id: int | None,
+        user_query: str,
+        user_id: int | None,
+        session_id: int | None,
+    ) -> str:
         if tool_name != "rag_search":
             return json.dumps(
                 {
                     "ok": False,
                     "status": "error",
-                    "message": f"unsupported tool: {tool_name}",
+                    "message": f"不支持的工具: {tool_name}",
+                    "items": [],
+                },
+                ensure_ascii=False,
+            )
+
+        if user_id is None or session_id is None:
+            return json.dumps(
+                {
+                    "ok": False,
+                    "status": "error",
+                    "message": "工具权限校验失败: 缺少用户或会话上下文",
+                    "items": [],
+                },
+                ensure_ascii=False,
+            )
+
+        if kb_id is None or kb_id < 0:
+            return json.dumps(
+                {
+                    "ok": False,
+                    "status": "error",
+                    "message": "工具权限校验失败: kb_id 非法",
                     "items": [],
                 },
                 ensure_ascii=False,
@@ -260,12 +289,12 @@ class ChatStreamService:
                 tools = [
                     ToolSpec(
                         name="rag_search",
-                        description="从知识库检索与用户问题相关的片段，返回来源和摘要。",
+                        description="在指定知识库中检索与用户问题最相关的文档片段。",
                         parameters={
                             "type": "object",
                             "properties": {
                                 "query": {"type": "string", "description": "用户问题"},
-                                "top_k": {"type": "integer", "description": "返回条数，1-10", "default": 5},
+                                "top_k": {"type": "integer", "description": "返回条数，范围 1-10", "default": 5},
                             },
                             "required": ["query"],
                         },
@@ -273,8 +302,14 @@ class ChatStreamService:
                 ]
 
                 async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
-                    safe_kb_id = kb_id if kb_id is not None else 0
-                    return await self._execute_tool(tool_name, tool_args, safe_kb_id, user_query)
+                    return await self._execute_tool(
+                        tool_name=tool_name,
+                        tool_args=tool_args,
+                        kb_id=kb_id,
+                        user_query=user_query,
+                        user_id=user_id,
+                        session_id=session_id,
+                    )
 
                 async for event in self._provider.stream_chat_with_tools(
                     model_messages,
@@ -295,7 +330,7 @@ class ChatStreamService:
                                 "success": event.success,
                                 "attempt": event.attempt,
                                 "status": payload.get("status", "error"),
-                                "message": payload.get("message", "未命中"),
+                                "message": payload.get("message", "工具执行失败"),
                                 "items": payload.get("items", []),
                             },
                         )
