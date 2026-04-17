@@ -147,7 +147,7 @@ class ChatStreamService:
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("Memory flush failed, skip writeback: %s", exc)
 
-            yield self._serialize_event("end", {"message": "stream_finished"})
+            yield self._serialize_event("done", {"message": "stream_finished"})
         except Exception as exc:  # noqa: BLE001
             if self._debug_stream:
                 logger.warning(
@@ -156,4 +156,13 @@ class ChatStreamService:
                     "".join(debug_preview),
                     exc,
                 )
-            yield self._serialize_event("error", {"message": str(exc)})
+            try:
+                yield self._serialize_event("error", {"message": str(exc)})
+            except Exception as send_error_exc:  # noqa: BLE001
+                logger.warning("Failed to send stream error event: %s", send_error_exc)
+                return
+
+            try:
+                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
+            except Exception as send_done_exc:  # noqa: BLE001
+                logger.warning("Failed to send stream done event after error: %s", send_done_exc)
