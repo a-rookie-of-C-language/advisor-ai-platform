@@ -5,6 +5,7 @@ import logging
 import os
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
+from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider, ChatMessage, LLMStreamEvent
 from memory.core.schema import MemoryCandidate
 from memory.pipeline.orchestrator import MemoryOrchestrator
@@ -31,10 +32,19 @@ class ChatStreamService:
         self._llm_extractor = llm_extractor
         self._debug_stream = self._read_debug_stream()
         self._enable_tool_use = self._read_enable_tool_use()
+        self._use_langgraph = self._read_use_langgraph()
         self._enabled_tools = self._read_enabled_tools()
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         if rag_service is not None:
             self._tools.register(RAGSearchTool(rag_service))
+        self._graph_runner = GraphRunner(
+            provider=self._provider,
+            memory_orchestrator=self._memory_orchestrator,
+            llm_extractor=self._llm_extractor,
+            tools=self._tools,
+            debug_stream=self._debug_stream,
+            enable_tool_use=self._enable_tool_use,
+        )
 
     @staticmethod
     def _read_debug_stream() -> bool:
@@ -44,6 +54,11 @@ class ChatStreamService:
     @staticmethod
     def _read_enable_tool_use() -> bool:
         raw = os.getenv("ENABLE_TOOL_USE", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_use_langgraph() -> bool:
+        raw = os.getenv("USE_LANGGRAPH", "true").strip().lower()
         return raw in {"1", "true", "yes", "on"}
 
     @staticmethod
@@ -120,6 +135,66 @@ class ChatStreamService:
         kb_id: int | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
+        if self._use_langgraph:
+            async for event in self._stream_events_graph(
+                validated_messages,
+                user_id=user_id,
+                session_id=session_id,
+                kb_id=kb_id,
+            ):
+                yield event
+            return
+
+        async for event in self._stream_events_legacy(
+            validated_messages,
+            user_id=user_id,
+            session_id=session_id,
+            kb_id=kb_id,
+        ):
+            yield event
+
+    async def _stream_events_graph(
+        self,
+        validated_messages: list[ChatMessage],
+        *,
+        user_id: int | None,
+        session_id: int | None,
+        kb_id: int | None,
+    ) -> AsyncIterator[str]:
+        user_query = self._last_user_message(validated_messages)
+        yield self._serialize_event("start", {"message": "stream_started"})
+        try:
+            async for event in self._graph_runner.run_stream(
+                messages=validated_messages,
+                user_query=user_query,
+                user_id=user_id,
+                session_id=session_id,
+                kb_id=kb_id,
+            ):
+                yield self._serialize_event(event["event"], event["data"])
+            yield self._serialize_event("done", {"message": "stream_finished"})
+        except Exception as exc:  # noqa: BLE001
+            if self._debug_stream:
+                logger.warning("debug_stream python error(graph): error=%s", exc)
+            try:
+                yield self._serialize_event("error", {"message": str(exc)})
+            except Exception as send_error_exc:  # noqa: BLE001
+                logger.warning("Failed to send stream error event: %s", send_error_exc)
+                return
+
+            try:
+                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
+            except Exception as send_done_exc:  # noqa: BLE001
+                logger.warning("Failed to send stream done event after error: %s", send_done_exc)
+
+    async def _stream_events_legacy(
+        self,
+        validated_messages: list[ChatMessage],
+        *,
+        user_id: int | None,
+        session_id: int | None,
+        kb_id: int | None,
+    ) -> AsyncIterator[str]:
         model_messages = list(validated_messages)
         user_query = self._last_user_message(validated_messages)
 

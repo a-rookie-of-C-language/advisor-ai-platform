@@ -42,6 +42,12 @@ class _ProviderError:
 
 class _ProviderToolUse:
     async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+        _ = messages
+        yield "answer"
+
+
+class _ProviderLegacyToolUse:
+    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -59,7 +65,6 @@ class _ProviderToolUse:
         _ = tools
         _ = max_tool_calls
         _ = max_tool_retries
-        yield LLMStreamEvent(type="tool_call", tool_name="rag_search", tool_args={"query": "q"})
         payload = await tool_executor("rag_search", {"query": "q", "top_k": 3})
         yield LLMStreamEvent(type="tool_result", tool_name="rag_search", tool_output=payload, attempt=1, success=True)
         yield LLMStreamEvent(type="delta", text="answer")
@@ -204,3 +209,19 @@ async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.Monke
     event_names = [name for name, _ in parsed]
 
     assert event_names == ["start", "delta", "done"]
+
+
+@pytest.mark.asyncio
+async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("USE_LANGGRAPH", "false")
+    service = ChatStreamService(
+        provider=_ProviderLegacyToolUse(),
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    messages = [ChatMessage(role="user", content="hi")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+
+    assert event_names == ["start", "sources", "delta", "done"]
