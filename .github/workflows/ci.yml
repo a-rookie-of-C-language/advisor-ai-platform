@@ -107,7 +107,7 @@ jobs:
     env:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: cijwtsecretfore2eonlycneducqutarookieofc
+      JWT_SECRET: Y2lqd3RzZWNyZXRmb3JlMmVvbmx5Y25lZHVjcXV0YXJvb2tpZW9mYw==
       MEMORY_API_TOKEN: arookieofc
       AGENT_BASE_URL: http://127.0.0.1:8001
       AGENT_TIMEOUT_MS: 600000
