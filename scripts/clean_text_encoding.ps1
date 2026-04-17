@@ -75,15 +75,38 @@ function Try-RepairMojibake {
 $resolvedRoot = (Resolve-Path -LiteralPath $Root).Path
 Set-Location $resolvedRoot
 
-$raw = git ls-files -z --cached --others --exclude-standard
-if (-not $raw) {
+function Test-SafeLiteralPath {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
+  try {
+    return Test-Path -LiteralPath $Path
+  }
+  catch {
+    return $false
+  }
+}
+
+$allFiles = @(git ls-files --cached --others --exclude-standard) | Where-Object {
+  $_ -and (Test-SafeLiteralPath $_)
+}
+if ($allFiles.Count -eq 0) {
   Write-Host "No target files."
   exit 0
 }
 
-$allFiles = ($raw -split "`0") | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+function Get-SafeExtension {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return "" }
+  try {
+    return [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
+  }
+  catch {
+    return ""
+  }
+}
+
 $targetFiles = $allFiles | Where-Object {
-  $ext = [System.IO.Path]::GetExtension($_).ToLowerInvariant()
+  $ext = Get-SafeExtension $_
   $extensions -contains $ext
 }
 
