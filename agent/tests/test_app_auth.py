@@ -39,3 +39,28 @@ def test_chat_stream_accepts_bearer_token_when_configured(monkeypatch):
         headers={"Authorization": "Bearer test-token"},
     )
     assert response.status_code == 200
+
+
+def test_chat_stream_accepts_x_agent_token_when_configured(monkeypatch):
+    monkeypatch.setenv("AGENT_API_TOKEN", "test-token")
+    monkeypatch.setattr(app_module, "_get_chat_stream_service", lambda: _FakeChatService())
+    client = TestClient(app_module.create_api_app())
+
+    response = client.post(
+        "/chat/stream",
+        json={"messages": [{"role": "user", "content": "hi"}], "userId": 1, "sessionId": 1001, "kbId": 1},
+        headers={"X-Agent-Token": "test-token"},
+    )
+    assert response.status_code == 200
+
+
+def test_chat_stream_no_token_required_when_not_configured(monkeypatch):
+    monkeypatch.delenv("AGENT_API_TOKEN", raising=False)
+    monkeypatch.setattr(app_module, "_get_chat_stream_service", lambda: _FakeChatService())
+    client = TestClient(app_module.create_api_app())
+
+    response = client.post(
+        "/chat/stream",
+        json={"messages": [{"role": "user", "content": "hi"}], "userId": 1, "sessionId": 1001, "kbId": 1},
+    )
+    assert response.status_code == 200

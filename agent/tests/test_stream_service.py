@@ -62,7 +62,7 @@ class _ProviderToolUse:
         yield LLMStreamEvent(type="tool_call", tool_name="rag_search", tool_args={"query": "q"})
         payload = await tool_executor("rag_search", {"query": "q", "top_k": 3})
         yield LLMStreamEvent(type="tool_result", tool_name="rag_search", tool_output=payload, attempt=1, success=True)
-        yield LLMStreamEvent(type="delta", text="回答")
+        yield LLMStreamEvent(type="delta", text="answer")
 
 
 class _RagMiss:
@@ -157,7 +157,7 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stream_tool_use_emits_sources_and_miss_message() -> None:
+async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     service = ChatStreamService(
         provider=_ProviderToolUse(),
         memory_orchestrator=None,
@@ -170,7 +170,7 @@ async def test_stream_tool_use_emits_sources_and_miss_message() -> None:
 
     assert event_names == ["start", "sources", "delta", "done"]
     assert parsed[1][1]["status"] == "miss"
-    assert parsed[1][1]["message"] == "未检索到相关知识"
+    assert parsed[1][1]["items"] == []
 
 
 @pytest.mark.asyncio
@@ -187,4 +187,4 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
 
     assert event_names == ["start", "sources", "delta", "done"]
     assert parsed[1][1]["status"] == "error"
-    assert "工具权限校验失败" in parsed[1][1]["message"]
+    assert parsed[1][1]["items"] == []
