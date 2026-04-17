@@ -171,7 +171,7 @@ class DocumentIndexer:
             with conn.cursor() as cur:
                 self._set_statement_timeout(cur)
                 cur.execute("DELETE FROM rag_document_chunk WHERE document_id = %s", (document_id,))
-                for idx, (text, vector) in enumerate(zip(texts, vectors)):
+                for idx, (text, vector) in enumerate(zip(texts, vectors, strict=False)):
                     cur.execute(
                         """
                         INSERT INTO rag_document_chunk (document_id, chunk_index, content, embedding)

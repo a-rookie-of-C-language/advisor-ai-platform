@@ -117,7 +117,7 @@ class RAGSearchTool(BaseTool):
                     "items": [],
                 }
             )
-        except Exception as exc:
+        except Exception:
             logger.exception(
                 "rag_search tool failed: user_id=%s, session_id=%s, kb_id=%s",
                 user_id,

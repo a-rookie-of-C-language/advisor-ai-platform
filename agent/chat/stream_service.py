@@ -6,7 +6,7 @@ import os
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
 from graph.runner import GraphRunner
-from llm.base_provider import BaseLLMProvider, ChatMessage, LLMStreamEvent
+from llm.base_provider import BaseLLMProvider, ChatMessage
 from memory.core.schema import MemoryCandidate
 from memory.pipeline.orchestrator import MemoryOrchestrator
 from memory.pipeline.work_memory import WorkMemory
@@ -119,7 +119,7 @@ class ChatStreamService:
         }
         try:
             return await self._tools.execute(tool_name, tool_args, context)
-        except Exception as exc:
+        except Exception:
             logger.exception(
                 "Tool execute failed: tool=%s, user_id=%s, session_id=%s, kb_id=%s",
                 tool_name,

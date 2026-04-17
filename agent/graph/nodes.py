@@ -207,7 +207,7 @@ async def generate_node(state: GraphState) -> GraphState:
                     debug_chars += len(piece)
             if runtime.debug_stream:
                 debug_count += 1
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception(
             "graph_node generate failed: session_id=%s, user_id=%s, kb_id=%s",
             state.get("session_id"),
