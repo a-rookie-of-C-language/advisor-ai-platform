@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
 
@@ -27,5 +29,60 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             @Param("now") LocalDateTime now,
             Pageable pageable
     );
-}
 
+    @Query(
+            value = """
+                    SELECT *
+                    FROM user_memory
+                    WHERE user_id = :userId
+                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND is_deleted = false
+                      AND embedding IS NOT NULL
+                      AND (embedding <=> CAST(:embedding AS vector)) <= :maxDistance
+                    ORDER BY embedding <=> CAST(:embedding AS vector)
+                    LIMIT 1
+                    """,
+            nativeQuery = true
+    )
+    Optional<UserMemoryDO> findMostSimilarByVector(
+            @Param("userId") Long userId,
+            @Param("kbId") Long kbId,
+            @Param("embedding") String embedding,
+            @Param("maxDistance") Double maxDistance
+    );
+
+    @Query(
+            value = """
+                    SELECT *
+                    FROM user_memory
+                    WHERE user_id = :userId
+                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND is_deleted = false
+                      AND embedding IS NOT NULL
+                    ORDER BY embedding <=> CAST(:embedding AS vector)
+                    LIMIT :topK
+                    """,
+            nativeQuery = true
+    )
+    List<UserMemoryDO> searchByVector(
+            @Param("userId") Long userId,
+            @Param("kbId") Long kbId,
+            @Param("embedding") String embedding,
+            @Param("topK") Integer topK
+    );
+
+    @Modifying
+    @Query(
+            value = """
+                    UPDATE user_memory
+                    SET embedding = CAST(:embedding AS vector),
+                        updated_at = NOW()
+                    WHERE id = :id
+                    """,
+            nativeQuery = true
+    )
+    int updateEmbeddingById(
+            @Param("id") Long id,
+            @Param("embedding") String embedding
+    );
+}

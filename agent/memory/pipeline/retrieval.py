@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+import time
 from datetime import datetime, timezone
 
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryItem
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryRetrieval:
@@ -18,15 +22,26 @@ class MemoryRetrieval:
         query: str,
         top_k: int = 6,
     ) -> list[MemoryItem]:
+        t0 = time.monotonic()
         items = await api_client.search_long_term(
             user_id=user_id,
             kb_id=kb_id,
             query=query,
             top_k=top_k * 2,
         )
+        latency_ms = (time.monotonic() - t0) * 1000
+        logger.debug(
+            "Memory retrieval: user=%d kb=%d query_len=%d raw=%d latency_ms=%.1f",
+            user_id, kb_id, len(query), len(items), latency_ms
+        )
         items = self._governance.apply_ttl(items)
         items = self._governance.resolve_conflicts(items)
-        return self.rerank(items, query)[:top_k]
+        result = self.rerank(items, query)[:top_k]
+        logger.debug(
+            "Memory retrieval final: user=%d kb=%d after_filter=%d returned=%d",
+            user_id, kb_id, len(items), len(result)
+        )
+        return result
 
     def rerank(self, items: list[MemoryItem], query: str) -> list[MemoryItem]:
         query_tokens = self._tokens(query)

@@ -16,8 +16,13 @@ import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.MemoryService;
+import cn.edu.cqut.advisorplatform.service.vector.EmbeddingService;
+import cn.edu.cqut.advisorplatform.service.vector.MemoryServiceFactory;
+import cn.edu.cqut.advisorplatform.service.vector.MemoryVectorService;
 import cn.edu.cqut.advisorplatform.utils.Assert;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemoryServiceImpl implements MemoryService {
@@ -36,18 +42,51 @@ public class MemoryServiceImpl implements MemoryService {
     private final UserMemoryDao userMemoryDao;
     private final SessionSummaryDao sessionSummaryDao;
     private final ChatSessionDao chatSessionDao;
+    private final MemoryServiceFactory memoryServiceFactory;
+    private final EmbeddingService embeddingService;
+
+    @Value("${advisor.memory.vector-store:pgvector}")
+    private String vectorStore;
 
     @Override
     public List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request) {
+        long startedAt = System.currentTimeMillis();
         int topK = request.getTopK() == null ? 6 : Math.max(1, Math.min(request.getTopK(), 50));
         String query = Optional.ofNullable(request.getQuery()).orElse("").trim();
+        List<UserMemoryDO> rows;
 
-        List<UserMemoryDO> rows = userMemoryDao.searchByScope(
+        if (!query.isEmpty() && memoryServiceFactory.hasService(vectorStore)) {
+            try {
+                MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
+                double[] queryEmbedding = embeddingService.embed(query);
+                rows = vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, topK);
+            } catch (Exception exc) {
+                log.warn("memory_vector_search_failed userId={}, kbId={}, err={}", request.getUserId(), request.getKbId(), exc.getMessage());
+                rows = userMemoryDao.searchByScope(
+                        request.getUserId(),
+                        request.getKbId(),
+                        query,
+                        LocalDateTime.now(),
+                        PageRequest.of(0, topK)
+                );
+            }
+        } else {
+            rows = userMemoryDao.searchByScope(
+                    request.getUserId(),
+                    request.getKbId(),
+                    query,
+                    LocalDateTime.now(),
+                    PageRequest.of(0, topK)
+            );
+        }
+
+        log.info(
+                "memory_search_done userId={}, kbId={}, topK={}, resultCount={}, elapsedMs={}",
                 request.getUserId(),
                 request.getKbId(),
-                query,
-                LocalDateTime.now(),
-                PageRequest.of(0, topK)
+                topK,
+                rows.size(),
+                System.currentTimeMillis() - startedAt
         );
 
         return rows.stream().map(MemoryItemResponseDTO::from).toList();
@@ -56,10 +95,15 @@ public class MemoryServiceImpl implements MemoryService {
     @Override
     @Transactional
     public MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request) {
+        long startedAt = System.currentTimeMillis();
         List<MemoryCandidateItemDTO> candidates = request.getCandidates();
         if (candidates == null || candidates.isEmpty()) {
             return MemoryCandidateUpsertResponseDTO.of(0, 0, "no_candidates");
         }
+
+        MemoryVectorService vectorService = memoryServiceFactory.hasService(vectorStore)
+                ? memoryServiceFactory.getService(vectorStore)
+                : null;
 
         int accepted = 0;
         int rejected = 0;
@@ -69,21 +113,65 @@ public class MemoryServiceImpl implements MemoryService {
                 continue;
             }
 
-            UserMemoryDO row = new UserMemoryDO();
-            row.setUserId(request.getUserId());
-            row.setKbId(request.getKbId());
-            row.setContent(candidate.getContent().trim());
-            row.setConfidence(toDecimal(candidate.getConfidence(), 0.7d, 3));
-            row.setScore(BigDecimal.ZERO.setScale(4));
-            row.setMemoryKey(extractMemoryKey(candidate.getTags()));
-            row.setSourceTurnId(candidate.getSourceTurnId());
-            row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
-            row.setIsDeleted(false);
-            row.setCreatedAt(LocalDateTime.now());
-            row.setUpdatedAt(LocalDateTime.now());
-            userMemoryDao.save(row);
-            accepted++;
+            String normalizedContent = candidate.getContent().trim();
+            BigDecimal confidence = toDecimal(candidate.getConfidence(), 0.7d, 3);
+
+            try {
+                UserMemoryDO row;
+                double[] embedding = embeddingService.embed(normalizedContent);
+                if (vectorService != null) {
+                    Optional<UserMemoryDO> similar = vectorService.findSimilar(
+                            request.getUserId(),
+                            request.getKbId(),
+                            embedding,
+                            0.9d
+                    );
+                    if (similar.isPresent()) {
+                        row = similar.get();
+                        row.setContent(normalizedContent);
+                        row.setConfidence(row.getConfidence().max(confidence));
+                        row.setMemoryKey(extractMemoryKey(candidate.getTags()));
+                        row.setSourceTurnId(candidate.getSourceTurnId());
+                        row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
+                        row.setUpdatedAt(LocalDateTime.now());
+                        row = userMemoryDao.save(row);
+                        vectorService.updateEmbedding(row.getId(), embedding);
+                        accepted++;
+                        continue;
+                    }
+                }
+
+                row = new UserMemoryDO();
+                row.setUserId(request.getUserId());
+                row.setKbId(request.getKbId());
+                row.setContent(normalizedContent);
+                row.setConfidence(confidence);
+                row.setScore(BigDecimal.ZERO.setScale(4));
+                row.setMemoryKey(extractMemoryKey(candidate.getTags()));
+                row.setSourceTurnId(candidate.getSourceTurnId());
+                row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
+                row.setIsDeleted(false);
+                row.setCreatedAt(LocalDateTime.now());
+                row.setUpdatedAt(LocalDateTime.now());
+                row = userMemoryDao.save(row);
+                if (vectorService != null) {
+                    vectorService.updateEmbedding(row.getId(), embedding);
+                }
+                accepted++;
+            } catch (Exception exc) {
+                log.warn("memory_write_failed userId={}, kbId={}, err={}", request.getUserId(), request.getKbId(), exc.getMessage());
+                rejected++;
+            }
         }
+
+        log.info(
+                "memory_write_done userId={}, kbId={}, accepted={}, rejected={}, elapsedMs={}",
+                request.getUserId(),
+                request.getKbId(),
+                accepted,
+                rejected,
+                System.currentTimeMillis() - startedAt
+        );
 
         return MemoryCandidateUpsertResponseDTO.of(accepted, rejected, "ok");
     }
