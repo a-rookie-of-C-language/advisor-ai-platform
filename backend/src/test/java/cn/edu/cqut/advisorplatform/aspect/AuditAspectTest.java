@@ -19,6 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,10 +68,41 @@ class AuditAspectTest {
         assertThat(saved.getMethod()).isNotBlank();
     }
 
+    @Test
+    void audit_shouldSaveFailedStatusAndErrorMessageWhenBusinessThrows() throws Throwable {
+        UserDO user = new UserDO();
+        user.setId(2L);
+        user.setUsername("tester2");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities())
+        );
+
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(TestController.class.getMethod("failingSearch", String.class));
+        when(joinPoint.proceed()).thenThrow(new IllegalStateException("boom"));
+
+        assertThatThrownBy(() -> auditAspect.audit(joinPoint))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("boom");
+
+        ArgumentCaptor<AuditLogDO> captor = ArgumentCaptor.forClass(AuditLogDO.class);
+        verify(auditService).saveAuditLogAsync(captor.capture());
+
+        AuditLogDO saved = captor.getValue();
+        assertThat(saved.getResponseStatus()).isEqualTo("FAILED");
+        assertThat(saved.getErrorMessage()).contains("IllegalStateException").contains("boom");
+        assertThat(saved.getMethod()).isEqualTo("TestController.failingSearch");
+    }
+
     static class TestController {
 
         @Auditable(module = AuditLogDO.AuditModule.MEMORY, action = AuditLogDO.AuditAction.SEARCH, logRequestParams = false)
         public String search(String keyword) {
+            return keyword;
+        }
+
+        @Auditable(module = AuditLogDO.AuditModule.MEMORY, action = AuditLogDO.AuditAction.SEARCH, logRequestParams = false)
+        public String failingSearch(String keyword) {
             return keyword;
         }
     }
