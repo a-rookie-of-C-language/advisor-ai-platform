@@ -1,8 +1,10 @@
 package cn.edu.cqut.advisorplatform.controller;
 
+import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
@@ -161,6 +163,7 @@ public class ChatController {
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.STREAM_CHAT, logRequestParams = true, logResponseData = false)
     public ResponseEntity<StreamingResponseBody> streamChat(
             @Valid @RequestBody ChatStreamRequestDTO request,
             @AuthenticationPrincipal @Nullable UserDO currentUser

@@ -1,4 +1,4 @@
-﻿spring:
+spring:
   mvc:
     async:
       request-timeout: 600000
@@ -11,6 +11,12 @@ advisor:
     secret: your_base64_encoded_jwt_secret
   memory:
     api-token: arookieofc
+    vector-store: pgvector
+  embedding:
+    model: bge-m3
+    dimension: 1024
+  ollama:
+    base-url: http://localhost:11434
   agent:
     base-url: http://127.0.0.1:8001
     api-token: arookieofc
