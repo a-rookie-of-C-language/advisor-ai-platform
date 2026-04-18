@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import re
+import time
 from typing import Awaitable, Callable
 
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryCandidate, WritebackResult
+
+logger = logging.getLogger(__name__)
 
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 
@@ -46,10 +50,18 @@ class MemoryWriteback:
         kb_id: int,
         candidates: list[MemoryCandidate],
     ) -> WritebackResult:
+        t0 = time.monotonic()
         filtered = [candidate for candidate in candidates if self._governance.should_write_candidate(candidate)]
         if not filtered:
+            logger.debug("Writeback skipped (no candidates): user=%d kb=%d", user_id, kb_id)
             return WritebackResult(accepted=0, rejected=0, message="no_candidates")
-        return await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=filtered)
+        result = await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=filtered)
+        elapsed_ms = (time.monotonic() - t0) * 1000
+        logger.debug(
+            "Writeback done: user=%d kb=%d candidates=%d accepted=%d rejected=%d elapsed_ms=%.1f",
+            user_id, kb_id, len(filtered), result.accepted, result.rejected, elapsed_ms
+        )
+        return result
 
     def _extract_rule_candidates(
         self,

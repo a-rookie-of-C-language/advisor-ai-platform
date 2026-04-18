@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import Any
 
 import httpx
 
+from memory.core.circuit_breaker import CircuitBreaker
 from memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryApiClient:
@@ -14,15 +18,22 @@ class MemoryApiClient:
         self,
         base_url: str,
         timeout_sec: float = 8.0,
-        max_retries: int = 2,
-        retry_backoff_sec: float = 0.3,
+        max_retries: int = 3,
+        retry_backoff_sec: float = 0.5,
         bearer_token: str | None = None,
+        failure_threshold: int = 3,
+        recovery_timeout: float = 60.0,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout_sec = timeout_sec
         self._max_retries = max_retries
         self._retry_backoff_sec = retry_backoff_sec
         self._bearer_token = bearer_token
+        self._circuit_breaker = CircuitBreaker(
+            failure_threshold=failure_threshold,
+            recovery_timeout=recovery_timeout,
+        )
+        self._logger = logger
 
     async def search_long_term(
         self,
@@ -102,31 +113,51 @@ class MemoryApiClient:
         if self._bearer_token:
             headers["Authorization"] = f"Bearer {self._bearer_token}"
 
+        async def _do_request() -> dict[str, Any]:
+            async with httpx.AsyncClient(timeout=self._timeout_sec) as client:
+                response = await client.request(method=method, url=url, json=json, headers=headers)
+                response.raise_for_status()
+                if not response.content:
+                    return {"ok": True, "data": None}
+                return response.json()
+
+        if self._circuit_breaker.state.value == "open":
+            self._logger.warning("Memory API circuit open, skipping request: %s %s", method, path)
+            raise MemoryApiCircuitOpen(f"Circuit open: {method} {path}")
+
         last_error: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
-                async with httpx.AsyncClient(timeout=self._timeout_sec) as client:
-                    response = await client.request(method=method, url=url, json=json, headers=headers)
-                    response.raise_for_status()
-                    if not response.content:
-                        return {"ok": True, "data": None}
-                    return response.json()
+                result = await _do_request()
+                self._circuit_breaker.record_success()
+                return result
             except httpx.HTTPStatusError as exc:
                 status_code = exc.response.status_code if exc.response is not None else None
-                # 4xx 一般属于业务或权限问题，立即抛出避免无效重试；仅 429 可继续重试
                 if status_code is not None and 400 <= status_code < 500 and status_code != 429:
+                    self._circuit_breaker.record_failure()
                     raise
                 last_error = exc
+                self._circuit_breaker.record_failure()
             except (httpx.RequestError, ValueError) as exc:
                 last_error = exc
+                self._circuit_breaker.record_failure()
 
             if attempt >= self._max_retries:
                 break
-            await asyncio.sleep(self._retry_backoff_sec * (attempt + 1))
+            backoff = self._retry_backoff_sec * (2 ** attempt)
+            self._logger.warning(
+                "Memory API retry %d/%d after %.1fs: %s %s",
+                attempt + 1, self._max_retries + 1, backoff, method, path
+            )
+            await asyncio.sleep(backoff)
 
         if last_error is not None:
             raise last_error
         raise RuntimeError("Memory API request failed")
+
+
+class MemoryApiCircuitOpen(Exception):
+    pass
 
     @staticmethod
     def _to_memory_item(data: dict[str, Any]) -> MemoryItem:
