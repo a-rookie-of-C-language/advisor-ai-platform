@@ -1,5 +1,5 @@
 package cn.edu.cqut.advisorplatform.service.impl;
-
+ 
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dao.SessionSummaryDao;
 import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
@@ -72,6 +72,8 @@ public class MemoryServiceImpl implements MemoryService {
             rows = searchText(request, query, topK);
         }
 
+        recordAccessHits(rows);
+
         log.info(
                 "memory_search_done userId={}, kbId={}, topK={}, mode={}, resultCount={}, elapsedMs={}",
                 request.getUserId(),
@@ -83,6 +85,16 @@ public class MemoryServiceImpl implements MemoryService {
         );
 
         return rows.stream().map(MemoryItemResponseDTO::from).toList();
+    }
+
+    private void recordAccessHits(List<UserMemoryDO> rows) {
+        if (rows.isEmpty()) {
+            return;
+        }
+        List<Long> ids = rows.stream().map(UserMemoryDO::getId).toList();
+        for (Long id : ids) {
+            userMemoryDao.incrementAccessCount(id);
+        }
     }
 
     private List<UserMemoryDO> searchByVector(MemorySearchRequestDTO request, int topK) {
@@ -206,7 +218,7 @@ public class MemoryServiceImpl implements MemoryService {
                             request.getUserId(),
                             request.getKbId(),
                             embedding,
-                            0.9d
+                            0.85d
                     );
                     if (similar.isPresent()) {
                         row = similar.get();
@@ -296,6 +308,43 @@ public class MemoryServiceImpl implements MemoryService {
     @Override
     public void healthCheck() {
         // no-op
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> cleanupExpiredMemories() {
+        int softDeleted = 0;
+        int lowConfidence = 0;
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime softDeleteCutoff = now.minusDays(30);
+        LocalDateTime staleCutoff = now.minusDays(90);
+
+        List<UserMemoryDO> softDeletedRows = userMemoryDao.findSoftDeletedBefore(softDeleteCutoff);
+        if (!softDeletedRows.isEmpty()) {
+            List<Long> ids = softDeletedRows.stream().map(UserMemoryDO::getId).toList();
+            userMemoryDao.deleteAllByIdInBatch(ids);
+            softDeleted = ids.size();
+        }
+
+        List<UserMemoryDO> staleRows = userMemoryDao.findLowConfidenceStale(
+                BigDecimal.valueOf(0.3),
+                staleCutoff,
+                PageRequest.of(0, 200)
+        );
+        if (!staleRows.isEmpty()) {
+            List<Long> ids = staleRows.stream().map(UserMemoryDO::getId).toList();
+            userMemoryDao.deleteAllByIdInBatch(ids);
+            lowConfidence = ids.size();
+        }
+
+        log.info(
+                "memory_cleanup_done soft_deleted={}, low_confidence={}",
+                softDeleted,
+                lowConfidence
+        );
+
+        return Map.of("soft_deleted", softDeleted, "low_confidence", lowConfidence);
     }
 
     private String extractMemoryKey(Map<String, Object> tags) {

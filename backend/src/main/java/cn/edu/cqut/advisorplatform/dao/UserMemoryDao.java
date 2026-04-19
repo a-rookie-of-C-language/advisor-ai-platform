@@ -85,4 +85,40 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             @Param("id") Long id,
             @Param("embedding") String embedding
     );
+
+    long countActiveByUserAndKb(@Param("userId") Long userId, @Param("kbId") Long kbId);
+
+    @Query("""
+            SELECT m FROM UserMemoryDO m
+            WHERE m.isDeleted = true AND m.updatedAt < :cutoff
+            """)
+    List<UserMemoryDO> findSoftDeletedBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("""
+            SELECT m FROM UserMemoryDO m
+            WHERE m.isDeleted = false
+              AND m.confidence < :maxConfidence
+              AND m.updatedAt < :staleSince
+            ORDER BY m.accessCount ASC, m.updatedAt ASC
+            """)
+    List<UserMemoryDO> findLowConfidenceStale(
+            @Param("maxConfidence") java.math.BigDecimal maxConfidence,
+            @Param("staleSince") LocalDateTime staleSince,
+            Pageable pageable
+    );
+
+    @Modifying
+    @Query(
+            value = """
+                    UPDATE user_memory
+                    SET access_count = access_count + 1,
+                        last_accessed_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = :id
+                    """,
+            nativeQuery = true
+    )
+    int incrementAccessCount(@Param("id") Long id);
+
+    void deleteAllByIdInBatch(List<Long> ids);
 }

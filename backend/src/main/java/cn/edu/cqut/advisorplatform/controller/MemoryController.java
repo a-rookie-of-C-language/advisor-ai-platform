@@ -57,4 +57,9 @@ public class MemoryController {
         memoryService.saveSessionSummary(sessionId, request);
         return ApiResponseDTO.success();
     }
+
+    @PostMapping("/cleanup")
+    public ApiResponseDTO<Map<String, Integer>> cleanupExpired() {
+        return ApiResponseDTO.success(memoryService.cleanupExpiredMemories());
+    }
 }

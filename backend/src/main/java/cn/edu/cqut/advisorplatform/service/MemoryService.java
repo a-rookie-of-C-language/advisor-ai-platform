@@ -8,6 +8,7 @@ import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
 
 import java.util.List;
+import java.util.Map;
 
 public interface MemoryService {
 
@@ -20,4 +21,6 @@ public interface MemoryService {
     void saveSessionSummary(Long sessionId, SessionSummaryUpdateRequestDTO request);
 
     void healthCheck();
+
+    Map<String, Integer> cleanupExpiredMemories();
 }
