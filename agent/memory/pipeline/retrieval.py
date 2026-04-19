@@ -6,13 +6,32 @@ from datetime import datetime, timezone
 
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryItem
+from memory.pipeline.query_processor import QueryProcessor
+from memory.pipeline.rerank import ConfidenceDecayRerank, DiversityRerank, MemoryRerankRegistry
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_RERANK_STRATEGY = "confidence_decay_v1"
+
 
 class MemoryRetrieval:
-    def __init__(self, governance: MemoryGovernance | None = None) -> None:
+    def __init__(
+        self,
+        governance: MemoryGovernance | None = None,
+        rerank_registry: MemoryRerankRegistry | None = None,
+        query_processor: QueryProcessor | None = None,
+        default_rerank_strategy: str = DEFAULT_RERANK_STRATEGY,
+    ) -> None:
         self._governance = governance or MemoryGovernance()
+        self._query_processor = query_processor or QueryProcessor()
+        self._default_rerank_strategy = default_rerank_strategy
+
+        if rerank_registry is not None:
+            self._rerank_registry = rerank_registry
+        else:
+            self._rerank_registry = MemoryRerankRegistry()
+            self._rerank_registry.register(ConfidenceDecayRerank(governance=self._governance))
+            self._rerank_registry.register(DiversityRerank())
 
     async def retrieve(
         self,
@@ -21,12 +40,17 @@ class MemoryRetrieval:
         kb_id: int,
         query: str,
         top_k: int = 6,
+        rerank_strategy: str | None = None,
     ) -> list[MemoryItem]:
         t0 = time.monotonic()
+
+        processed_query = self._query_processor.process(query)
+        search_text = self._query_processor.build_search_query(processed_query)
+
         items = await api_client.search_long_term(
             user_id=user_id,
             kb_id=kb_id,
-            query=query,
+            query=search_text,
             top_k=top_k * 2,
         )
         latency_ms = (time.monotonic() - t0) * 1000
@@ -36,26 +60,19 @@ class MemoryRetrieval:
         )
         items = self._governance.apply_ttl(items)
         items = self._governance.resolve_conflicts(items)
-        result = self.rerank(items, query)[:top_k]
+
+        strategy_name = rerank_strategy or self._default_rerank_strategy
+        strategy = self._rerank_registry.get(strategy_name)
+        result = strategy.rank(items, processed_query.normalized, top_k)
+
         logger.debug(
-            "Memory retrieval final: user=%d kb=%d after_filter=%d returned=%d",
-            user_id, kb_id, len(items), len(result)
+            "Memory retrieval final: user=%d kb=%d after_filter=%d returned=%d strategy=%s",
+            user_id, kb_id, len(items), len(result), strategy_name
         )
         return result
 
-    def rerank(self, items: list[MemoryItem], query: str) -> list[MemoryItem]:
-        query_tokens = self._tokens(query)
-        now = datetime.now(timezone.utc)
-
-        def score(item: MemoryItem) -> float:
-            content_tokens = self._tokens(item.content)
-            overlap = len(query_tokens.intersection(content_tokens))
-            lexical = overlap / max(len(query_tokens), 1)
-            decay = self._governance.compute_time_decay(item, now=now)
-            return 0.50 * item.score + 0.30 * item.confidence + 0.20 * decay + 0.10 * lexical
-
-        return sorted(items, key=score, reverse=True)
-
     @staticmethod
-    def _tokens(text: str) -> set[str]:
-        return {token for token in text.lower().split() if token}
+    def _tokenize(text: str) -> set[str]:
+        import re
+        lowered = text.lower()
+        return set(re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]", lowered))

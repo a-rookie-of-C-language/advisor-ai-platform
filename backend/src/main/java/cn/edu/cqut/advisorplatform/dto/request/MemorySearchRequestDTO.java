@@ -22,4 +22,7 @@ public class MemorySearchRequestDTO {
     @Max(50)
     @Nullable
     private Integer topK = 6;
+
+    @Nullable
+    private String mode = "hybrid";
 }

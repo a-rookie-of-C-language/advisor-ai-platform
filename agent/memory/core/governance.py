@@ -14,6 +14,8 @@ class MemoryGovernance:
         summary_token_threshold: int = 2400,
         llm_extract_enabled: bool = True,
         memory_half_life_days: float = 30.0,
+        query_enable_synonym: bool = True,
+        query_enable_normalization: bool = True,
     ) -> None:
         self._min_confidence = min_confidence
         self._max_candidates_per_turn = max_candidates_per_turn
@@ -21,6 +23,8 @@ class MemoryGovernance:
         self._summary_token_threshold = summary_token_threshold
         self._llm_extract_enabled = llm_extract_enabled
         self._memory_half_life_days = max(memory_half_life_days, 1.0)
+        self._query_enable_synonym = query_enable_synonym
+        self._query_enable_normalization = query_enable_normalization
 
     @property
     def summary_turn_threshold(self) -> int:
@@ -33,6 +37,14 @@ class MemoryGovernance:
     @property
     def llm_extract_enabled(self) -> bool:
         return self._llm_extract_enabled
+
+    @property
+    def query_enable_synonym(self) -> bool:
+        return self._query_enable_synonym
+
+    @property
+    def query_enable_normalization(self) -> bool:
+        return self._query_enable_normalization
 
     def should_write_candidate(self, candidate: MemoryCandidate) -> bool:
         return bool(candidate.content.strip()) and candidate.confidence >= self._min_confidence

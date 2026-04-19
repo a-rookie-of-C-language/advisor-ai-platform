@@ -29,10 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -48,48 +46,132 @@ public class MemoryServiceImpl implements MemoryService {
     @Value("${advisor.memory.vector-store:pgvector}")
     private String vectorStore;
 
+    @Value("${advisor.memory.hybrid.vector-weight:0.7}")
+    private double hybridVectorWeight;
+
+    @Value("${advisor.memory.hybrid.text-weight:0.3}")
+    private double hybridTextWeight;
+
     @Override
     public List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request) {
         long startedAt = System.currentTimeMillis();
         int topK = request.getTopK() == null ? 6 : Math.max(1, Math.min(request.getTopK(), 50));
         String query = Optional.ofNullable(request.getQuery()).orElse("").trim();
+        String mode = Optional.ofNullable(request.getMode()).orElse("hybrid").toLowerCase();
         List<UserMemoryDO> rows;
 
-        if (!query.isEmpty() && memoryServiceFactory.hasService(vectorStore)) {
-            try {
-                MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
-                double[] queryEmbedding = embeddingService.embed(query);
-                rows = vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, topK);
-            } catch (Exception exc) {
-                log.warn("memory_vector_search_failed userId={}, kbId={}, err={}", request.getUserId(), request.getKbId(), exc.getMessage());
-                rows = userMemoryDao.searchByScope(
-                        request.getUserId(),
-                        request.getKbId(),
-                        query,
-                        LocalDateTime.now(),
-                        PageRequest.of(0, topK)
-                );
-            }
+        boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
+
+        if ("vector".equals(mode) && hasVectorService) {
+            rows = searchByVector(request, topK);
+        } else if ("text".equals(mode)) {
+            rows = searchByText(request, query, topK);
+        } else if (hasVectorService) {
+            rows = searchHybrid(request, query, topK);
         } else {
-            rows = userMemoryDao.searchByScope(
-                    request.getUserId(),
-                    request.getKbId(),
-                    query,
-                    LocalDateTime.now(),
-                    PageRequest.of(0, topK)
-            );
+            rows = searchByText(request, query, topK);
         }
 
         log.info(
-                "memory_search_done userId={}, kbId={}, topK={}, resultCount={}, elapsedMs={}",
+                "memory_search_done userId={}, kbId={}, topK={}, mode={}, resultCount={}, elapsedMs={}",
                 request.getUserId(),
                 request.getKbId(),
                 topK,
+                mode,
                 rows.size(),
                 System.currentTimeMillis() - startedAt
         );
 
         return rows.stream().map(MemoryItemResponseDTO::from).toList();
+    }
+
+    private List<UserMemoryDO> searchByVector(MemorySearchRequestDTO request, int topK) {
+        try {
+            MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
+            double[] queryEmbedding = embeddingService.embed(request.getQuery());
+            return vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, topK);
+        } catch (Exception exc) {
+            log.warn("memory_vector_search_failed userId={}, kbId={}, err={}", request.getUserId(), request.getKbId(), exc.getMessage());
+            return searchByText(request, request.getQuery(), topK);
+        }
+    }
+
+    private List<UserMemoryDO> searchText(MemorySearchRequestDTO request, String query, int topK) {
+        return userMemoryDao.searchByScope(
+                request.getUserId(),
+                request.getKbId(),
+                query,
+                LocalDateTime.now(),
+                PageRequest.of(0, topK)
+        );
+    }
+
+    private List<UserMemoryDO> searchHybrid(MemorySearchRequestDTO request, String query, int topK) {
+        int recallK = Math.min(topK * 3, 50);
+
+        List<UserMemoryDO> vectorResults;
+        try {
+            MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
+            double[] queryEmbedding = embeddingService.embed(query);
+            vectorResults = vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, recallK);
+        } catch (Exception exc) {
+            log.warn("memory_hybrid_vector_fallback userId={}, kbId={}", request.getUserId(), request.getKbId());
+            return searchText(request, query, topK);
+        }
+
+        List<UserMemoryDO> textResults = userMemoryDao.searchByScope(
+                request.getUserId(),
+                request.getKbId(),
+                query,
+                LocalDateTime.now(),
+                PageRequest.of(0, recallK)
+        );
+
+        return mergeHybridResults(vectorResults, textResults, topK);
+    }
+
+    private List<UserMemoryDO> mergeHybridResults(List<UserMemoryDO> vectorResults, List<UserMemoryDO> textResults, int topK) {
+        Map<Long, Double> vectorScores = new LinkedHashMap<>();
+        for (int i = 0; i < vectorResults.size(); i++) {
+            UserMemoryDO item = vectorResults.get(i);
+            double rankScore = 1.0 - ((double) i / Math.max(vectorResults.size(), 1));
+            vectorScores.merge(item.getId(), rankScore, Math::max);
+        }
+
+        Map<Long, Double> textScores = new LinkedHashMap<>();
+        for (int i = 0; i < textResults.size(); i++) {
+            UserMemoryDO item = textResults.get(i);
+            double rankScore = 1.0 - ((double) i / Math.max(textResults.size(), 1));
+            textScores.merge(item.getId(), rankScore, Math::max);
+        }
+
+        Set<Long> allIds = new LinkedHashSet<>();
+        vectorResults.forEach(item -> allIds.add(item.getId()));
+        textResults.forEach(item -> allIds.add(item.getId()));
+
+        Map<Long, UserMemoryDO> allItemsMap = new LinkedHashMap<>();
+        for (UserMemoryDO item : vectorResults) {
+            allItemsMap.putIfAbsent(item.getId(), item);
+        }
+        for (UserMemoryDO item : textResults) {
+            allItemsMap.putIfAbsent(item.getId(), item);
+        }
+
+        List<Map.Entry<Long, Double>> fused = allIds.stream()
+                .map(id -> {
+                    double vScore = vectorScores.getOrDefault(id, 0.0);
+                    double tScore = textScores.getOrDefault(id, 0.0);
+                    double fusedScore = hybridVectorWeight * vScore + hybridTextWeight * tScore;
+                    return Map.entry(id, fusedScore);
+                })
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(topK)
+                .toList();
+
+        return fused.stream()
+                .map(entry -> allItemsMap.get(entry.getKey()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     @Override
