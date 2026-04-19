@@ -65,11 +65,11 @@ public class MemoryServiceImpl implements MemoryService {
         if ("vector".equals(mode) && hasVectorService) {
             rows = searchByVector(request, topK);
         } else if ("text".equals(mode)) {
-            rows = searchByText(request, query, topK);
+            rows = searchText(request, query, topK);
         } else if (hasVectorService) {
             rows = searchHybrid(request, query, topK);
         } else {
-            rows = searchByText(request, query, topK);
+            rows = searchText(request, query, topK);
         }
 
         log.info(
@@ -92,7 +92,7 @@ public class MemoryServiceImpl implements MemoryService {
             return vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, topK);
         } catch (Exception exc) {
             log.warn("memory_vector_search_failed userId={}, kbId={}, err={}", request.getUserId(), request.getKbId(), exc.getMessage());
-            return searchByText(request, request.getQuery(), topK);
+            return searchText(request, request.getQuery(), topK);
         }
     }
 
