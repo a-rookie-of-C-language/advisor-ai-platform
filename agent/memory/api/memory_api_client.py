@@ -107,6 +107,44 @@ class MemoryApiClient:
         except Exception:
             return False
 
+    async def submit_memory_task(
+        self,
+        user_id: int,
+        kb_id: int,
+        session_id: int,
+        turn_id: str,
+        user_text: str | None = None,
+        assistant_text: str | None = None,
+        recent_messages: list[dict[str, str]] | None = None,
+    ) -> dict[str, Any]:
+        payload = {
+            "userId": user_id,
+            "kbId": kb_id,
+            "sessionId": session_id,
+            "turnId": turn_id,
+        }
+        if user_text is not None:
+            payload["userText"] = user_text
+        if assistant_text is not None:
+            payload["assistantText"] = assistant_text
+        if recent_messages is not None:
+            payload["recentMessages"] = recent_messages
+        data = await self._request("POST", "/api/memory/task/submit", json=payload)
+        return data.get("data", {})
+
+    async def fetch_pending_tasks(self, limit: int = 10) -> list[dict[str, Any]]:
+        data = await self._request("GET", f"/api/memory/task/pending?limit={limit}")
+        return data.get("data", [])
+
+    async def mark_task_done(self, task_id: int) -> None:
+        await self._request("POST", f"/api/memory/task/{task_id}/done")
+
+    async def mark_task_failed(self, task_id: int, error: str | None = None) -> None:
+        params: dict[str, Any] = {}
+        if error:
+            params["error"] = error
+        await self._request("POST", f"/api/memory/task/{task_id}/fail", json=params if params else None)
+
     async def _request(self, method: str, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self._base_url}{path}"
         headers: dict[str, str] = {}

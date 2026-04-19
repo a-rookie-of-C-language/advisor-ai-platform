@@ -8,8 +8,8 @@ from memory.core.schema import MemoryCandidate, MemoryItem
 class MemoryGovernance:
     def __init__(
         self,
-        min_confidence: float = 0.65,
-        max_candidates_per_turn: int = 6,
+        min_confidence: float = 0.55,
+        max_candidates_per_turn: int = 8,
         summary_turn_threshold: int = 10,
         summary_token_threshold: int = 2400,
         llm_extract_enabled: bool = True,

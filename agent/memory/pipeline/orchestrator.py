@@ -59,21 +59,17 @@ class MemoryOrchestrator:
         assistant_text: str,
         recent_messages: list[dict[str, str]],
         source_turn_id: str | None = None,
-        llm_extractor: Extractor | None = None,
     ) -> None:
-        candidates = await self._writeback.extract_candidates(
-            user_text=user_text,
-            assistant_text=assistant_text,
-            source_turn_id=source_turn_id,
-            llm_extractor=llm_extractor,
-        )
-        await self._writeback.flush(
-            api_client=self._api_client,
-            user_id=user_id,
-            kb_id=kb_id,
-            candidates=candidates,
-        )
-
-        if self._session_memory.should_summarize(recent_messages):
-            summary_input = self._session_memory.build_summary_input(recent_messages)
-            await self._api_client.save_session_summary(session_id=session_id, summary=summary_input)
+        turn_id = source_turn_id or f"turn_{int(__import__('time').time())}"
+        try:
+            await self._api_client.submit_memory_task(
+                user_id=user_id,
+                kb_id=kb_id,
+                session_id=session_id,
+                turn_id=turn_id,
+                user_text=user_text,
+                assistant_text=assistant_text,
+                recent_messages=recent_messages,
+            )
+        except Exception as exc:
+            logger.warning("memory_task_submit_failed session=%s turn=%s err=%s", session_id, turn_id, exc)

@@ -21,11 +21,20 @@ class OpenAILLMExtractor:
 
     async def __call__(self, user_text: str, assistant_text: str) -> list[MemoryCandidate]:
         prompt = (
-            "Extract stable user memories from dialogue. Return strict JSON array only.\\n"
-            "Each item: {\"content\": string, \"confidence\": number(0-1), \"tags\": object}.\\n"
-            "Keep at most 5 items. Ignore temporary facts.\\n"
-            f"[USER] {user_text}\\n"
-            f"[ASSISTANT] {assistant_text}\\n"
+            "你是一个记忆提取专家。从对话中提取值得长期记住的用户信息。\n"
+            "\n"
+            "提取规则：\n"
+            "1. 只提取稳定的、长期有效的用户特征（偏好、目标、约束、身份信息）\n"
+            "2. 忽略临时性、一次性、已解决的问题\n"
+            "3. 每条记忆要有明确的置信度(0-1)，事实性高的给高分\n"
+            "4. tags中标记类型: preference/goal/constraint/identity/其他\n"
+            "5. 最多提取5条，按重要性排序\n"
+            "\n"
+            "返回严格JSON数组，不要其他文字：\n"
+            '[{"content": "记忆内容", "confidence": 0.8, "tags": {"type": "preference"}}]\n'
+            "\n"
+            f"[用户] {user_text}\n"
+            f"[助手] {assistant_text}\n"
         )
 
         response = await self._client.chat.completions.create(

@@ -1,16 +1,20 @@
 package cn.edu.cqut.advisorplatform.service.impl;
  
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dao.MemoryTaskDao;
 import cn.edu.cqut.advisorplatform.dao.SessionSummaryDao;
 import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateItemDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
 import cn.edu.cqut.advisorplatform.dto.request.SessionSummaryUpdateRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.MemoryTaskDO;
 import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
@@ -38,6 +42,7 @@ import java.util.stream.Collectors;
 public class MemoryServiceImpl implements MemoryService {
 
     private final UserMemoryDao userMemoryDao;
+    private final MemoryTaskDao memoryTaskDao;
     private final SessionSummaryDao sessionSummaryDao;
     private final ChatSessionDao chatSessionDao;
     private final MemoryServiceFactory memoryServiceFactory;
@@ -362,5 +367,50 @@ public class MemoryServiceImpl implements MemoryService {
     private BigDecimal toDecimal(Double value, double fallback, int scale) {
         double safe = value == null ? fallback : Math.max(0d, Math.min(1d, value));
         return BigDecimal.valueOf(safe).setScale(scale, java.math.RoundingMode.HALF_UP);
+    }
+
+    @Override
+    @Transactional
+    public MemoryTaskResponseDTO submitTask(MemoryTaskSubmitDTO request) {
+        var existing = memoryTaskDao.findBySessionIdAndTurnId(request.getSessionId(), request.getTurnId());
+        if (existing.isPresent()) {
+            return MemoryTaskResponseDTO.from(existing.get());
+        }
+        var task = new MemoryTaskDO();
+        task.setUserId(request.getUserId());
+        task.setKbId(request.getKbId());
+        task.setSessionId(request.getSessionId());
+        task.setTurnId(request.getTurnId());
+        task.setStatus("pending");
+        Map<String, Object> payload = new HashMap<>();
+        if (request.getUserText() != null) payload.put("user_text", request.getUserText());
+        if (request.getAssistantText() != null) payload.put("assistant_text", request.getAssistantText());
+        if (request.getRecentMessages() != null) payload.put("recent_messages", request.getRecentMessages());
+        task.setPayload(payload);
+        task.setRetryCount(0);
+        task.setCreatedAt(LocalDateTime.now());
+        return MemoryTaskResponseDTO.from(memoryTaskDao.save(task));
+    }
+
+    @Override
+    public List<MemoryTaskResponseDTO> fetchPendingTasks(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        List<MemoryTaskDO> tasks = memoryTaskDao.findPendingTasks(3, PageRequest.of(0, safeLimit));
+        for (MemoryTaskDO task : tasks) {
+            memoryTaskDao.updateStatus(task.getId(), "processing");
+        }
+        return tasks.stream().map(MemoryTaskResponseDTO::from).toList();
+    }
+
+    @Override
+    @Transactional
+    public void markTaskDone(Long taskId) {
+        memoryTaskDao.updateStatus(taskId, "done");
+    }
+
+    @Override
+    @Transactional
+    public void markTaskFailed(Long taskId, String error) {
+        memoryTaskDao.markFailed(taskId, error != null ? error : "unknown");
     }
 }

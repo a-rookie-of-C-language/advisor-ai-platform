@@ -10,6 +10,7 @@ from memory.pipeline.retrieval import MemoryRetrieval
 from memory.pipeline.session_memory import SessionMemory
 from memory.pipeline.work_memory import WorkMemory
 from memory.pipeline.writeback import MemoryWriteback
+from memory.pipeline.worker import MemoryWorkerAgent
 
 __all__ = [
     "InteractionLayer",
@@ -20,6 +21,7 @@ __all__ = [
     "MemoryItem",
     "MemoryOrchestrator",
     "MemoryRetrieval",
+    "MemoryWorkerAgent",
     "MemoryWriteback",
     "OpenAILLMExtractor",
     "SessionMemory",
