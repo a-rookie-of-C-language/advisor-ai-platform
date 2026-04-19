@@ -6,6 +6,7 @@ import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AuditService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -31,6 +35,11 @@ import java.util.Objects;
 @Component
 @RequiredArgsConstructor
 public class AuditAspect {
+
+    private static final String MASKED_VALUE = "***";
+    private static final int MAX_TEXT_LENGTH = 1000;
+    private static final String[] SENSITIVE_KEYS = {"password", "token", "secret", "apiKey", "authorization"};
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final AuditService auditService;
 

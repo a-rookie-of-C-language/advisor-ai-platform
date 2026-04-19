@@ -3,6 +3,7 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   MessageOutlined,
+  AuditOutlined,
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
@@ -12,16 +13,17 @@ import styles from './MainLayout.module.css'
 
 const { Sider, Header, Content } = Layout
 
-const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
-  { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
-  { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
-]
-
 export default function MainLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { realName, logout } = useAuthStore()
+  const { realName, logout, role } = useAuthStore()
+
+  const menuItems = [
+    { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+    { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
+    { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
+    ...(role === 'ADMIN' ? [{ key: '/audit', icon: <AuditOutlined />, label: '审计日志' }] : []),
+  ]
 
   const userMenu = {
     items: [

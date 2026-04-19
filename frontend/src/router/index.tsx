@@ -4,11 +4,17 @@ import Login from '../pages/Login/Login'
 import Dashboard from '../pages/Dashboard/Dashboard'
 import RAGPage from '../pages/RAG/RAGPage'
 import ChatPage from '../pages/Chat/ChatPage'
+import AuditPage from '../pages/Audit/AuditPage'
 import { useAuthStore } from '../store/authStore'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
   return token ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const role = useAuthStore((s) => s.role)
+  return role === 'ADMIN' ? <>{children}</> : <Navigate to="/dashboard" replace />
 }
 
 export default function AppRouter() {
@@ -27,6 +33,14 @@ export default function AppRouter() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="rag" element={<RAGPage />} />
         <Route path="chat" element={<ChatPage />} />
+        <Route
+          path="audit"
+          element={
+            <AdminRoute>
+              <AuditPage />
+            </AdminRoute>
+          }
+        />
       </Route>
     </Routes>
   )

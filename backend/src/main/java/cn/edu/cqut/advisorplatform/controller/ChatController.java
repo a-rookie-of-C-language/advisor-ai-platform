@@ -50,7 +50,7 @@ import java.util.Map;
 public class ChatController {
 
     private static final String TRACE_HEADER = "X-Trace-Id";
-    private static final String ASSISTANT_ERROR_PLACEHOLDER = "\u8bf7\u6c42\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+    private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
 
     private final AgentProxyService agentProxyService;
     private final ChatService chatService;
@@ -100,7 +100,7 @@ public class ChatController {
             @AuthenticationPrincipal @Nullable UserDO currentUser
     ) throws java.io.IOException {
         if (currentUser == null || currentUser.getId() == null) {
-            throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
+            throw new ForbiddenException("未登录或登录已失效");
         }
 
         String userContent = body.getOrDefault("content", "").trim();
@@ -169,7 +169,7 @@ public class ChatController {
             @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
         if (currentUser == null || currentUser.getId() == null) {
-            throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
+            throw new ForbiddenException("未登录或登录已失效");
         }
 
         long sessionKbId = chatService.getSessionKbId(request.getSessionId(), currentUser);

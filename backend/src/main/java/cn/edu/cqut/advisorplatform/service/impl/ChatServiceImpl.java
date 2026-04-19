@@ -24,7 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
-    private static final String DEFAULT_SESSION_TITLE = "\u65b0\u5bf9\u8bdd";
+    private static final String DEFAULT_SESSION_TITLE = "新对话";
     private static final long DEFAULT_KB_ID = 0L;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -96,11 +96,11 @@ public class ChatServiceImpl implements ChatService {
 
     private ChatSessionDO getOwnedSession(Long sessionId, UserDO currentUser) {
         ChatSessionDO session = chatSessionDao.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("\u4f1a\u8bdd\u4e0d\u5b58\u5728"));
+                .orElseThrow(() -> new NotFoundException("会话不存在"));
         Long currentUserId = requireUserId(currentUser);
         Long ownerId = session.getUser() == null ? null : session.getUser().getId();
         if (ownerId == null || !ownerId.equals(currentUserId)) {
-            throw new ForbiddenException("\u65e0\u6743\u8bbf\u95ee\u8be5\u4f1a\u8bdd");
+            throw new ForbiddenException("无权访问该会话");
         }
         return session;
     }
@@ -137,7 +137,7 @@ public class ChatServiceImpl implements ChatService {
 
     private UserDO requireUser(UserDO currentUser) {
         if (currentUser == null || currentUser.getId() == null) {
-            throw new ForbiddenException("\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548");
+            throw new ForbiddenException("未登录或登录已失效");
         }
         return currentUser;
     }
