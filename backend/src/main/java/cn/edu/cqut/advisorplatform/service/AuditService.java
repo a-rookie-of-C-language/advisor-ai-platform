@@ -38,5 +38,7 @@ public interface AuditService {
 
     AuditLogDO getAuditLogById(Long id);
 
+    long countByUserAndModule(Long userId, AuditModule module);
+
     long countByUserAndModuleAndAction(Long userId, AuditModule module, AuditAction action);
 }

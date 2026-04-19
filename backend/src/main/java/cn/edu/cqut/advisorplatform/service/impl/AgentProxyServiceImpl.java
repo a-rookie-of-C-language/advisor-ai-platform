@@ -44,7 +44,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     public AgentProxyServiceImpl(
             ObjectMapper objectMapper,
             @Value("${advisor.agent.base-url:http://127.0.0.1:8001}") String agentBaseUrl,
-            @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:arookieofc}}") String agentApiToken,
+            @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:}}") String agentApiToken,
             @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs,
             @Value("${advisor.agent.debug-stream:${DEBUG_STREAM:false}}") boolean debugStream
     ) {

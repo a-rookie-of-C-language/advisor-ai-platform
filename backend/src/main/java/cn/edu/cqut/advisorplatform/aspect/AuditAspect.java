@@ -156,13 +156,14 @@ public class AuditAspect {
                                   MethodSignature signature,
                                   Method method) {
         try {
-            Map<String, Object> params = new HashMap<>();
+            Map<String, Object> params = new LinkedHashMap<>();
             Parameter[] parameters = method.getParameters();
             Object[] args = joinPoint.getArgs();
 
             for (int i = 0; i < parameters.length; i++) {
                 if (args[i] != null && !isExcludedType(args[i].getClass())) {
-                    params.put(parameters[i].getName(), sanitizeValue(args[i]));
+                    String paramName = parameters[i].getName();
+                    params.put(paramName, sanitizeValue(paramName, args[i]));
                 }
             }
             return serializeToJson(params);
@@ -178,13 +179,31 @@ public class AuditAspect {
                 || type.getName().startsWith("org.hibernate");
     }
 
-    private Object sanitizeValue(Object value) {
+    private Object sanitizeValue(String key, Object value) {
+        if (isSensitiveKey(key)) {
+            return MASKED_VALUE;
+        }
         if (value instanceof String || value instanceof Number || value instanceof Boolean) {
-            String strValue = value.toString();
-            if (strValue.length() > 1000) {
-                return strValue.substring(0, 1000) + "...[truncated]";
+            return truncate(value.toString());
+        }
+        if (value instanceof Map<?, ?> mapValue) {
+            Map<String, Object> sanitized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : mapValue.entrySet()) {
+                String entryKey = String.valueOf(entry.getKey());
+                Object entryValue = entry.getValue();
+                if (entryValue == null) {
+                    sanitized.put(entryKey, null);
+                    continue;
+                }
+                if (isExcludedType(entryValue.getClass())) {
+                    continue;
+                }
+                sanitized.put(entryKey, sanitizeValue(entryKey, entryValue));
             }
-            return strValue;
+            return sanitized;
+        }
+        if (value instanceof List<?> listValue) {
+            return listValue.stream().limit(20).map(item -> item == null ? null : sanitizeValue(key, item)).toList();
         }
         if (value instanceof byte[] || value.getClass().isArray()) {
             return "[binary data]";
@@ -192,13 +211,29 @@ public class AuditAspect {
         return value.getClass().getSimpleName();
     }
 
+    private boolean isSensitiveKey(String key) {
+        if (key == null) {
+            return false;
+        }
+        String normalized = key.toLowerCase(Locale.ROOT);
+        for (String sensitive : SENSITIVE_KEYS) {
+            if (normalized.contains(sensitive)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String truncate(String value) {
+        if (value == null || value.length() <= MAX_TEXT_LENGTH) {
+            return value;
+        }
+        return value.substring(0, MAX_TEXT_LENGTH) + "...[truncated]";
+    }
+
     private String serializeToJson(Object obj) {
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper =
-                    new com.fasterxml.jackson.databind.ObjectMapper();
-            mapper.registerModule(
-                    new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-            return mapper.writeValueAsString(obj);
+            return OBJECT_MAPPER.writeValueAsString(obj);
         } catch (Exception e) {
             log.warn("Failed to serialize object to JSON", e);
             return "{}";

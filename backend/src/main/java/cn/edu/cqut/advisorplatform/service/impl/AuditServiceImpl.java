@@ -105,6 +105,12 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     @Transactional(readOnly = true)
+    public long countByUserAndModule(Long userId, AuditModule module) {
+        return auditLogDao.countByUserAndModule(userId, module);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countByUserAndModuleAndAction(
             Long userId,
             AuditModule module,

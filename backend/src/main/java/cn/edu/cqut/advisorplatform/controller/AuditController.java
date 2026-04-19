@@ -45,13 +45,10 @@ public class AuditController {
             @RequestParam AuditModule module,
             @RequestParam(required = false) AuditAction action
     ) {
-        long count;
         if (action != null) {
-            count = auditService.countByUserAndModuleAndAction(userId, module, action);
-        } else {
-            count = 0;
+            return ApiResponseDTO.success(auditService.countByUserAndModuleAndAction(userId, module, action));
         }
-        return ApiResponseDTO.success(count);
+        return ApiResponseDTO.success(auditService.countByUserAndModule(userId, module));
     }
 
     @GetMapping("/stats/module-action")

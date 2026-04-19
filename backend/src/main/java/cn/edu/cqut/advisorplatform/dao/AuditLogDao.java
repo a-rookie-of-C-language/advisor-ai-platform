@@ -45,6 +45,12 @@ public interface AuditLogDao extends JpaRepository<AuditLogDO, Long> {
 
     List<AuditLogDO> findTop100ByOrderByCreatedAtDesc();
 
+    @Query("SELECT COUNT(a) FROM AuditLogDO a WHERE a.userId = :userId AND a.module = :module")
+    long countByUserAndModule(
+            @Param("userId") Long userId,
+            @Param("module") AuditLogDO.AuditModule module
+    );
+
     @Query("SELECT COUNT(a) FROM AuditLogDO a WHERE a.userId = :userId AND a.module = :module AND a.action = :action")
     long countByUserAndModuleAndAction(
             @Param("userId") Long userId,
