@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, AsyncIterator
 
 from memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from agents.base.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 
@@ -35,21 +36,13 @@ class ToolCallResult:
 
 
 class Agent(ABC):
-    """Agent基类
-
-    核心能力：
-    - 生命周期管理：start / stop / pause / resume
-    - LLM调用能力：通过 llm 模块的 provider 进行推理
-    - 工具调用能力：注册和调用工具
-    - 记忆访问能力：读写记忆系统
-    """
-
     def __init__(
         self,
         name: str,
         llm_provider: Any = None,
         memory_client: Any = None,
         tools: dict[str, Any] | None = None,
+        permission_config: PermissionConfig | None = None,
     ) -> None:
         self._name = name
         self._state = AgentState.CREATED
@@ -57,6 +50,7 @@ class Agent(ABC):
         self._memory_client = memory_client
         self._tools = tools or {}
         self._context = AgentContext()
+        self._permission = permission_config or PermissionConfig()
         logger.debug("agent_created name=%s", name)
 
     @property
@@ -74,6 +68,17 @@ class Agent(ABC):
     @context.setter
     def context(self, ctx: AgentContext) -> None:
         self._context = ctx
+
+    @property
+    def permission(self) -> PermissionConfig:
+        return self._permission
+
+    def check_tool(self, tool: ToolPermission) -> bool:
+        return self._permission.allows_tool(tool)
+
+    def ensure_can_tool(self, tool: ToolPermission) -> None:
+        if not self.check_tool(tool):
+            raise PermissionError(f"Agent '{self._name}' has no permission to use '{tool.value}'")
 
     async def start(self) -> None:
         if self._state not in (AgentState.CREATED, AgentState.STOPPED):
@@ -106,7 +111,9 @@ class Agent(ABC):
     async def read_memory(
         self, user_id: int, kb_id: int, query: str, top_k: int = 10
     ) -> list[MemoryItem]:
-        """读取记忆"""
+        if not self.check_tool(ToolPermission.MEMORY_READ):
+            logger.warning("agent_read_memory_denied name=%s", self._name)
+            return []
         if self._memory_client is None:
             return []
         try:
@@ -120,7 +127,9 @@ class Agent(ABC):
     async def write_memory(
         self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
     ) -> WritebackResult:
-        """写入记忆"""
+        if not self.check_tool(ToolPermission.MEMORY_WRITE):
+            logger.warning("agent_write_memory_denied name=%s", self._name)
+            return WritebackResult(accepted=0, rejected=0, message="permission_denied")
         if self._memory_client is None:
             return WritebackResult(accepted=0, rejected=0, message="no_memory_client")
         try:
@@ -132,7 +141,8 @@ class Agent(ABC):
             return WritebackResult(accepted=0, rejected=len(candidates), message=str(exc))
 
     async def call_llm(self, messages: list[dict[str, str]], **kwargs) -> str:
-        """调用LLM"""
+        if not self.check_tool(ToolPermission.LLM):
+            raise PermissionError(f"Agent '{self._name}' has no permission to use LLM")
         if self._llm_provider is None:
             raise RuntimeError("no_llm_provider")
         from llm.base_provider import ChatMessage
@@ -144,7 +154,6 @@ class Agent(ABC):
         return "".join(chunks)
 
     async def call_tool(self, tool_name: str, **kwargs) -> ToolCallResult:
-        """调用工具"""
         tool = self._tools.get(tool_name)
         if tool is None:
             return ToolCallResult(tool_name=tool_name, success=False, result="", error="tool_not_found")
@@ -156,7 +165,6 @@ class Agent(ABC):
             return ToolCallResult(tool_name=tool_name, success=False, result="", error=str(exc))
 
     def register_tool(self, name: str, tool: Any) -> None:
-        """注册工具"""
         self._tools[name] = tool
 
     async def submit_task(
@@ -169,7 +177,9 @@ class Agent(ABC):
         assistant_text: str | None = None,
         recent_messages: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
-        """提交记忆任务到后端"""
+        if not self.check_tool(ToolPermission.TASK_SUBMIT):
+            logger.warning("agent_submit_task_denied name=%s", self._name)
+            return {}
         if self._memory_client is None:
             return {}
         try:
@@ -187,11 +197,9 @@ class Agent(ABC):
             return {}
 
     async def run_once(self) -> dict[str, Any]:
-        """执行一次任务，由子类实现"""
         raise NotImplementedError
 
     async def run(self) -> None:
-        """持续运行，由子类实现"""
         raise NotImplementedError
 
     async def _on_start(self) -> None:
