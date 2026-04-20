@@ -411,6 +411,6 @@ public class MemoryServiceImpl implements MemoryService {
     @Override
     @Transactional
     public void markTaskFailed(Long taskId, String error) {
-        memoryTaskDao.markFailed(taskId, error != null ? error : "unknown");
+        memoryTaskDao.markFailed(taskId, error != null ? error : "unknown", LocalDateTime.now());
     }
 }

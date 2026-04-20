@@ -24,7 +24,15 @@ public interface MemoryTaskDao extends JpaRepository<MemoryTaskDO, Long> {
     List<MemoryTaskDO> findPendingTasks(@Param("maxRetries") Integer maxRetries, Pageable pageable);
 
     @Modifying
-    @Query("UPDATE MemoryTaskDO t SET t.status = :status, t.processedAt = NOW() WHERE t.id = :id")
+    @Query("""
+            UPDATE MemoryTaskDO t
+            SET t.status = :status,
+                t.processedAt = CASE
+                    WHEN :status IN ('done', 'failed') THEN CURRENT_TIMESTAMP
+                    ELSE t.processedAt
+                END
+            WHERE t.id = :id
+            """)
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
     @Modifying
@@ -33,8 +41,8 @@ public interface MemoryTaskDao extends JpaRepository<MemoryTaskDO, Long> {
             SET t.status = 'failed',
                 t.retryCount = COALESCE(t.retryCount, 0) + 1,
                 t.errorMessage = :error,
-                t.processedAt = NOW()
+                t.processedAt = :now
             WHERE t.id = :id
             """)
-    int markFailed(@Param("id") Long id, @Param("error") String error);
+    int markFailed(@Param("id") Long id, @Param("error") String error, @Param("now") LocalDateTime now);
 }
