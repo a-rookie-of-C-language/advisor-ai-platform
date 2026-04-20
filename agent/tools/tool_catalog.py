@@ -18,27 +18,41 @@ class ToolCatalog:
         return raw in {"1", "true", "yes", "on"}
 
     @classmethod
-    def _always_load_tools(
+    def get_builtin_tools(
         cls,
         *,
         rag_service: Any | None,
+        memory_client: Any | None,
     ) -> list[BaseTool]:
         tools: list[BaseTool] = []
         if rag_service is not None:
             tools.append(RAGSearchTool(rag_service))
-        return tools
-
-    @classmethod
-    def _feature_gated_tools(
-        cls,
-        *,
-        memory_client: Any | None,
-    ) -> list[BaseTool]:
-        tools: list[BaseTool] = []
         if memory_client is not None and cls._feature_enabled("MEMORY_TOOLS", True):
             tools.append(MemoryReadTool(memory_client))
             tools.append(MemoryWriteTool(memory_client))
         return tools
+
+    @classmethod
+    def get_custom_tools(
+        cls,
+        *,
+        rag_service: Any | None,
+        memory_client: Any | None,
+    ) -> list[BaseTool]:
+        _ = rag_service
+        _ = memory_client
+        return []
+
+    @classmethod
+    def get_mcp_tools(
+        cls,
+        *,
+        rag_service: Any | None,
+        memory_client: Any | None,
+    ) -> list[BaseTool]:
+        _ = rag_service
+        _ = memory_client
+        return []
 
     @classmethod
     def get_all_base_tools(
@@ -48,7 +62,7 @@ class ToolCatalog:
         memory_client: Any | None = None,
     ) -> list[BaseTool]:
         tools: list[BaseTool] = []
-        tools.extend(cls._always_load_tools(rag_service=rag_service))
-        tools.extend(cls._feature_gated_tools(memory_client=memory_client))
+        tools.extend(cls.get_builtin_tools(rag_service=rag_service, memory_client=memory_client))
+        tools.extend(cls.get_custom_tools(rag_service=rag_service, memory_client=memory_client))
+        tools.extend(cls.get_mcp_tools(rag_service=rag_service, memory_client=memory_client))
         return tools
-

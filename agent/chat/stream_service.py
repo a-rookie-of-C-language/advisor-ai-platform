@@ -10,7 +10,7 @@ from llm.base_provider import BaseLLMProvider, ChatMessage
 from memory.core.schema import MemoryCandidate
 from memory.pipeline.orchestrator import MemoryOrchestrator
 from memory.pipeline.work_memory import WorkMemory
-from tools.tool_catalog import ToolCatalog
+from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
 
@@ -40,7 +40,7 @@ class ChatStreamService:
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.chat_tools()
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
-        for tool in ToolCatalog.get_all_base_tools(
+        for tool in ToolAssemblyPool.build(
             rag_service=rag_service,
             memory_client=memory_client,
         ):
