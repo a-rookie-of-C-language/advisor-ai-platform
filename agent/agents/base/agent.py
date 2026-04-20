@@ -4,10 +4,10 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator
+from typing import Any
 
 from memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
-from agents.base.tool_permission import PermissionConfig, ToolPermission
+from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class Agent(ABC):
         if self._memory_client is None:
             return []
         try:
-            return await self._memory_client.search_memory(
+            return await self._memory_client.search_long_term(
                 user_id=user_id, kb_id=kb_id, query=query, top_k=top_k
             )
         except Exception as exc:
@@ -147,7 +147,7 @@ class Agent(ABC):
         if self._memory_client is None:
             return WritebackResult(accepted=0, rejected=0, message="no_memory_client")
         try:
-            return await self._memory_client.save_memory_candidates(
+            return await self._memory_client.upsert_candidates(
                 user_id=user_id, kb_id=kb_id, candidates=candidates
             )
         except Exception as exc:

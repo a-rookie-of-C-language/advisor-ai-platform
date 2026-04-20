@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from memory.api.memory_api_client import MemoryApiClient
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryContext
@@ -7,6 +9,8 @@ from memory.pipeline.retrieval import MemoryRetrieval
 from memory.pipeline.session_memory import SessionMemory
 from memory.pipeline.work_memory import WorkMemory
 from memory.pipeline.writeback import Extractor, MemoryWriteback
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryOrchestrator:
@@ -25,6 +29,10 @@ class MemoryOrchestrator:
         self._writeback = writeback or MemoryWriteback(governance=self._governance)
         self._session_memory = session_memory or SessionMemory(governance=self._governance)
         self._work_memory = work_memory or WorkMemory()
+
+    @property
+    def api_client(self) -> MemoryApiClient:
+        return self._api_client
 
     async def load(
         self,

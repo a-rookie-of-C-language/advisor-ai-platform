@@ -10,7 +10,10 @@ from llm.base_provider import BaseLLMProvider, ChatMessage
 from memory.core.schema import MemoryCandidate
 from memory.pipeline.orchestrator import MemoryOrchestrator
 from memory.pipeline.work_memory import WorkMemory
+from tools.memory_read_tool import MemoryReadTool
+from tools.memory_write_tool import MemoryWriteTool
 from tools.rag_search_tool import RAGSearchTool
+from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
@@ -37,13 +40,19 @@ class ChatStreamService:
         self._use_langgraph = self._read_use_langgraph()
         self._enabled_tools = self._read_enabled_tools()
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
+        self._tool_permission = PermissionConfig.chat_tools()
         if rag_service is not None:
             self._tools.register(RAGSearchTool(rag_service))
+        memory_client = getattr(self._memory_orchestrator, "api_client", None)
+        if memory_client is not None:
+            self._tools.register(MemoryReadTool(memory_client))
+            self._tools.register(MemoryWriteTool(memory_client))
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
             llm_extractor=self._llm_extractor,
             tools=self._tools,
+            tool_permission=self._tool_permission,
             debug_stream=self._debug_stream,
             enable_tool_use=self._enable_tool_use,
         )
@@ -116,6 +125,7 @@ class ChatStreamService:
             "session_id": session_id,
             "kb_id": kb_id,
             "user_query": user_query,
+            "permission_config": self._tool_permission,
         }
         try:
             return await self._tools.execute(tool_name, tool_args, context)

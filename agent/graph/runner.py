@@ -21,6 +21,7 @@ class GraphRunner:
         memory_orchestrator: Any,
         llm_extractor: Any,
         tools: Any,
+        tool_permission: Any,
         *,
         debug_stream: bool,
         enable_tool_use: bool,
@@ -29,6 +30,7 @@ class GraphRunner:
         self._memory_orchestrator = memory_orchestrator
         self._llm_extractor = llm_extractor
         self._tools = tools
+        self._tool_permission = tool_permission
         self._work_memory = WorkMemory()
         self._debug_stream = debug_stream
         self._enable_tool_use = enable_tool_use
@@ -67,6 +69,7 @@ class GraphRunner:
             work_memory=self._work_memory,
             llm_extractor=self._llm_extractor,
             tools=self._tools,
+            tool_permission=self._tool_permission,
             enable_tool_use=self._enable_tool_use,
             debug_stream=self._debug_stream,
         )

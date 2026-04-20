@@ -27,6 +27,7 @@ class GraphRuntime:
     work_memory: WorkMemory
     llm_extractor: Any
     tools: Any
+    tool_permission: Any
     enable_tool_use: bool
     debug_stream: bool
 
@@ -138,6 +139,7 @@ async def call_rag_tool_node(state: GraphState) -> GraphState:
                 "session_id": state.get("session_id"),
                 "kb_id": state.get("kb_id"),
                 "user_query": state.get("user_query", ""),
+                "permission_config": runtime.tool_permission,
             },
         )
         parsed = json.loads(payload) if payload else {}

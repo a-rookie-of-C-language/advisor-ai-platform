@@ -31,10 +31,30 @@ class PermissionConfig:
     def allows_write(self, resource: str) -> bool:
         return resource in self.write_resources
 
+    def allows_all(self, required: set[ToolPermission]) -> bool:
+        return required.issubset(self.allowed_tools)
+
+    def is_subset_of(self, other: "PermissionConfig") -> bool:
+        return (
+            self.allowed_tools.issubset(other.allowed_tools)
+            and self.read_resources.issubset(other.read_resources)
+            and self.write_resources.issubset(other.write_resources)
+        )
+
     @classmethod
     def memory_worker(cls) -> "PermissionConfig":
+        # 后台子代理仅保留最小内存读写权限，不允许使用其他工具能力。
         return cls(
-            allowed_tools={ToolPermission.LLM, ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+            allowed_tools={ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+            read_resources={"memory"},
+            write_resources={"memory"},
+        )
+
+    @classmethod
+    def chat_tools(cls) -> "PermissionConfig":
+        return cls(
+            allowed_tools={ToolPermission.RAG_READ, ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
             read_resources={"context", "memory"},
             write_resources={"memory"},
         )
+

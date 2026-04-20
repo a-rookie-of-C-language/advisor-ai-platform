@@ -4,6 +4,8 @@ from typing import Any
 
 from llm.base_provider import ToolSpec
 from tools.base_tool import BaseTool
+from tools.tool_permission import PermissionConfig
+from tools.tool_result import ToolResult
 
 
 class ToolRegistry:
@@ -26,4 +28,13 @@ class ToolRegistry:
         tool = self.get(name)
         if tool is None:
             raise ValueError(f"unsupported tool: {name}")
-        return await tool.execute(tool_args, context)
+        permission = context.get("permission_config")
+        if permission is not None and not isinstance(permission, PermissionConfig):
+            raise TypeError("permission_config must be PermissionConfig")
+
+        if permission is not None and not permission.allows_all(tool.required_permissions):
+            denied = ToolResult.denied(f"tool permission denied: {name}")
+            return denied.to_json()
+
+        result = await tool.execute(tool_args, context)
+        return result.to_json()

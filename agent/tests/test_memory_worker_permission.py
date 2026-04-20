@@ -5,9 +5,9 @@ from typing import Any
 import pytest
 
 from agents.base.agent import Agent
-from agents.base.tool_permission import PermissionConfig, ToolPermission
 from agents.memory.memory_worker import MemoryWorkerSubAgent
 from memory.api.memory_api_client import MemoryApiClient
+from tools.tool_permission import PermissionConfig, ToolPermission
 
 
 class _FakeMemoryApiClient:
@@ -95,4 +95,3 @@ def test_memory_worker_has_strict_memory_worker_permission_config() -> None:
     assert config.allows_tool(ToolPermission.MEMORY_READ)
     assert config.allows_tool(ToolPermission.MEMORY_WRITE)
     assert config.allows_write("memory")
-

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import Any
 
 from RAG.RAG_service import RAG_service
 from RAG.schema import RAGSearchRequest, SearchMode
 from tools.base_tool import BaseTool
+from tools.tool_permission import ToolPermission
+from tools.tool_result import ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -25,44 +26,30 @@ class RAGSearchTool(BaseTool):
                 },
                 "required": ["query"],
             },
+            required_permissions={ToolPermission.RAG_READ},
         )
         self._rag_service = rag_service
 
-    async def execute(self, tool_args: dict[str, Any], context: dict[str, Any]) -> str:
+    async def execute(self, tool_args: dict[str, Any], context: dict[str, Any]) -> ToolResult:
         user_id = context.get("user_id")
         session_id = context.get("session_id")
         kb_id = context.get("kb_id")
         user_query = str(context.get("user_query") or "").strip()
 
         if user_id is None or session_id is None:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "tool permission check failed: missing user/session",
-                    "items": [],
-                }
+            return ToolResult.error(
+                "tool permission check failed: missing user/session",
             )
 
         if kb_id is None or int(kb_id) < 0:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "tool permission check failed: invalid kb_id",
-                    "items": [],
-                }
+            return ToolResult.error(
+                "tool permission check failed: invalid kb_id",
             )
 
         query = str(tool_args.get("query") or user_query).strip()
         if not query:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "empty query",
-                    "items": [],
-                }
+            return ToolResult.error(
+                "empty query",
             )
 
         top_k_raw = tool_args.get("top_k", 5)
@@ -90,33 +77,12 @@ class RAGSearchTool(BaseTool):
                     }
                     for hit in result.items
                 ]
-                return json.dumps(
-                    {
-                        "ok": True,
-                        "status": "hit",
-                        "message": "hit",
-                        "items": items,
-                    }
-                )
+                return ToolResult(ok=True, status="hit", message="hit", items=items)
 
             if result.ok:
-                return json.dumps(
-                    {
-                        "ok": True,
-                        "status": "miss",
-                        "message": "miss",
-                        "items": [],
-                    }
-                )
+                return ToolResult(ok=True, status="miss", message="miss", items=[])
 
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "rag_search_failed",
-                    "items": [],
-                }
-            )
+            return ToolResult.error("rag_search_failed")
         except Exception:
             logger.exception(
                 "rag_search tool failed: user_id=%s, session_id=%s, kb_id=%s",
@@ -124,11 +90,4 @@ class RAGSearchTool(BaseTool):
                 session_id,
                 kb_id,
             )
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "rag_search_exception",
-                    "items": [],
-                }
-            )
+            return ToolResult.error("rag_search_exception")

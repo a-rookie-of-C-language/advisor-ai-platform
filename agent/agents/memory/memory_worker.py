@@ -6,7 +6,7 @@ import time
 from typing import Any, Awaitable, Callable
 
 from agents.base.subagent import SubAgent
-from agents.base.tool_permission import PermissionConfig
+from tools.tool_permission import PermissionConfig
 from memory.api.memory_api_client import MemoryApiClient
 from memory.core.governance import MemoryGovernance
 from memory.core.schema import MemoryCandidate, WritebackResult
