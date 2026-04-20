@@ -86,7 +86,18 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             @Param("embedding") String embedding
     );
 
-    long countActiveByUserAndKb(@Param("userId") Long userId, @Param("kbId") Long kbId);
+    @Query("""
+            SELECT COUNT(m) FROM UserMemoryDO m
+            WHERE m.userId = :userId
+              AND m.kbId = :kbId
+              AND m.isDeleted = false
+              AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+            """)
+    long countActiveByUserAndKb(
+            @Param("userId") Long userId,
+            @Param("kbId") Long kbId,
+            @Param("now") LocalDateTime now
+    );
 
     @Query("""
             SELECT m FROM UserMemoryDO m
