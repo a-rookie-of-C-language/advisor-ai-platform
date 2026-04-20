@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -181,15 +182,23 @@ def create_api_app() -> FastAPI:
             len(messages),
         )
 
+        stream_kwargs = {
+            "user_id": request.userId,
+            "session_id": request.sessionId,
+            "kb_id": request.kbId,
+        }
+        # Backward compatible with fake/legacy stream services in tests.
+        try:
+            parameters = inspect.signature(service.stream_events).parameters
+            if "trace_id" in parameters:
+                stream_kwargs["trace_id"] = trace_id or None
+            if "turn_id" in parameters:
+                stream_kwargs["turn_id"] = turn_id or None
+        except (TypeError, ValueError):
+            pass
+
         return StreamingResponse(
-            service.stream_events(
-                messages,
-                user_id=request.userId,
-                session_id=request.sessionId,
-                kb_id=request.kbId,
-                trace_id=trace_id or None,
-                turn_id=turn_id or None,
-            ),
+            service.stream_events(messages, **stream_kwargs),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
