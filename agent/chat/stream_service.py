@@ -347,6 +347,10 @@ class ChatStreamService:
             "user_query": user_query,
             "trace_id": trace_id,
             "turn_id": turn_id,
+<<<<<<< HEAD
+=======
+            "permission_config": self._tool_permission,
+>>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
         }
         try:
             if tool_name == "web_search" and self._web_search_subagent is not None:
@@ -457,6 +461,14 @@ class ChatStreamService:
             )
 
         trace_events: list[dict[str, object]] = []
+        logger.info(
+            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+            trace_id,
+            turn_id,
+            session_id,
+            user_id,
+            kb_id,
+        )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
                 validated_messages,

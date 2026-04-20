@@ -92,7 +92,12 @@ class GraphRunner:
             intent_router=self._intent_router,
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
+<<<<<<< HEAD
             web_search_subagent=self._web_search_subagent,
+=======
+            trace_id=trace_id or "",
+            turn_id=turn_id or "",
+>>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
         )
         token = set_runtime(runtime)
         state = {

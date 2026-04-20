@@ -1,3 +1,4 @@
+<<<<<<< HEAD:backend/chat-service/src/main/resources/db/migration/V11__memory_storage_opt.sql
 -- V11: memory storage optimization (access heat + cleanup indexes)
 
 -- 1) access heat fields
@@ -24,3 +25,8 @@ WHERE is_deleted = false AND confidence < 0.5;
 COMMENT ON COLUMN user_memory.access_count IS 'Total retrieval hit count';
 COMMENT ON COLUMN user_memory.last_accessed_at IS 'Latest retrieval hit timestamp';
 COMMENT ON INDEX idx_user_memory_access IS 'Heat index for LRU-like ordering and cleanup';
+=======
+-- Placeholder migration to align with existing database history.
+-- Keep version/description stable for Flyway validation.
+SELECT 1;
+>>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移):backend/src/main/resources/db/migration/V11__memory_storage_opt.sql

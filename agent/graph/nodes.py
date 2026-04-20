@@ -36,7 +36,12 @@ class GraphRuntime:
     intent_router: Any = None
     safety_pipeline: Any = None
     fusion_pipeline: Any = None
+<<<<<<< HEAD
     web_search_subagent: Any = None
+=======
+    trace_id: str = ""
+    turn_id: str = ""
+>>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -65,6 +70,8 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
             "session_id": state.get("session_id"),
             "kb_id": state.get("kb_id"),
             "user_query": state.get("user_query", ""),
+            "trace_id": state.get("trace_id"),
+            "turn_id": state.get("turn_id"),
             "permission_config": runtime.tool_permission,
         },
     )
@@ -233,6 +240,70 @@ async def decide_tool_node(state: GraphState) -> GraphState:
         "rag_enabled": rag_enabled,
         "use_tool": use_tool,
     }
+
+
+async def call_rag_tool_node(state: GraphState) -> GraphState:
+    runtime = _runtime()
+    logger.info(
+        "graph_node call_rag_tool: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+        runtime.trace_id,
+        runtime.turn_id,
+        state.get("session_id"),
+        state.get("user_id"),
+        state.get("kb_id"),
+    )
+    try:
+        payload = await runtime.tools.execute(
+            "rag_search",
+            {"query": state.get("user_query", ""), "top_k": 5},
+            {
+                "user_id": state.get("user_id"),
+                "session_id": state.get("session_id"),
+                "kb_id": state.get("kb_id"),
+                "user_query": state.get("user_query", ""),
+                "trace_id": state.get("trace_id"),
+                "turn_id": state.get("turn_id"),
+            },
+        )
+        parsed = json.loads(payload) if payload else {}
+    except Exception as exc:  # noqa: BLE001
+        parsed = {
+            "status": "error",
+            "message": f"tool_execute_failed: {exc}",
+            "items": [],
+        }
+
+    await _emit(
+        "sources",
+        {
+            "tool": "rag_search",
+            "success": parsed.get("status") != "error",
+            "attempt": 1,
+            "status": parsed.get("status", "error"),
+            "message": parsed.get("message", "tool execute failed"),
+            "items": parsed.get("items", []),
+        },
+    )
+    model_messages = list(state.get("model_messages", state.get("messages", [])))
+    items = parsed.get("items", []) if isinstance(parsed, dict) else []
+    if items:
+        snippets = []
+        for item in items[:5]:
+            doc_name = item.get("docName") or item.get("doc_name") or "doc"
+            snippet = item.get("snippet") or ""
+            snippets.append(f"[{doc_name}] {snippet}")
+        if snippets:
+            model_messages = model_messages + [
+                ChatMessage(
+                    role="system",
+                    content=(
+                        "You have retrieved context from rag_search. "
+                        "Use it only when relevant and do not fabricate citations.\n"
+                        + "\n".join(snippets)
+                    ),
+                )
+            ]
+    return {"model_messages": model_messages}
 
 
 async def generate_node(state: GraphState) -> GraphState:
