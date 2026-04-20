@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
 from tools.base_tool import BaseTool
@@ -14,17 +14,21 @@ from tools.tool_registry import ToolRegistry
 from tools.tool_result import ToolResult
 
 
-class _DummyTool(BaseTool):
+class _DummyInput(BaseModel):
+    text: str
+
+
+class _DummyTool(BaseTool[_DummyInput, BaseModel]):
     def __init__(self) -> None:
         super().__init__(
             name="dummy",
             description="dummy",
-            parameters={"type": "object", "properties": {}},
+            input_model=_DummyInput,
             required_permissions={ToolPermission.RAG_READ},
         )
 
-    async def execute(self, tool_args: dict[str, Any], context: dict[str, Any]) -> ToolResult:
-        _ = tool_args
+    async def execute(self, tool_input: _DummyInput, context: dict[str, object]) -> ToolResult:
+        _ = tool_input
         _ = context
         return ToolResult(ok=True, status="ok", message="ok", items=[])
 
@@ -50,12 +54,24 @@ class _FakeMemoryClient:
 
 
 @pytest.mark.asyncio
+async def test_tool_registry_validation_error_before_permission_check() -> None:
+    registry = ToolRegistry()
+    registry.register(_DummyTool())
+    payload = await registry.execute("dummy", {}, {})
+    body = json.loads(payload)
+    assert body["ok"] is False
+    assert body["status"] == "error"
+    assert body["message"] == "tool_input_validation_failed"
+    assert body["meta"]["errors"]
+
+
+@pytest.mark.asyncio
 async def test_tool_registry_denies_without_permission() -> None:
     registry = ToolRegistry()
     registry.register(_DummyTool())
     payload = await registry.execute(
         "dummy",
-        {},
+        {"text": "x"},
         {"permission_config": PermissionConfig(allowed_tools=set(), read_resources=set(), write_resources=set())},
     )
     body = json.loads(payload)
@@ -65,26 +81,49 @@ async def test_tool_registry_denies_without_permission() -> None:
 
 @pytest.mark.asyncio
 async def test_memory_read_tool_returns_hit() -> None:
-    tool = MemoryReadTool(memory_client=_FakeMemoryClient())  # type: ignore[arg-type]
-    result = await tool.execute(
+    registry = ToolRegistry()
+    registry.register(MemoryReadTool(memory_client=_FakeMemoryClient()))  # type: ignore[arg-type]
+    payload = await registry.execute(
+        "memory_read",
         {"query": "q"},
-        {"user_id": 1, "kb_id": 2, "user_query": "q"},
+        {
+            "user_id": 1,
+            "kb_id": 2,
+            "user_query": "q",
+            "permission_config": PermissionConfig(
+                allowed_tools={ToolPermission.MEMORY_READ},
+                read_resources={"memory"},
+                write_resources=set(),
+            ),
+        },
     )
-    assert result.ok is True
-    assert result.status == "hit"
-    assert result.items
+    body = json.loads(payload)
+    assert body["ok"] is True
+    assert body["status"] == "hit"
+    assert body["items"]
 
 
 @pytest.mark.asyncio
 async def test_memory_write_tool_returns_meta() -> None:
     client = _FakeMemoryClient()
-    tool = MemoryWriteTool(memory_client=client)  # type: ignore[arg-type]
-    result = await tool.execute(
+    registry = ToolRegistry()
+    registry.register(MemoryWriteTool(memory_client=client))  # type: ignore[arg-type]
+    payload = await registry.execute(
+        "memory_write",
         {"candidates": [{"content": "喜欢咖啡", "confidence": 0.8}]},
-        {"user_id": 1, "kb_id": 2},
+        {
+            "user_id": 1,
+            "kb_id": 2,
+            "permission_config": PermissionConfig(
+                allowed_tools={ToolPermission.MEMORY_WRITE},
+                read_resources=set(),
+                write_resources={"memory"},
+            ),
+        },
     )
-    assert result.ok is True
-    assert result.status == "ok"
-    assert result.meta["accepted"] == 1
+    body = json.loads(payload)
+    assert body["ok"] is True
+    assert body["status"] == "ok"
+    assert body["meta"]["accepted"] == 1
     assert client.last_upsert_count == 1
 

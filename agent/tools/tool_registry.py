@@ -28,6 +28,17 @@ class ToolRegistry:
         tool = self.get(name)
         if tool is None:
             raise ValueError(f"unsupported tool: {name}")
+
+        validation = await tool.validate_input(tool_args)
+        if not validation.ok or validation.data is None:
+            return ToolResult(
+                ok=False,
+                status="error",
+                message="tool_input_validation_failed",
+                items=[],
+                meta={"errors": validation.errors},
+            ).to_json()
+
         permission = context.get("permission_config")
         if permission is not None and not isinstance(permission, PermissionConfig):
             raise TypeError("permission_config must be PermissionConfig")
@@ -36,5 +47,5 @@ class ToolRegistry:
             denied = ToolResult.denied(f"tool permission denied: {name}")
             return denied.to_json()
 
-        result = await tool.execute(tool_args, context)
+        result = await tool.execute(validation.data, context)
         return result.to_json()
