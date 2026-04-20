@@ -120,5 +120,5 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
     )
     int incrementAccessCount(@Param("id") Long id);
 
-    void deleteAllByIdInBatch(List<Long> ids);
+    void deleteAllByIdInBatch(Iterable<Long> ids);
 }
