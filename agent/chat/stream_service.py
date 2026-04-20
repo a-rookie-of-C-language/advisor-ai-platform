@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
+from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor
+from context.compaction.TranscriptStore import TranscriptStore
 from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider, ChatMessage
 from agent.context.memory.memory_injector import MemoryInjector
@@ -46,10 +49,17 @@ class ChatStreamService:
         self._enabled_tools = self._read_enabled_tools()
         self._context_compactor = ContextCompactor(
             enable_snip=self._read_context_snip_enabled(),
+            enable_microcompact=self._read_context_micro_enabled(),
             enable_context_collapse=self._read_context_collapse_enabled(),
+            enable_autocompact=self._read_context_auto_enabled(),
             snip_keep_last=self._read_context_snip_keep_last(),
+            micro_replace_before_rounds=self._read_context_micro_replace_before_rounds(),
             collapse_keep_last=self._read_context_collapse_keep_last(),
+            auto_trigger_tokens=self._read_context_auto_trigger_tokens(),
+            auto_keep_last=self._read_context_auto_keep_last(),
         )
+        self._compaction_subagent = ContextCompactionSubAgent(self._provider)
+        self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.chat_tools()
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
@@ -102,6 +112,16 @@ class ChatStreamService:
         return raw in {"1", "true", "yes", "on"}
 
     @staticmethod
+    def _read_context_micro_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_MICROCOMPACT", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_auto_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_AUTOCOMPACT", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
     def _read_context_snip_keep_last() -> int:
         raw = os.getenv("CONTEXT_SNIP_KEEP_LAST", "12").strip()
         try:
@@ -116,6 +136,37 @@ class ChatStreamService:
             return max(int(raw), 1)
         except ValueError:
             return 8
+
+    @staticmethod
+    def _read_context_micro_replace_before_rounds() -> int:
+        raw = os.getenv("CONTEXT_MICRO_REPLACE_BEFORE_ROUNDS", "3").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 3
+
+    @staticmethod
+    def _read_context_auto_trigger_tokens() -> int:
+        raw = os.getenv("CONTEXT_AUTO_TRIGGER_TOKENS", "70000").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 70000
+
+    @staticmethod
+    def _read_context_auto_keep_last() -> int:
+        raw = os.getenv("CONTEXT_AUTO_KEEP_LAST", "4").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 4
+
+    @staticmethod
+    def _read_context_transcript_dir() -> str:
+        raw = os.getenv("CONTEXT_TRANSCRIPT_DIR", "").strip()
+        if raw:
+            return raw
+        return str(Path("runtime") / "transcripts")
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:
@@ -191,7 +242,12 @@ class ChatStreamService:
         kb_id: int | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
-        compacted_messages, compact_stats = self._context_compactor.compact_for_model(validated_messages)
+        compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
+            validated_messages,
+            session_id=session_id,
+            summarize_fn=self._summarize_for_autocompact,
+            persist_transcript_fn=self._persist_compaction_transcript,
+        )
         if compact_stats["tokens_released"] > 0:
             logger.info(
                 "context_compaction_released session_id=%s released=%s before=%s after=%s",
@@ -199,6 +255,12 @@ class ChatStreamService:
                 compact_stats["tokens_released"],
                 compact_stats["tokens_before"],
                 compact_stats["tokens_after"],
+            )
+        if compact_stats.get("auto_compacted"):
+            logger.info(
+                "context_autocompact_done session_id=%s transcript=%s",
+                session_id,
+                compact_stats.get("transcript_path", ""),
             )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
@@ -441,3 +503,17 @@ class ChatStreamService:
             "llm_extractor_enabled": self._llm_extractor is not None,
             "graph": self._graph_runner.health_snapshot(),
         }
+
+    async def _summarize_for_autocompact(self, transcript: str) -> str:
+        try:
+            return await self._compaction_subagent.summarize_transcript(transcript)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("autocompact_summarize_failed err=%s", exc)
+            return ""
+
+    def _persist_compaction_transcript(self, session_id: int | None, messages: list[ChatMessage]) -> str:
+        try:
+            return self._transcript_store.save(session_id, messages)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
+            return ""
