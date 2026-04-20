@@ -225,3 +225,22 @@ async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch
     event_names = [name for name, _ in parsed]
 
     assert event_names == ["start", "sources", "delta", "done"]
+
+
+@pytest.mark.asyncio
+async def test_graph_health_contains_context_compaction_stats() -> None:
+    service = ChatStreamService(
+        provider=_ProviderOk(["ok"]),
+        memory_orchestrator=None,
+        rag_service=None,
+    )
+    messages = [ChatMessage(role="user", content="hello context compaction")]
+    _ = [event async for event in service.stream_events(messages)]
+
+    health = service.get_graph_health()
+    assert "context_compaction" in health
+    stats = health["context_compaction"]
+    assert "tokens_before" in stats
+    assert "tokens_after" in stats
+    assert "tokens_released" in stats
+    assert "latency_ms" in stats

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
@@ -62,6 +63,19 @@ class ChatStreamService:
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.chat_tools()
+        self._last_compaction_stats: dict[str, int | bool | str] = {
+            "snip_enabled": self._read_context_snip_enabled(),
+            "micro_enabled": self._read_context_micro_enabled(),
+            "collapse_enabled": self._read_context_collapse_enabled(),
+            "auto_enabled": self._read_context_auto_enabled(),
+            "tokens_before": 0,
+            "tokens_after": 0,
+            "tokens_released": 0,
+            "micro_replaced_count": 0,
+            "auto_compacted": False,
+            "transcript_path": "",
+            "latency_ms": 0,
+        }
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
         for tool in ToolAssemblyPool.build(
             rag_service=rag_service,
@@ -242,11 +256,19 @@ class ChatStreamService:
         kb_id: int | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
+        compact_started = time.monotonic()
         compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
             validated_messages,
             session_id=session_id,
             summarize_fn=self._summarize_for_autocompact,
             persist_transcript_fn=self._persist_compaction_transcript,
+        )
+        compact_stats["latency_ms"] = int((time.monotonic() - compact_started) * 1000)
+        self._last_compaction_stats = compact_stats
+        logger.info(
+            "context_compaction_stats session_id=%s stats=%s",
+            session_id,
+            compact_stats,
         )
         if compact_stats["tokens_released"] > 0:
             logger.info(
@@ -501,6 +523,7 @@ class ChatStreamService:
             "registered_tools": [spec.name for spec in self._tools.specs()],
             "memory_enabled": self._memory_orchestrator is not None,
             "llm_extractor_enabled": self._llm_extractor is not None,
+            "context_compaction": self._last_compaction_stats,
             "graph": self._graph_runner.health_snapshot(),
         }
 
