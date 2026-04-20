@@ -30,9 +30,11 @@ jobs:
             fi
           done < <(
             find agent backend frontend scripts \
-              -type f \
-              \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.ts' -o -name '*.tsx' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' -o -name '*.java' \) \
-              -print0
+              \( -type d \( -name target -o -name .venv -o -name __pycache__ -o -name node_modules -o -name dist -o -name build \) -prune \) \
+              -o \
+              \( -type f \
+                \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.ts' -o -name '*.tsx' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' -o -name '*.java' \) \
+                -print0 \)
           )
           if [ "$found" -ne 0 ]; then
             echo "BOM check failed."
