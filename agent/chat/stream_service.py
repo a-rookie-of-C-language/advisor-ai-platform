@@ -10,9 +10,7 @@ from llm.base_provider import BaseLLMProvider, ChatMessage
 from memory.core.schema import MemoryCandidate
 from memory.pipeline.orchestrator import MemoryOrchestrator
 from memory.pipeline.work_memory import WorkMemory
-from tools.memory_read_tool import MemoryReadTool
-from tools.memory_write_tool import MemoryWriteTool
-from tools.rag_search_tool import RAGSearchTool
+from tools.tool_catalog import ToolCatalog
 from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
 
@@ -41,12 +39,12 @@ class ChatStreamService:
         self._enabled_tools = self._read_enabled_tools()
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.chat_tools()
-        if rag_service is not None:
-            self._tools.register(RAGSearchTool(rag_service))
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
-        if memory_client is not None:
-            self._tools.register(MemoryReadTool(memory_client))
-            self._tools.register(MemoryWriteTool(memory_client))
+        for tool in ToolCatalog.get_all_base_tools(
+            rag_service=rag_service,
+            memory_client=memory_client,
+        ):
+            self._tools.register(tool)
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,

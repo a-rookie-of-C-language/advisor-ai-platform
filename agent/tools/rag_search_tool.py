@@ -78,7 +78,7 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
                 return ToolResult(ok=True, status="miss", message="miss", items=[])
 
             return ToolResult.error("rag_search_failed")
-        except Exception:  # noqa: BLE001
+        except Exception:  
             logger.exception(
                 "rag_search tool failed: user_id=%s, session_id=%s, kb_id=%s",
                 user_id,

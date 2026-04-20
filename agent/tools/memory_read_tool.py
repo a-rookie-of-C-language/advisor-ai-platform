@@ -65,5 +65,5 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
             if payload:
                 return ToolResult(ok=True, status="hit", message="hit", items=payload)
             return ToolResult(ok=True, status="miss", message="miss", items=[])
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return ToolResult.error(f"memory_read_exception: {exc}")

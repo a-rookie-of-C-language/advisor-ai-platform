@@ -72,5 +72,5 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
                 items=[],
                 meta={"accepted": result.accepted, "rejected": result.rejected},
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  
             return ToolResult.error(f"memory_write_exception: {exc}")
