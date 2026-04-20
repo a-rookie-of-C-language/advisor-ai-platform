@@ -5,6 +5,7 @@ import logging
 import os
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
+from context.compaction.ContextCompactor import ContextCompactor
 from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider, ChatMessage
 from agent.context.memory.memory_injector import MemoryInjector
@@ -43,6 +44,12 @@ class ChatStreamService:
         self._enable_tool_use = self._read_enable_tool_use()
         self._use_langgraph = self._read_use_langgraph()
         self._enabled_tools = self._read_enabled_tools()
+        self._context_compactor = ContextCompactor(
+            enable_snip=self._read_context_snip_enabled(),
+            enable_context_collapse=self._read_context_collapse_enabled(),
+            snip_keep_last=self._read_context_snip_keep_last(),
+            collapse_keep_last=self._read_context_collapse_keep_last(),
+        )
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.chat_tools()
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
@@ -83,6 +90,32 @@ class ChatStreamService:
             return None
         names = {name.strip() for name in raw.split(",") if name.strip()}
         return names or None
+
+    @staticmethod
+    def _read_context_snip_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_SNIP", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_collapse_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_COLLAPSE", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_snip_keep_last() -> int:
+        raw = os.getenv("CONTEXT_SNIP_KEEP_LAST", "12").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 12
+
+    @staticmethod
+    def _read_context_collapse_keep_last() -> int:
+        raw = os.getenv("CONTEXT_COLLAPSE_KEEP_LAST", "8").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 8
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:
@@ -158,9 +191,18 @@ class ChatStreamService:
         kb_id: int | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
+        compacted_messages, compact_stats = self._context_compactor.compact_for_model(validated_messages)
+        if compact_stats["tokens_released"] > 0:
+            logger.info(
+                "context_compaction_released session_id=%s released=%s before=%s after=%s",
+                session_id,
+                compact_stats["tokens_released"],
+                compact_stats["tokens_before"],
+                compact_stats["tokens_after"],
+            )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
-                validated_messages,
+                compacted_messages,
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
@@ -169,7 +211,7 @@ class ChatStreamService:
             return
 
         async for event in self._stream_events_legacy(
-            validated_messages,
+            compacted_messages,
             user_id=user_id,
             session_id=session_id,
             kb_id=kb_id,
