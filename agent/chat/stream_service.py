@@ -271,7 +271,7 @@ class ChatStreamService:
         )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
-                compacted_messages,
+                validated_messages,
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
@@ -282,7 +282,7 @@ class ChatStreamService:
             return
 
         async for event in self._stream_events_legacy(
-            compacted_messages,
+            validated_messages,
             user_id=user_id,
             session_id=session_id,
             kb_id=kb_id,
