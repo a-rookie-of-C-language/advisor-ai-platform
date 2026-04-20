@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from context.memory.core.schema import MemoryCandidate
 from openai import AsyncOpenAI
+
+from context.memory.core.schema import MemoryCandidate
 
 
 class OpenAILLMExtractor:

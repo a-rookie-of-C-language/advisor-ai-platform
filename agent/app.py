@@ -7,15 +7,15 @@ import os
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from context.memory.api.memory_api_client import MemoryApiClient
-from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
-from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
 from chat.stream_service import ChatStreamService
+from context.memory.api.memory_api_client import MemoryApiClient
+from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
+from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
 from RAG.DocumentIndexer import DocumentIndexer

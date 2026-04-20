@@ -4,9 +4,9 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
-from context.memory.core.schema import MemoryContext
 
 from chat.stream_service import ChatStreamService
+from context.memory.core.schema import MemoryContext
 from llm.base_provider import ChatMessage, LLMStreamEvent, ToolSpec
 
 

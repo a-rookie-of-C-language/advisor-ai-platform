@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import context.memory.api.memory_api_client as memory_api_module
 import httpx
 import pytest
+
+import context.memory.api.memory_api_client as memory_api_module
 from context.memory.api.memory_api_client import MemoryApiClient
 
 

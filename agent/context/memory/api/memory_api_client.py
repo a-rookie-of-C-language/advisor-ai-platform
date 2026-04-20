@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 import httpx
+
 from context.memory.core.circuit_breaker import CircuitBreaker
 from context.memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
 

@@ -4,13 +4,12 @@ import asyncio
 import logging
 from typing import Any, Awaitable, Callable
 
+from agents.base.subagent import SubAgent
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.governance import MemoryGovernance
 from context.memory.core.schema import MemoryCandidate, WritebackResult
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
-
-from agents.base.subagent import SubAgent
 from tools.tool_permission import PermissionConfig
 
 logger = logging.getLogger(__name__)

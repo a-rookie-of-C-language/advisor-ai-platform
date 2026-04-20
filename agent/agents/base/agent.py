@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Any
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
-
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
