@@ -22,7 +22,7 @@ Extractor = Callable[[str, str], list | Awaitable[list]]
 class MemoryWorkerSubAgent(SubAgent):
     """后台记忆提取SubAgent
 
-    能力约束（Claude Code模式）：
+    能力约束：
     - 只能：读取对话上下文 + 写入记忆 + 生成会话摘要
     - 不能：调用工具、搜索、执行任何其他操作
 
@@ -63,7 +63,7 @@ class MemoryWorkerSubAgent(SubAgent):
         """执行一次轮询，返回统计信息"""
         stats: dict[str, int] = {"fetched": 0, "processed": 0, "done": 0, "failed": 0}
         try:
-            tasks = await self._memory_client.fetch_pending_tasks(limit=self._batch_size)
+            tasks = await self.fetch_pending_tasks(limit=self._batch_size)
             stats["fetched"] = len(tasks)
         except Exception as exc:
             logger.error("memory_worker_fetch_failed err=%s", exc)
@@ -90,7 +90,7 @@ class MemoryWorkerSubAgent(SubAgent):
                 )
                 if candidates:
                     write_result: WritebackResult = await self._writeback.flush(
-                        api_client=self._memory_client,
+                        api_client=self,
                         user_id=user_id,
                         kb_id=kb_id,
                         candidates=candidates,
@@ -102,23 +102,31 @@ class MemoryWorkerSubAgent(SubAgent):
 
                 if session_id and recent_messages and self._session_memory.should_summarize(recent_messages):
                     summary_input = self._session_memory.build_summary_input(recent_messages)
-                    await self._memory_client.save_session_summary(
+                    await self.save_session_summary(
                         session_id=session_id, summary=summary_input
                     )
 
-                await self._memory_client.mark_task_done(task_id)
+                await self.mark_task_done(task_id)
                 stats["done"] += 1
                 logger.debug(
                     "memory_worker_task_done id=%s session=%s candidates=%d",
                     task_id, session_id, len(candidates),
                 )
             except Exception as exc:
+                error_text = str(exc)
                 logger.warning(
                     "memory_worker_task_failed id=%s session=%s err=%s",
                     task_id, session_id, exc,
                 )
                 try:
-                    await self._memory_client.mark_task_failed(task_id, str(exc))
+                    await self.mark_task_failed(task_id, error_text)
+                except PermissionError:
+                    # 任务状态回写兜底，避免因权限配置问题导致任务长期卡住。
+                    try:
+                        if self._memory_client is not None:
+                            await self._memory_client.mark_task_failed(task_id, error_text)
+                    except Exception:
+                        pass
                 except Exception:
                     pass
                 stats["failed"] += 1

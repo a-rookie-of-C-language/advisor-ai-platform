@@ -76,9 +76,23 @@ class Agent(ABC):
     def check_tool(self, tool: ToolPermission) -> bool:
         return self._permission.allows_tool(tool)
 
+    def check_read(self, resource: str) -> bool:
+        return self._permission.allows_read(resource)
+
+    def check_write(self, resource: str) -> bool:
+        return self._permission.allows_write(resource)
+
     def ensure_can_tool(self, tool: ToolPermission) -> None:
         if not self.check_tool(tool):
             raise PermissionError(f"Agent '{self._name}' has no permission to use '{tool.value}'")
+
+    def ensure_can_read(self, resource: str) -> None:
+        if not self.check_read(resource):
+            raise PermissionError(f"Agent '{self._name}' has no read permission for '{resource}'")
+
+    def ensure_can_write(self, resource: str) -> None:
+        if not self.check_write(resource):
+            raise PermissionError(f"Agent '{self._name}' has no write permission for '{resource}'")
 
     async def start(self) -> None:
         if self._state not in (AgentState.CREATED, AgentState.STOPPED):
@@ -195,6 +209,45 @@ class Agent(ABC):
         except Exception as exc:
             logger.warning("agent_submit_task_failed name=%s err=%s", self._name, exc)
             return {}
+
+    async def fetch_pending_tasks(self, limit: int = 10) -> list[dict[str, Any]]:
+        self.ensure_can_tool(ToolPermission.MEMORY_READ)
+        self.ensure_can_read("memory")
+        if self._memory_client is None:
+            raise RuntimeError("no_memory_client")
+        return await self._memory_client.fetch_pending_tasks(limit=limit)
+
+    async def upsert_candidates(
+        self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
+    ) -> WritebackResult:
+        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
+        self.ensure_can_write("memory")
+        if self._memory_client is None:
+            raise RuntimeError("no_memory_client")
+        return await self._memory_client.upsert_candidates(
+            user_id=user_id, kb_id=kb_id, candidates=candidates
+        )
+
+    async def save_session_summary(self, session_id: int, summary: str) -> None:
+        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
+        self.ensure_can_write("memory")
+        if self._memory_client is None:
+            raise RuntimeError("no_memory_client")
+        await self._memory_client.save_session_summary(session_id=session_id, summary=summary)
+
+    async def mark_task_done(self, task_id: int) -> None:
+        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
+        self.ensure_can_write("memory")
+        if self._memory_client is None:
+            raise RuntimeError("no_memory_client")
+        await self._memory_client.mark_task_done(task_id)
+
+    async def mark_task_failed(self, task_id: int, error: str | None = None) -> None:
+        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
+        self.ensure_can_write("memory")
+        if self._memory_client is None:
+            raise RuntimeError("no_memory_client")
+        await self._memory_client.mark_task_failed(task_id, error)
 
     async def run_once(self) -> dict[str, Any]:
         raise NotImplementedError
