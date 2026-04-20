@@ -13,8 +13,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Map;
 
@@ -40,6 +43,7 @@ class AuditAspectSanitizeTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+        RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
@@ -54,8 +58,13 @@ class AuditAspectSanitizeTest {
         Map<String, Object> body = Map.of(
                 "username", "alice",
                 "password", "123456",
-                "token", "abc-token"
+                "token", "abc-token",
+                "apiKey", "my-api-key",
+                "refreshToken", "my-refresh-token"
         );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/auth/register");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(TestController.class.getMethod("save", Map.class));
@@ -71,7 +80,13 @@ class AuditAspectSanitizeTest {
         assertThat(requestParams).contains("\"username\":\"alice\"");
         assertThat(requestParams).contains("\"password\":\"***\"");
         assertThat(requestParams).contains("\"token\":\"***\"");
-        assertThat(requestParams).doesNotContain("123456").doesNotContain("abc-token");
+        assertThat(requestParams).contains("\"apiKey\":\"***\"");
+        assertThat(requestParams).contains("\"refreshToken\":\"***\"");
+        assertThat(requestParams)
+                .doesNotContain("123456")
+                .doesNotContain("abc-token")
+                .doesNotContain("my-api-key")
+                .doesNotContain("my-refresh-token");
     }
 
     static class TestController {

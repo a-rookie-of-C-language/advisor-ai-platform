@@ -40,6 +40,8 @@ class ChatStreamRequestDTO(BaseModel):
     userId: int | None = None
     sessionId: int | None = None
     kbId: int | None = None
+    turnId: str | None = None
+    traceId: str | None = None
 
 
 @lru_cache(maxsize=1)
@@ -159,6 +161,25 @@ def create_api_app() -> FastAPI:
 
         service = _get_chat_stream_service()
         messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
+        trace_id = (
+            raw_request.headers.get("X-Trace-Id")
+            or request.traceId
+            or ""
+        )
+        turn_id = (
+            raw_request.headers.get("X-Turn-Id")
+            or request.turnId
+            or ""
+        )
+        logger.info(
+            "agent_chat_stream accepted: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s, messages=%s",
+            trace_id,
+            turn_id,
+            request.sessionId,
+            request.userId,
+            request.kbId,
+            len(messages),
+        )
 
         return StreamingResponse(
             service.stream_events(

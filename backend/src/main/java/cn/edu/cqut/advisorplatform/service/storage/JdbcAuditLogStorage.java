@@ -22,6 +22,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JdbcAuditLogStorage implements AuditLogStorage {
 
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long RETRY_BACKOFF_MS = 120L;
+
     private final AuditLogDao auditLogDao;
 
     @Override
@@ -39,13 +42,7 @@ public class JdbcAuditLogStorage implements AuditLogStorage {
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveAsync(AuditLogDO auditLog) {
-        try {
-            auditLogDao.save(auditLog);
-            log.debug("Async audit log saved: userId={}, module={}, action={}",
-                    auditLog.getUserId(), auditLog.getModule(), auditLog.getAction());
-        } catch (Exception e) {
-            log.error("Failed to save audit log asynchronously", e);
-        }
+        saveWithRetryAndFallback(auditLog);
     }
 
     @Override
@@ -53,10 +50,65 @@ public class JdbcAuditLogStorage implements AuditLogStorage {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveBatch(List<AuditLogDO> auditLogs) {
         try {
-            auditLogDao.saveAll(auditLogs);
+            for (AuditLogDO auditLog : auditLogs) {
+                saveWithRetryAndFallback(auditLog);
+            }
             log.debug("Async audit logs saved: count={}", auditLogs.size());
         } catch (Exception e) {
             log.error("Failed to save audit logs asynchronously", e);
+        }
+    }
+
+    private void saveWithRetryAndFallback(AuditLogDO auditLog) {
+        Exception lastError = null;
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                auditLogDao.save(auditLog);
+                log.debug(
+                        "Async audit log saved: userId={}, module={}, action={}, traceId={}, attempt={}",
+                        auditLog.getUserId(),
+                        auditLog.getModule(),
+                        auditLog.getAction(),
+                        auditLog.getTraceId(),
+                        attempt
+                );
+                return;
+            } catch (Exception e) {
+                lastError = e;
+                log.warn(
+                        "Async audit save retry failed: attempt={}/{}, traceId={}, module={}, action={}, reason={}",
+                        attempt,
+                        MAX_RETRY_ATTEMPTS,
+                        auditLog.getTraceId(),
+                        auditLog.getModule(),
+                        auditLog.getAction(),
+                        e.getMessage()
+                );
+                sleepBackoff();
+            }
+        }
+
+        try {
+            auditLogDao.save(auditLog);
+            log.warn(
+                    "Async audit save fallback to blocking call succeeded: traceId={}, module={}, action={}",
+                    auditLog.getTraceId(),
+                    auditLog.getModule(),
+                    auditLog.getAction()
+            );
+        } catch (Exception fallbackError) {
+            log.error("Failed to save audit log asynchronously", fallbackError);
+            if (lastError != null) {
+                log.error("Last async retry error", lastError);
+            }
+        }
+    }
+
+    private void sleepBackoff() {
+        try {
+            Thread.sleep(RETRY_BACKOFF_MS);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
         }
     }
 

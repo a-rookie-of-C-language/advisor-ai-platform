@@ -57,27 +57,33 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
 
     @GetMapping("/sessions")
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.QUERY, logRequestParams = false, logResponseData = false)
     public ApiResponseDTO<List<Map<String, Object>>> listSessions(@AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(chatService.listSessions(currentUser));
     }
 
     @PostMapping("/sessions")
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.STORE, logRequestParams = false, logResponseData = false)
     public ApiResponseDTO<Map<String, Object>> createSession(@AuthenticationPrincipal @Nullable UserDO currentUser) {
         return ApiResponseDTO.success(chatService.createSession(currentUser));
     }
 
     @DeleteMapping("/sessions/{id}")
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.DELETE, logRequestParams = true, logResponseData = false)
     public ApiResponseDTO<Void> deleteSession(@PathVariable Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
+        attachAuditContext(null, id, null);
         chatService.deleteSession(id, currentUser);
         return ApiResponseDTO.success();
     }
 
     @PatchMapping("/sessions/{id}/kb")
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.UPDATE, logRequestParams = true, logResponseData = false)
     public ApiResponseDTO<Map<String, Object>> updateSessionKb(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
+        attachAuditContext(null, id, null);
         Object kbIdValue = body == null ? null : body.get("kbId");
         if (!(kbIdValue instanceof Number kbIdNumber)) {
             throw new BadRequestException("kbId is required");
@@ -86,14 +92,17 @@ public class ChatController {
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.QUERY, logRequestParams = true, logResponseData = false)
     public ApiResponseDTO<List<Map<String, Object>>> listMessages(
             @PathVariable Long sessionId,
             @AuthenticationPrincipal @Nullable UserDO currentUser
     ) {
+        attachAuditContext(null, sessionId, null);
         return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
     }
 
     @PostMapping("/sessions/{sessionId}/messages")
+    @Auditable(module = AuditLogDO.AuditModule.CHAT, action = AuditLogDO.AuditAction.CHAT, logRequestParams = true, logResponseData = false)
     public ApiResponseDTO<Map<String, Object>> sendMessage(
             @PathVariable Long sessionId,
             @RequestBody Map<String, String> body,
@@ -119,6 +128,7 @@ public class ChatController {
 
         String turnId = buildTurnId(request, currentUser.getId());
         String traceId = resolveTraceIdFromRequest();
+        attachAuditContext(traceId, sessionId, turnId);
 
         LogTraceUtil.put(traceId, sessionId, turnId, currentUser.getId());
         try {
@@ -178,6 +188,7 @@ public class ChatController {
         String userText = extractLastUserMessage(request);
         String turnId = buildTurnId(request, currentUser.getId());
         String traceId = resolveTraceIdFromRequest();
+        attachAuditContext(traceId, request.getSessionId(), turnId);
 
         log.info("chat_stream accepted, traceId={}, sessionId={}, turnId={}, userId={}, kbId={}, userLen={}, userPreview={}",
                 traceId,
@@ -378,5 +389,25 @@ public class ChatController {
 
     private long elapsedSince(long startAt) {
         return Math.max(0L, System.currentTimeMillis() - startAt);
+    }
+
+    private void attachAuditContext(String traceId, Long sessionId, String turnId) {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return;
+        }
+        HttpServletRequest request = attributes.getRequest();
+        if (request == null) {
+            return;
+        }
+        if (traceId != null && !traceId.isBlank()) {
+            request.setAttribute("auditTraceId", traceId);
+        }
+        if (sessionId != null) {
+            request.setAttribute("auditSessionId", sessionId);
+        }
+        if (turnId != null && !turnId.isBlank()) {
+            request.setAttribute("auditTurnId", turnId);
+        }
     }
 }

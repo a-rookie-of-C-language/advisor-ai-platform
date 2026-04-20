@@ -6,6 +6,7 @@ import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AuditService;
+import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 @Aspect
@@ -38,7 +38,22 @@ public class AuditAspect {
 
     private static final String MASKED_VALUE = "***";
     private static final int MAX_TEXT_LENGTH = 1000;
-    private static final String[] SENSITIVE_KEYS = {"password", "token", "secret", "apiKey", "authorization"};
+    private static final String[] SENSITIVE_KEYS = {
+            "password",
+            "token",
+            "secret",
+            "apikey",
+            "api_key",
+            "accesskey",
+            "access_key",
+            "refreshtoken",
+            "refresh_token",
+            "idtoken",
+            "id_token",
+            "clientsecret",
+            "client_secret",
+            "authorization"
+    };
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final AuditService auditService;
@@ -106,6 +121,9 @@ public class AuditAspect {
                     auditLog.setRequestParams(extractParams(joinPoint, signature, method));
                 }
             }
+            auditLog.setTraceId(resolveTraceId(request));
+            auditLog.setSessionId(resolveSessionId(joinPoint, signature, request));
+            auditLog.setTurnId(resolveTurnId(request));
 
             if (exception != null) {
                 auditLog.setResponseStatus("FAILED");
@@ -170,7 +188,7 @@ public class AuditAspect {
             Object[] args = joinPoint.getArgs();
 
             for (int i = 0; i < parameters.length; i++) {
-                if (args[i] != null && !isExcludedType(args[i].getClass())) {
+                if (i < args.length && args[i] != null && !isExcludedType(args[i].getClass())) {
                     String paramName = parameters[i].getName();
                     params.put(paramName, sanitizeValue(paramName, args[i]));
                 }
@@ -231,6 +249,90 @@ public class AuditAspect {
             }
         }
         return false;
+    }
+
+    private String resolveTraceId(HttpServletRequest request) {
+        String fromMdc = LogTraceUtil.get(LogTraceUtil.TRACE_ID);
+        if (!fromMdc.isBlank()) {
+            return fromMdc;
+        }
+        if (request == null) {
+            return "";
+        }
+        Object attr = request.getAttribute("auditTraceId");
+        if (attr instanceof String trace && !trace.isBlank()) {
+            return trace;
+        }
+        String header = request.getHeader("X-Trace-Id");
+        return header == null ? "" : header.trim();
+    }
+
+    private Long resolveSessionId(
+            ProceedingJoinPoint joinPoint,
+            MethodSignature signature,
+            HttpServletRequest request
+    ) {
+        String fromMdc = LogTraceUtil.get(LogTraceUtil.SESSION_ID);
+        Long parsedMdc = parseLong(fromMdc);
+        if (parsedMdc != null) {
+            return parsedMdc;
+        }
+
+        if (request != null) {
+            Object attr = request.getAttribute("auditSessionId");
+            Long parsedAttr = parseLong(attr == null ? null : String.valueOf(attr));
+            if (parsedAttr != null) {
+                return parsedAttr;
+            }
+        }
+
+        Object[] args = joinPoint.getArgs();
+        String[] parameterNames = signature.getParameterNames();
+        if (args == null || parameterNames == null) {
+            return null;
+        }
+        for (int i = 0; i < args.length && i < parameterNames.length; i++) {
+            String name = parameterNames[i];
+            Object arg = args[i];
+            if (arg == null || name == null) {
+                continue;
+            }
+            String lowered = name.toLowerCase(Locale.ROOT);
+            if ("sessionid".equals(lowered) || "id".equals(lowered) && request != null && request.getRequestURI().contains("/sessions/")) {
+                Long parsed = parseLong(String.valueOf(arg));
+                if (parsed != null) {
+                    return parsed;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String resolveTurnId(HttpServletRequest request) {
+        String fromMdc = LogTraceUtil.get(LogTraceUtil.TURN_ID);
+        if (!fromMdc.isBlank()) {
+            return fromMdc;
+        }
+        if (request == null) {
+            return "";
+        }
+        Object attr = request.getAttribute("auditTurnId");
+        if (attr instanceof String turn && !turn.isBlank()) {
+            return turn;
+        }
+        String header = request.getHeader("X-Turn-Id");
+        return header == null ? "" : header.trim();
+    }
+
+    private Long parseLong(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private String truncate(String value) {

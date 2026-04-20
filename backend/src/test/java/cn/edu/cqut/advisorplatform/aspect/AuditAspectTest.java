@@ -13,10 +13,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,6 +42,7 @@ class AuditAspectTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+        RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
@@ -92,6 +94,31 @@ class AuditAspectTest {
         assertThat(saved.getResponseStatus()).isEqualTo("FAILED");
         assertThat(saved.getErrorMessage()).contains("IllegalStateException").contains("boom");
         assertThat(saved.getMethod()).isEqualTo("TestController.failingSearch");
+    }
+
+    @Test
+    void audit_shouldAllowAnonymousAndPersistTraceContext() throws Throwable {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Trace-Id", "trace-header-001");
+        request.setRequestURI("/api/auth/login");
+        request.setAttribute("auditSessionId", 1001L);
+        request.setAttribute("auditTurnId", "turn-xyz");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(TestController.class.getMethod("search", String.class));
+        when(joinPoint.proceed()).thenReturn("ok");
+
+        auditAspect.audit(joinPoint);
+
+        ArgumentCaptor<AuditLogDO> captor = ArgumentCaptor.forClass(AuditLogDO.class);
+        verify(auditService).saveAuditLogAsync(captor.capture());
+
+        AuditLogDO saved = captor.getValue();
+        assertThat(saved.getUserId()).isNull();
+        assertThat(saved.getTraceId()).isEqualTo("trace-header-001");
+        assertThat(saved.getSessionId()).isEqualTo(1001L);
+        assertThat(saved.getTurnId()).isEqualTo("turn-xyz");
     }
 
     static class TestController {
