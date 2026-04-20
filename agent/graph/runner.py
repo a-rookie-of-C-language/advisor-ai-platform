@@ -5,8 +5,9 @@ import logging
 import time
 from typing import Any, AsyncIterator
 
+from context.memory.memory_injector import MemoryInjector
+from context.memory.pipeline.work_memory import WorkMemory
 from llm.base_provider import ChatMessage
-from memory.pipeline.work_memory import WorkMemory
 
 from .nodes import GraphRuntime, reset_runtime, set_runtime
 from .workflow import build_chat_graph
@@ -21,6 +22,7 @@ class GraphRunner:
         memory_orchestrator: Any,
         llm_extractor: Any,
         tools: Any,
+        tool_permission: Any,
         *,
         debug_stream: bool,
         enable_tool_use: bool,
@@ -29,7 +31,9 @@ class GraphRunner:
         self._memory_orchestrator = memory_orchestrator
         self._llm_extractor = llm_extractor
         self._tools = tools
+        self._tool_permission = tool_permission
         self._work_memory = WorkMemory()
+        self._memory_injector = MemoryInjector(self._work_memory)
         self._debug_stream = debug_stream
         self._enable_tool_use = enable_tool_use
         self._compiled = build_chat_graph()
@@ -64,9 +68,10 @@ class GraphRunner:
             queue=queue,
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
-            work_memory=self._work_memory,
+            memory_injector=self._memory_injector,
             llm_extractor=self._llm_extractor,
             tools=self._tools,
+            tool_permission=self._tool_permission,
             enable_tool_use=self._enable_tool_use,
             debug_stream=self._debug_stream,
         )

@@ -13,11 +13,11 @@ from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
 from chat.stream_service import ChatStreamService
+from context.memory.api.memory_api_client import MemoryApiClient
+from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
+from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
-from memory.api.memory_api_client import MemoryApiClient
-from memory.pipeline.llm_extractor import OpenAILLMExtractor
-from memory.pipeline.orchestrator import MemoryOrchestrator
 from RAG.DocumentIndexer import DocumentIndexer
 from RAG.RAG_service import RAG_service
 

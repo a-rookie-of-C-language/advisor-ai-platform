@@ -54,4 +54,9 @@ public class UserMemoryDO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private Integer accessCount = 0;
+
+    private LocalDateTime lastAccessedAt;
 }
