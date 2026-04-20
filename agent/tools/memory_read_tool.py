@@ -22,6 +22,14 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
             required_permissions={ToolPermission.MEMORY_READ},
         )
         self._memory_client = memory_client
+        self._is_concurrency_safe = True
+        self._is_destructive = False
+        self._is_read_only = True
+        self._permission_matcher = "memory.read"
+        self._should_defer = True
+        self._always_load = False
+        self._interrupt_behavior = "block"
+        self._requires_user_interaction = False
 
     async def execute(self, tool_input: MemoryReadInput, context: dict[str, object]) -> ToolResult:
         user_id = context.get("user_id")
@@ -59,4 +67,3 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
             return ToolResult(ok=True, status="miss", message="miss", items=[])
         except Exception as exc:  # noqa: BLE001
             return ToolResult.error(f"memory_read_exception: {exc}")
-

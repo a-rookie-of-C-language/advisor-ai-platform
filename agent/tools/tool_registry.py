@@ -38,6 +38,38 @@ class ToolRegistry:
                 items=[],
                 meta={"errors": validation.errors},
             ).to_json()
+        tool_input = validation.data
+        try:
+            safety_meta = {
+                "loading": {
+                    "should_defer": tool.get_should_defer(),
+                    "always_load": tool.get_always_load(),
+                },
+                "feature": {
+                    "is_enabled": tool.get_is_enabled(),
+                },
+                "execution": {
+                    "is_concurrency_safe": tool.get_is_concurrency_safe(tool_input),
+                    "is_destructive": tool.get_is_destructive(tool_input),
+                    "is_read_only": tool.get_is_read_only(),
+                    "interrupt_behavior": tool.get_interrupt_behavior(),
+                    "requires_user_interaction": tool.get_requires_user_interaction(),
+                },
+                "permission_matcher": tool.get_permission_matcher(tool_input),
+            }
+        except ValueError as exc:
+            return ToolResult(
+                ok=False,
+                status="error",
+                message="tool_configuration_invalid",
+                items=[],
+                meta={"errors": [str(exc)]},
+            ).to_json()
+
+        if not safety_meta["feature"]["is_enabled"]:
+            denied = ToolResult.denied("tool_disabled")
+            denied.meta = safety_meta
+            return denied.to_json()
 
         permission = context.get("permission_config")
         if permission is not None and not isinstance(permission, PermissionConfig):
@@ -45,7 +77,12 @@ class ToolRegistry:
 
         if permission is not None and not permission.allows_all(tool.required_permissions):
             denied = ToolResult.denied(f"tool permission denied: {name}")
+            denied.meta = safety_meta
             return denied.to_json()
 
-        result = await tool.execute(validation.data, context)
+        result = await tool.execute(tool_input, context)
+        if not result.meta:
+            result.meta = {}
+        for key, value in safety_meta.items():
+            result.meta[key] = value
         return result.to_json()

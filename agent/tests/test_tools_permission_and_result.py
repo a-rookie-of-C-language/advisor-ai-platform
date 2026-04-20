@@ -77,6 +77,15 @@ async def test_tool_registry_denies_without_permission() -> None:
     body = json.loads(payload)
     assert body["ok"] is False
     assert body["status"] == "denied"
+    assert body["meta"]["loading"]["should_defer"] is True
+    assert body["meta"]["loading"]["always_load"] is False
+    assert body["meta"]["feature"]["is_enabled"] is True
+    assert body["meta"]["execution"]["is_concurrency_safe"] is False
+    assert body["meta"]["execution"]["is_destructive"] is False
+    assert body["meta"]["execution"]["is_read_only"] is False
+    assert body["meta"]["execution"]["interrupt_behavior"] == "block"
+    assert body["meta"]["execution"]["requires_user_interaction"] is False
+    assert body["meta"]["permission_matcher"] == "dummy"
 
 
 @pytest.mark.asyncio
@@ -101,6 +110,15 @@ async def test_memory_read_tool_returns_hit() -> None:
     assert body["ok"] is True
     assert body["status"] == "hit"
     assert body["items"]
+    assert body["meta"]["loading"]["should_defer"] is True
+    assert body["meta"]["loading"]["always_load"] is False
+    assert body["meta"]["feature"]["is_enabled"] is True
+    assert body["meta"]["execution"]["is_concurrency_safe"] is True
+    assert body["meta"]["execution"]["is_destructive"] is False
+    assert body["meta"]["execution"]["is_read_only"] is True
+    assert body["meta"]["execution"]["interrupt_behavior"] == "block"
+    assert body["meta"]["execution"]["requires_user_interaction"] is False
+    assert body["meta"]["permission_matcher"] == "memory.read"
 
 
 @pytest.mark.asyncio
@@ -125,5 +143,41 @@ async def test_memory_write_tool_returns_meta() -> None:
     assert body["ok"] is True
     assert body["status"] == "ok"
     assert body["meta"]["accepted"] == 1
+    assert body["meta"]["loading"]["should_defer"] is True
+    assert body["meta"]["loading"]["always_load"] is False
+    assert body["meta"]["feature"]["is_enabled"] is True
+    assert body["meta"]["execution"]["is_concurrency_safe"] is False
+    assert body["meta"]["execution"]["is_destructive"] is True
+    assert body["meta"]["execution"]["is_read_only"] is False
+    assert body["meta"]["execution"]["interrupt_behavior"] == "cancel"
+    assert body["meta"]["execution"]["requires_user_interaction"] is False
+    assert body["meta"]["permission_matcher"] == "memory.write"
     assert client.last_upsert_count == 1
 
+
+@pytest.mark.asyncio
+async def test_tool_registry_returns_tool_disabled_when_feature_off() -> None:
+    registry = ToolRegistry()
+    tool = _DummyTool()
+    tool._is_enabled = False
+    registry.register(tool)
+    payload = await registry.execute("dummy", {"text": "x"}, {})
+    body = json.loads(payload)
+    assert body["ok"] is False
+    assert body["status"] == "denied"
+    assert body["message"] == "tool_disabled"
+
+
+@pytest.mark.asyncio
+async def test_tool_registry_returns_error_on_loading_conflict() -> None:
+    registry = ToolRegistry()
+    tool = _DummyTool()
+    tool._always_load = True
+    tool._should_defer = True
+    registry.register(tool)
+    payload = await registry.execute("dummy", {"text": "x"}, {})
+    body = json.loads(payload)
+    assert body["ok"] is False
+    assert body["status"] == "error"
+    assert body["message"] == "tool_configuration_invalid"
+    assert body["meta"]["errors"]

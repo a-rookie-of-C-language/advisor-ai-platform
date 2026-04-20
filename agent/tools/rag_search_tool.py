@@ -28,6 +28,14 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
             required_permissions={ToolPermission.RAG_READ},
         )
         self._rag_service = rag_service
+        self._is_concurrency_safe = True
+        self._is_destructive = False
+        self._is_read_only = True
+        self._permission_matcher = "rag.read"
+        self._always_load = True
+        self._should_defer = False
+        self._interrupt_behavior = "block"
+        self._requires_user_interaction = False
 
     async def execute(self, tool_input: RAGSearchInput, context: dict[str, object]) -> ToolResult:
         user_id = context.get("user_id")
@@ -78,4 +86,3 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
                 kb_id,
             )
             return ToolResult.error("rag_search_exception")
-

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from llm.base_provider import ToolSpec
 from pydantic import BaseModel, ValidationError
@@ -31,10 +31,57 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         self._input_json_schema = input_json_schema
         self.output_model = output_model
         self.required_permissions = required_permissions or set()
+        self._is_concurrency_safe = False
+        self._is_destructive = False
+        self._is_read_only = False
+        self._permission_matcher = self.name
+        self._should_defer = True
+        self._always_load = False
+        self._is_enabled = True
+        self._interrupt_behavior: Literal["cancel", "block"] = "block"
+        self._requires_user_interaction = False
 
     @abstractmethod
     async def execute(self, tool_input: InputModelT, context: dict[str, Any]) -> ToolResult:
         """Execute tool and return normalized ToolResult."""
+
+    def _validate_behavior_flags(self) -> None:
+        if self._always_load and self._should_defer:
+            raise ValueError(
+                f"Tool '{self.name}' config conflict: always_load=True and should_defer=True"
+            )
+
+    def get_is_concurrency_safe(self, tool_input: InputModelT) -> bool:
+        _ = tool_input
+        return self._is_concurrency_safe
+
+    def get_is_destructive(self, tool_input: InputModelT) -> bool:
+        _ = tool_input
+        return self._is_destructive
+
+    def get_is_read_only(self) -> bool:
+        return self._is_read_only
+
+    def get_permission_matcher(self, tool_input: InputModelT) -> str:
+        _ = tool_input
+        return self._permission_matcher
+
+    def get_should_defer(self) -> bool:
+        self._validate_behavior_flags()
+        return self._should_defer
+
+    def get_always_load(self) -> bool:
+        self._validate_behavior_flags()
+        return self._always_load
+
+    def get_is_enabled(self) -> bool:
+        return self._is_enabled
+
+    def get_interrupt_behavior(self) -> Literal["cancel", "block"]:
+        return self._interrupt_behavior
+
+    def get_requires_user_interaction(self) -> bool:
+        return self._requires_user_interaction
 
     async def validate_input(self, input_payload: dict[str, Any]) -> ValidationResult[InputModelT]:
         try:

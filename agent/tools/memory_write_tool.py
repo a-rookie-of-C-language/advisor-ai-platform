@@ -31,6 +31,14 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
             required_permissions={ToolPermission.MEMORY_WRITE},
         )
         self._memory_client = memory_client
+        self._is_concurrency_safe = False
+        self._is_destructive = True
+        self._is_read_only = False
+        self._permission_matcher = "memory.write"
+        self._should_defer = True
+        self._always_load = False
+        self._interrupt_behavior = "cancel"
+        self._requires_user_interaction = False
 
     async def execute(self, tool_input: MemoryWriteInput, context: dict[str, object]) -> ToolResult:
         user_id = context.get("user_id")
@@ -66,4 +74,3 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
             )
         except Exception as exc:  # noqa: BLE001
             return ToolResult.error(f"memory_write_exception: {exc}")
-
