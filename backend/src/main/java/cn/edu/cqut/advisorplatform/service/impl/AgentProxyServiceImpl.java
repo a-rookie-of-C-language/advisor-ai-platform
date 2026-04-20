@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class AgentProxyServiceImpl implements AgentProxyService {
 
     private static final int DEBUG_PREVIEW_LIMIT = 200;
+    private static final String TRACE_HEADER = "X-Trace-Id";
+    private static final String TURN_HEADER = "X-Turn-Id";
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -44,7 +46,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     public AgentProxyServiceImpl(
             ObjectMapper objectMapper,
             @Value("${advisor.agent.base-url:http://127.0.0.1:8001}") String agentBaseUrl,
-            @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:arookieofc}}") String agentApiToken,
+            @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:}}") String agentApiToken,
             @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs,
             @Value("${advisor.agent.debug-stream:${DEBUG_STREAM:false}}") boolean debugStream
     ) {
@@ -86,7 +88,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                     request.getSessionId(), userId, payloadBytes.length, preview(payload));
         }
 
-        HttpRequest httpRequest = HttpRequest.newBuilder()
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(agentBaseUrl + "/chat/stream"))
                 .version(HttpClient.Version.HTTP_1_1)
                 .timeout(Duration.ofMinutes(10))
@@ -95,8 +97,16 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 .header("Cache-Control", "no-cache")
                 .header("X-Memory-Token", agentApiToken)
                 .header("Authorization", "Bearer " + agentApiToken)
-                .POST(HttpRequest.BodyPublishers.ofByteArray(payloadBytes))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofByteArray(payloadBytes));
+        String traceId = LogTraceUtil.get(LogTraceUtil.TRACE_ID);
+        if (!traceId.isBlank()) {
+            requestBuilder.header(TRACE_HEADER, traceId);
+        }
+        String turnId = LogTraceUtil.get(LogTraceUtil.TURN_ID);
+        if (!turnId.isBlank()) {
+            requestBuilder.header(TURN_HEADER, turnId);
+        }
+        HttpRequest httpRequest = requestBuilder.build();
 
         HttpResponse<InputStream> response;
         try {
@@ -340,6 +350,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         payload.put("userId", userId);
         payload.put("sessionId", request.getSessionId());
         payload.put("kbId", request.getKbId());
+        payload.put("turnId", LogTraceUtil.get(LogTraceUtil.TURN_ID));
+        payload.put("traceId", LogTraceUtil.get(LogTraceUtil.TRACE_ID));
         return objectMapper.writeValueAsString(payload);
     }
 

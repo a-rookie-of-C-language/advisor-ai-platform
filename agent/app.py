@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -40,6 +41,8 @@ class ChatStreamRequestDTO(BaseModel):
     userId: int | None = None
     sessionId: int | None = None
     kbId: int | None = None
+    turnId: str | None = None
+    traceId: str | None = None
 
 
 @lru_cache(maxsize=1)
@@ -159,14 +162,43 @@ def create_api_app() -> FastAPI:
 
         service = _get_chat_stream_service()
         messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
+        trace_id = (
+            raw_request.headers.get("X-Trace-Id")
+            or request.traceId
+            or ""
+        )
+        turn_id = (
+            raw_request.headers.get("X-Turn-Id")
+            or request.turnId
+            or ""
+        )
+        logger.info(
+            "agent_chat_stream accepted: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s, messages=%s",
+            trace_id,
+            turn_id,
+            request.sessionId,
+            request.userId,
+            request.kbId,
+            len(messages),
+        )
+
+        stream_kwargs = {
+            "user_id": request.userId,
+            "session_id": request.sessionId,
+            "kb_id": request.kbId,
+        }
+        # Backward compatible with fake/legacy stream services in tests.
+        try:
+            parameters = inspect.signature(service.stream_events).parameters
+            if "trace_id" in parameters:
+                stream_kwargs["trace_id"] = trace_id or None
+            if "turn_id" in parameters:
+                stream_kwargs["turn_id"] = turn_id or None
+        except (TypeError, ValueError):
+            pass
 
         return StreamingResponse(
-            service.stream_events(
-                messages,
-                user_id=request.userId,
-                session_id=request.sessionId,
-                kb_id=request.kbId,
-            ),
+            service.stream_events(messages, **stream_kwargs),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

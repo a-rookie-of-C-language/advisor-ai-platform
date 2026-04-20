@@ -17,7 +17,7 @@ public class ChatSessionDO {
     private Long id;
 
     @Column(nullable = false, length = 256)
-    private String title = "\u65b0\u5bf9\u8bdd";
+    private String title = "新对话";
 
     @Column(nullable = false)
     private Long kbId = 0L;

@@ -29,6 +29,8 @@ class GraphRuntime:
     tool_permission: Any
     enable_tool_use: bool
     debug_stream: bool
+    trace_id: str
+    turn_id: str
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -50,7 +52,9 @@ async def _emit(event: str, data: dict[str, Any]) -> None:
 async def load_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node load_memory: session_id=%s, user_id=%s, kb_id=%s",
+        "graph_node load_memory: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+        runtime.trace_id,
+        runtime.turn_id,
         state.get("session_id"),
         state.get("user_id"),
         state.get("kb_id"),
@@ -111,7 +115,9 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     rag_enabled = bool(tools) and kb_id is not None and kb_id >= 0 and bool(user_query)
     use_tool = rag_enabled and runtime.enable_tool_use
     logger.info(
-        "graph_node decide_tool: session_id=%s, rag_enabled=%s, use_tool=%s",
+        "graph_node decide_tool: trace_id=%s, turn_id=%s, session_id=%s, rag_enabled=%s, use_tool=%s",
+        runtime.trace_id,
+        runtime.turn_id,
         state.get("session_id"),
         rag_enabled,
         use_tool,
@@ -125,7 +131,9 @@ async def decide_tool_node(state: GraphState) -> GraphState:
 async def call_rag_tool_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node call_rag_tool: session_id=%s, user_id=%s, kb_id=%s",
+        "graph_node call_rag_tool: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+        runtime.trace_id,
+        runtime.turn_id,
         state.get("session_id"),
         state.get("user_id"),
         state.get("kb_id"),
@@ -139,6 +147,8 @@ async def call_rag_tool_node(state: GraphState) -> GraphState:
                 "session_id": state.get("session_id"),
                 "kb_id": state.get("kb_id"),
                 "user_query": state.get("user_query", ""),
+                "trace_id": state.get("trace_id"),
+                "turn_id": state.get("turn_id"),
                 "permission_config": runtime.tool_permission,
             },
         )
@@ -186,7 +196,9 @@ async def call_rag_tool_node(state: GraphState) -> GraphState:
 async def generate_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node generate: session_id=%s, use_tool=%s",
+        "graph_node generate: trace_id=%s, turn_id=%s, session_id=%s, use_tool=%s",
+        runtime.trace_id,
+        runtime.turn_id,
         state.get("session_id"),
         state.get("use_tool"),
     )
@@ -235,7 +247,9 @@ async def generate_node(state: GraphState) -> GraphState:
 async def flush_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node flush_memory: session_id=%s, memory_enabled=%s",
+        "graph_node flush_memory: trace_id=%s, turn_id=%s, session_id=%s, memory_enabled=%s",
+        runtime.trace_id,
+        runtime.turn_id,
         state.get("session_id"),
         state.get("memory_enabled"),
     )
@@ -265,7 +279,9 @@ async def flush_memory_node(state: GraphState) -> GraphState:
 async def finalize_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node finalize: session_id=%s, answer_len=%s",
+        "graph_node finalize: trace_id=%s, turn_id=%s, session_id=%s, answer_len=%s",
+        runtime.trace_id,
+        runtime.turn_id,
         state.get("session_id"),
         len(state.get("assistant_answer", "")),
     )

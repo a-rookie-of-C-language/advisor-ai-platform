@@ -1,0 +1,50 @@
+# Production configuration — all secrets MUST come from environment variables.
+# Never hardcode secrets in this file.
+
+spring:
+  mvc:
+    async:
+      request-timeout: 600000
+
+  datasource:
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+logging:
+  level:
+    root: WARN
+    cn.edu.cqut.advisorplatform: INFO
+    org.springframework.security: INFO
+    org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody: DEBUG
+
+advisor:
+  jwt:
+    secret: ${JWT_SECRET:}
+  memory:
+    api-token: ${MEMORY_API_TOKEN:}
+    vector-store: pgvector
+  embedding:
+    model: bge-m3
+    dimension: 1024
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  agent:
+    base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
+    api-token: ${AGENT_API_TOKEN:}
+    timeout-ms: 600000
+    debug-stream: false

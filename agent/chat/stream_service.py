@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
@@ -221,13 +220,16 @@ class ChatStreamService:
         session_id: int | None,
         kb_id: int | None,
         user_query: str,
+        trace_id: str | None = None,
+        turn_id: str | None = None,
     ) -> str:
         context = {
             "user_id": user_id,
             "session_id": session_id,
             "kb_id": kb_id,
             "user_query": user_query,
-            "permission_config": self._tool_permission,
+            "trace_id": trace_id,
+            "turn_id": turn_id,
         }
         try:
             return await self._tools.execute(tool_name, tool_args, context)
@@ -254,51 +256,37 @@ class ChatStreamService:
         user_id: int | None = None,
         session_id: int | None = None,
         kb_id: int | None = None,
+        trace_id: str | None = None,
+        turn_id: str | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
-        compact_started = time.monotonic()
-        compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
-            validated_messages,
-            session_id=session_id,
-            summarize_fn=self._summarize_for_autocompact,
-            persist_transcript_fn=self._persist_compaction_transcript,
-        )
-        compact_stats["latency_ms"] = int((time.monotonic() - compact_started) * 1000)
-        self._last_compaction_stats = compact_stats
         logger.info(
-            "context_compaction_stats session_id=%s stats=%s",
+            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+            trace_id,
+            turn_id,
             session_id,
-            compact_stats,
+            user_id,
+            kb_id,
         )
-        if compact_stats["tokens_released"] > 0:
-            logger.info(
-                "context_compaction_released session_id=%s released=%s before=%s after=%s",
-                session_id,
-                compact_stats["tokens_released"],
-                compact_stats["tokens_before"],
-                compact_stats["tokens_after"],
-            )
-        if compact_stats.get("auto_compacted"):
-            logger.info(
-                "context_autocompact_done session_id=%s transcript=%s",
-                session_id,
-                compact_stats.get("transcript_path", ""),
-            )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
-                compacted_messages,
+                validated_messages,
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
+                trace_id=trace_id,
+                turn_id=turn_id,
             ):
                 yield event
             return
 
         async for event in self._stream_events_legacy(
-            compacted_messages,
+            validated_messages,
             user_id=user_id,
             session_id=session_id,
             kb_id=kb_id,
+            trace_id=trace_id,
+            turn_id=turn_id,
         ):
             yield event
 
@@ -309,6 +297,8 @@ class ChatStreamService:
         user_id: int | None,
         session_id: int | None,
         kb_id: int | None,
+        trace_id: str | None,
+        turn_id: str | None,
     ) -> AsyncIterator[str]:
         user_query = self._last_user_message(validated_messages)
         yield self._serialize_event("start", {"message": "stream_started"})
@@ -319,6 +309,8 @@ class ChatStreamService:
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
+                trace_id=trace_id,
+                turn_id=turn_id,
             ):
                 yield self._serialize_event(event["event"], event["data"])
             yield self._serialize_event("done", {"message": "stream_finished"})
@@ -349,6 +341,8 @@ class ChatStreamService:
         user_id: int | None,
         session_id: int | None,
         kb_id: int | None,
+        trace_id: str | None,
+        turn_id: str | None,
     ) -> AsyncIterator[str]:
         model_messages = list(validated_messages)
         user_query = self._last_user_message(validated_messages)
@@ -413,6 +407,8 @@ class ChatStreamService:
                         session_id=session_id,
                         kb_id=kb_id,
                         user_query=user_query,
+                        trace_id=trace_id,
+                        turn_id=turn_id,
                     )
 
                 async for event in self._provider.stream_chat_with_tools(

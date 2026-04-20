@@ -17,7 +17,7 @@ public class MemoryApiTokenFilter extends OncePerRequestFilter {
 
     private final String expectedToken;
 
-    public MemoryApiTokenFilter(@Value("${advisor.memory.api-token:arookieofc}") String expectedToken) {
+    public MemoryApiTokenFilter(@Value("${advisor.memory.api-token:}") String expectedToken) {
         this.expectedToken = expectedToken;
     }
 

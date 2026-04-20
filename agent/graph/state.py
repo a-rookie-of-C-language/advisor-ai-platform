@@ -12,6 +12,8 @@ class GraphState(TypedDict, total=False):
     session_id: int | None
     kb_id: int | None
     user_query: str
+    trace_id: str | None
+    turn_id: str | None
     memory_enabled: bool
     rag_enabled: bool
     use_tool: bool

@@ -20,7 +20,7 @@ public class AuditLogDO {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Long userId;
 
     @Column(length = 64)
@@ -37,7 +37,7 @@ public class AuditLogDO {
     @Column(nullable = false, length = 128)
     private String method;
 
-    @Column(length = 256)
+    @Column(length = 512)
     private String requestUri;
 
     @Column(columnDefinition = "TEXT")
@@ -59,6 +59,17 @@ public class AuditLogDO {
 
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
+
+    @Column(length = 64)
+    private String traceId;
+
+    private Long sessionId;
+
+    @Column(length = 128)
+    private String turnId;
+
+    @Column(length = 256)
+    private String description;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

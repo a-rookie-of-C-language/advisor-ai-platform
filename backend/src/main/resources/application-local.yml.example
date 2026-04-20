@@ -1,3 +1,6 @@
+# Local development configuration example
+# Copy this file to application-local.yml and fill in your actual values
+
 spring:
   mvc:
     async:
@@ -10,7 +13,7 @@ advisor:
   jwt:
     secret: your_base64_encoded_jwt_secret
   memory:
-    api-token: arookieofc
+    api-token: your_memory_api_token
     vector-store: pgvector
   embedding:
     model: bge-m3
@@ -19,6 +22,6 @@ advisor:
     base-url: http://localhost:11434
   agent:
     base-url: http://127.0.0.1:8001
-    api-token: arookieofc
+    api-token: your_agent_api_token
     timeout-ms: 600000
     debug-stream: false

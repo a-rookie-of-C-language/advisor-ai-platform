@@ -15,10 +15,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -38,7 +38,7 @@ advisor:
   rag:
     upload-dir: ${RAG_UPLOAD_DIR:uploads}
   memory:
-    api-token: ${MEMORY_API_TOKEN:arookieofc}
+    api-token: ${MEMORY_API_TOKEN:}
     vector-store: ${MEMORY_VECTOR_STORE:pgvector}
   embedding:
     model: ${EMBEDDING_MODEL:bge-m3}
@@ -47,9 +47,9 @@ advisor:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
   agent:
     base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
-    api-token: ${MEMORY_API_TOKEN:arookieofc}
+    api-token: ${MEMORY_API_TOKEN:}
     timeout-ms: ${AGENT_TIMEOUT_MS:600000}
-    debug-stream: ${DEBUG_STREAM:true}
+    debug-stream: ${DEBUG_STREAM:false}
 
 logging:
   level:
