@@ -8,6 +8,17 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  flyway:
+    enabled: false
 
 management:
   tracing:
@@ -24,3 +35,8 @@ management:
 logging:
   pattern:
     level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
+
+advisor:
+  jwt:
+    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}
+    expiration: ${JWT_EXPIRE_MS:86400000}
