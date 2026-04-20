@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from agent.context.memory.core.schema import MemoryContext
+from context.memory.core.schema import MemoryContext
 
 
 class LongTermMemory(Protocol):
@@ -18,7 +18,7 @@ class LongTermMemory(Protocol):
 
 
 class OrchestratorLongTermMemoryAdapter:
-    """兼容适配：保持旧 orchestrator 逻辑不变，只暴露长期记忆接口语义。"""
+    """Compatibility adapter that preserves legacy orchestrator load behavior."""
 
     def __init__(self, memory_orchestrator) -> None:
         self._memory_orchestrator = memory_orchestrator
@@ -39,4 +39,3 @@ class OrchestratorLongTermMemoryAdapter:
             query=query,
             recent_messages=recent_messages,
         )
-

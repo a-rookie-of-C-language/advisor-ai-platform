@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agent.context.memory.core.schema import MemoryContext, MemoryItem
-from agent.context.memory.memory_injector import MemoryInjector
+from context.memory.core.schema import MemoryContext, MemoryItem
+from context.memory.memory_injector import MemoryInjector
 
 
 def test_memory_injector_only_outputs_memory_segment() -> None:

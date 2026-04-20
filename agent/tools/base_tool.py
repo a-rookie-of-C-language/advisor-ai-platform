@@ -3,8 +3,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Literal, TypeVar
 
-from llm.base_provider import ToolSpec
 from pydantic import BaseModel, ValidationError
+
+from llm.base_provider import ToolSpec
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
 from tools.validation_result import ValidationResult

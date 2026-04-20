@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from typing import Any, Awaitable, Callable
+
+from context.memory.api.memory_api_client import MemoryApiClient
+from context.memory.core.governance import MemoryGovernance
+from context.memory.core.schema import MemoryCandidate, WritebackResult
+from context.memory.pipeline.session_memory import SessionMemory
+from context.memory.pipeline.writeback import MemoryWriteback
 
 from agents.base.subagent import SubAgent
 from tools.tool_permission import PermissionConfig
-from agent.context.memory.api.memory_api_client import MemoryApiClient
-from agent.context.memory.core.governance import MemoryGovernance
-from agent.context.memory.core.schema import MemoryCandidate, WritebackResult
-from agent.context.memory.pipeline.llm_extractor import OpenAILLMExtractor
-from agent.context.memory.pipeline.session_memory import SessionMemory
-from agent.context.memory.pipeline.writeback import MemoryWriteback
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +19,7 @@ Extractor = Callable[[str, str], list | Awaitable[list]]
 
 
 class MemoryWorkerSubAgent(SubAgent):
-    """后台记忆提取SubAgent
-
-    能力约束：
-    - 只能：读取对话上下文 + 写入记忆 + 生成会话摘要
-    - 不能：调用工具、搜索、执行任何其他操作
-
-    工作流程：
-    1. 轮询拉取 pending 状态的任务（按created_at ASC，FIFO）
-    2. 拉取时自动标记为 processing（防止多Worker重复消费）
-    3. 对每个任务执行：规则提取 → LLM提取(可选) → 治理过滤 → 写入后端
-    4. 标记任务完成/失败
-    5. 判断是否需要生成会话摘要
-    """
+    """Background memory extraction worker with strict tool permissions."""
 
     def __init__(
         self,
@@ -60,7 +47,7 @@ class MemoryWorkerSubAgent(SubAgent):
         self._running = False
 
     async def run_once(self) -> dict[str, Any]:
-        """执行一次轮询，返回统计信息"""
+        """Execute one polling iteration and return processing stats."""
         stats: dict[str, int] = {"fetched": 0, "processed": 0, "done": 0, "failed": 0}
         try:
             tasks = await self.fetch_pending_tasks(limit=self._batch_size)
@@ -97,31 +84,39 @@ class MemoryWorkerSubAgent(SubAgent):
                     )
                     logger.debug(
                         "memory_worker_flush_done id=%s session=%s accepted=%d rejected=%d",
-                        task_id, session_id, write_result.accepted, write_result.rejected,
+                        task_id,
+                        session_id,
+                        write_result.accepted,
+                        write_result.rejected,
                     )
 
                 if session_id and recent_messages and self._session_memory.should_summarize(recent_messages):
                     summary_input = self._session_memory.build_summary_input(recent_messages)
                     await self.save_session_summary(
-                        session_id=session_id, summary=summary_input
+                        session_id=session_id,
+                        summary=summary_input,
                     )
 
                 await self.mark_task_done(task_id)
                 stats["done"] += 1
                 logger.debug(
                     "memory_worker_task_done id=%s session=%s candidates=%d",
-                    task_id, session_id, len(candidates),
+                    task_id,
+                    session_id,
+                    len(candidates),
                 )
             except Exception as exc:
                 error_text = str(exc)
                 logger.warning(
                     "memory_worker_task_failed id=%s session=%s err=%s",
-                    task_id, session_id, exc,
+                    task_id,
+                    session_id,
+                    exc,
                 )
                 try:
                     await self.mark_task_failed(task_id, error_text)
                 except PermissionError:
-                    # 任务状态回写兜底，避免因权限配置问题导致任务长期卡住。
+                    # Fallback: ensure task is marked failed when permission is misconfigured.
                     try:
                         if self._memory_client is not None:
                             await self._memory_client.mark_task_failed(task_id, error_text)
@@ -134,11 +129,13 @@ class MemoryWorkerSubAgent(SubAgent):
         return stats
 
     async def run(self) -> None:
-        """持续运行，循环轮询任务"""
+        """Run polling loop continuously until stopped."""
         self._running = True
         logger.info(
             "memory_worker_start name=%s interval=%.1fs batch=%d",
-            self._name, self._poll_interval, self._batch_size,
+            self._name,
+            self._poll_interval,
+            self._batch_size,
         )
         while self._running:
             try:
@@ -148,8 +145,11 @@ class MemoryWorkerSubAgent(SubAgent):
                 else:
                     logger.info(
                         "memory_worker_batch name=%s fetched=%d processed=%d done=%d failed=%d",
-                        self._name, stats["fetched"], stats["processed"],
-                        stats["done"], stats["failed"],
+                        self._name,
+                        stats["fetched"],
+                        stats["processed"],
+                        stats["done"],
+                        stats["failed"],
                     )
             except asyncio.CancelledError:
                 break
@@ -160,5 +160,5 @@ class MemoryWorkerSubAgent(SubAgent):
         logger.info("memory_worker_stop name=%s", self._name)
 
     async def stop(self) -> None:
-        """停止Worker"""
+        """Stop worker loop."""
         self._running = False

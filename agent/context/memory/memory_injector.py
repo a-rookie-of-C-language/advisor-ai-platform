@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from agent.context.model_context import ContextSegment, ModelContext
-from agent.context.memory.core.schema import MemoryContext
-from agent.context.memory.pipeline.work_memory import WorkMemory
+from context.memory.core.schema import MemoryContext
+from context.memory.pipeline.work_memory import WorkMemory
+from context.model_context import ContextSegment, ModelContext
 
 
 class MemoryInjector:
-    """长期记忆到模型上下文的单向注入器。"""
+    """Inject long-term memory content into model context as memory segment."""
 
     def __init__(self, renderer: WorkMemory | None = None) -> None:
         self._renderer = renderer or WorkMemory()
@@ -23,4 +23,3 @@ class MemoryInjector:
                 )
             )
         return model_context
-

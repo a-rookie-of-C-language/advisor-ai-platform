@@ -5,9 +5,10 @@ import logging
 import time
 from typing import Any, AsyncIterator
 
-from agent.context.memory.memory_injector import MemoryInjector
+from context.memory.memory_injector import MemoryInjector
+from context.memory.pipeline.work_memory import WorkMemory
+
 from llm.base_provider import ChatMessage
-from agent.context.memory.pipeline.work_memory import WorkMemory
 
 from .nodes import GraphRuntime, reset_runtime, set_runtime
 from .workflow import build_chat_graph

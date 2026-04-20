@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 
-from agent.context.memory.api.memory_api_client import MemoryApiClient
-from agent.context.memory.core.governance import MemoryGovernance
-from agent.context.memory.core.schema import MemoryContext
-from agent.context.memory.pipeline.retrieval import MemoryRetrieval
-from agent.context.memory.pipeline.session_memory import SessionMemory
-from agent.context.memory.pipeline.work_memory import WorkMemory
-from agent.context.memory.pipeline.writeback import Extractor, MemoryWriteback
+from context.memory.api.memory_api_client import MemoryApiClient
+from context.memory.core.governance import MemoryGovernance
+from context.memory.core.schema import MemoryContext
+from context.memory.pipeline.retrieval import MemoryRetrieval
+from context.memory.pipeline.session_memory import SessionMemory
+from context.memory.pipeline.work_memory import WorkMemory
+from context.memory.pipeline.writeback import MemoryWriteback
 
 logger = logging.getLogger(__name__)
 

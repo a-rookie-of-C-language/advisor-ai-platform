@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 
-from agent.context.memory.core.governance import MemoryGovernance
-from agent.context.memory.core.schema import SessionSummary
+from context.memory.core.governance import MemoryGovernance
+from context.memory.core.schema import SessionSummary
 
 
 class SessionMemory:

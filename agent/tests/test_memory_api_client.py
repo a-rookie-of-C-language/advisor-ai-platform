@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import context.memory.api.memory_api_client as memory_api_module
 import httpx
 import pytest
-
-import agent.context.memory.api.memory_api_client as memory_api_module
-from agent.context.memory.api.memory_api_client import MemoryApiClient
+from context.memory.api.memory_api_client import MemoryApiClient
 
 
 class _FakeAsyncClient:

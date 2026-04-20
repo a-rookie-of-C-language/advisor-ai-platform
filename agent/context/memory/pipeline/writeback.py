@@ -6,8 +6,8 @@ import re
 import time
 from typing import Awaitable, Callable
 
-from agent.context.memory.core.governance import MemoryGovernance
-from agent.context.memory.core.schema import MemoryCandidate, WritebackResult
+from context.memory.core.governance import MemoryGovernance
+from context.memory.core.schema import MemoryCandidate, WritebackResult
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +90,10 @@ class MemoryWriteback:
                 lowered.startswith("user")
                 or lowered.startswith("preference")
                 or lowered.startswith("constraint")
-                or lowered.startswith("用户")
-                or lowered.startswith("偏好")
-                or "记住" in lowered
-                or "记录" in lowered
+                or lowered.startswith("goal")
+                or lowered.startswith("identity")
+                or "remember" in lowered
+                or "record" in lowered
             )
             if not is_memory_sentence:
                 continue
@@ -119,12 +119,9 @@ class MemoryWriteback:
         strong_patterns = [
             "i like", "i dislike", "i prefer", "i am", "i work",
             "my preference", "must", "cannot", "remember", "long term",
-            "我的", "我喜欢", "我讨厌", "我希望", "我是", "我在",
-            "目标", "计划", "经常", "总是", "从不", "需要",
         ]
         weak_patterns = [
             "i want", "please", "usually", "often",
-            "想要", "可以", "一般", "通常", "有时候",
         ]
 
         for pattern in strong_patterns:

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agent.context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class ToolCallResult:
     error: str | None = None
 
 
-class Agent(ABC):
+class Agent:
     def __init__(
         self,
         name: str,

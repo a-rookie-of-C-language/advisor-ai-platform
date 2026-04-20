@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 DEFAULT_STOP_WORDS: Set[str] = {
     "的", "了", "是", "在", "我", "有", "和", "就", "不", "人", "都", "一",

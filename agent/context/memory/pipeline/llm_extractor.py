@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from context.memory.core.schema import MemoryCandidate
 from openai import AsyncOpenAI
-
-from agent.context.memory.core.schema import MemoryCandidate
 
 
 class OpenAILLMExtractor:
@@ -21,20 +20,20 @@ class OpenAILLMExtractor:
 
     async def __call__(self, user_text: str, assistant_text: str) -> list[MemoryCandidate]:
         prompt = (
-            "你是一个记忆提取专家。从对话中提取值得长期记住的用户信息。\n"
+            "You are a memory extraction expert. Extract user facts worth long-term memory from the dialogue.\n"
             "\n"
-            "提取规则：\n"
-            "1. 只提取稳定的、长期有效的用户特征（偏好、目标、约束、身份信息）\n"
-            "2. 忽略临时性、一次性、已解决的问题\n"
-            "3. 每条记忆要有明确的置信度(0-1)，事实性高的给高分\n"
-            "4. tags中标记类型: preference/goal/constraint/identity/其他\n"
-            "5. 最多提取5条，按重要性排序\n"
+            "Rules:\n"
+            "1. Keep only stable and durable user traits (preference, goal, constraint, identity).\n"
+            "2. Ignore temporary, one-off, or already-resolved issues.\n"
+            "3. Each memory must include confidence in [0,1].\n"
+            "4. Use tags.type in preference/goal/constraint/identity/other.\n"
+            "5. Return at most 8 items sorted by importance.\n"
             "\n"
-            "返回严格JSON数组，不要其他文字：\n"
-            '[{"content": "记忆内容", "confidence": 0.8, "tags": {"type": "preference"}}]\n'
+            "Return strict JSON array only, no extra text:\n"
+            "[{\"content\": \"memory text\", \"confidence\": 0.8, \"tags\": {\"type\": \"preference\"}}]\n"
             "\n"
-            f"[用户] {user_text}\n"
-            f"[助手] {assistant_text}\n"
+            f"[User] {user_text}\n"
+            f"[Assistant] {assistant_text}\n"
         )
 
         response = await self._client.chat.completions.create(

@@ -6,9 +6,8 @@ from datetime import datetime
 from typing import Any
 
 import httpx
-
-from agent.context.memory.core.circuit_breaker import CircuitBreaker
-from agent.context.memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
+from context.memory.core.circuit_breaker import CircuitBreaker
+from context.memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
 
 logger = logging.getLogger(__name__)
 

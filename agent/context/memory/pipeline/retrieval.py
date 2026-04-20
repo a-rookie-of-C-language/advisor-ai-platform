@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timezone
 
-from agent.context.memory.core.governance import MemoryGovernance
-from agent.context.memory.core.schema import MemoryItem
-from agent.context.memory.pipeline.query_processor import QueryProcessor
-from agent.context.memory.pipeline.rerank import ConfidenceDecayRerank, DiversityRerank, MemoryRerankRegistry
+from context.memory.core.governance import MemoryGovernance
+from context.memory.core.schema import MemoryItem
+from context.memory.pipeline.query_processor import QueryProcessor
+from context.memory.pipeline.rerank import ConfidenceDecayRerank, DiversityRerank, MemoryRerankRegistry
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,6 @@ import pytest
 
 from agents.base.agent import Agent
 from agents.memory.memory_worker import MemoryWorkerSubAgent
-from agent.context.memory.api.memory_api_client import MemoryApiClient
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 

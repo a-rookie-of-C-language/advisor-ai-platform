@@ -4,10 +4,10 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
+from context.memory.core.schema import MemoryContext
 
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage, LLMStreamEvent, ToolSpec
-from agent.context.memory.core.schema import MemoryContext
 
 
 def _parse_event(raw: str) -> tuple[str, dict]:
