@@ -2,14 +2,18 @@ server:
   port: 8084
 
 spring:
+<<<<<<< HEAD
   config:
     import: optional:nacos:advisor-ai-platform-common.yaml
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
   application:
     name: memory-service
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+<<<<<<< HEAD
       config:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
         file-extension: yaml
@@ -28,6 +32,8 @@ spring:
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
 
 management:
   tracing:
@@ -39,11 +45,16 @@ management:
   endpoints:
     web:
       exposure:
+<<<<<<< HEAD
         include: health,info,prometheus,metrics
+=======
+        include: health,info
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
 
 logging:
   pattern:
     level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
+<<<<<<< HEAD
 
 advisor:
   internal:
@@ -66,3 +77,5 @@ advisor:
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
 
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)

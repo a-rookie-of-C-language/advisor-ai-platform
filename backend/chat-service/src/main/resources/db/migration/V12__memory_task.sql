@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 -- V12: async memory extraction task queue
 
 CREATE TABLE IF NOT EXISTS memory_task (
@@ -30,3 +31,8 @@ COMMENT ON TABLE memory_task IS 'Async memory extraction task queue for backgrou
 COMMENT ON COLUMN memory_task.turn_id IS 'Conversation turn id, unique within one session';
 COMMENT ON COLUMN memory_task.status IS 'pending/processing/done/failed';
 COMMENT ON COLUMN memory_task.payload IS 'Task payload, e.g. user_text/assistant_text/recent_messages';
+=======
+-- Placeholder migration to align with existing database history.
+-- Keep version/description stable for Flyway validation.
+SELECT 1;
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)

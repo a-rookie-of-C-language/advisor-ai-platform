@@ -1,18 +1,28 @@
+<<<<<<< HEAD
 server:
   port: 8080
 
 spring:
   config:
     import: optional:nacos:advisor-ai-platform-common.yaml
+=======
+﻿server:
+  port: 8080
+
+spring:
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
   application:
     name: gateway
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+<<<<<<< HEAD
       config:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
         file-extension: yaml
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
     gateway:
       routes:
         - id: auth-service
@@ -22,7 +32,11 @@ spring:
         - id: chat-service
           uri: lb://chat-service
           predicates:
+<<<<<<< HEAD
             - Path=/api/chat/**,/api/session/**,/api/monitor/**
+=======
+            - Path=/api/chat/**,/api/session/**
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
         - id: rag-service
           uri: lb://rag-service
           predicates:
@@ -46,6 +60,7 @@ management:
   endpoints:
     web:
       exposure:
+<<<<<<< HEAD
         include: health,info,prometheus,metrics
 
 advisor:
@@ -55,3 +70,10 @@ advisor:
   risk:
     control-service-url: ${RISK_CONTROL_SERVICE_URL:http://risk-control-service:8086}
 
+=======
+        include: health,info
+
+advisor:
+  jwt:
+    secret: ${JWT_SECRET:default-secret-default-secret-default-secret}
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)

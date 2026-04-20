@@ -2,14 +2,18 @@ server:
   port: 8081
 
 spring:
+<<<<<<< HEAD
   config:
     import: optional:nacos:advisor-ai-platform-common.yaml
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
   application:
     name: auth-service
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+<<<<<<< HEAD
       config:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
         file-extension: yaml
@@ -24,6 +28,8 @@ spring:
     show-sql: false
   flyway:
     enabled: false
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
 
 management:
   tracing:
@@ -35,11 +41,16 @@ management:
   endpoints:
     web:
       exposure:
+<<<<<<< HEAD
         include: health,info,prometheus,metrics
+=======
+        include: health,info
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
 
 logging:
   pattern:
     level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
+<<<<<<< HEAD
 
 advisor:
   jwt:
@@ -48,3 +59,5 @@ advisor:
     refresh-expiration: ${JWT_REFRESH_EXPIRE_MS:604800000}
     refresh-max-active: ${JWT_REFRESH_MAX_ACTIVE:10}
 
+=======
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
