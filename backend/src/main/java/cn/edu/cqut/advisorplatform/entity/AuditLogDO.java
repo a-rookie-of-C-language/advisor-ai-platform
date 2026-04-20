@@ -68,6 +68,9 @@ public class AuditLogDO {
     @Column(length = 128)
     private String turnId;
 
+    @Column(length = 256)
+    private String description;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

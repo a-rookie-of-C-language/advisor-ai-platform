@@ -68,6 +68,7 @@ class AuditAspectTest {
         assertThat(saved.getAction()).isEqualTo(AuditLogDO.AuditAction.SEARCH);
         assertThat(saved.getResponseStatus()).isEqualTo("SUCCESS");
         assertThat(saved.getMethod()).isNotBlank();
+        assertThat(saved.getDescription()).isEqualTo("memory_search");
     }
 
     @Test
@@ -123,7 +124,12 @@ class AuditAspectTest {
 
     static class TestController {
 
-        @Auditable(module = AuditLogDO.AuditModule.MEMORY, action = AuditLogDO.AuditAction.SEARCH, logRequestParams = false)
+        @Auditable(
+                module = AuditLogDO.AuditModule.MEMORY,
+                action = AuditLogDO.AuditAction.SEARCH,
+                logRequestParams = false,
+                description = "memory_search"
+        )
         public String search(String keyword) {
             return keyword;
         }

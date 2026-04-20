@@ -110,12 +110,16 @@ class ChatStreamService:
         session_id: int | None,
         kb_id: int | None,
         user_query: str,
+        trace_id: str | None = None,
+        turn_id: str | None = None,
     ) -> str:
         context = {
             "user_id": user_id,
             "session_id": session_id,
             "kb_id": kb_id,
             "user_query": user_query,
+            "trace_id": trace_id,
+            "turn_id": turn_id,
         }
         try:
             return await self._tools.execute(tool_name, tool_args, context)
@@ -142,14 +146,26 @@ class ChatStreamService:
         user_id: int | None = None,
         session_id: int | None = None,
         kb_id: int | None = None,
+        trace_id: str | None = None,
+        turn_id: str | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
+        logger.info(
+            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+            trace_id,
+            turn_id,
+            session_id,
+            user_id,
+            kb_id,
+        )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
                 validated_messages,
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
+                trace_id=trace_id,
+                turn_id=turn_id,
             ):
                 yield event
             return
@@ -159,6 +175,8 @@ class ChatStreamService:
             user_id=user_id,
             session_id=session_id,
             kb_id=kb_id,
+            trace_id=trace_id,
+            turn_id=turn_id,
         ):
             yield event
 
@@ -169,6 +187,8 @@ class ChatStreamService:
         user_id: int | None,
         session_id: int | None,
         kb_id: int | None,
+        trace_id: str | None,
+        turn_id: str | None,
     ) -> AsyncIterator[str]:
         user_query = self._last_user_message(validated_messages)
         yield self._serialize_event("start", {"message": "stream_started"})
@@ -179,6 +199,8 @@ class ChatStreamService:
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
+                trace_id=trace_id,
+                turn_id=turn_id,
             ):
                 yield self._serialize_event(event["event"], event["data"])
             yield self._serialize_event("done", {"message": "stream_finished"})
@@ -209,6 +231,8 @@ class ChatStreamService:
         user_id: int | None,
         session_id: int | None,
         kb_id: int | None,
+        trace_id: str | None,
+        turn_id: str | None,
     ) -> AsyncIterator[str]:
         model_messages = list(validated_messages)
         user_query = self._last_user_message(validated_messages)
@@ -272,6 +296,8 @@ class ChatStreamService:
                         session_id=session_id,
                         kb_id=kb_id,
                         user_query=user_query,
+                        trace_id=trace_id,
+                        turn_id=turn_id,
                     )
 
                 async for event in self._provider.stream_chat_with_tools(

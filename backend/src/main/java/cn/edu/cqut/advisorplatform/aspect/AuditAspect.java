@@ -105,6 +105,7 @@ public class AuditAspect {
             auditLog.setMethod(method.getDeclaringClass().getSimpleName() + "." + method.getName());
             auditLog.setCreatedAt(LocalDateTime.now());
             auditLog.setDurationMs(duration);
+            auditLog.setDescription(truncate(description));
 
             UserDO currentUser = getCurrentUser();
             if (currentUser != null) {

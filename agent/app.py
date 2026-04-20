@@ -187,6 +187,8 @@ def create_api_app() -> FastAPI:
                 user_id=request.userId,
                 session_id=request.sessionId,
                 kb_id=request.kbId,
+                trace_id=trace_id or None,
+                turn_id=turn_id or None,
             ),
             media_type="text/event-stream",
             headers={
