@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 
-from memory.api.memory_api_client import MemoryApiClient
-from memory.core.governance import MemoryGovernance
-from memory.core.schema import MemoryContext
-from memory.pipeline.retrieval import MemoryRetrieval
-from memory.pipeline.session_memory import SessionMemory
-from memory.pipeline.work_memory import WorkMemory
-from memory.pipeline.writeback import Extractor, MemoryWriteback
+from agent.context.memory.api.memory_api_client import MemoryApiClient
+from agent.context.memory.core.governance import MemoryGovernance
+from agent.context.memory.core.schema import MemoryContext
+from agent.context.memory.pipeline.retrieval import MemoryRetrieval
+from agent.context.memory.pipeline.session_memory import SessionMemory
+from agent.context.memory.pipeline.work_memory import WorkMemory
+from agent.context.memory.pipeline.writeback import Extractor, MemoryWriteback
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,23 @@ class MemoryOrchestrator:
             short_term=short_term,
             long_term=long_term,
             summary=summary,
+        )
+
+    async def load_memory_context(
+        self,
+        user_id: int,
+        session_id: int,
+        kb_id: int,
+        query: str,
+        recent_messages: list[dict[str, str]],
+    ) -> MemoryContext:
+        # Deprecated compatibility alias: prefer LongTermMemory adapter interface.
+        return await self.load(
+            user_id=user_id,
+            session_id=session_id,
+            kb_id=kb_id,
+            query=query,
+            recent_messages=recent_messages,
         )
 
     async def flush(

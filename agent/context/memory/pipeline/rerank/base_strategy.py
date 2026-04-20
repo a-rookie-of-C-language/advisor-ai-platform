@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List
 
-from memory.core.schema import MemoryItem
+from agent.context.memory.core.schema import MemoryItem
 
 
 class BaseMemoryRerankStrategy(ABC):

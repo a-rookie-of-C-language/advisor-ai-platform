@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
+from agent.context.memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
 
 
 class MemoryRerankRegistry:

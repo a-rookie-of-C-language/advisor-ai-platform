@@ -7,9 +7,10 @@ from typing import AsyncIterator, Awaitable, Callable, Iterable
 
 from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider, ChatMessage
-from memory.core.schema import MemoryCandidate
-from memory.pipeline.orchestrator import MemoryOrchestrator
-from memory.pipeline.work_memory import WorkMemory
+from agent.context.memory.memory_injector import MemoryInjector
+from agent.context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
+from agent.context.memory.core.schema import MemoryCandidate
+from agent.context.memory.pipeline.orchestrator import MemoryOrchestrator
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
@@ -31,7 +32,12 @@ class ChatStreamService:
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
-        self._work_memory = WorkMemory()
+        self._memory_injector = MemoryInjector()
+        self._long_term_memory = (
+            OrchestratorLongTermMemoryAdapter(memory_orchestrator)
+            if memory_orchestrator is not None
+            else None
+        )
         self._llm_extractor = llm_extractor
         self._debug_stream = self._read_debug_stream()
         self._enable_tool_use = self._read_enable_tool_use()
@@ -222,7 +228,7 @@ class ChatStreamService:
         user_query = self._last_user_message(validated_messages)
 
         memory_enabled = (
-            self._memory_orchestrator is not None
+            self._long_term_memory is not None
             and user_id is not None
             and session_id is not None
             and kb_id is not None
@@ -233,14 +239,15 @@ class ChatStreamService:
 
         if memory_enabled:
             try:
-                context = await self._memory_orchestrator.load(
+                memory_context = await self._long_term_memory.load_memory_context(
                     user_id=user_id,
                     session_id=session_id,
                     kb_id=kb_id,
                     query=user_query,
                     recent_messages=self._to_memory_messages(validated_messages),
                 )
-                memory_prompt = self._work_memory.render_for_prompt(context)
+                model_context = self._memory_injector.build_model_context(memory_context)
+                memory_prompt = model_context.render(source_filter={"memory"})
                 if memory_prompt:
                     model_messages = [
                         ChatMessage(

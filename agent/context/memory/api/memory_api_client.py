@@ -7,8 +7,8 @@ from typing import Any
 
 import httpx
 
-from memory.core.circuit_breaker import CircuitBreaker
-from memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
+from agent.context.memory.core.circuit_breaker import CircuitBreaker
+from agent.context.memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
 
 logger = logging.getLogger(__name__)
 

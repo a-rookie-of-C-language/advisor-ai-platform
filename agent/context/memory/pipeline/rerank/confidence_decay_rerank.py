@@ -4,9 +4,9 @@ import re
 from datetime import datetime, timezone
 from typing import Dict, List
 
-from memory.core.governance import MemoryGovernance
-from memory.core.schema import MemoryItem
-from memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
+from agent.context.memory.core.governance import MemoryGovernance
+from agent.context.memory.core.schema import MemoryItem
+from agent.context.memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
 
 
 class ConfidenceDecayRerank(BaseMemoryRerankStrategy):

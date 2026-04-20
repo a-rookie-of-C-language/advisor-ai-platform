@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from llm.base_provider import ChatMessage
-from memory.pipeline.work_memory import WorkMemory
 
 from .state import GraphState
 
@@ -24,7 +23,7 @@ class GraphRuntime:
     queue: asyncio.Queue[dict[str, Any]]
     provider: Any
     memory_orchestrator: Any
-    work_memory: WorkMemory
+    memory_injector: Any
     llm_extractor: Any
     tools: Any
     tool_permission: Any
@@ -69,14 +68,15 @@ async def load_memory_node(state: GraphState) -> GraphState:
 
     if memory_enabled:
         try:
-            context = await runtime.memory_orchestrator.load(
+            memory_context = await runtime.memory_orchestrator.load(
                 user_id=state.get("user_id"),
                 session_id=state.get("session_id"),
                 kb_id=state.get("kb_id"),
                 query=user_query,
                 recent_messages=[{"role": item.role, "content": item.content} for item in messages],
             )
-            memory_prompt = runtime.work_memory.render_for_prompt(context)
+            model_context = runtime.memory_injector.build_model_context(memory_context)
+            memory_prompt = model_context.render(source_filter={"memory"})
             if memory_prompt:
                 model_messages = [
                     ChatMessage(

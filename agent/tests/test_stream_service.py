@@ -7,7 +7,7 @@ import pytest
 
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage, LLMStreamEvent, ToolSpec
-from memory.core.schema import MemoryContext
+from agent.context.memory.core.schema import MemoryContext
 
 
 def _parse_event(raw: str) -> tuple[str, dict]:

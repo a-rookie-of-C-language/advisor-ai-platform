@@ -5,7 +5,7 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
-from memory.core.schema import MemoryCandidate
+from agent.context.memory.core.schema import MemoryCandidate
 
 
 class OpenAILLMExtractor:

@@ -7,12 +7,12 @@ from typing import Any, Awaitable, Callable
 
 from agents.base.subagent import SubAgent
 from tools.tool_permission import PermissionConfig
-from memory.api.memory_api_client import MemoryApiClient
-from memory.core.governance import MemoryGovernance
-from memory.core.schema import MemoryCandidate, WritebackResult
-from memory.pipeline.llm_extractor import OpenAILLMExtractor
-from memory.pipeline.session_memory import SessionMemory
-from memory.pipeline.writeback import MemoryWriteback
+from agent.context.memory.api.memory_api_client import MemoryApiClient
+from agent.context.memory.core.governance import MemoryGovernance
+from agent.context.memory.core.schema import MemoryCandidate, WritebackResult
+from agent.context.memory.pipeline.llm_extractor import OpenAILLMExtractor
+from agent.context.memory.pipeline.session_memory import SessionMemory
+from agent.context.memory.pipeline.writeback import MemoryWriteback
 
 logger = logging.getLogger(__name__)
 

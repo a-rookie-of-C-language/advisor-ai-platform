@@ -5,7 +5,7 @@ import json
 import pytest
 from pydantic import BaseModel
 
-from memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from agent.context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
 from tools.base_tool import BaseTool
 from tools.memory_read_tool import MemoryReadTool
 from tools.memory_write_tool import MemoryWriteTool

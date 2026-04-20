@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from memory.core.schema import MemoryCandidate, MemoryItem
+from agent.context.memory.core.schema import MemoryCandidate, MemoryItem
 
 
 class MemoryGovernance:

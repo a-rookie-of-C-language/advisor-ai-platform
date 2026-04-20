@@ -15,9 +15,9 @@ from starlette.responses import StreamingResponse
 from chat.stream_service import ChatStreamService
 from llm.base_provider import ChatMessage
 from llm.provider_factory import build_provider_from_env
-from memory.api.memory_api_client import MemoryApiClient
-from memory.pipeline.llm_extractor import OpenAILLMExtractor
-from memory.pipeline.orchestrator import MemoryOrchestrator
+from agent.context.memory.api.memory_api_client import MemoryApiClient
+from agent.context.memory.pipeline.llm_extractor import OpenAILLMExtractor
+from agent.context.memory.pipeline.orchestrator import MemoryOrchestrator
 from RAG.DocumentIndexer import DocumentIndexer
 from RAG.RAG_service import RAG_service
 

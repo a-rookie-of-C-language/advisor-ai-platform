@@ -4,8 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from memory.api.memory_api_client import MemoryApiClient
-from memory.core.schema import MemoryCandidate
+from agent.context.memory.api.memory_api_client import MemoryApiClient
+from agent.context.memory.core.schema import MemoryCandidate
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult

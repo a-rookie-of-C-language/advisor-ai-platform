@@ -19,6 +19,8 @@ class ToolPermission(Enum):
 @dataclass
 class PermissionConfig:
     allowed_tools: set[ToolPermission] = field(default_factory=set)
+    # context: 模型推理期上下文资源
+    # memory: 长期记忆资源（只允许通过注入器进入context）
     read_resources: set[str] = field(default_factory=lambda: {"context", "memory"})
     write_resources: set[str] = field(default_factory=set)
 
@@ -57,4 +59,3 @@ class PermissionConfig:
             read_resources={"context", "memory"},
             write_resources={"memory"},
         )
-

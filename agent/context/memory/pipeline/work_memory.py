@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from memory.core.schema import MemoryContext, MemoryItem, SessionSummary
+from agent.context.memory.core.schema import MemoryContext, MemoryItem, SessionSummary
 
 
 class WorkMemory:

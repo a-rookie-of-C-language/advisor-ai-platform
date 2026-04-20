@@ -14,11 +14,11 @@ import logging
 import time
 from typing import Awaitable, Callable
 
-from memory.api.memory_api_client import MemoryApiClient
-from memory.core.governance import MemoryGovernance
-from memory.pipeline.llm_extractor import OpenAILLMExtractor
-from memory.pipeline.writeback import MemoryWriteback
-from memory.pipeline.session_memory import SessionMemory
+from agent.context.memory.api.memory_api_client import MemoryApiClient
+from agent.context.memory.core.governance import MemoryGovernance
+from agent.context.memory.pipeline.llm_extractor import OpenAILLMExtractor
+from agent.context.memory.pipeline.writeback import MemoryWriteback
+from agent.context.memory.pipeline.session_memory import SessionMemory
 
 logger = logging.getLogger(__name__)
 
