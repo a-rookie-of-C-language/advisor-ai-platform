@@ -2,13 +2,17 @@ name: Lint
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "refactor/**"]
   pull_request:
-    branches: ["master"]
+    branches: ["master", "refactor/**"]
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-python:
-    name: Python (ruff)
+    name: Python (venv + ruff)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -20,11 +24,23 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install ruff
-        run: pip install ruff
+      - name: Create project venv
+        run: python -m venv .venv
 
-      - name: Run ruff
-        run: ruff check .
+      - name: Install dependencies in venv
+        shell: bash
+        run: |
+          set -e
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run ruff in venv
+        shell: bash
+        run: |
+          set -e
+          source .venv/bin/activate
+          ruff check .
 
   lint-frontend:
     name: Frontend (ESLint)
@@ -48,7 +64,7 @@ jobs:
         run: npm run lint
 
   lint-java:
-    name: Java (Maven compile)
+    name: Java (Spotless + Checkstyle)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,5 +78,8 @@ jobs:
           java-version: "17"
           cache: "maven"
 
-      - name: Compile
-        run: mvn compile -q
+      - name: Spotless check
+        run: mvn -q -DskipTests spotless:check
+
+      - name: Checkstyle check
+        run: mvn -q -DskipTests checkstyle:check

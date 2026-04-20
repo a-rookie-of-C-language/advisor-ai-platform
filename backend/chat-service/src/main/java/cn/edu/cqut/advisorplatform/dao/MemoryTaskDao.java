@@ -1,30 +1,32 @@
 package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.MemoryTaskDO;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
 public interface MemoryTaskDao extends JpaRepository<MemoryTaskDO, Long> {
 
-    Optional<MemoryTaskDO> findBySessionIdAndTurnId(@Param("sessionId") Long sessionId, @Param("turnId") String turnId);
+  Optional<MemoryTaskDO> findBySessionIdAndTurnId(
+      @Param("sessionId") Long sessionId, @Param("turnId") String turnId);
 
-    @Query("""
+  @Query(
+      """
             SELECT t FROM MemoryTaskDO t
             WHERE t.status = 'pending'
               AND (t.retryCount < :maxRetries OR t.retryCount IS NULL)
             ORDER BY t.createdAt ASC
             """)
-    List<MemoryTaskDO> findPendingTasks(@Param("maxRetries") Integer maxRetries, Pageable pageable);
+  List<MemoryTaskDO> findPendingTasks(@Param("maxRetries") Integer maxRetries, Pageable pageable);
 
-    @Modifying
-    @Query("""
+  @Modifying
+  @Query(
+      """
             UPDATE MemoryTaskDO t
             SET t.status = :status,
                 t.processedAt = CASE
@@ -33,10 +35,11 @@ public interface MemoryTaskDao extends JpaRepository<MemoryTaskDO, Long> {
                 END
             WHERE t.id = :id
             """)
-    int updateStatus(@Param("id") Long id, @Param("status") String status);
+  int updateStatus(@Param("id") Long id, @Param("status") String status);
 
-    @Modifying
-    @Query("""
+  @Modifying
+  @Query(
+      """
             UPDATE MemoryTaskDO t
             SET t.status = 'failed',
                 t.retryCount = COALESCE(t.retryCount, 0) + 1,
@@ -44,5 +47,6 @@ public interface MemoryTaskDao extends JpaRepository<MemoryTaskDO, Long> {
                 t.processedAt = :now
             WHERE t.id = :id
             """)
-    int markFailed(@Param("id") Long id, @Param("error") String error, @Param("now") LocalDateTime now);
+  int markFailed(
+      @Param("id") Long id, @Param("error") String error, @Param("now") LocalDateTime now);
 }

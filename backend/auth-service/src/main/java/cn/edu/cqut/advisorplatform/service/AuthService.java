@@ -6,7 +6,7 @@ import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 
 public interface AuthService {
 
-    LoginResponseDTO login(LoginRequestDTO request);
+  LoginResponseDTO login(LoginRequestDTO request);
 
-    void register(RegisterRequestDTO request);
+  void register(RegisterRequestDTO request);
 }

@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 public class AuditServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(AuditServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(AuditServiceApplication.class, args);
+  }
 }

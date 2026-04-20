@@ -6,9 +6,7 @@ import lombok.Data;
 @Data
 public class ChatStreamMessageDTO {
 
-    @NotBlank
-    private String role;
+  @NotBlank private String role;
 
-    @NotBlank
-    private String content;
+  @NotBlank private String content;
 }

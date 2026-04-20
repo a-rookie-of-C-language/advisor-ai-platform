@@ -1,7 +1,6 @@
 package cn.edu.cqut.advisorplatform.annotation;
 
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-
 import java.lang.annotation.*;
 
 @Target(ElementType.METHOD)
@@ -9,13 +8,13 @@ import java.lang.annotation.*;
 @Documented
 public @interface Auditable {
 
-    AuditLogDO.AuditModule module();
+  AuditLogDO.AuditModule module();
 
-    AuditLogDO.AuditAction action();
+  AuditLogDO.AuditAction action();
 
-    boolean logRequestParams() default true;
+  boolean logRequestParams() default true;
 
-    boolean logResponseData() default false;
+  boolean logResponseData() default false;
 
-    String description() default "";
+  String description() default "";
 }

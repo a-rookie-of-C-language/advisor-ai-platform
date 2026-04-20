@@ -8,29 +8,28 @@ import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO
 import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
-
 import java.util.List;
 import java.util.Map;
 
 public interface MemoryService {
 
-    List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request);
+  List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request);
 
-    MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request);
+  MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request);
 
-    SessionSummaryResponseDTO getSessionSummary(Long sessionId);
+  SessionSummaryResponseDTO getSessionSummary(Long sessionId);
 
-    void saveSessionSummary(Long sessionId, SessionSummaryUpdateRequestDTO request);
+  void saveSessionSummary(Long sessionId, SessionSummaryUpdateRequestDTO request);
 
-    void healthCheck();
+  void healthCheck();
 
-    Map<String, Integer> cleanupExpiredMemories();
+  Map<String, Integer> cleanupExpiredMemories();
 
-    MemoryTaskResponseDTO submitTask(MemoryTaskSubmitDTO request);
+  MemoryTaskResponseDTO submitTask(MemoryTaskSubmitDTO request);
 
-    List<MemoryTaskResponseDTO> fetchPendingTasks(int limit);
+  List<MemoryTaskResponseDTO> fetchPendingTasks(int limit);
 
-    void markTaskDone(Long taskId);
+  void markTaskDone(Long taskId);
 
-    void markTaskFailed(Long taskId, String error);
+  void markTaskFailed(Long taskId, String error);
 }

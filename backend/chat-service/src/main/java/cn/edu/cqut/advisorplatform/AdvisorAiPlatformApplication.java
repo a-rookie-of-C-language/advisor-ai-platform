@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableFeignClients
 public class AdvisorAiPlatformApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(AdvisorAiPlatformApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(AdvisorAiPlatformApplication.class, args);
+  }
 }

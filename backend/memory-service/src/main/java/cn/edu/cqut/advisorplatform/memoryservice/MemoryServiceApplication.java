@@ -10,7 +10,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableFeignClients
 public class MemoryServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(MemoryServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(MemoryServiceApplication.class, args);
+  }
 }
