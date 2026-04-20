@@ -1,23 +1,34 @@
 -- V8__user_memory_add_vector_support.sql
--- 为 user_memory 表添加向量嵌入支持，用于语义相似度匹配
+-- Add vector and trigram search capabilities for user_memory.
 
--- 1. 添加 embedding 列 (PostgreSQL vector 类型)
+-- 0) Ensure required extensions exist.
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- 1) Add embedding column (pgvector type).
 ALTER TABLE user_memory
 ADD COLUMN IF NOT EXISTS embedding vector(1024);
 
--- 2. 创建 HNSW 索引加速余弦相似度搜索
--- HNSW 是 pgvector 推荐的高性能索引类型
+-- 2) Create HNSW index for semantic retrieval.
 CREATE INDEX IF NOT EXISTS idx_user_memory_embedding_hnsw
 ON user_memory USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64)
 WHERE is_deleted = false;
 
--- 3. 创建GIN索引用于全文检索（备用/降级方案）
-CREATE INDEX IF NOT EXISTS idx_user_memory_content_trgm
-ON user_memory USING gin (content gin_trgm_ops)
-WHERE is_deleted = false;
+-- 3) Create trigram index for fallback text matching.
+-- If pg_trgm is unavailable due to permission restrictions, do not fail migration.
+DO $$
+BEGIN
+    CREATE INDEX IF NOT EXISTS idx_user_memory_content_trgm
+    ON user_memory USING gin (content gin_trgm_ops)
+    WHERE is_deleted = false;
+EXCEPTION
+    WHEN insufficient_privilege OR undefined_object THEN
+        RAISE NOTICE 'Skip idx_user_memory_content_trgm: pg_trgm unavailable or insufficient privilege';
+END
+$$;
 
--- 4. 添加注释
-COMMENT ON COLUMN user_memory.embedding IS '文本向量嵌入 (bge-m3, 1024维)';
-COMMENT ON INDEX idx_user_memory_embedding_hnsw IS 'HNSW向量索引，用于语义相似度搜索';
-COMMENT ON INDEX idx_user_memory_content_trgm IS 'GIN-trigram索引，用于全文匹配降级方案';
+-- 4) Add comments.
+COMMENT ON COLUMN user_memory.embedding IS 'Text embedding vector (bge-m3, 1024 dims)';
+COMMENT ON INDEX idx_user_memory_embedding_hnsw IS 'HNSW vector index for semantic similarity search';
+COMMENT ON INDEX idx_user_memory_content_trgm IS 'GIN trigram index for fallback full-text matching';

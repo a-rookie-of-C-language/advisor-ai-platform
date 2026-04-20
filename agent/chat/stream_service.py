@@ -3,14 +3,21 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
+from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
+from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
+from context.compaction.ContextCompactor import ContextCompactor
+from context.compaction.TranscriptStore import TranscriptStore
+from context.memory.core.schema import MemoryCandidate
+from context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
+from context.memory.memory_injector import MemoryInjector
+from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider, ChatMessage
-from memory.core.schema import MemoryCandidate
-from memory.pipeline.orchestrator import MemoryOrchestrator
-from memory.pipeline.work_memory import WorkMemory
-from tools.rag_search_tool import RAGSearchTool
+from tools.tool_assembly_pool import ToolAssemblyPool
+from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
@@ -30,20 +37,57 @@ class ChatStreamService:
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
-        self._work_memory = WorkMemory()
+        self._memory_injector = MemoryInjector()
+        self._long_term_memory = (
+            OrchestratorLongTermMemoryAdapter(memory_orchestrator)
+            if memory_orchestrator is not None
+            else None
+        )
         self._llm_extractor = llm_extractor
         self._debug_stream = self._read_debug_stream()
         self._enable_tool_use = self._read_enable_tool_use()
         self._use_langgraph = self._read_use_langgraph()
         self._enabled_tools = self._read_enabled_tools()
+        self._context_compactor = ContextCompactor(
+            enable_snip=self._read_context_snip_enabled(),
+            enable_microcompact=self._read_context_micro_enabled(),
+            enable_context_collapse=self._read_context_collapse_enabled(),
+            enable_autocompact=self._read_context_auto_enabled(),
+            snip_keep_last=self._read_context_snip_keep_last(),
+            micro_replace_before_rounds=self._read_context_micro_replace_before_rounds(),
+            collapse_keep_last=self._read_context_collapse_keep_last(),
+            auto_trigger_tokens=self._read_context_auto_trigger_tokens(),
+            auto_keep_last=self._read_context_auto_keep_last(),
+        )
+        self._compaction_subagent = ContextCompactionSubAgent(self._provider)
+        self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
-        if rag_service is not None:
-            self._tools.register(RAGSearchTool(rag_service))
+        self._tool_permission = PermissionConfig.chat_tools()
+        self._last_compaction_stats: dict[str, int | bool | str] = {
+            "snip_enabled": self._read_context_snip_enabled(),
+            "micro_enabled": self._read_context_micro_enabled(),
+            "collapse_enabled": self._read_context_collapse_enabled(),
+            "auto_enabled": self._read_context_auto_enabled(),
+            "tokens_before": 0,
+            "tokens_after": 0,
+            "tokens_released": 0,
+            "micro_replaced_count": 0,
+            "auto_compacted": False,
+            "transcript_path": "",
+            "latency_ms": 0,
+        }
+        memory_client = getattr(self._memory_orchestrator, "api_client", None)
+        for tool in ToolAssemblyPool.build(
+            rag_service=rag_service,
+            memory_client=memory_client,
+        ):
+            self._tools.register(tool)
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
             llm_extractor=self._llm_extractor,
             tools=self._tools,
+            tool_permission=self._tool_permission,
             debug_stream=self._debug_stream,
             enable_tool_use=self._enable_tool_use,
         )
@@ -70,6 +114,73 @@ class ChatStreamService:
             return None
         names = {name.strip() for name in raw.split(",") if name.strip()}
         return names or None
+
+    @staticmethod
+    def _read_context_snip_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_SNIP", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_collapse_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_COLLAPSE", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_micro_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_MICROCOMPACT", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_auto_enabled() -> bool:
+        raw = os.getenv("FEATURE_CONTEXT_AUTOCOMPACT", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_context_snip_keep_last() -> int:
+        raw = os.getenv("CONTEXT_SNIP_KEEP_LAST", "12").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 12
+
+    @staticmethod
+    def _read_context_collapse_keep_last() -> int:
+        raw = os.getenv("CONTEXT_COLLAPSE_KEEP_LAST", "8").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 8
+
+    @staticmethod
+    def _read_context_micro_replace_before_rounds() -> int:
+        raw = os.getenv("CONTEXT_MICRO_REPLACE_BEFORE_ROUNDS", "3").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 3
+
+    @staticmethod
+    def _read_context_auto_trigger_tokens() -> int:
+        raw = os.getenv("CONTEXT_AUTO_TRIGGER_TOKENS", "70000").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 70000
+
+    @staticmethod
+    def _read_context_auto_keep_last() -> int:
+        raw = os.getenv("CONTEXT_AUTO_KEEP_LAST", "4").strip()
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return 4
+
+    @staticmethod
+    def _read_context_transcript_dir() -> str:
+        raw = os.getenv("CONTEXT_TRANSCRIPT_DIR", "").strip()
+        if raw:
+            return raw
+        return str(Path("runtime") / "transcripts")
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:
@@ -160,7 +271,7 @@ class ChatStreamService:
         )
         if self._use_langgraph:
             async for event in self._stream_events_graph(
-                validated_messages,
+                compacted_messages,
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
@@ -171,7 +282,7 @@ class ChatStreamService:
             return
 
         async for event in self._stream_events_legacy(
-            validated_messages,
+            compacted_messages,
             user_id=user_id,
             session_id=session_id,
             kb_id=kb_id,
@@ -238,7 +349,7 @@ class ChatStreamService:
         user_query = self._last_user_message(validated_messages)
 
         memory_enabled = (
-            self._memory_orchestrator is not None
+            self._long_term_memory is not None
             and user_id is not None
             and session_id is not None
             and kb_id is not None
@@ -249,14 +360,15 @@ class ChatStreamService:
 
         if memory_enabled:
             try:
-                context = await self._memory_orchestrator.load(
+                memory_context = await self._long_term_memory.load_memory_context(
                     user_id=user_id,
                     session_id=session_id,
                     kb_id=kb_id,
                     query=user_query,
                     recent_messages=self._to_memory_messages(validated_messages),
                 )
-                memory_prompt = self._work_memory.render_for_prompt(context)
+                model_context = self._memory_injector.build_model_context(memory_context)
+                memory_prompt = model_context.render(source_filter={"memory"})
                 if memory_prompt:
                     model_messages = [
                         ChatMessage(
@@ -408,5 +520,20 @@ class ChatStreamService:
             "registered_tools": [spec.name for spec in self._tools.specs()],
             "memory_enabled": self._memory_orchestrator is not None,
             "llm_extractor_enabled": self._llm_extractor is not None,
+            "context_compaction": self._last_compaction_stats,
             "graph": self._graph_runner.health_snapshot(),
         }
+
+    async def _summarize_for_autocompact(self, transcript: str) -> str:
+        try:
+            return await self._compaction_subagent.summarize_transcript(transcript)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("autocompact_summarize_failed err=%s", exc)
+            return ""
+
+    def _persist_compaction_transcript(self, session_id: int | None, messages: list[ChatMessage]) -> str:
+        try:
+            return self._transcript_store.save(session_id, messages)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
+            return ""
