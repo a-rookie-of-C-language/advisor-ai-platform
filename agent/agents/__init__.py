@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.base import Agent, AgentContext, AgentState, PermissionConfig, SubAgent, ToolCallResult
+from agents.base import Agent, AgentContext, AgentState, PermissionConfig, SubAgent, ToolCallResult, ToolPermission
 from agents.memory import MemoryWorkerSubAgent
 
 __all__ = [
@@ -11,4 +11,5 @@ __all__ = [
     "PermissionConfig",
     "SubAgent",
     "ToolCallResult",
+    "ToolPermission",
 ]
