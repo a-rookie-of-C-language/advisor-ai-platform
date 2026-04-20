@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  nacos:
+    image: nacos/nacos-server:v2.4.2
+    container_name: advisor-nacos
+    environment:
+      - MODE=standalone
+    ports:
+      - "8848:8848"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: advisor-jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+
+  postgres:
+    image: postgres:16
+    container_name: advisor-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: advisor_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:

@@ -2,8 +2,14 @@ server:
   port: 8080
 
 spring:
+  application:
+    name: chat-service
   profiles:
     active: local
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
   mvc:
     async:
       request-timeout: 600000
@@ -52,5 +58,15 @@ advisor:
     debug-stream: ${DEBUG_STREAM:false}
 
 logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
   level:
     cn.edu.cqut.advisorplatform: DEBUG
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://127.0.0.1:4318/v1/traces}
