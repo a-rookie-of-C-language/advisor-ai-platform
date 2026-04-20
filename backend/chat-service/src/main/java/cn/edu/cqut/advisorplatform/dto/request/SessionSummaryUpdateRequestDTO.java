@@ -6,6 +6,5 @@ import lombok.Data;
 @Data
 public class SessionSummaryUpdateRequestDTO {
 
-    @NotBlank
-    private String summary;
+  @NotBlank private String summary;
 }

@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: ["master", "refactor/**"]
   pull_request:
-    branches: [master]
+    branches: ["master", "refactor/**"]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   encoding-guard:
@@ -40,7 +44,7 @@ jobs:
         run: ./scripts/clean_text_encoding.ps1 -DryRun
 
   build-java:
-    name: Java (Maven)
+    name: Java (Maven Build + Test)
     runs-on: ubuntu-latest
     needs: [encoding-guard]
     defaults:
@@ -52,34 +56,17 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: maven
 
-      - name: Detect UTF-8 BOM in Java sources
-        shell: bash
-        run: |
-          set -e
-          found=0
-          while IFS= read -r -d '' f; do
-            bom=$(xxd -p -l 3 "$f" | tr -d '\n')
-            if [ "$bom" = "efbbbf" ]; then
-              echo "::error file=$f::UTF-8 BOM detected in Java source"
-              found=1
-            fi
-          done < <(find src/main/java -name '*.java' -print0)
-          if [ "$found" -ne 0 ]; then
-            echo "BOM check failed."
-            exit 1
-          fi
+      - name: Build all modules
+        run: mvn -q -DskipTests package
 
-      - name: Build
-        run: mvn clean package -DskipTests -q
-
-      - name: Test
-        run: mvn test -q
+      - name: Run tests
+        run: mvn -q test
 
   build-frontend:
-    name: Frontend (Node)
+    name: Frontend (Build)
     runs-on: ubuntu-latest
     needs: [encoding-guard]
     defaults:
@@ -90,7 +77,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -101,7 +88,7 @@ jobs:
         run: npm run build
 
   build-python:
-    name: Python (tests)
+    name: Python (.venv + compile + test)
     runs-on: ubuntu-latest
     needs: [encoding-guard]
     defaults:
@@ -112,19 +99,35 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Create project venv
+        run: python -m venv .venv
 
-      - name: Syntax check
-        run: python -m compileall . -q
+      - name: Install dependencies in venv
+        shell: bash
+        run: |
+          set -e
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest -q
+      - name: Syntax check in venv
+        shell: bash
+        run: |
+          set -e
+          source .venv/bin/activate
+          python -m compileall app.py agents chat context graph llm RAG tools -q
+
+      - name: Run tests in venv
+        shell: bash
+        run: |
+          set -e
+          source .venv/bin/activate
+          pytest -q
 
   e2e-chat:
-    name: E2E Chat Drill (all)
+    name: E2E Chat Drill (Gateway + Services + Agent)
     runs-on: ubuntu-latest
     needs: [build-java, build-frontend, build-python]
     services:
@@ -133,26 +136,37 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
+          POSTGRES_DB: advisor_ai
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-cmd "pg_isready -U postgres -d advisor_ai"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      nacos:
+        image: nacos/nacos-server:v2.4.2
+        env:
+          MODE: standalone
+        ports:
+          - 8848:8848
 
     env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
+
       JWT_SECRET: Y2lqd3RzZWNyZXRmb3JlMmVvbmx5Y25lZHVjcXV0YXJvb2tpZW9mYw==
+      JWT_EXPIRE_MS: 86400000
       MEMORY_API_TOKEN: arookieofc
       AGENT_API_TOKEN: arookieofc
       AGENT_BASE_URL: http://127.0.0.1:8001
       AGENT_TIMEOUT_MS: 600000
-      DEBUG_STREAM: 'false'
+      DEBUG_STREAM: "false"
 
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/advisor_ai
       AGENT_MODE: api
       AGENT_API_HOST: 127.0.0.1
       AGENT_API_PORT: 8001
@@ -160,6 +174,7 @@ jobs:
       MEMORY_API_TIMEOUT_SEC: 30
       MEMORY_API_MAX_RETRIES: 2
       MEMORY_API_RETRY_BACKOFF_SEC: 0.3
+      NACOS_SERVER_ADDR: 127.0.0.1:8848
 
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -173,18 +188,18 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: maven
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Validate LLM secrets
         shell: bash
@@ -200,50 +215,109 @@ jobs:
             echo "OPENAI_MODEL=gpt-4o-mini" >> "$GITHUB_ENV"
           fi
 
-      - name: Prepare frontend deps (for node cache consistency)
+      - name: Install frontend deps
         working-directory: frontend
         run: npm ci
 
-      - name: Start backend
+      - name: Start auth-service
         shell: bash
         run: |
-          cd backend
-          nohup mvn -q spring-boot:run > ../backend-e2e.log 2>&1 &
+          cd backend/auth-service
+          nohup mvn -q spring-boot:run > ../../auth-e2e.log 2>&1 &
 
-      - name: Start agent (venv)
+      - name: Start chat-service
+        shell: bash
+        run: |
+          cd backend/chat-service
+          nohup env SERVER_PORT=8082 SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/advisor_ai mvn -q spring-boot:run > ../../chat-e2e.log 2>&1 &
+
+      - name: Start audit-service
+        shell: bash
+        run: |
+          cd backend/audit-service
+          nohup mvn -q spring-boot:run > ../../audit-e2e.log 2>&1 &
+
+      - name: Start gateway
+        shell: bash
+        run: |
+          cd backend/gateway
+          nohup env SERVER_PORT=8080 mvn -q spring-boot:run > ../../gateway-e2e.log 2>&1 &
+
+      - name: Start agent (.venv)
         shell: bash
         run: |
           cd agent
           python -m venv .venv
           source .venv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements.txt
           nohup .venv/bin/python app.py --mode api > ../agent-e2e.log 2>&1 &
 
-      - name: Wait for backend and agent health
+      - name: Wait for dependencies and health
         shell: bash
         run: |
           set -e
-          echo "Waiting backend http://localhost:8080 ..."
+
+          echo "Waiting Nacos..."
           for i in {1..90}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/chat/sessions || true)
-            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
-              echo "backend is ready (status=$code)"
+            if curl -fsS "http://localhost:8848/nacos/v1/console/health/liveness" >/dev/null; then
+              echo "nacos is ready"
               break
             fi
             if [ "$i" = "90" ]; then
-              echo "backend not ready"
+              echo "nacos not ready"
               exit 1
             fi
             sleep 2
           done
 
-          echo "Waiting agent http://localhost:8001/health ..."
-          for i in {1..90}; do
+          echo "Waiting auth-service..."
+          for i in {1..120}; do
+            if curl -fsS http://localhost:8081/internal/health >/dev/null; then
+              echo "auth-service is ready"
+              break
+            fi
+            if [ "$i" = "120" ]; then
+              echo "auth-service not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting chat-service..."
+          for i in {1..120}; do
+            if curl -fsS http://localhost:8082/internal/health >/dev/null; then
+              echo "chat-service is ready"
+              break
+            fi
+            if [ "$i" = "120" ]; then
+              echo "chat-service not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting gateway..."
+          for i in {1..120}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/internal/health || true)
+            if [ "$code" = "200" ]; then
+              echo "gateway is ready"
+              break
+            fi
+            if [ "$i" = "120" ]; then
+              echo "gateway not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting agent..."
+          for i in {1..120}; do
             if curl -fsS http://localhost:8001/health >/dev/null; then
               echo "agent is ready"
               break
             fi
-            if [ "$i" = "90" ]; then
+            if [ "$i" = "120" ]; then
               echo "agent not ready"
               exit 1
             fi
@@ -257,8 +331,14 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          echo "===== backend-e2e.log (tail 300) ====="
-          tail -n 300 backend-e2e.log || true
+          echo "===== gateway-e2e.log (tail 300) ====="
+          tail -n 300 gateway-e2e.log || true
+          echo "===== auth-e2e.log (tail 300) ====="
+          tail -n 300 auth-e2e.log || true
+          echo "===== chat-e2e.log (tail 300) ====="
+          tail -n 300 chat-e2e.log || true
+          echo "===== audit-e2e.log (tail 300) ====="
+          tail -n 300 audit-e2e.log || true
           echo "===== agent-e2e.log (tail 300) ====="
           tail -n 300 agent-e2e.log || true
 
@@ -268,5 +348,8 @@ jobs:
         with:
           name: e2e-chat-logs
           path: |
-            backend-e2e.log
+            gateway-e2e.log
+            auth-e2e.log
+            chat-e2e.log
+            audit-e2e.log
             agent-e2e.log

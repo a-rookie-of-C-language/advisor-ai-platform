@@ -7,11 +7,11 @@ import lombok.Data;
 @AllArgsConstructor
 public class MemoryCandidateUpsertResponseDTO {
 
-    private int accepted;
-    private int rejected;
-    private String message;
+  private int accepted;
+  private int rejected;
+  private String message;
 
-    public static MemoryCandidateUpsertResponseDTO of(int accepted, int rejected, String message) {
-        return new MemoryCandidateUpsertResponseDTO(accepted, rejected, message);
-    }
+  public static MemoryCandidateUpsertResponseDTO of(int accepted, int rejected, String message) {
+    return new MemoryCandidateUpsertResponseDTO(accepted, rejected, message);
+  }
 }

@@ -9,20 +9,16 @@ import org.springframework.lang.Nullable;
 @Data
 public class MemorySearchRequestDTO {
 
-    @NotNull
-    private Long userId;
+  @NotNull private Long userId;
 
-    @NotNull
-    private Long kbId;
+  @NotNull private Long kbId;
 
-    @Nullable
-    private String query = "";
+  @Nullable private String query = "";
 
-    @Min(1)
-    @Max(50)
-    @Nullable
-    private Integer topK = 6;
+  @Min(1)
+  @Max(50)
+  @Nullable
+  private Integer topK = 6;
 
-    @Nullable
-    private String mode = "hybrid";
+  @Nullable private String mode = "hybrid";
 }
