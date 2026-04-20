@@ -1,0 +1,44 @@
+package cn.edu.cqut.advisorplatform.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class MemoryTaskResponseDTO {
+
+    private Long id;
+    private Long userId;
+    private Long kbId;
+    private Long sessionId;
+    private String turnId;
+    private String status;
+    private Map<String, Object> payload;
+    private Integer retryCount;
+    private String errorMessage;
+    private LocalDateTime createdAt;
+    private LocalDateTime processedAt;
+
+    public static MemoryTaskResponseDTO from(cn.edu.cqut.advisorplatform.entity.MemoryTaskDO task) {
+        return MemoryTaskResponseDTO.builder()
+                .id(task.getId())
+                .userId(task.getUserId())
+                .kbId(task.getKbId())
+                .sessionId(task.getSessionId())
+                .turnId(task.getTurnId())
+                .status(task.getStatus())
+                .payload(task.getPayload())
+                .retryCount(task.getRetryCount())
+                .errorMessage(task.getErrorMessage())
+                .createdAt(task.getCreatedAt())
+                .processedAt(task.getProcessedAt())
+                .build();
+    }
+}

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:backend/chat-service/src/main/resources/db/migration/V11__memory_storage_opt.sql
 -- V11: memory storage optimization (access heat + cleanup indexes)
 
@@ -30,3 +31,8 @@ COMMENT ON INDEX idx_user_memory_access IS 'Heat index for LRU-like ordering and
 -- Keep version/description stable for Flyway validation.
 SELECT 1;
 >>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移):backend/src/main/resources/db/migration/V11__memory_storage_opt.sql
+=======
+-- Placeholder migration to align with existing database history.
+-- Keep version/description stable for Flyway validation.
+SELECT 1;
+>>>>>>> 051e97d (feat: 后端升级为Spring Cloud Alibaba多模块架构骨架并接入Gateway/Nacos/OTel)
