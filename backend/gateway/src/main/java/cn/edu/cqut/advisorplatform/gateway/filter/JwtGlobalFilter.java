@@ -5,10 +5,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -65,9 +66,24 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
   }
 
   private boolean validate(String token) {
+    return validateWithBase64Key(token) || validateWithRawKey(token);
+  }
+
+  private boolean validateWithBase64Key(String token) {
     try {
       byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
-      SecretKey key = Keys.hmacShaKeyFor(keyBytes);
+      Key key = Keys.hmacShaKeyFor(keyBytes);
+      Claims ignored =
+          Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      return true;
+    } catch (Exception ex) {
+      return false;
+    }
+  }
+
+  private boolean validateWithRawKey(String token) {
+    try {
+      Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
       Claims ignored =
           Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
       return true;

@@ -32,6 +32,10 @@ public class JwtUtil {
     return claimsResolver.apply(claims);
   }
 
+  public Claims extractClaims(String token) {
+    return extractAllClaims(token);
+  }
+
   public String generateToken(UserDetails userDetails) {
     return generateToken(new HashMap<>(), userDetails);
   }

@@ -84,7 +84,7 @@ public class ChatController {
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Void> deleteSession(
-      @PathVariable Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @PathVariable("id") Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
     attachAuditContext(null, id, null);
     chatService.deleteSession(id, currentUser);
     return ApiResponseDTO.success();
@@ -97,7 +97,7 @@ public class ChatController {
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Map<String, Object>> updateSessionKb(
-      @PathVariable Long id,
+      @PathVariable("id") Long id,
       @RequestBody Map<String, Object> body,
       @AuthenticationPrincipal @Nullable UserDO currentUser) {
     attachAuditContext(null, id, null);
@@ -116,7 +116,8 @@ public class ChatController {
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<List<Map<String, Object>>> listMessages(
-      @PathVariable Long sessionId, @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @PathVariable("sessionId") Long sessionId,
+      @AuthenticationPrincipal @Nullable UserDO currentUser) {
     attachAuditContext(null, sessionId, null);
     return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
   }
@@ -128,7 +129,7 @@ public class ChatController {
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Map<String, Object>> sendMessage(
-      @PathVariable Long sessionId,
+      @PathVariable("sessionId") Long sessionId,
       @RequestBody Map<String, String> body,
       @AuthenticationPrincipal @Nullable UserDO currentUser)
       throws java.io.IOException {

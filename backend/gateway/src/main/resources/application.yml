@@ -45,4 +45,4 @@ management:
 
 advisor:
   jwt:
-    secret: ${JWT_SECRET:default-secret-default-secret-default-secret}
+    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}

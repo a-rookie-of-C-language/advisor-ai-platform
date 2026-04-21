@@ -9,6 +9,8 @@ import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuthService;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,7 +34,11 @@ public class AuthServiceImpl implements AuthService {
         userDao
             .findByUsername(request.getUsername())
             .orElseThrow(() -> new NotFoundException("用户不存在"));
-    String token = jwtUtil.generateToken(user);
+    Map<String, Object> extraClaims = new HashMap<>();
+    extraClaims.put("userId", user.getId());
+    extraClaims.put(
+        "role", user.getRole() == null ? UserDO.UserRole.ADVISOR.name() : user.getRole().name());
+    String token = jwtUtil.generateToken(extraClaims, user);
     return LoginResponseDTO.of(token, user);
   }
 
