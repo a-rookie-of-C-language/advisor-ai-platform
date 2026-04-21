@@ -3,8 +3,8 @@ package cn.edu.cqut.advisorplatform.gateway.filter;
 import cn.edu.cqut.advisorplatform.common.trace.TraceHeaderConstants;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,7 +66,8 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
 
   private boolean validate(String token) {
     try {
-      SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+      byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+      SecretKey key = Keys.hmacShaKeyFor(keyBytes);
       Claims ignored =
           Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
       return true;
