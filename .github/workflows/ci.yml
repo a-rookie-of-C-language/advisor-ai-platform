@@ -221,6 +221,12 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Install backend modules to local m2
+        shell: bash
+        run: |
+          cd backend
+          mvn -q -DskipTests install
+
       - name: Start auth-service
         shell: bash
         run: |
