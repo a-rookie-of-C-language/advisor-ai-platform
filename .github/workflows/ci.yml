@@ -152,6 +152,8 @@ jobs:
           MODE: standalone
         ports:
           - 8848:8848
+          - 9848:9848
+          - 9849:9849
 
     env:
       DB_HOST: 127.0.0.1
@@ -227,6 +229,37 @@ jobs:
           cd backend
           mvn -q -DskipTests install
 
+      - name: Wait for Nacos ready (HTTP + gRPC)
+        shell: bash
+        run: |
+          set -e
+
+          echo "Waiting Nacos HTTP (8848)..."
+          for i in {1..90}; do
+            if curl -fsS "http://localhost:8848/nacos/v1/console/health/liveness" >/dev/null; then
+              echo "nacos http is ready"
+              break
+            fi
+            if [ "$i" = "90" ]; then
+              echo "nacos http not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting Nacos gRPC (9848)..."
+          for i in {1..90}; do
+            if (echo > /dev/tcp/127.0.0.1/9848) >/dev/null 2>&1; then
+              echo "nacos grpc is ready"
+              break
+            fi
+            if [ "$i" = "90" ]; then
+              echo "nacos grpc not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
       - name: Start auth-service
         shell: bash
         run: |
@@ -265,19 +298,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
-          echo "Waiting Nacos..."
-          for i in {1..90}; do
-            if curl -fsS "http://localhost:8848/nacos/v1/console/health/liveness" >/dev/null; then
-              echo "nacos is ready"
-              break
-            fi
-            if [ "$i" = "90" ]; then
-              echo "nacos not ready"
-              exit 1
-            fi
-            sleep 2
-          done
 
           echo "Waiting auth-service..."
           for i in {1..120}; do
