@@ -4,6 +4,7 @@ import http from 'node:http';
 
 const DEFAULT_BACKEND = 'http://localhost:8080';
 const DEFAULT_AGENT = 'http://127.0.0.1:8001';
+const TRANSIENT_HTTP_STATUSES = new Set([429, 502, 503, 504]);
 
 function ts() {
   return new Date().toISOString();
@@ -33,26 +34,60 @@ async function fetchJson(url, options = {}) {
   return { res, text, json };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withTransientRetry(label, requestFn, attempts = 8, baseDelayMs = 400) {
+  let lastError = null;
+
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      const result = await requestFn();
+      if (!TRANSIENT_HTTP_STATUSES.has(result.res.status)) {
+        return result;
+      }
+      lastError = new Error(
+        `${label} transient http ${result.res.status}: ${result.text.slice(0, 300)}`,
+      );
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    if (i < attempts) {
+      const delay = Math.min(baseDelayMs * 2 ** (i - 1), 5000);
+      log(`${label} transient failure, retrying`, { attempt: i, delayMs: delay });
+      await sleep(delay);
+    }
+  }
+
+  throw lastError ?? new Error(`${label} failed after retries`);
+}
+
 async function registerAndLogin(baseUrl) {
   const username = randomUser();
   const password = 'Test@123456';
 
   log('register', { username });
-  const reg = await fetchJson(`${baseUrl}/api/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, realName: 'debug-user', phone: '', email: '' }),
-  });
+  const reg = await withTransientRetry('register', () =>
+    fetchJson(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, realName: 'debug-user', phone: '', email: '' }),
+    }),
+  );
   if (!reg.res.ok) {
     throw new Error(`register failed: ${reg.res.status} ${reg.text}`);
   }
 
   log('login', { username });
-  const login = await fetchJson(`${baseUrl}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
+  const login = await withTransientRetry('login', () =>
+    fetchJson(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    }),
+  );
   if (!login.res.ok || !login.json?.data?.token) {
     throw new Error(`login failed: ${login.res.status} ${login.text}`);
   }
