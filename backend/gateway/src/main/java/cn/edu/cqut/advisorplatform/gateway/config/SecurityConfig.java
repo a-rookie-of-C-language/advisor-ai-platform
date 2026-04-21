@@ -20,8 +20,9 @@ public class SecurityConfig {
                 exchange
                     .pathMatchers("/actuator/**", "/internal/health", "/api/auth/**")
                     .permitAll()
+                    // Gateway uses JwtGlobalFilter as the single auth gate for routed APIs.
                     .anyExchange()
-                    .authenticated())
+                    .permitAll())
         .build();
   }
 }
