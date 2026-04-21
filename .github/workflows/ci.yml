@@ -339,6 +339,20 @@ jobs:
             sleep 2
           done
 
+          echo "Warming gateway -> auth-service route..."
+          for i in {1..60}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/auth/__ready__ || true)
+            if [ "$code" = "200" ] || [ "$code" = "400" ] || [ "$code" = "401" ] || [ "$code" = "403" ] || [ "$code" = "404" ] || [ "$code" = "405" ]; then
+              echo "gateway auth route is ready (http=$code)"
+              break
+            fi
+            if [ "$i" = "60" ]; then
+              echo "gateway auth route not ready (last http=$code)"
+              exit 1
+            fi
+            sleep 2
+          done
+
           echo "Waiting agent..."
           for i in {1..120}; do
             if curl -fsS http://localhost:8001/health >/dev/null; then
