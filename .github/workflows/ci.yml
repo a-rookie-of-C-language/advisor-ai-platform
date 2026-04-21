@@ -314,7 +314,7 @@ jobs:
 
           echo "Waiting chat-service..."
           for i in {1..120}; do
-            if curl -fsS http://localhost:8082/internal/health >/dev/null; then
+            if curl -fsS http://localhost:8082/actuator/health >/dev/null; then
               echo "chat-service is ready"
               break
             fi
