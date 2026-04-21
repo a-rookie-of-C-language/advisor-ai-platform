@@ -161,7 +161,9 @@ async function runSmoke(baseUrl, authBaseUrl) {
 
   log('create session');
   const create = await fetchJson(`${baseUrl}/api/chat/sessions`, { method: 'POST', headers: auth });
-  if (!create.res.ok) throw new Error(`create session failed: ${create.res.status}`);
+  if (!create.res.ok) {
+    throw new Error(`create session failed: ${create.res.status} ${create.text}`);
+  }
   const sessionId = create.json?.data?.id;
   if (!sessionId) throw new Error('session id missing');
 
