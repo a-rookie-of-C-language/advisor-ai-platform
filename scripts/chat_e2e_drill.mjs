@@ -64,13 +64,13 @@ async function withTransientRetry(label, requestFn, attempts = 8, baseDelayMs = 
   throw lastError ?? new Error(`${label} failed after retries`);
 }
 
-async function registerAndLogin(baseUrl) {
+async function registerAndLogin(authBaseUrl) {
   const username = randomUser();
   const password = 'Test@123456';
 
   log('register', { username });
   const reg = await withTransientRetry('register', () =>
-    fetchJson(`${baseUrl}/api/auth/register`, {
+    fetchJson(`${authBaseUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password, realName: 'debug-user', phone: '', email: '' }),
@@ -82,7 +82,7 @@ async function registerAndLogin(baseUrl) {
 
   log('login', { username });
   const login = await withTransientRetry('login', () =>
-    fetchJson(`${baseUrl}/api/auth/login`, {
+    fetchJson(`${authBaseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -155,8 +155,8 @@ async function readSseUntilDone(response, hardTimeoutMs = 600_000) {
   return { hasDelta, hasDone, hasError, deltaCount };
 }
 
-async function runSmoke(baseUrl) {
-  const { username, token } = await registerAndLogin(baseUrl);
+async function runSmoke(baseUrl, authBaseUrl) {
+  const { username, token } = await registerAndLogin(authBaseUrl);
   const auth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   log('create session');
@@ -428,14 +428,15 @@ function parseArgs(argv) {
   const mode = argv[2] || 'smoke';
   const baseUrl = argv[3] || DEFAULT_BACKEND;
   const agentBaseUrl = argv[4] || process.env.AGENT_BASE_URL || DEFAULT_AGENT;
-  return { mode, baseUrl, agentBaseUrl };
+  const authBaseUrl = argv[5] || process.env.E2E_AUTH_BASE_URL || baseUrl;
+  return { mode, baseUrl, agentBaseUrl, authBaseUrl };
 }
 
 async function main() {
-  const { mode, baseUrl, agentBaseUrl } = parseArgs(process.argv);
+  const { mode, baseUrl, agentBaseUrl, authBaseUrl } = parseArgs(process.argv);
 
   if (mode === 'smoke') {
-    const result = await runSmoke(baseUrl);
+    const result = await runSmoke(baseUrl, authBaseUrl);
     console.log(JSON.stringify({ ok: true, mode, result }, null, 2));
     return;
   }
@@ -445,7 +446,7 @@ async function main() {
     return;
   }
   if (mode === 'all') {
-    const smoke = await runSmoke(baseUrl);
+    const smoke = await runSmoke(baseUrl, authBaseUrl);
     const timeout = await runTimeoutDrill();
     console.log(JSON.stringify({ ok: true, mode, smoke, timeout }, null, 2));
     return;
@@ -456,7 +457,7 @@ async function main() {
     return;
   }
   if (mode === 'full') {
-    const smoke = await runSmoke(baseUrl);
+    const smoke = await runSmoke(baseUrl, authBaseUrl);
     const timeout = await runTimeoutDrill();
     const auth = await runAgentAuthDrill(agentBaseUrl);
     console.log(JSON.stringify({ ok: true, mode, smoke, timeout, auth }, null, 2));

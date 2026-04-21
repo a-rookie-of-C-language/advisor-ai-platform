@@ -179,6 +179,7 @@ jobs:
       MEMORY_API_MAX_RETRIES: 2
       MEMORY_API_RETRY_BACKOFF_SEC: 0.3
       NACOS_SERVER_ADDR: 127.0.0.1:8848
+      E2E_AUTH_BASE_URL: http://localhost:8081
 
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -264,19 +265,19 @@ jobs:
         shell: bash
         run: |
           cd backend/auth-service
-          nohup mvn -q spring-boot:run > ../../auth-e2e.log 2>&1 &
+          nohup env SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8081 mvn -q spring-boot:run > ../../auth-e2e.log 2>&1 &
 
       - name: Start chat-service
         shell: bash
         run: |
           cd backend/chat-service
-          nohup env SERVER_PORT=8082 SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/advisor_ai mvn -q spring-boot:run > ../../chat-e2e.log 2>&1 &
+          nohup env SERVER_PORT=8082 SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/advisor_ai SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8082 mvn -q spring-boot:run > ../../chat-e2e.log 2>&1 &
 
       - name: Start audit-service
         shell: bash
         run: |
           cd backend/audit-service
-          nohup mvn -q spring-boot:run > ../../audit-e2e.log 2>&1 &
+          nohup env SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8085 mvn -q spring-boot:run > ../../audit-e2e.log 2>&1 &
 
       - name: Start gateway
         shell: bash
