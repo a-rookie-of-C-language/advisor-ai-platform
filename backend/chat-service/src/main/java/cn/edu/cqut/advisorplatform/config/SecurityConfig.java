@@ -51,6 +51,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/api/memory/**")
                     .permitAll()
+                    .requestMatchers("/actuator/health/**", "/actuator/info")
+                    .permitAll()
                     .requestMatchers("/api/audit/**")
                     .hasRole("ADMIN")
                     .anyRequest()
