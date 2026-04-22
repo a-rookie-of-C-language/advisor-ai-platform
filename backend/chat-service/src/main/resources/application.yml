@@ -39,8 +39,8 @@ spring:
 
 advisor:
   jwt:
-    secret: ${JWT_SECRET}
-    expiration: 86400000
+    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}
+    expiration: ${JWT_EXPIRE_MS:86400000}
   rag:
     upload-dir: ${RAG_UPLOAD_DIR:uploads}
   memory:

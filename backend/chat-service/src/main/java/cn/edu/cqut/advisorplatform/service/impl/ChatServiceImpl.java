@@ -1,8 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.client.RagServiceClient;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
+import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
@@ -29,7 +30,7 @@ public class ChatServiceImpl implements ChatService {
 
   private final ChatSessionDao chatSessionDao;
   private final ChatMessageDao chatMessageDao;
-  private final RagKnowledgeBaseDao ragKnowledgeBaseDao;
+  private final RagServiceClient ragServiceClient;
 
   @Override
   public List<Map<String, Object>> listSessions(@Nullable UserDO currentUser) {
@@ -69,7 +70,9 @@ public class ChatServiceImpl implements ChatService {
     if (kbId == null || kbId <= 0) {
       session.setKbId(DEFAULT_KB_ID);
     } else {
-      ragKnowledgeBaseDao.findById(kbId).orElseThrow(() -> new NotFoundException("知识库不存在"));
+      if (!existsKnowledgeBase(kbId)) {
+        throw new NotFoundException("知识库不存在");
+      }
       session.setKbId(kbId);
     }
     session.setUpdatedAt(LocalDateTime.now());
@@ -143,5 +146,17 @@ public class ChatServiceImpl implements ChatService {
       throw new ForbiddenException("未登录或登录已失效");
     }
     return userId;
+  }
+
+  private boolean existsKnowledgeBase(Long kbId) {
+    try {
+      ApiResponseDTO<Map<String, Boolean>> response = ragServiceClient.existsKnowledgeBase(kbId);
+      if (response == null || response.getData() == null) {
+        return false;
+      }
+      return Boolean.TRUE.equals(response.getData().get("exists"));
+    } catch (Exception ignored) {
+      return false;
+    }
   }
 }
