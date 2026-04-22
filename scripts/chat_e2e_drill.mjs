@@ -38,6 +38,30 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function pickDiagHeaders(headers) {
+  const keep = [
+    'www-authenticate',
+    'x-trace-id',
+    'x-request-id',
+    'content-type',
+    'server',
+  ];
+  const out = {};
+  for (const k of keep) {
+    const v = headers.get(k);
+    if (v) {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function tokenDigest(token) {
+  if (!token || typeof token !== 'string') return 'empty';
+  const prefix = token.slice(0, 12);
+  return `${prefix}...(${token.length})`;
+}
+
 async function withTransientRetry(label, requestFn, attempts = 8, baseDelayMs = 400) {
   let lastError = null;
 
@@ -162,7 +186,14 @@ async function runSmoke(baseUrl, authBaseUrl) {
   log('create session');
   const create = await fetchJson(`${baseUrl}/api/chat/sessions`, { method: 'POST', headers: auth });
   if (!create.res.ok) {
-    throw new Error(`create session failed: ${create.res.status} ${create.text}`);
+    const diag = {
+      status: create.res.status,
+      body: create.text,
+      headers: pickDiagHeaders(create.res.headers),
+      authHeader: auth.Authorization ? 'present' : 'missing',
+      tokenDigest: tokenDigest(token),
+    };
+    throw new Error(`create session failed: ${JSON.stringify(diag)}`);
   }
   const sessionId = create.json?.data?.id;
   if (!sessionId) throw new Error('session id missing');

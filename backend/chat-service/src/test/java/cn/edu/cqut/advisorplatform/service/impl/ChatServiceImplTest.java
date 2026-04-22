@@ -4,10 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cn.edu.cqut.advisorplatform.client.RagServiceClient;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +26,8 @@ class ChatServiceImplTest {
 
   @Mock private ChatMessageDao chatMessageDao;
 
+  @Mock private RagServiceClient ragServiceClient;
+
   @InjectMocks private ChatServiceImpl chatService;
 
   @Test
@@ -31,7 +36,7 @@ class ChatServiceImplTest {
 
     ChatSessionDO saved = new ChatSessionDO();
     saved.setId(1001L);
-    saved.setTitle("\u65b0\u5bf9\u8bdd");
+    saved.setTitle("新对话");
     saved.setKbId(0L);
     saved.setUser(user);
     when(chatSessionDao.save(org.mockito.ArgumentMatchers.any(ChatSessionDO.class)))
@@ -57,6 +62,25 @@ class ChatServiceImplTest {
     long kbId = chatService.getSessionKbId(1001L, user);
 
     assertThat(kbId).isEqualTo(0L);
+  }
+
+  @Test
+  void updateSessionKb_shouldUseRemoteRagCheck() {
+    UserDO user = buildUser();
+    ChatSessionDO session = new ChatSessionDO();
+    session.setId(2001L);
+    session.setKbId(0L);
+    session.setUser(user);
+
+    when(chatSessionDao.findById(2001L)).thenReturn(Optional.of(session));
+    when(ragServiceClient.existsKnowledgeBase(3001L))
+        .thenReturn(ApiResponseDTO.success(Map.of("exists", true)));
+    when(chatSessionDao.save(session)).thenReturn(session);
+
+    chatService.updateSessionKb(2001L, 3001L, user);
+
+    assertThat(session.getKbId()).isEqualTo(3001L);
+    verify(ragServiceClient).existsKnowledgeBase(3001L);
   }
 
   private UserDO buildUser() {
