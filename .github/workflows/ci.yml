@@ -265,7 +265,7 @@ jobs:
         shell: bash
         run: |
           cd backend/auth-service
-          nohup env SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8081 mvn -q spring-boot:run > ../../auth-e2e.log 2>&1 &
+          nohup env SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8081 ADVISOR_JWT_SECRET=${JWT_SECRET} mvn -q spring-boot:run > ../../auth-e2e.log 2>&1 &
 
       - name: Start chat-service
         shell: bash
@@ -279,11 +279,17 @@ jobs:
           cd backend/audit-service
           nohup env SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8085 mvn -q spring-boot:run > ../../audit-e2e.log 2>&1 &
 
+      - name: Start rag-service
+        shell: bash
+        run: |
+          cd backend/rag-service
+          nohup env SERVER_PORT=8083 SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8083 ADVISOR_JWT_SECRET=${JWT_SECRET} mvn -q spring-boot:run > ../../rag-e2e.log 2>&1 &
+
       - name: Start gateway
         shell: bash
         run: |
           cd backend/gateway
-          nohup env SERVER_PORT=8080 mvn -q spring-boot:run > ../../gateway-e2e.log 2>&1 &
+          nohup env SERVER_PORT=8080 ADVISOR_JWT_SECRET=${JWT_SECRET} mvn -q spring-boot:run > ../../gateway-e2e.log 2>&1 &
 
       - name: Start agent (.venv)
         shell: bash
@@ -321,6 +327,19 @@ jobs:
             fi
             if [ "$i" = "120" ]; then
               echo "chat-service not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting rag-service..."
+          for i in {1..120}; do
+            if curl -fsS http://localhost:8083/actuator/health >/dev/null; then
+              echo "rag-service is ready"
+              break
+            fi
+            if [ "$i" = "120" ]; then
+              echo "rag-service not ready"
               exit 1
             fi
             sleep 2
@@ -370,6 +389,9 @@ jobs:
       - name: Run chat e2e drill (full)
         run: node scripts/chat_e2e_drill.mjs full http://localhost:8080 http://127.0.0.1:8001
 
+      - name: Run rag e2e drill
+        run: node scripts/rag_e2e_drill.mjs http://localhost:8080 http://localhost:8081
+
       - name: Print logs on failure
         if: failure()
         shell: bash
@@ -380,6 +402,8 @@ jobs:
           tail -n 300 auth-e2e.log || true
           echo "===== chat-e2e.log (tail 300) ====="
           tail -n 300 chat-e2e.log || true
+          echo "===== rag-e2e.log (tail 300) ====="
+          tail -n 300 rag-e2e.log || true
           echo "===== audit-e2e.log (tail 300) ====="
           tail -n 300 audit-e2e.log || true
           echo "===== agent-e2e.log (tail 300) ====="
@@ -394,5 +418,6 @@ jobs:
             gateway-e2e.log
             auth-e2e.log
             chat-e2e.log
+            rag-e2e.log
             audit-e2e.log
             agent-e2e.log

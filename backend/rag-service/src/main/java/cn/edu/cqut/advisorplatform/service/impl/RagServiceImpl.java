@@ -167,6 +167,14 @@ public class RagServiceImpl implements RagService {
     documentDao.deleteById(id);
   }
 
+  @Override
+  public boolean existsKnowledgeBase(Long id) {
+    if (id == null || id <= 0) {
+      return false;
+    }
+    return knowledgeBaseDao.existsById(id);
+  }
+
   private boolean isKnowledgeBaseOwner(RagKnowledgeBaseDO kb, @Nullable UserDO currentUser) {
     if (kb == null || currentUser == null || currentUser.getId() == null) {
       return false;

@@ -22,4 +22,6 @@ public interface RagService {
       Long kbId, MultipartFile file, @Nullable UserDO currentUser);
 
   void deleteDocument(Long id, @Nullable UserDO currentUser);
+
+  boolean existsKnowledgeBase(Long id);
 }
