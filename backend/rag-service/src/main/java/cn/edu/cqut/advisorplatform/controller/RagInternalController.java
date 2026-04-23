@@ -21,4 +21,3 @@ public class RagInternalController {
     return ApiResponseDTO.success(Map.of("exists", ragService.existsKnowledgeBase(id)));
   }
 }
-
