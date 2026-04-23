@@ -154,6 +154,10 @@ jobs:
           - 8848:8848
           - 9848:9848
           - 9849:9849
+      jaeger:
+        image: jaegertracing/all-in-one:1.57
+        ports:
+          - 4318:4318
 
     env:
       DB_HOST: 127.0.0.1
@@ -180,6 +184,7 @@ jobs:
       MEMORY_API_RETRY_BACKOFF_SEC: 0.3
       NACOS_SERVER_ADDR: 127.0.0.1:8848
       E2E_AUTH_BASE_URL: http://localhost:8081
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318/v1/traces
 
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -333,13 +338,15 @@ jobs:
           done
 
           echo "Waiting rag-service..."
-          for i in {1..120}; do
+          for i in {1..180}; do
             if curl -fsS http://localhost:8083/actuator/health >/dev/null; then
               echo "rag-service is ready"
               break
             fi
-            if [ "$i" = "120" ]; then
+            if [ "$i" = "180" ]; then
               echo "rag-service not ready"
+              echo "===== rag-e2e.log (tail 200) ====="
+              tail -n 200 rag-e2e.log || true
               exit 1
             fi
             sleep 2
