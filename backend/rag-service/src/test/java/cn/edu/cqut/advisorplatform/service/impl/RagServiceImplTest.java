@@ -77,4 +77,3 @@ class RagServiceImplTest {
     verify(documentDao).deleteById(30L);
   }
 }
-

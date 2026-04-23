@@ -38,7 +38,10 @@ public class SecurityConfig {
                     .requestMatchers("/error")
                     .permitAll()
                     .requestMatchers(
-                        "/actuator/health/**", "/actuator/info", "/internal/health", "/internal/rag/**")
+                        "/actuator/health/**",
+                        "/actuator/info",
+                        "/internal/health",
+                        "/internal/rag/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())
