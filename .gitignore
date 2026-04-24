@@ -18,3 +18,4 @@ java-upgrade/
 pytest**/
 **cache**/
 .tmp/
+agent/tests/reports/*.json

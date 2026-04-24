@@ -1,0 +1,11 @@
+{
+  "accuracy_min": 0.9,
+  "task_completion_rate_min": 0.9,
+  "quality_score_min": 0.85,
+  "intent_hit_rate_min": 0.9,
+  "exception_error_rate_max": 0.02,
+  "business_failure_rate_max": 0.02,
+  "timeout_rate_max": 0.01,
+  "p95_latency_ms_max": 1000,
+  "case_timeout_ms": 1000
+}

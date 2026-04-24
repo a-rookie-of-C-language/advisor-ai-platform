@@ -1,0 +1,92 @@
+[
+  {
+    "case_id": "basic_consultation",
+    "message": "我最近学习压力很大，应该怎么调整？",
+    "expected_intent": "student_support",
+    "expected_answer_keywords": ["学习压力", "作息", "求助"],
+    "quality_keywords": ["倾听", "作息", "辅导员", "求助"],
+    "mock_answer": "我理解你的学习压力。可以先稳定作息，拆分任务，也可以向辅导员或心理支持渠道求助。",
+    "mock_latency_ms": 12
+  },
+  {
+    "case_id": "policy_question",
+    "message": "奖学金评定一般需要看哪些材料？",
+    "expected_intent": "policy_qa",
+    "expected_answer_keywords": ["奖学金", "成绩", "材料"],
+    "quality_keywords": ["奖学金", "成绩", "综测", "材料"],
+    "mock_answer": "奖学金评定通常会参考成绩、综测表现、证明材料和学院通知要求，建议以最新通知为准。",
+    "mock_latency_ms": 8
+  },
+  {
+    "case_id": "rag_lookup",
+    "message": "帮我查一下知识库里关于请假流程的说明",
+    "expected_intent": "rag_lookup",
+    "expected_answer_keywords": ["请假流程", "知识库", "审批"],
+    "quality_keywords": ["请假流程", "知识库", "审批", "辅导员"],
+    "mock_answer": "根据知识库，请假流程通常包括提交申请、辅导员或学院审批，并按要求补充证明材料。",
+    "mock_latency_ms": 16
+  },
+  {
+    "case_id": "memory_followup",
+    "message": "结合我上次提到的考研计划，给我一个本周安排",
+    "expected_intent": "memory_followup",
+    "expected_answer_keywords": ["考研计划", "本周", "复习"],
+    "quality_keywords": ["考研计划", "本周", "复习", "调整"],
+    "mock_answer": "结合你的考研计划，本周可以安排英语、专业课和政治复习，并在周末复盘后调整节奏。",
+    "mock_latency_ms": 10
+  },
+  {
+    "case_id": "safety_referral",
+    "message": "学生情绪很低落，辅导员应该先做什么？",
+    "expected_intent": "risk_support",
+    "expected_answer_keywords": ["情绪", "风险", "转介"],
+    "quality_keywords": ["情绪", "风险", "转介", "记录"],
+    "mock_answer": "应先稳定沟通并评估情绪风险，必要时及时转介心理中心，同时做好记录和持续跟进。",
+    "mock_latency_ms": 14
+  },
+  {
+    "case_id": "session_summary",
+    "message": "请总结一下这次谈话重点",
+    "expected_intent": "summary",
+    "expected_answer_keywords": ["总结", "重点", "后续"],
+    "quality_keywords": ["总结", "重点", "问题", "后续"],
+    "mock_answer": "本次总结重点包括当前问题、已确认的信息和后续行动，建议继续跟踪执行情况。",
+    "mock_latency_ms": 6
+  },
+  {
+    "case_id": "action_plan",
+    "message": "帮我给学业预警学生做一个沟通计划",
+    "expected_intent": "action_plan",
+    "expected_answer_keywords": ["学业预警", "沟通计划", "跟进"],
+    "quality_keywords": ["学业预警", "沟通计划", "原因", "跟进"],
+    "mock_answer": "学业预警沟通计划可包括了解原因、确认课程风险、制定补救安排，并约定后续跟进节点。",
+    "mock_latency_ms": 18
+  },
+  {
+    "case_id": "boundary_short_input",
+    "message": "帮我看看",
+    "expected_intent": "clarification",
+    "expected_answer_keywords": ["具体", "补充", "问题"],
+    "quality_keywords": ["具体", "补充", "问题", "信息"],
+    "mock_answer": "可以的，但还需要你补充更具体的问题、背景信息和希望我协助的方向。",
+    "mock_latency_ms": 5
+  },
+  {
+    "case_id": "career_guidance",
+    "message": "学生问就业和升学怎么选，我该怎么引导？",
+    "expected_intent": "career_guidance",
+    "expected_answer_keywords": ["就业", "升学", "引导"],
+    "quality_keywords": ["就业", "升学", "兴趣", "能力"],
+    "mock_answer": "可以从兴趣、能力、家庭情况和长期目标入手，引导学生比较就业与升学的成本和收益。",
+    "mock_latency_ms": 11
+  },
+  {
+    "case_id": "campus_process",
+    "message": "新生入学材料漏交了怎么办？",
+    "expected_intent": "campus_process",
+    "expected_answer_keywords": ["入学材料", "补交", "学院"],
+    "quality_keywords": ["入学材料", "补交", "学院", "截止时间"],
+    "mock_answer": "建议尽快联系学院确认补交流程、截止时间和所需入学材料，避免影响后续手续。",
+    "mock_latency_ms": 9
+  }
+]
