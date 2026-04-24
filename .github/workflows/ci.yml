@@ -128,6 +128,14 @@ jobs:
           source .venv/bin/activate
           pytest -q
 
+      - name: Upload agent mock e2e metrics report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-http-e2e-metrics
+          path: agent/tests/reports/*.json
+          if-no-files-found: ignore
+
   e2e-chat:
     name: E2E Chat Drill (Gateway + Services + Agent)
     runs-on: ubuntu-latest
