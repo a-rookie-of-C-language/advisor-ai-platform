@@ -19,3 +19,4 @@ pytest**/
 **cache**/
 .tmp/
 agent/tests/reports/*.json
+scripts/jmeter/results/
