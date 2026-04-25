@@ -55,6 +55,18 @@ public class JwtUtil {
     return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
   }
 
+  public boolean isTokenExpired(Claims claims) {
+    return claims == null || claims.getExpiration() == null || claims.getExpiration().before(new Date());
+  }
+
+  public boolean isAccessToken(Claims claims) {
+    if (claims == null) {
+      return false;
+    }
+    String type = claims.get("type", String.class);
+    return type == null || "access".equalsIgnoreCase(type);
+  }
+
   private boolean isTokenExpired(String token) {
     return extractExpiration(token).before(new Date());
   }

@@ -35,3 +35,9 @@ management:
 logging:
   pattern:
     level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
+
+advisor:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:${MEMORY_API_TOKEN:}}
+  jwt:
+    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}

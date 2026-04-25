@@ -38,6 +38,8 @@ spring:
       max-request-size: 50MB
 
 advisor:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:${MEMORY_API_TOKEN:}}
   jwt:
     secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}
     expiration: ${JWT_EXPIRE_MS:86400000}

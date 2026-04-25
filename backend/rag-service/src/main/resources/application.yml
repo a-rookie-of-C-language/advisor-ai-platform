@@ -37,6 +37,8 @@ logging:
     level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
 
 advisor:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:${MEMORY_API_TOKEN:}}
   rag:
     upload-dir: ${RAG_UPLOAD_DIR:uploads}
   jwt:

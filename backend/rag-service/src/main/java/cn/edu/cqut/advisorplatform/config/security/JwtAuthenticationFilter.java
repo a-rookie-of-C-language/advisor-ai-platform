@@ -43,6 +43,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
       return;
     }
+    if (!jwtUtil.isAccessToken(claims) || jwtUtil.isTokenExpired(claims)) {
+      filterChain.doFilter(request, response);
+      return;
+    }
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
       UserDO principal = buildPrincipal(claims);

@@ -39,10 +39,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     try {
       claims = jwtUtil.extractClaims(jwt);
     } catch (JwtException | IllegalArgumentException e) {
-      // token invalid or expired, let downstream security rules return unauthorized
       filterChain.doFilter(request, response);
       return;
     }
+
     if (!jwtUtil.isAccessToken(claims) || jwtUtil.isTokenExpired(claims)) {
       filterChain.doFilter(request, response);
       return;
@@ -57,6 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authToken);
       }
     }
+
     filterChain.doFilter(request, response);
   }
 
@@ -64,14 +65,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     if (claims == null) {
       return null;
     }
+
     String username = claims.getSubject();
     Long userId = parseLong(claims.get("userId"));
     if (username == null || username.isBlank() || userId == null) {
       return null;
     }
 
-    String roleClaim = claims.get("role", String.class);
     UserDO.UserRole role = UserDO.UserRole.ADVISOR;
+    String roleClaim = claims.get("role", String.class);
     if (roleClaim != null && !roleClaim.isBlank()) {
       try {
         role = UserDO.UserRole.valueOf(roleClaim.trim().toUpperCase());
