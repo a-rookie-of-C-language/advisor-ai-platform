@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.config;
 
 import cn.edu.cqut.advisorplatform.config.security.JwtAuthenticationFilter;
+import cn.edu.cqut.advisorplatform.config.security.InternalServiceTokenFilter;
 import cn.edu.cqut.advisorplatform.config.security.MemoryApiTokenFilter;
 import jakarta.servlet.DispatcherType;
 import java.util.List;
@@ -32,6 +33,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final InternalServiceTokenFilter internalServiceTokenFilter;
   private final MemoryApiTokenFilter memoryApiTokenFilter;
   private final UserDetailsService userDetailsService;
 
@@ -49,6 +51,10 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/api/auth/**")
                     .permitAll()
+                    .requestMatchers("/internal/health")
+                    .permitAll()
+                    .requestMatchers("/internal/**")
+                    .hasRole("INTERNAL")
                     .requestMatchers("/api/memory/**")
                     .permitAll()
                     .requestMatchers("/actuator/health/**", "/actuator/info")
@@ -60,6 +66,7 @@ public class SecurityConfig {
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authenticationProvider(authenticationProvider())
+        .addFilterBefore(internalServiceTokenFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(memoryApiTokenFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(jwtAuthenticationFilter, MemoryApiTokenFilter.class);
 

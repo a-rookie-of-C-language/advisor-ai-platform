@@ -1,16 +1,17 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.config.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
 import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.LogoutRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.RefreshTokenRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuthService;
-import java.util.HashMap;
-import java.util.Map;
+import cn.edu.cqut.advisorplatform.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,8 +24,8 @@ public class AuthServiceImpl implements AuthService {
 
   private final UserDao userDao;
   private final PasswordEncoder passwordEncoder;
-  private final JwtUtil jwtUtil;
   private final AuthenticationManager authenticationManager;
+  private final RefreshTokenService refreshTokenService;
 
   @Override
   public LoginResponseDTO login(LoginRequestDTO request) {
@@ -34,12 +35,14 @@ public class AuthServiceImpl implements AuthService {
         userDao
             .findByUsername(request.getUsername())
             .orElseThrow(() -> new NotFoundException("用户不存在"));
-    Map<String, Object> extraClaims = new HashMap<>();
-    extraClaims.put("userId", user.getId());
-    extraClaims.put(
-        "role", user.getRole() == null ? UserDO.UserRole.ADVISOR.name() : user.getRole().name());
-    String token = jwtUtil.generateToken(extraClaims, user);
-    return LoginResponseDTO.of(token, user);
+
+    TokenPairResponseDTO tokenPair = refreshTokenService.issueTokenPair(user);
+    return LoginResponseDTO.of(
+        tokenPair.getAccessToken(),
+        tokenPair.getRefreshToken(),
+        tokenPair.getAccessExpiresIn(),
+        tokenPair.getRefreshExpiresIn(),
+        user);
   }
 
   @Override
@@ -55,5 +58,20 @@ public class AuthServiceImpl implements AuthService {
     user.setEmail(request.getEmail());
     user.setRole(UserDO.UserRole.ADVISOR);
     userDao.save(user);
+  }
+
+  @Override
+  public TokenPairResponseDTO refresh(RefreshTokenRequestDTO request) {
+    return refreshTokenService.refresh(request.getRefreshToken());
+  }
+
+  @Override
+  public void logout(LogoutRequestDTO request) {
+    refreshTokenService.logout(request.getRefreshToken());
+  }
+
+  @Override
+  public void logoutAll(Long userId) {
+    refreshTokenService.logoutAll(userId);
   }
 }

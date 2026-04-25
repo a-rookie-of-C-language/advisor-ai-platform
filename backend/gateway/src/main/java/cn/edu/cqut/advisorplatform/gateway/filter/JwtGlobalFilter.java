@@ -27,7 +27,13 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
   private static final Logger log = LoggerFactory.getLogger(JwtGlobalFilter.class);
 
   private static final List<String> WHITE_LIST =
-      List.of("/api/auth/login", "/api/auth/register", "/actuator", "/internal/health");
+      List.of(
+          "/api/auth/login",
+          "/api/auth/register",
+          "/api/auth/refresh",
+          "/api/auth/logout",
+          "/actuator",
+          "/internal/health");
 
   @Value("${advisor.jwt.secret:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}")
   private String jwtSecret;
@@ -98,8 +104,11 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
     try {
       byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
       Key key = Keys.hmacShaKeyFor(keyBytes);
-      Claims ignored =
+      Claims claims =
           Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      if (!isAccessToken(claims)) {
+        return new ValidationResult(false, "invalid_token_type");
+      }
       return new ValidationResult(true, "ok");
     } catch (Exception ex) {
       return new ValidationResult(false, ex.getClass().getSimpleName());
@@ -109,12 +118,23 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
   private ValidationResult validateWithRawKey(String token) {
     try {
       Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-      Claims ignored =
+      Claims claims =
           Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      if (!isAccessToken(claims)) {
+        return new ValidationResult(false, "invalid_token_type");
+      }
       return new ValidationResult(true, "ok");
     } catch (Exception ex) {
       return new ValidationResult(false, ex.getClass().getSimpleName());
     }
+  }
+
+  private boolean isAccessToken(Claims claims) {
+    if (claims == null) {
+      return false;
+    }
+    String type = claims.get("type", String.class);
+    return type == null || "access".equalsIgnoreCase(type);
   }
 
   private String maskToken(String token) {
