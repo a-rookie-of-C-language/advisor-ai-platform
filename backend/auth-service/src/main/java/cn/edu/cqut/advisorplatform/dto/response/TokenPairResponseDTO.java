@@ -1,4 +1,5 @@
 package cn.edu.cqut.advisorplatform.dto.response;
+
 import lombok.Data;
 
 @Data
