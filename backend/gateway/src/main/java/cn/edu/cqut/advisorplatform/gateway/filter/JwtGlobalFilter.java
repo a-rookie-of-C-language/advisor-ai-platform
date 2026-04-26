@@ -30,6 +30,7 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
       List.of(
           "/api/auth/login",
           "/api/auth/register",
+          "/api/auth/__ready__",
           "/api/auth/refresh",
           "/api/auth/logout",
           "/actuator",
