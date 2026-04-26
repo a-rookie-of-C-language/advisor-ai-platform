@@ -49,7 +49,9 @@ public class InternalServiceTokenFilter extends OncePerRequestFilter {
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       response.setCharacterEncoding(StandardCharsets.UTF_8.name());
       response.setContentType("application/json;charset=UTF-8");
-      response.getWriter().write("{\"code\":401,\"message\":\"internal api unauthorized\",\"data\":null}");
+      response
+          .getWriter()
+          .write("{\"code\":401,\"message\":\"internal api unauthorized\",\"data\":null}");
       return;
     }
 

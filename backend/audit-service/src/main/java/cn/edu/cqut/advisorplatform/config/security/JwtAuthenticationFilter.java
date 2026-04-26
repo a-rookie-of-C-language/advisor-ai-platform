@@ -53,7 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       String username = claims.getSubject();
       if (username != null && !username.isBlank()) {
         String roleClaim = claims.get("role", String.class);
-        String role = roleClaim == null || roleClaim.isBlank() ? "ADVISOR" : roleClaim.trim().toUpperCase();
+        String role =
+            roleClaim == null || roleClaim.isBlank() ? "ADVISOR" : roleClaim.trim().toUpperCase();
         UsernamePasswordAuthenticationToken authToken =
             new UsernamePasswordAuthenticationToken(
                 username, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
