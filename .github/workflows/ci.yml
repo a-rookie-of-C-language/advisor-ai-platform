@@ -298,6 +298,12 @@ jobs:
           cd backend/rag-service
           nohup env SERVER_PORT=8083 SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8083 ADVISOR_JWT_SECRET=${JWT_SECRET} mvn -q spring-boot:run > ../../rag-e2e.log 2>&1 &
 
+      - name: Start memory-service
+        shell: bash
+        run: |
+          cd backend/memory-service
+          nohup env SERVER_PORT=8084 SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8084 ADVISOR_JWT_SECRET=${JWT_SECRET} mvn -q spring-boot:run > ../../memory-e2e.log 2>&1 &
+
       - name: Start gateway
         shell: bash
         run: |
@@ -355,6 +361,21 @@ jobs:
               echo "rag-service not ready"
               echo "===== rag-e2e.log (tail 200) ====="
               tail -n 200 rag-e2e.log || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "Waiting memory-service..."
+          for i in {1..180}; do
+            if curl -fsS http://localhost:8084/actuator/health >/dev/null; then
+              echo "memory-service is ready"
+              break
+            fi
+            if [ "$i" = "180" ]; then
+              echo "memory-service not ready"
+              echo "===== memory-e2e.log (tail 200) ====="
+              tail -n 200 memory-e2e.log || true
               exit 1
             fi
             sleep 2
@@ -421,6 +442,8 @@ jobs:
           tail -n 300 rag-e2e.log || true
           echo "===== audit-e2e.log (tail 300) ====="
           tail -n 300 audit-e2e.log || true
+          echo "===== memory-e2e.log (tail 300) ====="
+          tail -n 300 memory-e2e.log || true
           echo "===== agent-e2e.log (tail 300) ====="
           tail -n 300 agent-e2e.log || true
 
@@ -435,4 +458,5 @@ jobs:
             chat-e2e.log
             rag-e2e.log
             audit-e2e.log
+            memory-e2e.log
             agent-e2e.log

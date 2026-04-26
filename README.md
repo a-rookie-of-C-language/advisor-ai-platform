@@ -101,3 +101,12 @@ node scripts/chat_e2e_drill.mjs smoke http://localhost:8080 http://127.0.0.1:800
 - 文档上传后一直是 `PENDING`：检查 Agent 是否运行、`DATABASE_URL` 是否正确。
 - 检索报向量错误：确认数据库已安装 pgvector，且 `rag_document_chunk.embedding` 维度与模型一致。
 - 前端 401：检查登录态与后端 JWT 配置。
+
+## Memory Service 服务说明（2026-04-26）
+
+- `/api/memory/**` 已正式迁移到 `backend/memory-service`，不再由 `chat-service` 承担。
+- 联调时请确保 `memory-service` 与其他微服务一起启动。
+- 关键配置：
+  - `MEMORY_API_TOKEN`：Agent 调用 `/api/memory/**` 的鉴权 token
+  - `JWT_SECRET`：JWT 验签密钥
+  - `DB_*`：PostgreSQL 连接信息
