@@ -81,9 +81,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     String username = claims.getSubject();
     UserDO user =
-        userDao
-            .findByUsername(username)
-            .orElseThrow(() -> new NotFoundException("用户不存在"));
+        userDao.findByUsername(username).orElseThrow(() -> new NotFoundException("用户不存在"));
 
     return issueTokenPair(user);
   }
@@ -128,7 +126,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
   private Map<String, Object> buildClaims(UserDO user) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("userId", user.getId());
-    claims.put("role", user.getRole() == null ? UserDO.UserRole.ADVISOR.name() : user.getRole().name());
+    claims.put(
+        "role", user.getRole() == null ? UserDO.UserRole.ADVISOR.name() : user.getRole().name());
     return claims;
   }
 
