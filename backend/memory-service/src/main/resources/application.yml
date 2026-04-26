@@ -8,6 +8,21 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
 
 management:
   tracing:
@@ -24,3 +39,24 @@ management:
 logging:
   pattern:
     level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-} turnId=%X{turnId:-}]"
+
+advisor:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:${MEMORY_API_TOKEN:}}
+  jwt:
+    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}
+    expiration: ${JWT_EXPIRE_MS:86400000}
+  memory:
+    api-token: ${MEMORY_API_TOKEN:}
+    vector-store: ${MEMORY_VECTOR_STORE:pgvector}
+    hybrid:
+      vector-weight: ${MEMORY_HYBRID_VECTOR_WEIGHT:0.7}
+      text-weight: ${MEMORY_HYBRID_TEXT_WEIGHT:0.3}
+    cleanup:
+      enabled: ${MEMORY_CLEANUP_ENABLED:true}
+      cron: ${MEMORY_CLEANUP_CRON:0 0 3 * * ?}
+  embedding:
+    model: ${EMBEDDING_MODEL:bge-m3}
+    dimension: ${EMBEDDING_DIM:1024}
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
