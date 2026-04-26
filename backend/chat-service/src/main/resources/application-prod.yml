@@ -34,9 +34,9 @@ logging:
 
 advisor:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
   memory:
-    api-token: ${MEMORY_API_TOKEN:}
+    api-token: ${MEMORY_API_TOKEN:${INTERNAL_SERVICE_TOKEN:arookieofc}}
     vector-store: pgvector
   embedding:
     model: bge-m3
@@ -45,6 +45,6 @@ advisor:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
   agent:
     base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
-    api-token: ${AGENT_API_TOKEN:}
+    api-token: ${AGENT_API_TOKEN:${INTERNAL_SERVICE_TOKEN:arookieofc}}
     timeout-ms: 600000
     debug-stream: false

@@ -1,0 +1,4 @@
+case_id,query,candidate_text,summary_seed
+memory_case_a,memory e2e candidate,memory pressure candidate A,memory-summary-A
+memory_case_b,memory long term,memory pressure candidate B,memory-summary-B
+memory_case_c,task pending backlog,memory pressure candidate C,memory-summary-C

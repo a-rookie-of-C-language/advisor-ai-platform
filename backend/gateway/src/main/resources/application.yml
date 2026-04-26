@@ -2,12 +2,17 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:nacos:advisor-ai-platform-common.yaml
   application:
     name: gateway
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        file-extension: yaml
     gateway:
       routes:
         - id: auth-service
@@ -45,4 +50,4 @@ management:
 
 advisor:
   jwt:
-    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}

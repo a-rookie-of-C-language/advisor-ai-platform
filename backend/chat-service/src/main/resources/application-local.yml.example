@@ -11,9 +11,11 @@ spring:
 
 advisor:
   jwt:
-    secret: your_base64_encoded_jwt_secret
+    secret: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+  internal:
+    token: arookieofc
   memory:
-    api-token: your_memory_api_token
+    api-token: arookieofc
     vector-store: pgvector
   embedding:
     model: bge-m3
@@ -22,6 +24,6 @@ advisor:
     base-url: http://localhost:11434
   agent:
     base-url: http://127.0.0.1:8001
-    api-token: your_agent_api_token
+    api-token: arookieofc
     timeout-ms: 600000
     debug-stream: false

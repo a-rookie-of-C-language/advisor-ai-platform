@@ -2,12 +2,17 @@ server:
   port: 8084
 
 spring:
+  config:
+    import: optional:nacos:advisor-ai-platform-common.yaml
   application:
     name: memory-service
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        file-extension: yaml
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
     username: ${DB_USERNAME:postgres}
@@ -42,12 +47,12 @@ logging:
 
 advisor:
   internal:
-    token: ${INTERNAL_SERVICE_TOKEN:${MEMORY_API_TOKEN:}}
+    token: ${INTERNAL_SERVICE_TOKEN:arookieofc}
   jwt:
-    secret: ${JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
     expiration: ${JWT_EXPIRE_MS:86400000}
   memory:
-    api-token: ${MEMORY_API_TOKEN:}
+    api-token: ${MEMORY_API_TOKEN:${INTERNAL_SERVICE_TOKEN:arookieofc}}
     vector-store: ${MEMORY_VECTOR_STORE:pgvector}
     hybrid:
       vector-weight: ${MEMORY_HYBRID_VECTOR_WEIGHT:0.7}
