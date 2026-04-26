@@ -425,6 +425,9 @@ jobs:
       - name: Run chat e2e drill (full)
         run: node scripts/chat_e2e_drill.mjs full http://localhost:8080 http://127.0.0.1:8001
 
+      - name: Run memory e2e drill (full)
+        run: node scripts/memory_e2e_drill.mjs http://localhost:8080 http://localhost:8081
+
       - name: Run rag e2e drill
         run: node scripts/rag_e2e_drill.mjs http://localhost:8080 http://localhost:8081
 

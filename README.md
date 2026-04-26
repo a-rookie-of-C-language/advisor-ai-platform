@@ -110,3 +110,11 @@ node scripts/chat_e2e_drill.mjs smoke http://localhost:8080 http://127.0.0.1:800
   - `MEMORY_API_TOKEN`：Agent 调用 `/api/memory/**` 的鉴权 token
   - `JWT_SECRET`：JWT 验签密钥
   - `DB_*`：PostgreSQL 连接信息
+### Memory 全链路联调（真实服务）
+```bash
+node scripts/memory_e2e_drill.mjs http://localhost:8080 http://localhost:8081
+```
+
+通过标准：
+- 返回 `{"ok": true}`
+- 覆盖 `/api/memory/**` 完整接口（health、search、candidates、session-summary、task submit/pending/done/fail）
