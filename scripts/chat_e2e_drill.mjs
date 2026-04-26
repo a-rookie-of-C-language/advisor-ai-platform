@@ -216,21 +216,7 @@ async function runSmoke(baseUrl, authBaseUrl) {
   if (!send.res.ok) throw new Error(`send failed: ${send.res.status}`);
 
   log('stream send and assert done');
-  const streamRes = await fetch(`${baseUrl}/api/chat/stream`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-    },
-    body: JSON.stringify({
-      sessionId,
-      kbId: 999,
-      messages: [{ role: 'user', content: 'smoke stream: reply stream ok' }],
-    }),
-  });
-  if (!streamRes.ok) throw new Error(`stream failed: ${streamRes.status}`);
-  const stream = await readSseUntilDone(streamRes, 600_000);
+  const stream = await streamSendWithRetry(baseUrl, token, sessionId);
 
   log('list messages');
   const msgs = await fetchJson(`${baseUrl}/api/chat/sessions/${sessionId}/messages`, {
@@ -256,6 +242,49 @@ async function runSmoke(baseUrl, authBaseUrl) {
   if (out.messageCount < 2) throw new Error(`expected >=2 messages, got ${out.messageCount}`);
 
   return out;
+}
+
+async function streamSendWithRetry(baseUrl, token, sessionId, attempts = 3) {
+  let lastError = null;
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      const streamRes = await fetch(`${baseUrl}/api/chat/stream`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({
+          sessionId,
+          kbId: 999,
+          messages: [{ role: 'user', content: 'smoke stream: reply stream ok' }],
+        }),
+      });
+      if (!streamRes.ok) {
+        if (TRANSIENT_HTTP_STATUSES.has(streamRes.status)) {
+          throw new Error(`stream transient http ${streamRes.status}`);
+        }
+        throw new Error(`stream failed: ${streamRes.status}`);
+      }
+      return await readSseUntilDone(streamRes, 600_000);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const msg = (lastError.message || '').toLowerCase();
+      const retryable =
+        msg.includes('terminated') ||
+        msg.includes('econnreset') ||
+        msg.includes('socket') ||
+        msg.includes('network');
+      if (!retryable || i >= attempts) {
+        break;
+      }
+      const delay = Math.min(500 * 2 ** (i - 1), 3000);
+      log('stream transient failure, retrying', { attempt: i, delayMs: delay, reason: lastError.message });
+      await sleep(delay);
+    }
+  }
+  throw lastError ?? new Error('stream failed');
 }
 
 function startTimeoutMockServer(port = 19081) {

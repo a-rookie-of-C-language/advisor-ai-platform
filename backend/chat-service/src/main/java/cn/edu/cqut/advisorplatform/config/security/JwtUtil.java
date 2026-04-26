@@ -56,7 +56,9 @@ public class JwtUtil {
   }
 
   public boolean isTokenExpired(Claims claims) {
-    return claims == null || claims.getExpiration() == null || claims.getExpiration().before(new Date());
+    return claims == null
+        || claims.getExpiration() == null
+        || claims.getExpiration().before(new Date());
   }
 
   public boolean isAccessToken(Claims claims) {
