@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.dto.response;
 
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;

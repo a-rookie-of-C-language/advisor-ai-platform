@@ -1,6 +1,6 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.memoryservice.dao;
 
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.ChatSessionDO;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 

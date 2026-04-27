@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.vector;
 
-import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.memoryservice.dao.UserMemoryDao;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;

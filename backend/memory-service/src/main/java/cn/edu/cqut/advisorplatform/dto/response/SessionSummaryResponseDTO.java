@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.dto.response;
 
-import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.SessionSummaryDO;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
