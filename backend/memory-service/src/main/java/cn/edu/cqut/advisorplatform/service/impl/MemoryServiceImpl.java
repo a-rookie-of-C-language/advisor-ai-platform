@@ -57,6 +57,7 @@ public class MemoryServiceImpl implements MemoryService {
   private double hybridTextWeight;
 
   @Override
+  @Transactional
   public List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request) {
     long startedAt = System.currentTimeMillis();
     int topK = request.getTopK() == null ? 6 : Math.max(1, Math.min(request.getTopK(), 50));
@@ -408,6 +409,7 @@ public class MemoryServiceImpl implements MemoryService {
   }
 
   @Override
+  @Transactional
   public List<MemoryTaskResponseDTO> fetchPendingTasks(int limit) {
     int safeLimit = Math.max(1, Math.min(limit, 50));
     List<MemoryTaskDO> tasks = memoryTaskDao.findPendingTasks(3, PageRequest.of(0, safeLimit));

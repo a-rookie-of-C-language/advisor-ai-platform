@@ -42,13 +42,15 @@ public class MemoryController {
   }
 
   @GetMapping("/session-summary/{sessionId}")
-  public ApiResponseDTO<SessionSummaryResponseDTO> getSessionSummary(@PathVariable Long sessionId) {
+  public ApiResponseDTO<SessionSummaryResponseDTO> getSessionSummary(
+      @PathVariable("sessionId") Long sessionId) {
     return ApiResponseDTO.success(memoryService.getSessionSummary(sessionId));
   }
 
   @PutMapping("/session-summary/{sessionId}")
   public ApiResponseDTO<Void> saveSessionSummary(
-      @PathVariable Long sessionId, @Valid @RequestBody SessionSummaryUpdateRequestDTO request) {
+      @PathVariable("sessionId") Long sessionId,
+      @Valid @RequestBody SessionSummaryUpdateRequestDTO request) {
     memoryService.saveSessionSummary(sessionId, request);
     return ApiResponseDTO.success();
   }
@@ -66,19 +68,20 @@ public class MemoryController {
 
   @GetMapping("/task/pending")
   public ApiResponseDTO<List<MemoryTaskResponseDTO>> fetchPendingTasks(
-      @RequestParam(defaultValue = "10") int limit) {
+      @RequestParam(name = "limit", defaultValue = "10") int limit) {
     return ApiResponseDTO.success(memoryService.fetchPendingTasks(limit));
   }
 
   @PostMapping("/task/{id}/done")
-  public ApiResponseDTO<Void> markTaskDone(@PathVariable Long id) {
+  public ApiResponseDTO<Void> markTaskDone(@PathVariable("id") Long id) {
     memoryService.markTaskDone(id);
     return ApiResponseDTO.success();
   }
 
   @PostMapping("/task/{id}/fail")
   public ApiResponseDTO<Void> markTaskFailed(
-      @PathVariable Long id, @RequestParam(required = false) String error) {
+      @PathVariable("id") Long id,
+      @RequestParam(name = "error", required = false) String error) {
     memoryService.markTaskFailed(id, error);
     return ApiResponseDTO.success();
   }
