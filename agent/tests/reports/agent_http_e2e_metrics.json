@@ -1,0 +1,238 @@
+{
+  "suite": "agent_http_e2e_mock",
+  "metrics": {
+    "case_count": 10,
+    "accuracy": 1.0,
+    "task_completion_rate": 1.0,
+    "quality_score": 1.0,
+    "intent_hit_rate": 1.0,
+    "exception_error_rate": 0.0,
+    "business_failure_rate": 0.0,
+    "timeout_rate": 0.0,
+    "p50_latency_ms": 15.82,
+    "p95_latency_ms": 30.49
+  },
+  "thresholds": {
+    "accuracy_min": 0.9,
+    "task_completion_rate_min": 0.9,
+    "quality_score_min": 0.85,
+    "intent_hit_rate_min": 0.9,
+    "exception_error_rate_max": 0.02,
+    "business_failure_rate_max": 0.02,
+    "timeout_rate_max": 0.01,
+    "p95_latency_ms_max": 1000,
+    "case_timeout_ms": 1000
+  },
+  "checks": {
+    "accuracy": true,
+    "task_completion_rate": true,
+    "quality_score": true,
+    "intent_hit_rate": true,
+    "exception_error_rate": true,
+    "business_failure_rate": true,
+    "timeout_rate": true,
+    "p95_latency_ms": true
+  },
+  "cases": [
+    {
+      "case_id": "counselor_role_definition",
+      "status_code": 200,
+      "latency_ms": 25.6,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "根据《普通高等学校辅导员队伍建设规定》，辅导员是开展大学生思想政治教育的骨干力量，是学生日常思想政治教育和管理工作的组织者、实施者、指导者，应努力成为学生成长成才的人生导师和健康生活的知心朋友。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "counselor_staffing_ratio",
+      "status_code": 200,
+      "latency_ms": 15.68,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "文件要求高校按总体上师生比不低于1:200的比例设置专职辅导员岗位，按照专兼结合、以专为主的原则足额配备到位。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "counselor_main_responsibilities",
+      "status_code": 200,
+      "latency_ms": 30.03,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "辅导员主要职责包括思想理论教育和价值引领、党团和班级建设、学风建设、学生日常事务管理、心理健康教育与咨询、网络思想政治教育、校园危机事件应对、职业规划与就业创业指导以及理论和实践研究。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "mental_health_responsibility",
+      "status_code": 200,
+      "latency_ms": 15.63,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "在心理健康教育与咨询工作中，辅导员应协助学校心理健康教育机构开展心理健康教育，对学生心理问题进行初步排查和疏导，组织心理健康知识普及宣传活动，培育学生理性平和、乐观向上的健康心态。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "network_ideological_education",
+      "status_code": 200,
+      "latency_ms": 30.49,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "辅导员应运用新媒体新技术推动思想政治工作传统优势与信息技术融合，构建网络思想政治教育阵地，加强学生网络素养教育，培养校园好网民，引导学生创作网络文化作品、弘扬主旋律、传播正能量，并加强网上互动交流。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "campus_crisis_response",
+      "status_code": 200,
+      "latency_ms": 15.26,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "校园危机事件发生时，辅导员应参与学校和院系危机事件工作预案制定和执行，对危机事件进行初步处理，稳定局面、控制事态发展，及时掌握信息并按程序及时上报，参与后期应对及总结研究分析。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "daily_affairs_management",
+      "status_code": 200,
+      "latency_ms": 30.31,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "学生日常事务管理包括开展入学教育、毕业生教育及相关管理服务，组织军事训练，评选各类奖学金和助学金，指导学生办理助学贷款，组织勤工俭学，做好困难帮扶，并为学生提供生活指导。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "career_ability_standard_value",
+      "status_code": 200,
+      "latency_ms": 15.1,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "《高等学校辅导员职业能力标准》是国家对合格高校辅导员专业素质的基本要求，是辅导员开展学生工作的基本规范，是引领辅导员专业化职业化发展的基本准则，也是辅导员培养、准入、培训、考核等工作的基本依据。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "precise_financial_aid_identification",
+      "status_code": 200,
+      "latency_ms": 15.82,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "资助育人工作要求构建精准资助工作体系，精准认定家庭经济困难学生，健全认定工作机制，可采用家访、大数据分析和谈心谈话等方式合理确定认定标准，建立家庭经济困难学生档案并实施动态管理。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    },
+    {
+      "case_id": "employment_guidance_values",
+      "status_code": 200,
+      "latency_ms": 16.48,
+      "event_names": [
+        "start",
+        "intent",
+        "sources",
+        "delta",
+        "done"
+      ],
+      "answer": "辅导员应为学生提供科学的职业生涯规划和就业指导及相关服务，帮助学生树立正确的就业观念，引导学生到基层、到西部、到祖国最需要的地方建功立业。",
+      "accuracy_passed": true,
+      "task_completed": true,
+      "intent_hit": true,
+      "quality_score": 1.0,
+      "exception_error": false,
+      "business_failed": false,
+      "timed_out": false
+    }
+  ]
+}
