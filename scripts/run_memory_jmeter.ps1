@@ -4,6 +4,7 @@ param(
 
   [string]$BaseUrl = "http://127.0.0.1:8080",
   [string]$MemoryToken = "arookieofc",
+  [int]$KbId = 1,
   [string]$AuthPassword = "Test@123456",
   [string]$JMeterBin = $env:JMETER_BIN,
   [int]$MaxSampleMs = 600000,
@@ -153,6 +154,7 @@ $jmeterArgs = @(
   "-o", $html,
   "-JBASE_URL=$BaseUrl",
   "-JMEMORY_TOKEN=$MemoryToken",
+  "-JKB_ID=$KbId",
   "-JAUTH_PASSWORD=$AuthPassword",
   "-JCASE_FILE=$caseFile",
   "-JTHREADS=$($profileConfig.Threads)",
