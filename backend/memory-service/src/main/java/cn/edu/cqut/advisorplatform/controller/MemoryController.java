@@ -80,8 +80,7 @@ public class MemoryController {
 
   @PostMapping("/task/{id}/fail")
   public ApiResponseDTO<Void> markTaskFailed(
-      @PathVariable("id") Long id,
-      @RequestParam(name = "error", required = false) String error) {
+      @PathVariable("id") Long id, @RequestParam(name = "error", required = false) String error) {
     memoryService.markTaskFailed(id, error);
     return ApiResponseDTO.success();
   }
