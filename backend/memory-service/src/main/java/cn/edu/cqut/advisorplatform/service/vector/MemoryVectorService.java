@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.vector;
 
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO;
 import java.util.List;
 import java.util.Optional;
 

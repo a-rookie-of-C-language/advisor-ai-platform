@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.config.security;
 
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.UserDO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;

@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.dao.MemoryTaskDao;
-import cn.edu.cqut.advisorplatform.dao.SessionSummaryDao;
-import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
+import cn.edu.cqut.advisorplatform.memoryservice.dao.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.memoryservice.dao.MemoryTaskDao;
+import cn.edu.cqut.advisorplatform.memoryservice.dao.SessionSummaryDao;
+import cn.edu.cqut.advisorplatform.memoryservice.dao.UserMemoryDao;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateItemDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;
@@ -13,10 +13,10 @@ import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO
 import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.MemoryTaskDO;
-import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.MemoryTaskDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.SessionSummaryDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.MemoryService;

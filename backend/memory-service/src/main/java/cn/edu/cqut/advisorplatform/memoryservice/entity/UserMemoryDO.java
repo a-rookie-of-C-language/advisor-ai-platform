@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.memoryservice.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
