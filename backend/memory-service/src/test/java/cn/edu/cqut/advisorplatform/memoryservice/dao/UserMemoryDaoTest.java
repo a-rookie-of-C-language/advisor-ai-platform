@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.memoryservice.dao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
