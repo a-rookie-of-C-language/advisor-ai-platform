@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -78,6 +79,20 @@ public class GlobalExceptionHandler {
         .body(ApiResponseDTO.error(503, "请求超时，请稍后重试"));
   }
 
+  @ExceptionHandler(IOException.class)
+  public ResponseEntity<?> handleIoException(IOException e, @Nullable HttpServletRequest request) {
+    if (isClientAbort(e)) {
+      log.warn("Client disconnected during stream response, reason={}", safeMessage(e));
+      return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+    log.error("Unhandled io exception", e);
+    if (isSseRequest(request)) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(ApiResponseDTO.error(500, "服务器内部错误"));
+  }
+
   @ExceptionHandler(RuntimeException.class)
   public ResponseEntity<?> handleRuntime(RuntimeException e, @Nullable HttpServletRequest request) {
     log.error("Unhandled runtime exception", e);
@@ -95,7 +110,7 @@ public class GlobalExceptionHandler {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(ApiResponseDTO.error(500, "服务器内部错误"));
+        .body(ApiResponseDTO.error(500, "internal server error"));
   }
 
   private boolean isSseRequest(@Nullable HttpServletRequest request) {
@@ -108,6 +123,18 @@ public class GlobalExceptionHandler {
     return (accept != null && accept.contains("text/event-stream"))
         || (contentType != null && contentType.contains("text/event-stream"))
         || "/api/chat/stream".equals(uri);
+  }
+
+  private boolean isClientAbort(IOException io) {
+    String msg = io.getMessage();
+    if (msg == null) {
+      return false;
+    }
+    String lower = msg.toLowerCase();
+    return lower.contains("broken pipe")
+        || lower.contains("connection reset")
+        || lower.contains("forcibly closed")
+        || lower.contains("stream closed");
   }
 
   private String safeMessage(Exception exception) {

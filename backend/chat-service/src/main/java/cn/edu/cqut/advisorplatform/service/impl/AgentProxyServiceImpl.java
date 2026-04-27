@@ -22,6 +22,10 @@ import java.util.Collections.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,27 +38,40 @@ public class AgentProxyServiceImpl implements AgentProxyService {
   private static final int DEBUG_PREVIEW_LIMIT = 200;
   private static final String TRACE_HEADER = "X-Trace-Id";
   private static final String TURN_HEADER = "X-Turn-Id";
+  private static final ScheduledExecutorService FIRST_CHUNK_WATCHDOG =
+      Executors.newScheduledThreadPool(
+          1,
+          runnable -> {
+            Thread thread = new Thread(runnable, "agent-proxy-first-chunk-watchdog");
+            thread.setDaemon(true);
+            return thread;
+          });
 
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
   private final String agentBaseUrl;
   private final String agentApiToken;
   private final boolean debugStream;
+  private final long requestTimeoutMs;
+  private final long firstChunkTimeoutMs;
 
   public AgentProxyServiceImpl(
       ObjectMapper objectMapper,
       @Value("${advisor.agent.base-url:http://127.0.0.1:8001}") String agentBaseUrl,
       @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:}}") String agentApiToken,
       @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs,
+      @Value("${advisor.agent.first-chunk-timeout-ms:120000}") long firstChunkTimeoutMs,
       @Value("${advisor.agent.debug-stream:${DEBUG_STREAM:false}}") boolean debugStream) {
     this.objectMapper = objectMapper;
     this.agentBaseUrl = agentBaseUrl;
     this.agentApiToken = agentApiToken;
     this.debugStream = debugStream;
+    this.requestTimeoutMs = Math.max(timeoutMs, 1000L);
+    this.firstChunkTimeoutMs = Math.max(firstChunkTimeoutMs, 1000L);
     this.httpClient =
         HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(Duration.ofMillis(Math.max(timeoutMs, 1000L)))
+            .connectTimeout(Duration.ofMillis(this.requestTimeoutMs))
             .build();
   }
 
@@ -104,6 +121,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             .header("Cache-Control", "no-cache")
             .header("X-Memory-Token", agentApiToken)
             .header("Authorization", "Bearer " + agentApiToken)
+            .timeout(Duration.ofMillis(requestTimeoutMs))
             .POST(HttpRequest.BodyPublishers.ofByteArray(payloadBytes));
     String traceId = LogTraceUtil.get(LogTraceUtil.TRACE_ID);
     if (!traceId.isBlank()) {
@@ -145,6 +163,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     StringBuilder assistantText = new StringBuilder();
     int deltaCount = 0;
     boolean firstDeltaLogged = false;
+    AtomicBoolean firstChunkReceived = new AtomicBoolean(false);
+    AtomicBoolean firstChunkTimedOut = new AtomicBoolean(false);
     AtomicBoolean sawDoneEvent = new AtomicBoolean(false);
     AtomicBoolean sawEndEvent = new AtomicBoolean(false);
     AtomicBoolean sawErrorEvent = new AtomicBoolean(false);
@@ -155,41 +175,69 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     }
 
     try (InputStream bodyStream = response.body()) {
+      ScheduledFuture<?> firstChunkTimeoutFuture =
+          FIRST_CHUNK_WATCHDOG.schedule(
+              () -> {
+                if (!firstChunkReceived.get()) {
+                  firstChunkTimedOut.set(true);
+                  try {
+                    bodyStream.close();
+                  } catch (IOException ignored) {
+                    // no-op
+                  }
+                }
+              },
+              firstChunkTimeoutMs,
+              TimeUnit.MILLISECONDS);
       byte[] buffer = new byte[8192];
       int read;
-      while ((read = bodyStream.read(buffer)) != -1) {
-        String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
-        sseBuffer.append(chunk);
+      try {
+        while ((read = bodyStream.read(buffer)) != -1) {
+          if (firstChunkReceived.compareAndSet(false, true)) {
+            firstChunkTimeoutFuture.cancel(false);
+            log.info("agent_proxy first_byte, elapsedMs={}", elapsedSince(startAt));
+          }
+          String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
+          sseBuffer.append(chunk);
 
-        int before = deltaCount;
-        deltaCount +=
-            collectDeltaAndAnswer(
-                sseBuffer,
-                deltaPreview,
-                assistantText,
-                sources,
-                sawDoneEvent,
-                sawEndEvent,
-                sawErrorEvent);
-        if (!firstDeltaLogged && deltaCount > before) {
-          firstDeltaLogged = true;
-          log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
-        }
+          int before = deltaCount;
+          deltaCount +=
+              collectDeltaAndAnswer(
+                  sseBuffer,
+                  deltaPreview,
+                  assistantText,
+                  sources,
+                  sawDoneEvent,
+                  sawEndEvent,
+                  sawErrorEvent);
+          if (!firstDeltaLogged && deltaCount > before) {
+            firstDeltaLogged = true;
+            log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
+          }
 
-        if (outputStream != null) {
-          try {
-            outputStream.write(buffer, 0, read);
-            outputStream.flush();
-          } catch (IOException io) {
-            if (isClientAbort(io)) {
-              log.warn(
-                  "agent_proxy client_disconnected, reason={}",
-                  LogTraceUtil.preview(io.getMessage()));
-              return new ChatStreamProxyResult(assistantText.toString(), List.copyOf(sources));
+          if (outputStream != null) {
+            try {
+              outputStream.write(buffer, 0, read);
+              outputStream.flush();
+            } catch (IOException io) {
+              if (isClientAbort(io)) {
+                log.warn(
+                    "agent_proxy client_disconnected, reason={}",
+                    LogTraceUtil.preview(io.getMessage()));
+                return new ChatStreamProxyResult(assistantText.toString(), List.copyOf(sources));
+              }
+              throw io;
             }
-            throw io;
           }
         }
+      } catch (IOException io) {
+        if (firstChunkTimedOut.get()) {
+          throw new IOException(
+              "agent first chunk timeout after " + firstChunkTimeoutMs + "ms", io);
+        }
+        throw io;
+      } finally {
+        firstChunkTimeoutFuture.cancel(false);
       }
     } finally {
       if (debugStream) {
