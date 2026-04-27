@@ -1,6 +1,6 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.memoryservice.dao;
 
-import cn.edu.cqut.advisorplatform.entity.MemoryTaskDO;
+import cn.edu.cqut.advisorplatform.memoryservice.entity.MemoryTaskDO;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

@@ -25,7 +25,8 @@ public class MemoryTaskResponseDTO {
   private LocalDateTime createdAt;
   private LocalDateTime processedAt;
 
-  public static MemoryTaskResponseDTO from(cn.edu.cqut.advisorplatform.entity.MemoryTaskDO task) {
+  public static MemoryTaskResponseDTO from(
+      cn.edu.cqut.advisorplatform.memoryservice.entity.MemoryTaskDO task) {
     return MemoryTaskResponseDTO.builder()
         .id(task.getId())
         .userId(task.getUserId())
