@@ -109,6 +109,7 @@ async function main() {
 
   const userAuth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const memoryAuth = {
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
     'X-Memory-Token': memoryToken,
   };
@@ -127,7 +128,7 @@ async function main() {
   log('memory health');
   const health = await fetchJson(`${baseUrl}/api/memory/health`, {
     method: 'GET',
-    headers: { 'X-Memory-Token': memoryToken },
+    headers: memoryAuth,
   });
   ensureApiSuccess('memory health', health);
   if (health.json?.data?.ok !== true) {
@@ -174,7 +175,7 @@ async function main() {
   log('memory session summary get (before put)');
   const summaryBefore = await fetchJson(`${baseUrl}/api/memory/session-summary/${sessionId}`, {
     method: 'GET',
-    headers: { 'X-Memory-Token': memoryToken },
+    headers: memoryAuth,
   });
   ensureApiSuccess('summary get before', summaryBefore);
 
@@ -190,7 +191,7 @@ async function main() {
   log('memory session summary get (after put)');
   const summaryAfter = await fetchJson(`${baseUrl}/api/memory/session-summary/${sessionId}`, {
     method: 'GET',
-    headers: { 'X-Memory-Token': memoryToken },
+    headers: memoryAuth,
   });
   ensureApiSuccess('summary get after', summaryAfter);
   if (summaryAfter.json?.data?.summary !== summaryText) {
@@ -246,7 +247,7 @@ async function main() {
   log('memory task pending');
   const pending = await fetchJson(`${baseUrl}/api/memory/task/pending?limit=10`, {
     method: 'GET',
-    headers: { 'X-Memory-Token': memoryToken },
+    headers: memoryAuth,
   });
   ensureApiSuccess('task pending', pending);
   const pendingIds = Array.isArray(pending.json?.data) ? pending.json.data.map((x) => x.id) : [];
@@ -257,7 +258,7 @@ async function main() {
   log('memory task done');
   const done = await fetchJson(`${baseUrl}/api/memory/task/${taskId1}/done`, {
     method: 'POST',
-    headers: { 'X-Memory-Token': memoryToken },
+    headers: memoryAuth,
   });
   ensureApiSuccess('task done', done);
 
@@ -266,7 +267,7 @@ async function main() {
     `${baseUrl}/api/memory/task/${taskId2}/fail?error=${encodeURIComponent('e2e-fail')}`,
     {
       method: 'POST',
-      headers: { 'X-Memory-Token': memoryToken },
+      headers: memoryAuth,
     },
   );
   ensureApiSuccess('task fail', fail);
