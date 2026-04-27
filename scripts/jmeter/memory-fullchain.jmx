@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Memory Fullchain Pressure Test" enabled="true">
@@ -246,6 +246,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -288,6 +292,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
               <elementProp name="" elementType="Header">
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
               </elementProp>
             </collectionProp>
           </HeaderManager>
@@ -336,6 +344,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -383,6 +395,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -415,6 +431,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
               <elementProp name="" elementType="Header">
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
               </elementProp>
             </collectionProp>
           </HeaderManager>
@@ -467,6 +487,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -518,6 +542,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -559,6 +587,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -596,6 +628,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -629,6 +665,10 @@ vars.put("user_id", matcher.group(1))</stringProp>
                 <stringProp name="Header.name">X-Memory-Token</stringProp>
                 <stringProp name="Header.value">${MEMORY_TOKEN}</stringProp>
               </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+              </elementProp>
             </collectionProp>
           </HeaderManager>
           <hashTree/>
@@ -645,3 +685,4 @@ vars.put("user_id", matcher.group(1))</stringProp>
     </hashTree>
   </hashTree>
 </jmeterTestPlan>
+
