@@ -1,4 +1,4 @@
-target/
+﻿target/
 # 敏感配置文件，禁止提交
 **/application-local.yml
 __pycache__/
@@ -17,4 +17,7 @@ log.txt
 java-upgrade/
 pytest**/
 **cache**/
+.tmp/
+agent/tests/reports/*.json
+scripts/jmeter/results/
 jmeter/
