@@ -6,7 +6,16 @@ param(
   [string]$MemoryToken = "arookieofc",
   [string]$AuthPassword = "Test@123456",
   [string]$JMeterBin = $env:JMETER_BIN,
-  [int]$MaxSampleMs = 600000
+  [int]$MaxSampleMs = 600000,
+  [switch]$AutoStartServices,
+  [ValidateSet("wait", "fastfail")]
+  [string]$ServiceReadyMode = "wait",
+  [int]$ServiceReadyTimeoutSec = 180,
+  [string]$DbHost = "127.0.0.1",
+  [int]$DbPort = 5432,
+  [string]$DbName = "postgres",
+  [string]$DbUsername = "postgres",
+  [string]$DbPassword = "su201314"
 )
 
 $ErrorActionPreference = "Stop"
@@ -120,6 +129,18 @@ $html = Join-Path $resultDir "html"
 $summary = Join-Path $resultDir "summary.json"
 
 New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
+
+if ($AutoStartServices) {
+  $starter = Join-Path $PSScriptRoot "start_backend_for_pressure.ps1"
+  & $starter `
+    -ReadyMode $ServiceReadyMode `
+    -WaitReadySeconds $ServiceReadyTimeoutSec `
+    -DbHost $DbHost `
+    -DbPort $DbPort `
+    -DbName $DbName `
+    -DbUsername $DbUsername `
+    -DbPassword $DbPassword
+}
 
 $profileConfig = Get-ProfileConfig -Name $Profile
 $resolvedJMeter = Resolve-JMeterBin -Candidate $JMeterBin
