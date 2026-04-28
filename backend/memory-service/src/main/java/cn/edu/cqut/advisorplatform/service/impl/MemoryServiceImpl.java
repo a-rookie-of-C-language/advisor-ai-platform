@@ -50,6 +50,7 @@ public class MemoryServiceImpl implements MemoryService {
   private final MemoryServiceFactory memoryServiceFactory;
   private final EmbeddingService embeddingService;
   private final PlatformTransactionManager transactionManager;
+
   @Value("${advisor.memory.vector-store:pgvector}")
   private String vectorStore;
 
@@ -439,5 +440,3 @@ public class MemoryServiceImpl implements MemoryService {
     memoryTaskDao.markFailed(taskId, error != null ? error : "unknown", LocalDateTime.now());
   }
 }
-
-
