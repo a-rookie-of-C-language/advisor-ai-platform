@@ -14,7 +14,7 @@ from RAG.rerank_strategy import (
     ChunkScoreRerankStrategy,
     RerankStrategyRegistry,
     RetrievalCandidate,
-    TitleBoostChunkDocRerankStrategy,
+    TitleBoostRerankStrategy,
 )
 from RAG.schema import (
     RAGChunkHit,
@@ -41,9 +41,8 @@ class RAG_service:
         self.embedding_engine = OllamaEmbeddingEngine(model=embedding_model, base_url=ollama_base_url)
         self.rerank_registry = RerankStrategyRegistry()
         self.rerank_registry.register(ChunkScoreRerankStrategy())
+        self.rerank_registry.register(TitleBoostRerankStrategy())
         self.rerank_registry.register(ChunkDocTwoStageRerankStrategy())
-        self.rerank_registry.register(TitleBoostChunkDocRerankStrategy())
-        self.default_rerank_strategy_name = "title_boost_chunk_doc_v1"
 
     @staticmethod
     def _normalize_distance(distance: float) -> float:
@@ -166,9 +165,23 @@ class RAG_service:
         candidate_rows: List[RetrievalCandidate],
     ) -> List[RetrievalCandidate]:
         if request.use_rerank:
-            strategy = self.rerank_registry.get(self.default_rerank_strategy_name)
-            return strategy.rank(candidate_rows, request.top_k)
+            processors = self.rerank_registry.get_enabled_ordered()
+            if not processors:
+                return sorted(candidate_rows, key=lambda row: (-row.score, row.recall_index))[: request.top_k]
+
+            ranked_rows = list(candidate_rows)
+            for processor in processors:
+                ranked_rows = processor.rank(ranked_rows, top_k=len(ranked_rows))
+                if not ranked_rows:
+                    break
+            return ranked_rows[: request.top_k]
         return sorted(candidate_rows, key=lambda row: row.recall_index)[: request.top_k]
+
+    def _current_rerank_chain_name(self) -> str:
+        processors = self.rerank_registry.get_enabled_ordered()
+        if not processors:
+            return "none"
+        return ">".join(processor.name for processor in processors)
 
     def _load_live_title_map(
         self,
@@ -258,7 +271,7 @@ class RAG_service:
                 debug=RAGSearchDebugTrace(
                     rewritten_query=rewritten_query if request.rewrite_query else None,
                     recall_k=recall_k,
-                    rerank_model=self.default_rerank_strategy_name if request.use_rerank else None,
+                    rerank_model=self._current_rerank_chain_name() if request.use_rerank else None,
                     latency_ms=self._latency_ms(started_at),
                 ),
             )
@@ -316,7 +329,7 @@ class RAG_service:
                 debug=RAGSearchDebugTrace(
                     rewritten_query=rewritten_query if request.rewrite_query else None,
                     recall_k=recall_k,
-                    rerank_model=self.default_rerank_strategy_name if request.use_rerank else None,
+                    rerank_model=self._current_rerank_chain_name() if request.use_rerank else None,
                     latency_ms=self._latency_ms(started_at),
                 ),
             )
