@@ -33,7 +33,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
@@ -46,7 +49,7 @@ public class MemoryServiceImpl implements MemoryService {
   private final ChatSessionDao chatSessionDao;
   private final MemoryServiceFactory memoryServiceFactory;
   private final EmbeddingService embeddingService;
-
+  private final PlatformTransactionManager transactionManager;
   @Value("${advisor.memory.vector-store:pgvector}")
   private String vectorStore;
 
@@ -201,7 +204,6 @@ public class MemoryServiceImpl implements MemoryService {
   }
 
   @Override
-  @Transactional
   public MemoryCandidateUpsertResponseDTO upsertCandidates(
       MemoryCandidateUpsertRequestDTO request) {
     long startedAt = System.currentTimeMillis();
@@ -217,6 +219,8 @@ public class MemoryServiceImpl implements MemoryService {
 
     int accepted = 0;
     int rejected = 0;
+    TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+    txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     for (MemoryCandidateItemDTO candidate : candidates) {
       if (candidate == null
           || candidate.getContent() == null
@@ -229,49 +233,53 @@ public class MemoryServiceImpl implements MemoryService {
       BigDecimal confidence = toDecimal(candidate.getConfidence(), 0.7d, 3);
 
       try {
-        UserMemoryDO row;
         double[] embedding = embeddingService.embed(normalizedContent);
-        if (vectorService != null) {
-          Optional<UserMemoryDO> similar =
-              vectorService.findSimilar(request.getUserId(), request.getKbId(), embedding, 0.85d);
-          if (similar.isPresent()) {
-            row = similar.get();
-            row.setContent(normalizedContent);
-            row.setConfidence(row.getConfidence().max(confidence));
-            row.setMemoryKey(extractMemoryKey(candidate.getTags()));
-            row.setSourceTurnId(candidate.getSourceTurnId());
-            row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
-            row.setUpdatedAt(LocalDateTime.now());
-            row = userMemoryDao.save(row);
-            vectorService.updateEmbedding(row.getId(), embedding);
-            accepted++;
-            continue;
-          }
-        }
+        txTemplate.executeWithoutResult(
+            status -> {
+              UserMemoryDO row;
+              if (vectorService != null) {
+                Optional<UserMemoryDO> similar =
+                    vectorService.findSimilar(
+                        request.getUserId(), request.getKbId(), embedding, 0.85d);
+                if (similar.isPresent()) {
+                  row = similar.get();
+                  row.setContent(normalizedContent);
+                  row.setConfidence(row.getConfidence().max(confidence));
+                  row.setMemoryKey(extractMemoryKey(candidate.getTags()));
+                  row.setSourceTurnId(candidate.getSourceTurnId());
+                  row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
+                  row.setUpdatedAt(LocalDateTime.now());
+                  row = userMemoryDao.save(row);
+                  vectorService.updateEmbedding(row.getId(), embedding);
+                  return;
+                }
+              }
 
-        row = new UserMemoryDO();
-        row.setUserId(request.getUserId());
-        row.setKbId(request.getKbId());
-        row.setContent(normalizedContent);
-        row.setConfidence(confidence);
-        row.setScore(BigDecimal.ZERO.setScale(4));
-        row.setMemoryKey(extractMemoryKey(candidate.getTags()));
-        row.setSourceTurnId(candidate.getSourceTurnId());
-        row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
-        row.setIsDeleted(false);
-        row.setCreatedAt(LocalDateTime.now());
-        row.setUpdatedAt(LocalDateTime.now());
-        row = userMemoryDao.save(row);
-        if (vectorService != null) {
-          vectorService.updateEmbedding(row.getId(), embedding);
-        }
+              row = new UserMemoryDO();
+              row.setUserId(request.getUserId());
+              row.setKbId(request.getKbId());
+              row.setContent(normalizedContent);
+              row.setConfidence(confidence);
+              row.setScore(BigDecimal.ZERO.setScale(4));
+              row.setMemoryKey(extractMemoryKey(candidate.getTags()));
+              row.setSourceTurnId(candidate.getSourceTurnId());
+              row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
+              row.setIsDeleted(false);
+              row.setCreatedAt(LocalDateTime.now());
+              row.setUpdatedAt(LocalDateTime.now());
+              row = userMemoryDao.save(row);
+              if (vectorService != null) {
+                vectorService.updateEmbedding(row.getId(), embedding);
+              }
+            });
         accepted++;
       } catch (Exception exc) {
         log.warn(
-            "memory_write_failed userId={}, kbId={}, err={}",
+            "memory_write_failed userId={}, kbId={}, contentHash={}",
             request.getUserId(),
             request.getKbId(),
-            exc.getMessage());
+            Integer.toHexString(normalizedContent.hashCode()),
+            exc);
         rejected++;
       }
     }
@@ -431,3 +439,5 @@ public class MemoryServiceImpl implements MemoryService {
     memoryTaskDao.markFailed(taskId, error != null ? error : "unknown", LocalDateTime.now());
   }
 }
+
+
