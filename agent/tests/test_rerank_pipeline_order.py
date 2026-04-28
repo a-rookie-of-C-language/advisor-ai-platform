@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from RAG.rerank_strategy import BaseRerankStrategy, RerankStrategyRegistry
 from RAG.rerank_strategy.RetrievalCandidate import RetrievalCandidate
 from RAG.schema import RAGChunkHit, ScoreType
@@ -63,5 +65,5 @@ def test_pipeline_chain_respects_order_and_enabled() -> None:
     for processor in registry.get_enabled_ordered():
         rows = processor.rank(rows, top_k=len(rows))
 
-    assert rows[0].score == 0.8
-    assert rows[1].score == 0.7
+    assert rows[0].score == pytest.approx(0.8)
+    assert rows[1].score == pytest.approx(0.7)
