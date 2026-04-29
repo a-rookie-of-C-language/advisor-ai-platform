@@ -29,6 +29,82 @@
   margin-top: 8px;
 }
 
+.chatSessionBox {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 220px);
+}
+
+.chatSessionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chatSessionTitle {
+  color: #fff !important;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.chatSessionAddBtn {
+  color: #fff !important;
+}
+
+.chatSessionList {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0;
+}
+
+.chatSessionEmpty {
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+  font-size: 13px;
+  padding: 24px 0;
+}
+
+.chatSessionItem {
+  margin: 0 8px 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.chatSessionItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chatSessionItemActive {
+  background: rgba(37, 99, 235, 0.3);
+  border-left: 3px solid #2563eb;
+}
+
+.chatSessionItemTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  max-width: 145px;
+}
+
+.chatSessionDeleteBtn {
+  color: rgba(255, 255, 255, 0.35) !important;
+  opacity: 0;
+}
+
+.chatSessionItem:hover .chatSessionDeleteBtn {
+  opacity: 1;
+}
+
 .header {
   background: #ffffff !important;
   padding: 0 24px !important;

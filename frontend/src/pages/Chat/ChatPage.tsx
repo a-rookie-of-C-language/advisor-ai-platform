@@ -1,26 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button, Collapse, Empty, Input, Select, Space, Tag, Typography } from 'antd'
 import {
-  Button,
-  Collapse,
-  Empty,
-  Input,
-  Popconfirm,
-  Select,
-  Space,
-  Tag,
-  Tooltip,
-  Typography,
-} from 'antd'
-import {
-  DeleteOutlined,
   FileTextOutlined,
   LoadingOutlined,
-  PlusOutlined,
   RobotOutlined,
   SendOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
+import { useSearchParams } from 'react-router-dom'
 import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
 import { ragApi, type KnowledgeBaseDTO } from '../../api/ragApi'
 import { globalMessage } from '../../utils/globalMessage'
@@ -142,18 +130,12 @@ export default function ChatPage() {
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeId) ?? null,
     [sessions, activeId],
   )
-
-  const getKnowledgeBaseName = (kbId: number) => {
-    if (!kbId) {
-      return '不使用知识库'
-    }
-    return knowledgeBases.find((kb) => kb.id === kbId)?.name ?? `知识库 #${kbId}`
-  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -165,7 +147,11 @@ export default function ChatPage() {
         const response = await chatApi.listSessions()
         const nextSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
         setSessions(nextSessions)
-        if (nextSessions.length > 0) {
+        const routeSessionId = Number(searchParams.get('sessionId') ?? '')
+        if (nextSessions.length > 0 && Number.isFinite(routeSessionId) && routeSessionId > 0) {
+          const matched = nextSessions.find((item) => item.id === routeSessionId)
+          setActiveId(matched ? matched.id : nextSessions[0].id)
+        } else if (nextSessions.length > 0) {
           setActiveId(nextSessions[0].id)
         }
       } catch (error) {
@@ -173,6 +159,20 @@ export default function ChatPage() {
       }
     })()
   }, [])
+
+  useEffect(() => {
+    const routeSessionId = Number(searchParams.get('sessionId') ?? '')
+    if (Number.isFinite(routeSessionId) && routeSessionId > 0 && routeSessionId !== activeId) {
+      setActiveId(routeSessionId)
+    }
+  }, [searchParams, activeId])
+
+  useEffect(() => {
+    if (activeId == null) {
+      return
+    }
+    setSearchParams({ sessionId: String(activeId) }, { replace: true })
+  }, [activeId, setSearchParams])
 
   useEffect(() => {
     void (async () => {
@@ -205,18 +205,6 @@ export default function ChatPage() {
     })()
   }, [activeId])
 
-  const handleNewSession = async () => {
-    try {
-      const response = await chatApi.createSession()
-      const created = response.data
-      const newSession = toChatSession(created)
-      setSessions((prev) => [newSession, ...prev])
-      setActiveId(newSession.id)
-    } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '创建会话失败')
-    }
-  }
-
   const handleSelectKb = async (kbId: number) => {
     if (!activeSession) {
       return
@@ -232,22 +220,6 @@ export default function ChatPage() {
       globalMessage.success(kbId > 0 ? '知识库已绑定到当前会话' : '已取消当前会话的知识库绑定')
     } catch (error) {
       globalMessage.error(typeof error === 'string' ? error : '更新会话知识库失败')
-    }
-  }
-
-  const handleDeleteSession = async (id: number) => {
-    try {
-      await chatApi.deleteSession(id)
-      setSessions((prev) => {
-        const next = prev.filter((session) => session.id !== id)
-        if (activeId === id) {
-          setActiveId(next[0]?.id ?? null)
-        }
-        return next
-      })
-      globalMessage.success('会话已删除')
-    } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '删除会话失败')
     }
   }
 
@@ -287,7 +259,7 @@ export default function ChatPage() {
 
     let targetSession = activeSession
     if (!targetSession) {
-        try {
+      try {
         const response = await chatApi.createSession()
         const created = response.data
         targetSession = toChatSession(created)
@@ -416,62 +388,6 @@ export default function ChatPage() {
 
   return (
     <div className={styles.container}>
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarHeader}>
-          <Title level={5} style={{ margin: 0, color: '#fff' }}>对话列表</Title>
-          <Tooltip title="新建对话">
-            <Button
-              type="text"
-              icon={<PlusOutlined />}
-              onClick={() => void handleNewSession()}
-              style={{ color: '#fff' }}
-            />
-          </Tooltip>
-        </div>
-
-        <div className={styles.sessionList}>
-          {sessions.length === 0 && (
-            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>暂无会话</Text>
-            </div>
-          )}
-
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className={`${styles.sessionItem} ${session.id === activeId ? styles.sessionItemActive : ''}`}
-              onClick={() => setActiveId(session.id)}
-            >
-              <div className={styles.sessionTitle}>{session.title}</div>
-              <div className={styles.sessionMeta}>
-                <Space size={6} wrap>
-                  <Tag color={session.kbId > 0 ? 'blue' : 'default'} style={{ marginInlineEnd: 0 }}>
-                    {getKnowledgeBaseName(session.kbId)}
-                  </Tag>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
-                </Space>
-                <Popconfirm
-                  title="确认删除该会话吗？"
-                  onConfirm={(event) => {
-                    event?.stopPropagation()
-                    void handleDeleteSession(session.id)
-                  }}
-                  onCancel={(event) => event?.stopPropagation()}
-                >
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    className={styles.deleteBtn}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                </Popconfirm>
-              </div>
-            </div>
-          ))}
-        </div>
-      </aside>
-
       <main className={styles.main}>
         {activeSession && (
           <div style={{ padding: '16px 20px 0' }}>
