@@ -1,13 +1,16 @@
-version: "3.9"
-
-services:
+﻿services:
   nacos:
     image: nacos/nacos-server:v2.4.2
     container_name: advisor-nacos
     environment:
-      - MODE=standalone
+      MODE: standalone
     ports:
       - "8848:8848"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   jaeger:
     image: jaegertracing/all-in-one:1.57
@@ -18,7 +21,7 @@ services:
       - "4318:4318"
 
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: advisor-postgres
     environment:
       POSTGRES_USER: postgres
@@ -27,7 +30,173 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - backend_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d advisor_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: advisor-auth-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
+      MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: chat-service/Dockerfile
+    container_name: advisor-chat-service
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
+      MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
+      AGENT_BASE_URL: http://host.docker.internal:8001
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    ports:
+      - "8082:8082"
+
+  rag-service:
+    build:
+      context: .
+      dockerfile: rag-service/Dockerfile
+    container_name: advisor-rag-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
+      MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+
+  memory-service:
+    build:
+      context: .
+      dockerfile: memory-service/Dockerfile
+    container_name: advisor-memory-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
+      MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: audit-service/Dockerfile
+    container_name: advisor-audit-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
+      MEMORY_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: arookieofc
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8085:8085"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: advisor-gateway
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      rag-service:
+        condition: service_started
+      memory-service:
+        condition: service_started
+      audit-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
 
 volumes:
-  pg_data:
+  backend_pg_data:
