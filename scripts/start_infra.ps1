@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$ComposeFile = "backend/docker-compose.yml",
   [int]$WaitSeconds = 90,
   [switch]$SkipHealthCheck
