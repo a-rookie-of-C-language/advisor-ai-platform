@@ -6,15 +6,18 @@ import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.criteria.Predicate;
 
 @Slf4j
 @Service("jdbcAuditLogStorage")
@@ -63,8 +66,28 @@ public class JdbcAuditLogStorage implements AuditLogStorage {
       LocalDateTime startTime,
       LocalDateTime endTime,
       Pageable pageable) {
-    Page<AuditLogDO> page =
-        auditLogDao.searchAuditLogs(userId, module, action, startTime, endTime, pageable);
+    Specification<AuditLogDO> specification =
+        (root, query, cb) -> {
+          List<Predicate> predicates = new ArrayList<>();
+          if (userId != null) {
+            predicates.add(cb.equal(root.get("userId"), userId));
+          }
+          if (module != null) {
+            predicates.add(cb.equal(root.get("module"), module));
+          }
+          if (action != null) {
+            predicates.add(cb.equal(root.get("action"), action));
+          }
+          if (startTime != null) {
+            predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), startTime));
+          }
+          if (endTime != null) {
+            predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), endTime));
+          }
+          return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+    Page<AuditLogDO> page = auditLogDao.findAll(specification, pageable);
     return PageResponseDTO.of(
         page.getContent(), page.getTotalElements(), page.getNumber(), page.getSize());
   }
