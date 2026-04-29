@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd'
 import {
   DashboardOutlined,
@@ -9,6 +10,8 @@ import {
 } from '@ant-design/icons'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { chatApi, type ChatSessionDTO } from '../../api/chatApi'
+import ChatSessionSidebar from './ChatSessionSidebar'
 import styles from './MainLayout.module.css'
 
 const { Sider, Header, Content } = Layout
@@ -17,6 +20,39 @@ export default function MainLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { realName, logout, role } = useAuthStore()
+  const [chatSessions, setChatSessions] = useState<ChatSessionDTO[]>([])
+  const isChatPage = location.pathname === '/chat'
+  const activeSessionId = useMemo(() => {
+    const value = new URLSearchParams(location.search).get('sessionId')
+    if (!value) {
+      return null
+    }
+    const parsed = Number(value)
+    return Number.isNaN(parsed) ? null : parsed
+  }, [location.search])
+
+  const loadChatSessions = async () => {
+    if (!isChatPage) {
+      return
+    }
+    try {
+      const response = await chatApi.listSessions()
+      setChatSessions(response.data ?? [])
+    } catch {
+      setChatSessions([])
+    }
+  }
+
+  useEffect(() => {
+    void loadChatSessions()
+    if (!isChatPage) {
+      return
+    }
+    const timer = setInterval(() => {
+      void loadChatSessions()
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [location.pathname])
 
   const menuItems = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
@@ -53,6 +89,30 @@ export default function MainLayout() {
           onClick={({ key }) => navigate(key)}
           className={styles.menu}
         />
+        {isChatPage && (
+          <ChatSessionSidebar
+            sessions={chatSessions}
+            activeSessionId={activeSessionId}
+            onCreate={() => {
+              void (async () => {
+                const created = (await chatApi.createSession()).data
+                navigate(`/chat?sessionId=${created.id}`)
+                await loadChatSessions()
+              })()
+            }}
+            onSelect={(sessionId) => navigate(`/chat?sessionId=${sessionId}`)}
+            onDelete={(sessionId) => {
+              void (async () => {
+                await chatApi.deleteSession(sessionId)
+                const next = chatSessions.filter((s) => s.id !== sessionId)
+                setChatSessions(next)
+                if (activeSessionId === sessionId) {
+                  navigate(next.length > 0 ? `/chat?sessionId=${next[0].id}` : '/chat')
+                }
+              })()
+            }}
+          />
+        )}
       </Sider>
       <Layout>
         <Header className={styles.header}>
