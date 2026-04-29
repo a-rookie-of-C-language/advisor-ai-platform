@@ -20,29 +20,31 @@ public class AuditController {
 
   @GetMapping("/logs")
   public ApiResponseDTO<PageResponseDTO<AuditLogDO>> getAuditLogs(
-      @RequestParam(required = false) Long userId,
-      @RequestParam(required = false) AuditModule module,
-      @RequestParam(required = false) AuditAction action,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+      @RequestParam(value = "userId", required = false) Long userId,
+      @RequestParam(value = "module", required = false) AuditModule module,
+      @RequestParam(value = "action", required = false) AuditAction action,
+      @RequestParam(value = "startTime", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime startTime,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+      @RequestParam(value = "endTime", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime endTime,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(value = "page", defaultValue = "0") int page,
+      @RequestParam(value = "size", defaultValue = "20") int size) {
     return ApiResponseDTO.success(
         auditService.queryAuditLogs(userId, module, action, startTime, endTime, page, size));
   }
 
   @GetMapping("/logs/{id}")
-  public ApiResponseDTO<AuditLogDO> getAuditLogById(@PathVariable Long id) {
+  public ApiResponseDTO<AuditLogDO> getAuditLogById(@PathVariable("id") Long id) {
     return ApiResponseDTO.success(auditService.getAuditLogById(id));
   }
 
   @GetMapping("/stats/module")
   public ApiResponseDTO<Long> countByUserAndModule(
-      @RequestParam Long userId,
-      @RequestParam AuditModule module,
-      @RequestParam(required = false) AuditAction action) {
+      @RequestParam("userId") Long userId,
+      @RequestParam("module") AuditModule module,
+      @RequestParam(value = "action", required = false) AuditAction action) {
     if (action != null) {
       return ApiResponseDTO.success(
           auditService.countByUserAndModuleAndAction(userId, module, action));
@@ -52,9 +54,9 @@ public class AuditController {
 
   @GetMapping("/stats/module-action")
   public ApiResponseDTO<Long> countByUserAndModuleAndAction(
-      @RequestParam Long userId,
-      @RequestParam AuditModule module,
-      @RequestParam AuditAction action) {
+      @RequestParam("userId") Long userId,
+      @RequestParam("module") AuditModule module,
+      @RequestParam("action") AuditAction action) {
     return ApiResponseDTO.success(
         auditService.countByUserAndModuleAndAction(userId, module, action));
   }
