@@ -1,4 +1,4 @@
-﻿services:
+services:
   nacos:
     image: nacos/nacos-server:v2.4.2
     container_name: advisor-nacos
