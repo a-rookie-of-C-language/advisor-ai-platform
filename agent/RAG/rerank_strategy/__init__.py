@@ -3,7 +3,6 @@ from .ChunkDocTwoStageRerankStrategy import ChunkDocTwoStageRerankStrategy
 from .ChunkScoreRerankStrategy import ChunkScoreRerankStrategy
 from .RerankStrategyRegistry import RerankStrategyRegistry
 from .RetrievalCandidate import RetrievalCandidate
-from .TitleBoostChunkDocRerankStrategy import TitleBoostChunkDocRerankStrategy
 from .TitleBoostRerankStrategy import TitleBoostRerankStrategy
 
 __all__ = [
@@ -13,5 +12,4 @@ __all__ = [
     "RetrievalCandidate",
     "RerankStrategyRegistry",
     "TitleBoostRerankStrategy",
-    "TitleBoostChunkDocRerankStrategy",
 ]

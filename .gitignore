@@ -20,3 +20,4 @@ pytest**/
 .tmp/
 agent/tests/reports/*.json
 scripts/jmeter/results/
+jmeter/
