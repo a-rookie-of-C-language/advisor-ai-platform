@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
+import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +18,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.criteria.Predicate;
 
 @Slf4j
 @Service("jdbcAuditLogStorage")
