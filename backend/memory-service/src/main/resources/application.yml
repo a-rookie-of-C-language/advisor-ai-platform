@@ -39,7 +39,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
 
 logging:
   pattern:
@@ -65,3 +65,4 @@ advisor:
     dimension: ${EMBEDDING_DIM:1024}
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+
