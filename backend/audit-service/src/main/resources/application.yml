@@ -35,7 +35,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
 
 logging:
   pattern:
@@ -46,3 +46,4 @@ advisor:
     token: ${INTERNAL_SERVICE_TOKEN:arookieofc}
   jwt:
     secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+
