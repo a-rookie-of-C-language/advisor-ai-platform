@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from llm.base_provider import ChatMessage
+from llm.chat_message import ChatMessage
 
 
 class GraphState(TypedDict, total=False):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from context.compaction.ContextCompactor import ContextCompactor
-from llm.base_provider import ChatMessage
+from llm.chat_message import ChatMessage
 
 
 @pytest.mark.asyncio

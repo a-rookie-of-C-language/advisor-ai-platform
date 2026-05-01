@@ -5,7 +5,7 @@ import json
 import re
 from typing import Awaitable, Callable
 
-from llm.base_provider import ChatMessage
+from llm.chat_message import ChatMessage
 
 
 class ContextCompactor:

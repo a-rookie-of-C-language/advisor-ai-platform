@@ -15,7 +15,8 @@ from context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from graph.runner import GraphRunner
-from llm.base_provider import BaseLLMProvider, ChatMessage
+from llm.base_provider import BaseLLMProvider
+from llm.chat_message import ChatMessage
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry

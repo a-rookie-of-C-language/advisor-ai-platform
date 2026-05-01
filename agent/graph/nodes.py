@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
-from llm.base_provider import ChatMessage
+from llm.chat_message import ChatMessage
 
 from .state import GraphState
 

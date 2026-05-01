@@ -158,7 +158,7 @@ class Agent:
             raise PermissionError(f"Agent '{self._name}' has no permission to use LLM")
         if self._llm_provider is None:
             raise RuntimeError("no_llm_provider")
-        from llm.base_provider import ChatMessage
+        from llm.chat_message import ChatMessage
 
         chat_messages = [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
         chunks: list[str] = []

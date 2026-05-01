@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from llm.base_provider import ToolSpec
+from llm.tool_spec import ToolSpec
 from tools.base_tool import BaseTool
 from tools.tool_permission import PermissionConfig
 from tools.tool_result import ToolResult

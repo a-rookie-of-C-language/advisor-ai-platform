@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from llm.base_provider import ChatMessage
+from llm.chat_message import ChatMessage
 
 
 class TranscriptStore:

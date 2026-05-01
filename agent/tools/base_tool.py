@@ -5,7 +5,7 @@ from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from llm.base_provider import ToolSpec
+from llm.tool_spec import ToolSpec
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
 from tools.validation_result import ValidationResult
