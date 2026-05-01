@@ -119,7 +119,10 @@ services:
       MEMORY_API_TOKEN: arookieofc
       AGENT_API_TOKEN: arookieofc
       AGENT_BASE_URL: http://host.docker.internal:8001
+      AI_GATEWAY_ENABLED: "false"
       AI_GATEWAY_BASE_URL: http://ai-gateway:8080
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
+      AI_GATEWAY_MODEL: ${AI_PROVIDER_MODEL:-gpt-4.1-mini}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
