@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import logging
@@ -13,9 +13,12 @@ from context.memory.core.schema import MemoryCandidate
 from context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
+from eval.action_score import score_action
 from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
+from memory.failure_memory_matcher import FailureMemoryMatcher
+from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
@@ -24,7 +27,7 @@ _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
 
-_STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
+_STREAM_ERROR_MESSAGE = "鏈嶅姟鍐呴儴閿欒锛岃绋嶅悗閲嶈瘯"
 
 
 class ChatStreamService:
@@ -63,6 +66,11 @@ class ChatStreamService:
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.chat_tools()
+        self._feature_action_scoring = self._read_feature_action_scoring()
+        self._feature_failure_memory_inject = self._read_feature_failure_memory_inject()
+        self._action_score_threshold = self._read_action_score_threshold()
+        self._failure_memory_store = FailureMemoryStore(self._read_failure_memory_dir())
+        self._last_action_score: dict[str, object] = {}
         self._last_compaction_stats: dict[str, int | bool | str] = {
             "snip_enabled": self._read_context_snip_enabled(),
             "micro_enabled": self._read_context_micro_enabled(),
@@ -91,6 +99,32 @@ class ChatStreamService:
             debug_stream=self._debug_stream,
             enable_tool_use=self._enable_tool_use,
         )
+
+
+    @staticmethod
+    def _read_feature_action_scoring() -> bool:
+        raw = os.getenv("FEATURE_ACTION_SCORING", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_feature_failure_memory_inject() -> bool:
+        raw = os.getenv("FEATURE_FAILURE_MEMORY_INJECT", "true").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _read_action_score_threshold() -> int:
+        raw = os.getenv("ACTION_SCORE_THRESHOLD", "70").strip()
+        try:
+            return max(min(int(raw), 100), 0)
+        except ValueError:
+            return 70
+
+    @staticmethod
+    def _read_failure_memory_dir() -> str:
+        raw = os.getenv("FAILURE_MEMORY_DIR", "").strip()
+        if raw:
+            return raw
+        return str(Path("runtime") / "failure_memory")
 
     @staticmethod
     def _read_debug_stream() -> bool:
@@ -213,6 +247,63 @@ class ChatStreamService:
                 return message.content
         return ""
 
+
+    @staticmethod
+    def _parse_serialized_event(raw: str) -> dict[str, object]:
+        event_name = "message"
+        data: dict[str, object] = {}
+        for line in raw.strip().split("\n"):
+            if line.startswith("event:"):
+                event_name = line.split(":", 1)[1].strip()
+            elif line.startswith("data:"):
+                payload = line.split(":", 1)[1].strip()
+                try:
+                    parsed = json.loads(payload)
+                    if isinstance(parsed, dict):
+                        data = parsed
+                except json.JSONDecodeError:
+                    data = {}
+        return {"event": event_name, "data": data}
+
+    def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
+        memory = matched.get("memory", {}) if isinstance(matched, dict) else {}
+        if not isinstance(memory, dict):
+            return ""
+        reasons = memory.get("reasons", [])
+        strategy = str(memory.get("avoid_strategy", "")).strip()
+        parts = [
+            "You have a prior failure pattern for a similar query.",
+            "Avoid repeating the same mistake.",
+        ]
+        if reasons:
+            parts.append(f"Failure reasons: {reasons}")
+        if strategy:
+            parts.append(f"Recommended strategy: {strategy}")
+        return "\n".join(parts)
+
+    def _write_failure_memory(
+        self,
+        *,
+        user_query: str,
+        session_id: int | None,
+        kb_id: int | None,
+        score: int,
+        reasons: list[str],
+    ) -> None:
+        if not reasons:
+            return
+        avoid_strategy = "Prefer explicit tool decision, validate tool args, and ground answer on tool evidence."
+        item = FailureMemoryItem(
+            ts=str(int(time.time())),
+            user_query=user_query,
+            session_id=session_id,
+            kb_id=kb_id,
+            reasons=reasons,
+            score=score,
+            avoid_strategy=avoid_strategy,
+        )
+        self._failure_memory_store.append(item)
+
     async def _execute_tool(
         self,
         tool_name: str,
@@ -261,6 +352,24 @@ class ChatStreamService:
         turn_id: str | None = None,
     ) -> AsyncIterator[str]:
         validated_messages = self._validate_messages(messages)
+        user_query = self._last_user_message(validated_messages)
+        if self._feature_failure_memory_inject and user_query:
+            recent = self._failure_memory_store.load_recent(limit=200)
+            matched = FailureMemoryMatcher.match(user_query, recent)
+            if matched:
+                prompt = self._build_failure_avoid_prompt(matched)
+                if prompt:
+                    validated_messages = [ChatMessage(role="system", content=prompt)] + validated_messages
+
+        compact_started = time.monotonic()
+        compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
+            validated_messages,
+            session_id=session_id,
+            summarize_fn=self._summarize_for_autocompact,
+            persist_transcript_fn=self._persist_compaction_transcript,
+        )
+        compact_stats["latency_ms"] = int((time.monotonic() - compact_started) * 1000)
+        self._last_compaction_stats = compact_stats
         logger.info(
             "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
             trace_id,
@@ -269,6 +378,22 @@ class ChatStreamService:
             user_id,
             kb_id,
         )
+        if compact_stats["tokens_released"] > 0:
+            logger.info(
+                "context_compaction_released session_id=%s released=%s before=%s after=%s",
+                session_id,
+                compact_stats["tokens_released"],
+                compact_stats["tokens_before"],
+                compact_stats["tokens_after"],
+            )
+        if compact_stats.get("auto_compacted"):
+            logger.info(
+                "context_autocompact_done session_id=%s transcript=%s",
+                session_id,
+                compact_stats.get("transcript_path", ""),
+            )
+
+        trace_events: list[dict[str, object]] = []
         if self._use_langgraph:
             async for event in self._stream_events_graph(
                 validated_messages,
@@ -278,18 +403,43 @@ class ChatStreamService:
                 trace_id=trace_id,
                 turn_id=turn_id,
             ):
+                trace_events.append(self._parse_serialized_event(event))
                 yield event
-            return
+        else:
+            async for event in self._stream_events_legacy(
+                compacted_messages,
+                user_id=user_id,
+                session_id=session_id,
+                kb_id=kb_id,
+            ):
+                trace_events.append(self._parse_serialized_event(event))
+                yield event
 
-        async for event in self._stream_events_legacy(
-            validated_messages,
-            user_id=user_id,
-            session_id=session_id,
-            kb_id=kb_id,
-            trace_id=trace_id,
-            turn_id=turn_id,
-        ):
-            yield event
+        if self._feature_action_scoring:
+            action_score = score_action(user_query=user_query, kb_id=kb_id, trace_events=trace_events)
+            self._last_action_score = action_score.to_dict()
+            logger.info(
+                "action_score session_id=%s user_id=%s score=%s detail=%s",
+                session_id,
+                user_id,
+                action_score.total,
+                action_score.to_dict(),
+            )
+            if action_score.total < self._action_score_threshold:
+                logger.warning(
+                    "action_score_below_threshold session_id=%s user_id=%s score=%s threshold=%s",
+                    session_id,
+                    user_id,
+                    action_score.total,
+                    self._action_score_threshold,
+                )
+                self._write_failure_memory(
+                    user_query=user_query,
+                    session_id=session_id,
+                    kb_id=kb_id,
+                    score=action_score.total,
+                    reasons=action_score.reasons,
+                )
 
     async def _stream_events_graph(
         self,
@@ -522,6 +672,7 @@ class ChatStreamService:
             "llm_extractor_enabled": self._llm_extractor is not None,
             "context_compaction": self._last_compaction_stats,
             "graph": self._graph_runner.health_snapshot(),
+            "action_score": self._last_action_score,
         }
 
     async def _summarize_for_autocompact(self, transcript: str) -> str:
