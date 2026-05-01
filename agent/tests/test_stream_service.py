@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from typing import AsyncIterator, Iterable
@@ -42,8 +42,26 @@ class _ProviderError:
 
 class _ProviderToolUse:
     async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+        if False:
+            yield ""
+        return
+
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+    ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
-        yield "answer"
+        _ = tools
+        _ = max_tool_calls
+        _ = max_tool_retries
+        payload = await tool_executor("rag_search", {"query": "q", "top_k": 3})
+        yield LLMStreamEvent(type="tool_result", tool_name="rag_search", tool_output=payload, attempt=1, success=True)
+        yield LLMStreamEvent(type="delta", text="answer")
 
 
 class _ProviderLegacyToolUse:

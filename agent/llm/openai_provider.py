@@ -24,7 +24,7 @@ class OpenAIProvider(BaseLLMProvider):
         )
         self._model = model
         self._temperature = temperature
-    @staticmethod
+
     def get_client(self) -> AsyncOpenAI:
         return self._client
 

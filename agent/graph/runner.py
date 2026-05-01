@@ -40,7 +40,6 @@ class GraphRunner:
         self._node_order = [
             "load_memory",
             "decide_tool",
-            "call_rag_tool",
             "generate",
             "flush_memory",
             "finalize",
