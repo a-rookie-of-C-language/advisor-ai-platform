@@ -5,6 +5,7 @@ import Dashboard from '../pages/Dashboard/Dashboard'
 import RAGPage from '../pages/RAG/RAGPage'
 import ChatPage from '../pages/Chat/ChatPage'
 import AuditPage from '../pages/Audit/AuditPage'
+import MonitorPage from '../pages/Monitor/MonitorPage'
 import { useAuthStore } from '../store/authStore'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -38,6 +39,14 @@ export default function AppRouter() {
           element={
             <AdminRoute>
               <AuditPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="monitor"
+          element={
+            <AdminRoute>
+              <MonitorPage />
             </AdminRoute>
           }
         />

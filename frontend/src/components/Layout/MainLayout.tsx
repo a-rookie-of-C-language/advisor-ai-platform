@@ -5,6 +5,7 @@ import {
   DatabaseOutlined,
   MessageOutlined,
   AuditOutlined,
+  LineChartOutlined,
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
@@ -58,7 +59,12 @@ export default function MainLayout() {
     { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
     { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
     { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
-    ...(role === 'ADMIN' ? [{ key: '/audit', icon: <AuditOutlined />, label: '审计日志' }] : []),
+    ...(role === 'ADMIN'
+      ? [
+          { key: '/audit', icon: <AuditOutlined />, label: '审计日志' },
+          { key: '/monitor', icon: <LineChartOutlined />, label: '监控中心' },
+        ]
+      : []),
   ]
 
   const userMenu = {
