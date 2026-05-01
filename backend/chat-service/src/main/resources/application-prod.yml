@@ -48,3 +48,8 @@ advisor:
     api-token: ${AGENT_API_TOKEN:${INTERNAL_SERVICE_TOKEN:arookieofc}}
     timeout-ms: 600000
     debug-stream: false
+  ai-gateway:
+    enabled: ${AI_GATEWAY_ENABLED:false}
+    base-url: ${AI_GATEWAY_BASE_URL:http://127.0.0.1:8090}
+    api-key: ${AI_GATEWAY_API_KEY:dev-key}
+    model: ${AI_GATEWAY_MODEL:gpt-4.1-mini}

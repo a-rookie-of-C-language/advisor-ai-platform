@@ -51,6 +51,10 @@ public class AgentProxyServiceImpl implements AgentProxyService {
   private final HttpClient httpClient;
   private final String agentBaseUrl;
   private final String agentApiToken;
+  private final boolean aiGatewayEnabled;
+  private final String aiGatewayBaseUrl;
+  private final String aiGatewayApiKey;
+  private final String aiGatewayModel;
   private final boolean debugStream;
   private final long requestTimeoutMs;
   private final long firstChunkTimeoutMs;
@@ -59,12 +63,20 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       ObjectMapper objectMapper,
       @Value("${advisor.agent.base-url:http://127.0.0.1:8001}") String agentBaseUrl,
       @Value("${advisor.agent.api-token:${MEMORY_API_TOKEN:}}") String agentApiToken,
+      @Value("${advisor.ai-gateway.enabled:false}") boolean aiGatewayEnabled,
+      @Value("${advisor.ai-gateway.base-url:http://127.0.0.1:8090}") String aiGatewayBaseUrl,
+      @Value("${advisor.ai-gateway.api-key:dev-key}") String aiGatewayApiKey,
+      @Value("${advisor.ai-gateway.model:gpt-4.1-mini}") String aiGatewayModel,
       @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs,
       @Value("${advisor.agent.first-chunk-timeout-ms:120000}") long firstChunkTimeoutMs,
       @Value("${advisor.agent.debug-stream:${DEBUG_STREAM:false}}") boolean debugStream) {
     this.objectMapper = objectMapper;
     this.agentBaseUrl = agentBaseUrl;
     this.agentApiToken = agentApiToken;
+    this.aiGatewayEnabled = aiGatewayEnabled;
+    this.aiGatewayBaseUrl = aiGatewayBaseUrl;
+    this.aiGatewayApiKey = aiGatewayApiKey;
+    this.aiGatewayModel = aiGatewayModel;
     this.debugStream = debugStream;
     this.requestTimeoutMs = Math.max(timeoutMs, 1000L);
     this.firstChunkTimeoutMs = Math.max(firstChunkTimeoutMs, 1000L);
@@ -90,7 +102,10 @@ public class AgentProxyServiceImpl implements AgentProxyService {
   private ChatStreamProxyResult proxyInternal(
       ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
     long startAt = System.currentTimeMillis();
-    String payload = buildPayloadJson(request, userId);
+    String payload =
+        aiGatewayEnabled
+            ? buildAiGatewayPayloadJson(request)
+            : buildPayloadJson(request, userId);
     byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
     log.info(
@@ -113,16 +128,23 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
     HttpRequest.Builder requestBuilder =
         HttpRequest.newBuilder()
-            .uri(URI.create(agentBaseUrl + "/chat/stream"))
+            .uri(
+                URI.create(
+                    aiGatewayEnabled
+                        ? aiGatewayBaseUrl + "/v1/chat/stream"
+                        : agentBaseUrl + "/chat/stream"))
             .version(HttpClient.Version.HTTP_1_1)
             .timeout(Duration.ofMinutes(10))
             .header("Content-Type", "application/json")
             .header("Accept", "text/event-stream")
             .header("Cache-Control", "no-cache")
-            .header("X-Memory-Token", agentApiToken)
-            .header("Authorization", "Bearer " + agentApiToken)
+            .header(
+                "Authorization", "Bearer " + (aiGatewayEnabled ? aiGatewayApiKey : agentApiToken))
             .timeout(Duration.ofMillis(requestTimeoutMs))
             .POST(HttpRequest.BodyPublishers.ofByteArray(payloadBytes));
+    if (!aiGatewayEnabled) {
+      requestBuilder.header("X-Memory-Token", agentApiToken);
+    }
     String traceId = LogTraceUtil.get(LogTraceUtil.TRACE_ID);
     if (!traceId.isBlank()) {
       requestBuilder.header(TRACE_HEADER, traceId);
@@ -333,13 +355,24 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       }
     }
 
-    if (!"delta".equals(event) || dataBuilder.isEmpty()) {
+    if (dataBuilder.isEmpty()) {
       return null;
     }
 
     try {
       JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      return node.path("text").asText("");
+      if ("delta".equals(event)) {
+        return node.path("text").asText("");
+      }
+      if ("raw".equals(event)) {
+        String content =
+            node.path("choices").path(0).path("delta").path("content").asText("");
+        if (!content.isBlank()) {
+          return content;
+        }
+        return node.path("choices").path(0).path("message").path("content").asText("");
+      }
+      return null;
     } catch (Exception e) {
       return null;
     }
@@ -416,6 +449,26 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     payload.put("kbId", request.getKbId());
     payload.put("turnId", LogTraceUtil.get(LogTraceUtil.TURN_ID));
     payload.put("traceId", LogTraceUtil.get(LogTraceUtil.TRACE_ID));
+    return objectMapper.writeValueAsString(payload);
+  }
+
+  private String buildAiGatewayPayloadJson(ChatStreamRequestDTO request) throws IOException {
+    List<Map<String, String>> messages =
+        request.getMessages().stream()
+            .filter(
+                message ->
+                    message != null && message.getRole() != null && message.getContent() != null)
+            .map(message -> toMap(message.getRole(), message.getContent()))
+            .filter(message -> !message.get("content").isBlank())
+            .toList();
+
+    if (messages.isEmpty()) {
+      throw new BadRequestException("ai gateway stream failed: no valid messages");
+    }
+
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("model", aiGatewayModel);
+    payload.put("messages", messages);
     return objectMapper.writeValueAsString(payload);
   }
 
