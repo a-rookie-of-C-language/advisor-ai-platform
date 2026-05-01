@@ -37,6 +37,43 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: advisor-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ai-gateway:
+    build:
+      context: ./ai-gateway
+      dockerfile: Dockerfile
+    container_name: advisor-ai-gateway
+    environment:
+      APP_NAME: aigateway
+      HTTP_ADDR: 0.0.0.0:8080
+      MASTER_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
+      REDIS_ADDR: redis://redis:6379
+      RATE_LIMIT_PER_MIN: 120
+      RATE_LIMIT_TENANT_PER_MIN: 240
+      RATE_LIMIT_ROUTE_PER_MIN: 120
+      RATE_LIMIT_MODEL_PER_MIN: 120
+      RATE_LIMIT_WINDOW_MS: 60000
+      PROVIDER_BASE_URL: ${AI_PROVIDER_BASE_URL:-https://api.openai.com/v1}
+      PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY:-}
+      PROVIDER_MODEL: ${AI_PROVIDER_MODEL:-gpt-4.1-mini}
+      PROVIDER_TIMEOUT_SEC: 60
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+
   auth-service:
     build:
       context: .
@@ -82,6 +119,7 @@ services:
       MEMORY_API_TOKEN: arookieofc
       AGENT_API_TOKEN: arookieofc
       AGENT_BASE_URL: http://host.docker.internal:8001
+      AI_GATEWAY_BASE_URL: http://ai-gateway:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -89,6 +127,8 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
+        condition: service_started
+      ai-gateway:
         condition: service_started
     ports:
       - "8082:8082"
