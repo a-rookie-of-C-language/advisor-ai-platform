@@ -1,4 +1,5 @@
 import request from './request'
+import { resolveAgentStreamEndpoint } from './agentEndpoint'
 import { useAuthStore } from '../store/authStore'
 
 export interface ChatSessionDTO {
@@ -55,15 +56,12 @@ interface StreamHandlers {
 const FIRST_PACKET_TIMEOUT_MS = 30_000
 const IDLE_TIMEOUT_MS = 60_000
 
-function getAuthHeaders(): HeadersInit {
+function getAuthToken(): string {
   const token = useAuthStore.getState().token
   if (!token) {
     throw new Error('auth token missing')
   }
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }
+  return token
 }
 
 function parseSseBlock(block: string): { event: string; data: string } | null {
@@ -147,9 +145,10 @@ export const chatApi = {
     startFirstPacketTimer()
 
     try {
-      const response = await fetch('/api/chat/stream', {
+      const endpoint = resolveAgentStreamEndpoint(getAuthToken())
+      const response = await fetch(endpoint.url, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: endpoint.headers,
         body: JSON.stringify(payload),
         signal: controller.signal,
       })
