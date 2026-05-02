@@ -9,6 +9,7 @@ node_modules/
 dist/
 prompts/
 agents.md
+claude.md
 .vscode/
 .idea/
 .venv/
@@ -18,3 +19,5 @@ java-upgrade/
 pytest**/
 **cache**/
 jmeter/
+.claude/
+agent/runtime/

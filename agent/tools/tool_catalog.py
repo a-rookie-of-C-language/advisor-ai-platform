@@ -4,9 +4,10 @@ import os
 from typing import Any
 
 from tools.base_tool import BaseTool
-from agent.tools.tool_impl.memory_read_tool import MemoryReadTool
-from agent.tools.tool_impl.memory_write_tool import MemoryWriteTool
-from agent.tools.tool_impl.rag_search_tool import RAGSearchTool
+from tools.tool_impl.memory_read_tool import MemoryReadTool
+from tools.tool_impl.memory_write_tool import MemoryWriteTool
+from tools.tool_impl.rag_search_tool import RAGSearchTool
+from tools.tool_impl.web_search_tool import WebSearchTool
 
 
 class ToolCatalog:
@@ -30,6 +31,8 @@ class ToolCatalog:
         if memory_client is not None and cls._feature_enabled("MEMORY_TOOLS", True):
             tools.append(MemoryReadTool(memory_client))
             tools.append(MemoryWriteTool(memory_client))
+        if cls._feature_enabled("WEB_SEARCH", True):
+            tools.append(WebSearchTool())
         return tools
 
     @classmethod
