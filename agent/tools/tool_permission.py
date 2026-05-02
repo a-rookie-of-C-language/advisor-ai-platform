@@ -42,20 +42,3 @@ class PermissionConfig:
             and self.read_resources.issubset(other.read_resources)
             and self.write_resources.issubset(other.write_resources)
         )
-
-    @classmethod
-    def memory_worker(cls) -> "PermissionConfig":
-        # 后台子代理仅保留最小内存读写权限，不允许使用其他工具能力。
-        return cls(
-            allowed_tools={ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
-            read_resources={"memory"},
-            write_resources={"memory"},
-        )
-
-    @classmethod
-    def chat_tools(cls) -> "PermissionConfig":
-        return cls(
-            allowed_tools={ToolPermission.RAG_READ, ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
-            read_resources={"context", "memory"},
-            write_resources={"memory"},
-        )

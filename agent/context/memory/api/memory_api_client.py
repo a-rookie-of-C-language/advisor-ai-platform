@@ -193,16 +193,12 @@ class MemoryApiClient:
             raise last_error
         raise RuntimeError("Memory API request failed")
 
-
-class MemoryApiCircuitOpen(Exception):
-    pass
-
     @staticmethod
     def _to_memory_item(data: dict[str, Any]) -> MemoryItem:
         return MemoryItem(
             id=int(data.get("id", 0)),
             user_id=int(data.get("userId", 0)),
-            kb_id=int(data.get("kbId", 0)),
+            kb_id=int(data.get("kbId", 0)), 
             content=str(data.get("content", "")),
             confidence=float(data.get("confidence", 0.5)),
             score=float(data.get("score", 0.0)),
@@ -222,3 +218,7 @@ class MemoryApiCircuitOpen(Exception):
             return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         except ValueError:
             return None
+
+
+class MemoryApiCircuitOpen(Exception):
+    pass

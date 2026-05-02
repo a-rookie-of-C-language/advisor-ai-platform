@@ -46,7 +46,13 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
 
         if user_id is None:
             return ToolResult.error("memory_write missing user_id")
-        if kb_id is None or int(kb_id) < 0:
+        if kb_id is None:
+            return ToolResult.error("memory_write invalid kb_id")
+        try:
+            kb_id_int = int(kb_id)
+        except (ValueError, TypeError):
+            return ToolResult.error("memory_write invalid kb_id")
+        if kb_id_int < 0:
             return ToolResult.error("memory_write invalid kb_id")
 
         candidates = [

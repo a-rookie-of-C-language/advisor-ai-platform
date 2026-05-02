@@ -18,7 +18,7 @@ from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from tools.tool_assembly_pool import ToolAssemblyPool
-from tools.tool_permission import PermissionConfig
+from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
@@ -63,7 +63,11 @@ class ChatStreamService:
         self._compaction_subagent = ContextCompactionSubAgent(self._provider)
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
-        self._tool_permission = PermissionConfig.chat_tools()
+        self._tool_permission = PermissionConfig(
+            allowed_tools={ToolPermission.RAG_READ, ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+            read_resources={"context", "memory"},
+            write_resources={"memory"},
+        )
         self._last_compaction_stats: dict[str, int | bool | str] = {
             "snip_enabled": self._read_context_snip_enabled(),
             "micro_enabled": self._read_context_micro_enabled(),
@@ -484,7 +488,6 @@ class ChatStreamService:
                         assistant_text=answer,
                         recent_messages=self._to_memory_messages(validated_messages)
                         + [{"role": "assistant", "content": answer}],
-                        llm_extractor=self._llm_extractor,
                     )
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("Memory flush failed, skip writeback: %s", exc)

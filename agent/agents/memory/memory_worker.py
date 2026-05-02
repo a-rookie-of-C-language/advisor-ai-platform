@@ -10,7 +10,7 @@ from context.memory.core.governance import MemoryGovernance
 from context.memory.core.schema import MemoryCandidate, WritebackResult
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
-from tools.tool_permission import PermissionConfig
+from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,11 @@ class MemoryWorkerSubAgent(SubAgent):
     ) -> None:
         super().__init__(
             name="memory_worker",
-            permission_config=PermissionConfig.memory_worker(),
+            permission_config=PermissionConfig(
+                allowed_tools={ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+                read_resources={"memory"},
+                write_resources={"memory"},
+            ),
             memory_client=api_client,
             **kwargs,
         )

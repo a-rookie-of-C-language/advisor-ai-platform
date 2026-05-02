@@ -20,14 +20,14 @@ from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
 from tools.tool_assembly_pool import ToolAssemblyPool
-from tools.tool_permission import PermissionConfig
+from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
 
-_STREAM_ERROR_MESSAGE = "鏈嶅姟鍐呴儴閿欒锛岃绋嶅悗閲嶈瘯"
+_STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
 
 
 class ChatStreamService:
@@ -65,7 +65,11 @@ class ChatStreamService:
         self._compaction_subagent = ContextCompactionSubAgent(self._provider)
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
-        self._tool_permission = PermissionConfig.chat_tools()
+        self._tool_permission = PermissionConfig(
+            allowed_tools={ToolPermission.RAG_READ, ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+            read_resources={"context", "memory"},
+            write_resources={"memory"},
+        )
         self._feature_action_scoring = self._read_feature_action_scoring()
         self._feature_failure_memory_inject = self._read_feature_failure_memory_inject()
         self._action_score_threshold = self._read_action_score_threshold()
@@ -630,7 +634,6 @@ class ChatStreamService:
                         assistant_text=answer,
                         recent_messages=self._to_memory_messages(validated_messages)
                         + [{"role": "assistant", "content": answer}],
-                        llm_extractor=self._llm_extractor,
                     )
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("Memory flush failed, skip writeback: %s", exc)

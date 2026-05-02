@@ -46,7 +46,13 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
         if user_id is None or session_id is None:
             return ToolResult.error("tool permission check failed: missing user/session")
 
-        if kb_id is None or int(kb_id) < 0:
+        if kb_id is None:
+            return ToolResult.error("tool permission check failed: invalid kb_id")
+        try:
+            kb_id_int = int(kb_id)
+        except (ValueError, TypeError):
+            return ToolResult.error("tool permission check failed: invalid kb_id")
+        if kb_id_int < 0:
             return ToolResult.error("tool permission check failed: invalid kb_id")
 
         query = str(tool_input.query or user_query).strip()

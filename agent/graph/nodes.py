@@ -143,11 +143,6 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     }
 
 
-async def call_rag_tool_node(state: GraphState) -> GraphState:
-    _ = state
-    return {}
-
-
 async def generate_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(

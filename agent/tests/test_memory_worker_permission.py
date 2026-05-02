@@ -90,7 +90,11 @@ async def test_memory_worker_permission_denied_marks_task_failed() -> None:
 
 
 def test_memory_worker_has_strict_memory_worker_permission_config() -> None:
-    config = PermissionConfig.memory_worker()
+    config = PermissionConfig(
+        allowed_tools={ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+        read_resources={"memory"},
+        write_resources={"memory"},
+    )
     assert config.allows_tool(ToolPermission.MEMORY_READ)
     assert config.allows_tool(ToolPermission.MEMORY_WRITE)
     assert config.allows_write("memory")

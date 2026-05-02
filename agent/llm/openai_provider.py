@@ -112,6 +112,8 @@ class OpenAIProvider(BaseLLMProvider):
                 tool_choice=tool_choice,
             )
 
+            if not response.choices:
+                raise RuntimeError("LLM returned empty choices (possibly content filter)")
             choice = response.choices[0]
             assistant_message = choice.message
             assistant_content = assistant_message.content or ""

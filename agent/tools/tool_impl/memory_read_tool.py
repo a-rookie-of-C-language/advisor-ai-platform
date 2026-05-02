@@ -38,7 +38,13 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
 
         if user_id is None:
             return ToolResult.error("memory_read missing user_id")
-        if kb_id is None or int(kb_id) < 0:
+        if kb_id is None:
+            return ToolResult.error("memory_read missing kb_id")
+        try:
+            kb_id_int = int(kb_id)
+        except (ValueError, TypeError):
+            return ToolResult.error("memory_read invalid kb_id")
+        if kb_id_int < 0:
             return ToolResult.error("memory_read invalid kb_id")
 
         query = str(tool_input.query or user_query).strip()
