@@ -11,8 +11,8 @@ class ContextCompactionSubAgent(SubAgent):
         super().__init__(
             name="context_compaction_subagent",
             llm_provider=llm_provider,
-            permission_config=PermissionConfig(
-                allowed_tools={ToolPermission.LLM},
+            permission_config=PermissionConfig.from_allowed_tools(
+                {ToolPermission.LLM},
                 read_resources={"context"},
                 write_resources=set(),
             ),

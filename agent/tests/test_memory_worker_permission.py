@@ -59,8 +59,8 @@ async def test_agent_fetch_pending_tasks_requires_memory_read_permission() -> No
 
 @pytest.mark.asyncio
 async def test_agent_save_session_summary_requires_memory_write_resource() -> None:
-    permission = PermissionConfig(
-        allowed_tools={ToolPermission.MEMORY_WRITE},
+    permission = PermissionConfig.from_allowed_tools(
+        {ToolPermission.MEMORY_WRITE},
         read_resources={"memory"},
         write_resources=set(),
     )
@@ -73,8 +73,8 @@ async def test_agent_save_session_summary_requires_memory_write_resource() -> No
 async def test_memory_worker_permission_denied_marks_task_failed() -> None:
     client = _FakeMemoryApiClient()
     worker = MemoryWorkerSubAgent(api_client=client)  # type: ignore[arg-type]
-    worker._permission = PermissionConfig(  # type: ignore[attr-defined]
-        allowed_tools={ToolPermission.MEMORY_READ},
+    worker._permission = PermissionConfig.from_allowed_tools(  # type: ignore[attr-defined]
+        {ToolPermission.MEMORY_READ},
         read_resources={"context", "memory"},
         write_resources=set(),
     )
@@ -90,8 +90,8 @@ async def test_memory_worker_permission_denied_marks_task_failed() -> None:
 
 
 def test_memory_worker_has_strict_memory_worker_permission_config() -> None:
-    config = PermissionConfig(
-        allowed_tools={ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+    config = PermissionConfig.from_allowed_tools(
+        {ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
         read_resources={"memory"},
         write_resources={"memory"},
     )

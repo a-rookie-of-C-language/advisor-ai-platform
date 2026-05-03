@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 
 import pytest
+from tools.tool_impl.memory_read_tool import MemoryReadTool
+from tools.tool_impl.memory_write_tool import MemoryWriteTool
 from pydantic import BaseModel
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
 from tools.base_tool import BaseTool
-from agent.tools.tool_impl.memory_read_tool import MemoryReadTool
-from agent.tools.tool_impl.memory_write_tool import MemoryWriteTool
 from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
 from tools.tool_result import ToolResult
@@ -72,7 +72,9 @@ async def test_tool_registry_denies_without_permission() -> None:
     payload = await registry.execute(
         "dummy",
         {"text": "x"},
-        {"permission_config": PermissionConfig(allowed_tools=set(), read_resources=set(), write_resources=set())},
+        {"permission_config": PermissionConfig(
+            tool_modes={}, default_mode="deny", read_resources=set(), write_resources=set(),
+        )},
     )
     body = json.loads(payload)
     assert body["ok"] is False
@@ -99,8 +101,8 @@ async def test_memory_read_tool_returns_hit() -> None:
             "user_id": 1,
             "kb_id": 2,
             "user_query": "q",
-            "permission_config": PermissionConfig(
-                allowed_tools={ToolPermission.MEMORY_READ},
+            "permission_config": PermissionConfig.from_allowed_tools(
+                {ToolPermission.MEMORY_READ},
                 read_resources={"memory"},
                 write_resources=set(),
             ),
@@ -132,8 +134,8 @@ async def test_memory_write_tool_returns_meta() -> None:
         {
             "user_id": 1,
             "kb_id": 2,
-            "permission_config": PermissionConfig(
-                allowed_tools={ToolPermission.MEMORY_WRITE},
+            "permission_config": PermissionConfig.from_allowed_tools(
+                {ToolPermission.MEMORY_WRITE},
                 read_resources=set(),
                 write_resources={"memory"},
             ),

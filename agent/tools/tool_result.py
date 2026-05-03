@@ -18,6 +18,16 @@ class ToolResult:
         return cls(ok=False, status="denied", message=message, items=[])
 
     @classmethod
+    def pending(cls, message: str, callback_id: str) -> "ToolResult":
+        return cls(
+            ok=False,
+            status="pending",
+            message=message,
+            items=[],
+            meta={"callback_id": callback_id},
+        )
+
+    @classmethod
     def error(cls, message: str) -> "ToolResult":
         return cls(ok=False, status="error", message=message, items=[])
 

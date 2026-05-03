@@ -32,8 +32,8 @@ class MemoryWorkerSubAgent(SubAgent):
     ) -> None:
         super().__init__(
             name="memory_worker",
-            permission_config=PermissionConfig(
-                allowed_tools={ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
+            permission_config=PermissionConfig.from_allowed_tools(
+                {ToolPermission.MEMORY_READ, ToolPermission.MEMORY_WRITE},
                 read_resources={"memory"},
                 write_resources={"memory"},
             ),

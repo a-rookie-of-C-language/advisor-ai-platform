@@ -63,11 +63,9 @@ class ChatStreamService:
         self._compaction_subagent = ContextCompactionSubAgent(self._provider)
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
-        self._tool_permission = PermissionConfig(
-            allowed_tools={
-                ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
-                ToolPermission.MEMORY_WRITE, ToolPermission.SEARCH,
-            },
+        self._tool_permission = PermissionConfig.from_allowed_tools(
+            {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
+             ToolPermission.MEMORY_WRITE, ToolPermission.SEARCH},
             read_resources={"context", "memory"},
             write_resources={"memory"},
         )
