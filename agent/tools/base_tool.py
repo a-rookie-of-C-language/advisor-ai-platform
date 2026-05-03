@@ -25,6 +25,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         input_json_schema: dict[str, Any] | None = None,
         output_model: type[OutputModelT] | None = None,
         required_permissions: set[ToolPermission] | None = None,
+        category: str = "general",
     ) -> None:
         self.name = name
         self.description = description
@@ -32,6 +33,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         self._input_json_schema = input_json_schema
         self.output_model = output_model
         self.required_permissions = required_permissions or set()
+        self.category = category
         self._is_concurrency_safe = False
         self._is_destructive = False
         self._is_read_only = False

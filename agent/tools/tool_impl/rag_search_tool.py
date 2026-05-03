@@ -26,6 +26,7 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
             description="Search relevant snippets from the selected knowledge base.",
             input_model=RAGSearchInput,
             required_permissions={ToolPermission.RAG_READ},
+            category="retrieval",
         )
         self._rag_service = rag_service
         self._is_concurrency_safe = True

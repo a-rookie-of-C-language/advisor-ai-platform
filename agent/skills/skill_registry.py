@@ -30,3 +30,19 @@ class SkillRegistry:
         for skill in self.list_all():
             lines.append(f"- {skill.name}: {skill.description}")
         return "\n".join(lines)
+
+    def brief_prompt(self, names: list[str]) -> str:
+        """Build a prompt from the brief of selected skills (progressive disclosure)."""
+        parts = []
+        for name in names:
+            skill = self.get(name)
+            if skill is not None:
+                parts.append(f"[{skill.name}] {skill.brief}")
+        return "\n".join(parts)
+
+    def expand_skill(self, name: str) -> str:
+        """Return the full system_prompt for a single skill (on-demand expansion)."""
+        skill = self.get(name)
+        if skill is None:
+            return ""
+        return skill.system_prompt

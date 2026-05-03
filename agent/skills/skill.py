@@ -9,6 +9,7 @@ class Skill:
 
     name: str
     description: str
+    brief: str
     system_prompt: str
     required_tools: set[str] = field(default_factory=set)
     priority: int = 0

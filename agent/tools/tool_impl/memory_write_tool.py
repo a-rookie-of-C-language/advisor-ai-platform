@@ -29,6 +29,7 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
             description="Write memory candidates into long-term memory.",
             input_model=MemoryWriteInput,
             required_permissions={ToolPermission.MEMORY_WRITE},
+            category="writing",
         )
         self._memory_client = memory_client
         self._is_concurrency_safe = False

@@ -20,6 +20,7 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
             description="Search long-term memory items by user query.",
             input_model=MemoryReadInput,
             required_permissions={ToolPermission.MEMORY_READ},
+            category="retrieval",
         )
         self._memory_client = memory_client
         self._is_concurrency_safe = True

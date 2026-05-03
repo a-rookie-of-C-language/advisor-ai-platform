@@ -21,6 +21,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
             description="Search the web for real-time information using DuckDuckGo.",
             input_model=WebSearchInput,
             required_permissions={ToolPermission.SEARCH},
+            category="search",
         )
         self._is_concurrency_safe = True
         self._is_destructive = False

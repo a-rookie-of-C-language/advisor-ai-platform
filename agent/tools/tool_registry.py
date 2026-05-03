@@ -26,6 +26,14 @@ class ToolRegistry:
     def specs(self) -> list[ToolSpec]:
         return [tool.to_tool_spec() for tool in self._tools.values()]
 
+    def specs_by_categories(self, categories: set[str]) -> list[ToolSpec]:
+        """返回指定 category 下的 tool specs，用于意图路由后按需注入。"""
+        return [tool.to_tool_spec() for tool in self._tools.values() if tool.category in categories]
+
+    def all_categories(self) -> set[str]:
+        """返回当前注册的所有 tool category。"""
+        return {tool.category for tool in self._tools.values()}
+
     async def execute(self, name: str, tool_args: dict[str, Any], context: dict[str, Any]) -> str:
         tool = self.get(name)
         if tool is None:

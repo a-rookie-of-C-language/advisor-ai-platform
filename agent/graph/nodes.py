@@ -31,6 +31,7 @@ class GraphRuntime:
     enable_tool_use: bool
     debug_stream: bool
     skill_registry: Any = None
+    intent_router: Any = None
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -99,7 +100,7 @@ async def select_skill_node(state: GraphState) -> GraphState:
         for name in active_skills:
             skill = skill_registry.get(name)
             if skill is not None:
-                prompts.append(skill.system_prompt)
+                prompts.append(skill.brief)
 
         merged_prompt = "\n\n".join(prompts)
         logger.info(
@@ -227,7 +228,15 @@ async def generate_node(state: GraphState) -> GraphState:
 
     try:
         if state.get("use_tool"):
-            tools = runtime.tools.specs()
+            # 意图路由：按需注入 tool specs
+            user_query = state.get("user_query", "")
+            if runtime.intent_router is not None:
+                all_cats = runtime.tools.all_categories()
+                matched_cats = runtime.intent_router.route_with_fallback(user_query, all_cats)
+                tools = runtime.tools.specs_by_categories(matched_cats)
+                logger.debug("intent_router: injecting %d tools for categories=%s", len(tools), matched_cats)
+            else:
+                tools = runtime.tools.specs()
 
             async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
                 return await _execute_tool(tool_name=tool_name, tool_args=tool_args, state=state)

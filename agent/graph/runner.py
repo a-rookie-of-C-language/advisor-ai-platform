@@ -27,6 +27,7 @@ class GraphRunner:
         debug_stream: bool,
         enable_tool_use: bool,
         skill_registry: Any = None,
+        intent_router: Any = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -38,6 +39,7 @@ class GraphRunner:
         self._debug_stream = debug_stream
         self._enable_tool_use = enable_tool_use
         self._skill_registry = skill_registry
+        self._intent_router = intent_router
         self._compiled = build_chat_graph()
         self._node_order = [
             "select_skill",
@@ -77,6 +79,7 @@ class GraphRunner:
             enable_tool_use=self._enable_tool_use,
             debug_stream=self._debug_stream,
             skill_registry=self._skill_registry,
+            intent_router=self._intent_router,
         )
         token = set_runtime(runtime)
         state = {
