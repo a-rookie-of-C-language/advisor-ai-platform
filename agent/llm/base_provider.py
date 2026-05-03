@@ -12,8 +12,17 @@ ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[str]]
 
 class BaseLLMProvider(ABC):
     @abstractmethod
-    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
-        """Stream response chunks for a chat request."""
+    async def stream_chat(
+        self,
+        messages: Iterable[ChatMessage],
+        *,
+        response_format: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Stream response chunks for a chat request.
+
+        Args:
+            response_format: Optional OpenAI response_format, e.g. {"type": "json_object"}.
+        """
         raise NotImplementedError
 
     async def stream_chat_with_tools(
@@ -24,10 +33,12 @@ class BaseLLMProvider(ABC):
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
+        strict_tools: bool = False,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = tools
         _ = tool_executor
         _ = max_tool_calls
         _ = max_tool_retries
+        _ = strict_tools
         async for chunk in self.stream_chat(messages):
             yield LLMStreamEvent(type="delta", text=chunk)

@@ -52,10 +52,17 @@ class QueryEngine:
 
 
     @staticmethod
-    def build_tool_payload(tools: list[ToolSpec]) -> list[dict[str, Any]]:
-        """Convert ToolSpec list to OpenAI function-calling payload format."""
-        return [
-            {
+    def build_tool_payload(tools: list[ToolSpec], *, strict: bool = False) -> list[dict[str, Any]]:
+        """Convert ToolSpec list to OpenAI function-calling payload format.
+
+        Args:
+            strict: When True, add ``strict: true`` to each function definition.
+                    Requires schema to have ``additionalProperties: false`` and
+                    all properties in ``required``.
+        """
+        payload = []
+        for tool in tools:
+            entry: dict[str, Any] = {
                 "type": "function",
                 "function": {
                     "name": tool.name,
@@ -63,8 +70,10 @@ class QueryEngine:
                     "parameters": tool.parameters,
                 },
             }
-            for tool in tools
-        ]
+            if strict:
+                entry["function"]["strict"] = True
+            payload.append(entry)
+        return payload
 
     @staticmethod
     def build_tool_description_prompt(tools: list[ToolSpec]) -> str:

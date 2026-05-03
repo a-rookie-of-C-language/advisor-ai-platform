@@ -9,6 +9,7 @@ from openai import AsyncOpenAI
 from llm.base_provider import BaseLLMProvider, ToolExecutor
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
+from llm.tool_call_fsm import ToolCallFSM
 from llm.tool_spec import ToolSpec
 from prompt.QueryEngine import QueryEngine
 
@@ -42,10 +43,15 @@ class OpenAIProvider(BaseLLMProvider):
         return [text[idx : idx + size] for idx in range(0, len(text), size)]
 
     @staticmethod
-    def _to_tool_payload(tools: list[ToolSpec]) -> list[dict[str, Any]]:
-        return QueryEngine.build_tool_payload(tools)
+    def _to_tool_payload(tools: list[ToolSpec], *, strict: bool = False) -> list[dict[str, Any]]:
+        return QueryEngine.build_tool_payload(tools, strict=strict)
 
-    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        messages: Iterable[ChatMessage],
+        *,
+        response_format: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
         payload = [
             {
                 "role": message.role,
@@ -54,12 +60,16 @@ class OpenAIProvider(BaseLLMProvider):
             for message in messages
         ]
 
-        stream = await self._client.chat.completions.create(
-            model=self._model,
-            messages=payload,
-            temperature=self._temperature,
-            stream=True,
-        )
+        kwargs: dict[str, Any] = {
+            "model": self._model,
+            "messages": payload,
+            "temperature": self._temperature,
+            "stream": True,
+        }
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
+        stream = await self._client.chat.completions.create(**kwargs)
 
         async for chunk in stream:
             if not chunk.choices:
@@ -76,6 +86,7 @@ class OpenAIProvider(BaseLLMProvider):
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
+        strict_tools: bool = False,
     ) -> AsyncIterator[LLMStreamEvent]:
         if not tools:
             async for chunk in self.stream_chat(messages):
@@ -89,7 +100,7 @@ class OpenAIProvider(BaseLLMProvider):
             }
             for message in messages
         ]
-        tool_payload = self._to_tool_payload(tools)
+        tool_payload = self._to_tool_payload(tools, strict=strict_tools)
         tool_call_count = 0
 
         while True:
@@ -135,19 +146,60 @@ class OpenAIProvider(BaseLLMProvider):
                 for raw_call in raw_tool_calls:
                     tool_name = raw_call.function.name
                     args_text = raw_call.function.arguments or "{}"
+                    fsm = ToolCallFSM(
+                        tool_name,
+                        args_text,
+                        max_args_retries=2,
+                        max_exec_retries=max_tool_retries,
+                    )
+
+                    # --- 阶段一：参数解析与验证 ---
                     try:
                         tool_args = json.loads(args_text)
                     except Exception:
-                        logger.warning(
-                            "tool_args parse failed: tool=%s, raw=%s",
-                            tool_name,
-                            args_text[:200],
-                        )
+                        tool_args = None  # type: ignore[assignment]
+
+                    if not fsm.validate_args(tool_args):
+                        # FSM 进入 ARGS_RETRY 或 FAILED
+                        if fsm.state.value == "args_retry":
+                            # 重试：通知 LLM 参数格式错误，等待下一轮修正
+                            error_output = json.dumps(
+                                {
+                                    "ok": False,
+                                    "status": "error",
+                                    "message": f"Invalid JSON in tool arguments: {args_text[:200]}",
+                                    "items": [],
+                                },
+                                ensure_ascii=False,
+                            )
+                            yield LLMStreamEvent(
+                                type="tool_call",
+                                tool_name=tool_name,
+                                tool_args={},
+                            )
+                            yield LLMStreamEvent(
+                                type="tool_result",
+                                tool_name=tool_name,
+                                tool_args={},
+                                tool_output=error_output,
+                                attempt=0,
+                                success=False,
+                            )
+                            conversation.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": raw_call.id,
+                                    "content": error_output,
+                                }
+                            )
+                            continue
+
+                        # FAILED：参数解析彻底失败
                         error_output = json.dumps(
                             {
                                 "ok": False,
                                 "status": "error",
-                                "message": f"Invalid JSON in tool arguments: {args_text[:200]}",
+                                "message": f"tool_args_parse_exhausted: {args_text[:200]}",
                                 "items": [],
                             },
                             ensure_ascii=False,
@@ -162,7 +214,7 @@ class OpenAIProvider(BaseLLMProvider):
                             tool_name=tool_name,
                             tool_args={},
                             tool_output=error_output,
-                            attempt=0,
+                            attempt=fsm.context.attempt,
                             success=False,
                         )
                         conversation.append(
@@ -174,10 +226,11 @@ class OpenAIProvider(BaseLLMProvider):
                         )
                         continue
 
+                    # --- 阶段二：工具执行 ---
                     yield LLMStreamEvent(
                         type="tool_call",
                         tool_name=tool_name,
-                        tool_args=tool_args,
+                        tool_args=fsm.context.tool_args,
                     )
 
                     last_error = ""
@@ -187,11 +240,15 @@ class OpenAIProvider(BaseLLMProvider):
                     for attempt in range(1, max_tool_retries + 1):
                         used_attempt = attempt
                         try:
-                            tool_output = await tool_executor(tool_name, tool_args)
+                            tool_output = await tool_executor(tool_name, fsm.context.tool_args)
                             success = True
+                            fsm.record_execution(tool_output, success=True)
                             break
                         except Exception as exc:  # noqa: BLE001
                             last_error = str(exc)
+                            fsm.record_execution(str(exc), success=False)
+                            if fsm.state.value == "failed":
+                                break
 
                     if not success:
                         tool_output = json.dumps(
@@ -207,7 +264,7 @@ class OpenAIProvider(BaseLLMProvider):
                     yield LLMStreamEvent(
                         type="tool_result",
                         tool_name=tool_name,
-                        tool_args=tool_args,
+                        tool_args=fsm.context.tool_args,
                         tool_output=tool_output,
                         attempt=used_attempt,
                         success=success,

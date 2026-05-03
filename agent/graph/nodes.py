@@ -86,7 +86,11 @@ async def select_skill_node(state: GraphState) -> GraphState:
     try:
         selection_messages = [ChatMessage(role="user", content=selection_prompt)]
         response_text = ""
-        async for chunk in provider_stream(runtime.provider, selection_messages):
+        async for chunk in provider_stream(
+            runtime.provider,
+            selection_messages,
+            response_format={"type": "json_object"},
+        ):
             response_text += chunk
 
         known_names = [s.name for s in all_skills]
@@ -139,11 +143,15 @@ def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[
     return []
 
 
-async def provider_stream(provider: Any, messages: list[ChatMessage]):
+async def provider_stream(
+    provider: Any,
+    messages: list[ChatMessage],
+    *,
+    response_format: dict[str, Any] | None = None,
+):
     """Simple streaming wrapper for LLM text generation (no tools)."""
-    async for event in provider.stream_chat_with_tools(messages, [], None, max_tool_calls=0):
-        if event.type == "delta" and event.text:
-            yield event.text
+    async for chunk in provider.stream_chat(messages, response_format=response_format):
+        yield chunk
 
 
 async def load_memory_node(state: GraphState) -> GraphState:
