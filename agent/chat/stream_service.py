@@ -14,6 +14,10 @@ from context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from eval.action_score import score_action
+from fusion.conflict_detect import ConflictDetectStrategy
+from fusion.registry import SourcePriorityRegistry
+from fusion.source_weight import SourceWeightStrategy
+from fusion.time_decay import TimeDecayStrategy
 from graph.runner import GraphRunner
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
@@ -33,6 +37,15 @@ Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCa
 logger = logging.getLogger(__name__)
 
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
+
+
+def _build_default_fusion_pipeline() -> SourcePriorityRegistry:
+    """构建默认的跨源优先级融合 pipeline。"""
+    registry = SourcePriorityRegistry()
+    registry.register(TimeDecayStrategy())
+    registry.register(SourceWeightStrategy())
+    registry.register(ConflictDetectStrategy())
+    return registry
 
 
 class ChatStreamService:
@@ -104,6 +117,7 @@ class ChatStreamService:
         self._tools.register(ExpandSkillTool(self._skill_registry))
         self._intent_router = IntentRouter()
         self._safety_pipeline = SafetyPipeline()
+        self._fusion_pipeline = _build_default_fusion_pipeline()
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
@@ -115,6 +129,7 @@ class ChatStreamService:
             skill_registry=self._skill_registry,
             intent_router=self._intent_router,
             safety_pipeline=self._safety_pipeline,
+            fusion_pipeline=self._fusion_pipeline,
         )
 
 

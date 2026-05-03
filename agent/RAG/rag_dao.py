@@ -52,6 +52,7 @@ class PgVectorDAO:
                 rdc.chunk_index,
                 rd.file_name,
                 rd.file_type,
+                rdc.metadata,
                 rdc.embedding <=> %s::vector AS distance
             FROM rag_document_chunk rdc
             JOIN rag_document rd ON rdc.document_id = rd.id
@@ -72,19 +73,21 @@ class PgVectorDAO:
 
         ids, docs, metadatas, distances = [], [], [], []
         for row in rows:
-            chunk_id, doc_id, content, chunk_index, file_name, file_type, distance = row
+            chunk_id, doc_id, content, chunk_index, file_name, file_type, chunk_metadata, distance = row
             ids.append(str(chunk_id))
             docs.append(content)
             distances.append(float(distance))
-            metadatas.append(
-                {
-                    "document_id": str(doc_id),
-                    "source": file_name,
-                    "source_type": file_type,
-                    "doc_title": file_name,
-                    "chunk_index": chunk_index,
-                }
-            )
+
+            meta: Dict[str, Any] = {
+                "document_id": str(doc_id),
+                "source": file_name,
+                "source_type": file_type,
+                "doc_title": file_name,
+                "chunk_index": chunk_index,
+            }
+            if chunk_metadata and isinstance(chunk_metadata, dict):
+                meta.update(chunk_metadata)
+            metadatas.append(meta)
 
         return {
             "ids": [ids],

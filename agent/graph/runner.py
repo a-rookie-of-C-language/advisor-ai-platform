@@ -29,6 +29,7 @@ class GraphRunner:
         skill_registry: Any = None,
         intent_router: Any = None,
         safety_pipeline: Any = None,
+        fusion_pipeline: Any = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -42,6 +43,7 @@ class GraphRunner:
         self._skill_registry = skill_registry
         self._intent_router = intent_router
         self._safety_pipeline = safety_pipeline
+        self._fusion_pipeline = fusion_pipeline
         self._compiled = build_chat_graph()
         self._node_order = [
             "select_skill",
@@ -83,6 +85,7 @@ class GraphRunner:
             skill_registry=self._skill_registry,
             intent_router=self._intent_router,
             safety_pipeline=self._safety_pipeline,
+            fusion_pipeline=self._fusion_pipeline,
         )
         token = set_runtime(runtime)
         state = {

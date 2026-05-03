@@ -87,6 +87,23 @@ class QueryEngine:
 
 
     @staticmethod
+    def build_scene_detection_prompt(user_query: str) -> str:
+        """Build the prompt sent to LLM for scene detection (product/policy/general)."""
+        return (
+            "根据用户问题，判断属于以下哪个场景，返回 JSON 格式：\n"
+            '{"scene": "product_query" | "policy_query" | "general", "confidence": 0.0~1.0}\n\n'
+            "- product_query: 产品功能、制度规范、操作指南相关\n"
+            "- policy_query: 政策法规、时效性信息、最新规定相关\n"
+            "- general: 通用查询\n\n"
+            f"用户问题: {user_query}"
+        )
+
+    @staticmethod
+    def build_conflict_hint_prompt(conflict_hint: str) -> str:
+        """Wrap conflict detection hint for system prompt injection."""
+        return conflict_hint
+
+    @staticmethod
     def assemble_messages(
         model_messages: list[ChatMessage],
         *,

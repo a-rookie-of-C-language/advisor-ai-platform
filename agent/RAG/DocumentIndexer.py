@@ -115,16 +115,17 @@ class DocumentIndexer:
                 return
 
             engine, _ = self._chunk_registry.select(path, None)
-            texts = engine.chunk(path)
-            if not texts:
+            chunk_results = engine.chunk(path)
+            if not chunk_results:
                 logger.warning("切块结果为空，document_id=%s", document_id)
                 await self._set_status(document_id, "FAILED")
                 return
 
+            texts = [c.text for c in chunk_results]
             vectors = self._embedding_engine.embed_texts(texts)
-            await self._save_chunks(document_id, texts, vectors)
+            await self._save_chunks(document_id, chunk_results, vectors)
             await self._set_status(document_id, "READY")
-            logger.info("索引完成，document_id=%s, chunks=%s", document_id, len(texts))
+            logger.info("索引完成，document_id=%s, chunks=%s", document_id, len(chunk_results))
 
         except Exception as exc:
             logger.exception("索引失败，document_id=%s, error=%s", document_id, exc)
@@ -137,11 +138,11 @@ class DocumentIndexer:
             lambda: self._run_with_retry("get_document_info", self._sync_get_document_info, document_id),
         )
 
-    async def _save_chunks(self, document_id: int, texts: list, vectors: list):
+    async def _save_chunks(self, document_id: int, chunk_results: list, vectors: list):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            lambda: self._run_with_retry("save_chunks", self._sync_save_chunks, document_id, texts, vectors),
+            lambda: self._run_with_retry("save_chunks", self._sync_save_chunks, document_id, chunk_results, vectors),
         )
 
     async def _set_status(self, document_id: int, status: str):
@@ -165,19 +166,22 @@ class DocumentIndexer:
         finally:
             self._release_conn(conn)
 
-    def _sync_save_chunks(self, document_id: int, texts: list, vectors: list):
+    def _sync_save_chunks(self, document_id: int, chunk_results: list, vectors: list):
+        import json
+
         conn = self._acquire_conn()
         try:
             with conn.cursor() as cur:
                 self._set_statement_timeout(cur)
                 cur.execute("DELETE FROM rag_document_chunk WHERE document_id = %s", (document_id,))
-                for idx, (text, vector) in enumerate(zip(texts, vectors, strict=False)):
+                for idx, (chunk, vector) in enumerate(zip(chunk_results, vectors, strict=False)):
+                    meta_json = json.dumps(chunk.metadata, ensure_ascii=False) if chunk.metadata else None
                     cur.execute(
                         """
-                        INSERT INTO rag_document_chunk (document_id, chunk_index, content, embedding)
-                        VALUES (%s, %s, %s, %s)
+                        INSERT INTO rag_document_chunk (document_id, chunk_index, content, embedding, metadata)
+                        VALUES (%s, %s, %s, %s, %s)
                         """,
-                        (document_id, idx, text, str(vector)),
+                        (document_id, idx, chunk.text, str(vector), meta_json),
                     )
             conn.commit()
         except Exception:

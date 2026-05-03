@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from .base_chunk_engine import BaseChunkEngine
+from .base_chunk_engine import BaseChunkEngine, ChunkResult
 from .file_profile import FileProfile
 
 try:
@@ -70,20 +70,29 @@ class HybridPDFChunkEngine(BaseChunkEngine):
         except Exception:
             return ""
 
-    def chunk(self, file_path: Path) -> list[str]:
+    def chunk(self, file_path: Path) -> list[ChunkResult]:
         data = file_path.read_bytes()
         reader = PdfReader(io.BytesIO(data))
-        out: list[str] = []
+        out: list[ChunkResult] = []
         for idx, page in enumerate(reader.pages):
             text = (page.extract_text() or "").strip()
             if len(text) >= self.min_text_chars:
-                out.append(f"[page:{idx + 1}] {text}")
+                out.append(ChunkResult(
+                    text=f"[page:{idx + 1}] {text}",
+                    metadata={"page_number": idx + 1},
+                ))
                 continue
 
             ocr_text = self._ocr_page(file_path=file_path, page_index=idx)
             if ocr_text:
-                out.append(f"[page:{idx + 1}] {ocr_text}")
+                out.append(ChunkResult(
+                    text=f"[page:{idx + 1}] {ocr_text}",
+                    metadata={"page_number": idx + 1, "ocr": True},
+                ))
             elif text:
-                out.append(f"[page:{idx + 1}] {text}")
+                out.append(ChunkResult(
+                    text=f"[page:{idx + 1}] {text}",
+                    metadata={"page_number": idx + 1},
+                ))
         return out
 

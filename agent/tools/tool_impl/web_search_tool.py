@@ -55,6 +55,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
                     "title": r.get("title", ""),
                     "snippet": r.get("body", ""),
                     "url": r.get("href", ""),
+                    "source": "web",
                 }
                 for r in ddgs.text(query, max_results=max_results)
             ]
