@@ -30,6 +30,8 @@ class GraphRuntime:
     tool_permission: Any
     enable_tool_use: bool
     debug_stream: bool
+    trace_id: str = ""
+    turn_id: str = ""
     skill_registry: Any = None
     intent_router: Any = None
     safety_pipeline: Any = None
@@ -218,7 +220,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     tools = runtime.tools.specs()
     kb_id = state.get("kb_id")
     user_query = state.get("user_query", "")
-    rag_enabled = bool(tools) and kb_id is not None and kb_id >= 0 and bool(user_query)
+    rag_enabled = bool(tools) and kb_id is not None and kb_id > 0 and bool(user_query)
     use_tool = rag_enabled and runtime.enable_tool_use
     logger.info(
         "graph_node decide_tool: session_id=%s, rag_enabled=%s, use_tool=%s",
@@ -369,6 +371,9 @@ async def _run_fusion_pipeline(
     runtime = _runtime()
     if runtime.fusion_pipeline is None:
         return None
+    kb_id = state.get("kb_id")
+    if not kb_id:
+        return None
 
     context = {
         "user_id": state.get("user_id"),
@@ -452,7 +457,9 @@ async def _run_fusion_pipeline(
         return None
 
     candidates = rag_results + web_results
-    ranked = runtime.fusion_pipeline.rank(candidates, user_query, scene)
+    ranked = list(candidates)
+    for strategy in runtime.fusion_pipeline.get_enabled_ordered():
+        ranked = strategy.rank(ranked, user_query, scene)
 
     # 检查是否有冲突提示
     conflict_hint = ranked[0].metadata.get("_conflict_hint") if ranked else None

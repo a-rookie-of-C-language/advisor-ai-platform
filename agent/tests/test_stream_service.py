@@ -34,11 +34,36 @@ class _ProviderOk:
         for chunk in self._chunks:
             yield chunk
 
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+        **kwargs: object,
+    ) -> AsyncIterator[LLMStreamEvent]:
+        for chunk in self._chunks:
+            yield LLMStreamEvent(type="delta", text=chunk)
+
 
 class _ProviderError:
     async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
         if False:
             yield ""
+        raise RuntimeError("provider boom")
+
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+        **kwargs: object,
+    ) -> AsyncIterator[LLMStreamEvent]:
         raise RuntimeError("provider boom")
 
 

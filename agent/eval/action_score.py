@@ -47,7 +47,8 @@ def score_action(
     grounded_ok = True
     if called_tool:
         grounded_ok = all(
-            ((e.get("data") or {}).get("status") in {"hit", "miss"} and isinstance((e.get("data") or {}).get("items"), list))
+            (e.get("data") or {}).get("status") in {"hit", "miss"}
+            and isinstance((e.get("data") or {}).get("items"), list)
             for e in source_events
         )
     has_error = any(e.get("event") == "error" for e in trace_events)

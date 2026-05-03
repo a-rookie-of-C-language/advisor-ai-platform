@@ -7,7 +7,11 @@ def test_score_action_penalizes_missing_tool_call() -> None:
     score = score_action(
         user_query="请根据知识库给出来源",
         kb_id=1,
-        trace_events=[{"event": "start", "data": {}}, {"event": "delta", "data": {"text": "x"}}, {"event": "done", "data": {}}],
+        trace_events=[
+            {"event": "start", "data": {}},
+            {"event": "delta", "data": {"text": "x"}},
+            {"event": "done", "data": {}},
+        ],
     )
     assert score.should_call_tool is True
     assert score.called_tool is False

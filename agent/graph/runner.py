@@ -69,6 +69,8 @@ class GraphRunner:
         user_id: int | None,
         session_id: int | None,
         kb_id: int | None,
+        trace_id: str | None = None,
+        turn_id: str | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -82,6 +84,8 @@ class GraphRunner:
             tool_permission=self._tool_permission,
             enable_tool_use=self._enable_tool_use,
             debug_stream=self._debug_stream,
+            trace_id=trace_id or "",
+            turn_id=turn_id or "",
             skill_registry=self._skill_registry,
             intent_router=self._intent_router,
             safety_pipeline=self._safety_pipeline,
@@ -95,6 +99,8 @@ class GraphRunner:
             "session_id": session_id,
             "kb_id": kb_id,
             "user_query": user_query,
+            "trace_id": trace_id,
+            "turn_id": turn_id,
         }
         done = asyncio.Event()
         invoke_error: list[Exception] = []

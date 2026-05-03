@@ -119,7 +119,14 @@ jobs:
         run: |
           set -e
           source .venv/bin/activate
-          python -m compileall app.py agents chat context graph llm RAG tools -q
+          python -m compileall app.py agents chat context evaluation fusion graph llm RAG safety skills tools -q
+
+      - name: Lint with ruff
+        shell: bash
+        run: |
+          set -e
+          source .venv/bin/activate
+          ruff check .
 
       - name: Run tests in venv
         shell: bash

@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
@@ -432,6 +433,8 @@ class ChatStreamService:
                 user_id=user_id,
                 session_id=session_id,
                 kb_id=kb_id,
+                trace_id=trace_id,
+                turn_id=turn_id,
             ):
                 trace_events.append(self._parse_serialized_event(event))
                 yield event
@@ -527,7 +530,7 @@ class ChatStreamService:
             and bool(user_query)
         )
 
-        rag_enabled = bool(self._tools.specs()) and kb_id is not None and kb_id >= 0 and bool(user_query)
+        rag_enabled = bool(self._tools.specs()) and kb_id is not None and kb_id > 0 and bool(user_query)
 
         if memory_enabled:
             try:

@@ -1,0 +1,2 @@
+{"ts": "1777824690", "user_query": "hi", "session_id": null, "kb_id": 1, "reasons": ["tool_args_or_execution_invalid", "tool_result_not_grounded"], "score": 60, "avoid_strategy": "Prefer explicit tool decision, validate tool args, and ground answer on tool evidence."}
+{"ts": "1777825964", "user_query": "hi", "session_id": null, "kb_id": 1, "reasons": ["tool_args_or_execution_invalid", "tool_result_not_grounded"], "score": 60, "avoid_strategy": "Prefer explicit tool decision, validate tool args, and ground answer on tool evidence."}
