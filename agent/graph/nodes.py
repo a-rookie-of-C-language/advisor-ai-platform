@@ -89,7 +89,8 @@ async def select_skill_node(state: GraphState) -> GraphState:
         async for chunk in provider_stream(runtime.provider, selection_messages):
             response_text += chunk
 
-        selected_names = _parse_skill_names(response_text)
+        known_names = [s.name for s in all_skills]
+        selected_names = _parse_skill_names(response_text, known_names)
         active_skills = [n for n in selected_names if skill_registry.get(n) is not None]
 
         if not active_skills:
@@ -114,19 +115,27 @@ async def select_skill_node(state: GraphState) -> GraphState:
         return {"active_skills": [], "skill_system_prompt": ""}
 
 
-def _parse_skill_names(text: str) -> list[str]:
-    """Extract skill names from LLM response (expects JSON array)."""
+def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[str]:
+    """Extract skill names from LLM response (expects JSON array).
+
+    Fallback: if JSON parsing fails, try to match known skill names from plain text.
+    """
     import re
 
+    # 优先：尝试提取 JSON 数组
     match = re.search(r"\[.*?\]", text, re.DOTALL)
-    if not match:
-        return []
-    try:
-        names = json.loads(match.group())
-        if isinstance(names, list):
-            return [str(n) for n in names if isinstance(n, str)]
-    except json.JSONDecodeError:
-        pass
+    if match:
+        try:
+            names = json.loads(match.group())
+            if isinstance(names, list):
+                return [str(n) for n in names if isinstance(n, str)]
+        except json.JSONDecodeError:
+            pass
+
+    # 兜底：从纯文本中匹配已知 skill name
+    if known_names:
+        lower_text = text.lower()
+        return [name for name in known_names if name.lower() in lower_text]
     return []
 
 
@@ -252,6 +261,11 @@ async def generate_node(state: GraphState) -> GraphState:
                     try:
                         payload = json.loads(event.tool_output) if event.tool_output else {}
                     except Exception:
+                        logger.warning(
+                            "tool_output parse failed: tool=%s, output=%s",
+                            event.tool_name,
+                            (event.tool_output or "")[:200],
+                        )
                         payload = {}
                     await _emit(
                         "sources",

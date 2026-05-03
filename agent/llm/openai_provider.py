@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, AsyncIterator, Iterable
 
 from openai import AsyncOpenAI
@@ -10,6 +11,8 @@ from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_spec import ToolSpec
 from prompt.QueryEngine import QueryEngine
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider(BaseLLMProvider):
@@ -135,7 +138,41 @@ class OpenAIProvider(BaseLLMProvider):
                     try:
                         tool_args = json.loads(args_text)
                     except Exception:
-                        tool_args = {}
+                        logger.warning(
+                            "tool_args parse failed: tool=%s, raw=%s",
+                            tool_name,
+                            args_text[:200],
+                        )
+                        error_output = json.dumps(
+                            {
+                                "ok": False,
+                                "status": "error",
+                                "message": f"Invalid JSON in tool arguments: {args_text[:200]}",
+                                "items": [],
+                            },
+                            ensure_ascii=False,
+                        )
+                        yield LLMStreamEvent(
+                            type="tool_call",
+                            tool_name=tool_name,
+                            tool_args={},
+                        )
+                        yield LLMStreamEvent(
+                            type="tool_result",
+                            tool_name=tool_name,
+                            tool_args={},
+                            tool_output=error_output,
+                            attempt=0,
+                            success=False,
+                        )
+                        conversation.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": raw_call.id,
+                                "content": error_output,
+                            }
+                        )
+                        continue
 
                     yield LLMStreamEvent(
                         type="tool_call",

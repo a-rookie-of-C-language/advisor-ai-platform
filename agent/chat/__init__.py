@@ -440,6 +440,11 @@ class ChatStreamService:
                         try:
                             payload = json.loads(event.tool_output) if event.tool_output else {}
                         except Exception:
+                            logger.warning(
+                                "tool_output parse failed: tool=%s, output=%s",
+                                event.tool_name,
+                                (event.tool_output or "")[:200],
+                            )
                             payload = {}
                         yield self._serialize_event(
                             "sources",
