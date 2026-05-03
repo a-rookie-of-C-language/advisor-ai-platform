@@ -335,12 +335,15 @@ jobs:
 
           echo "Waiting auth-service..."
           for i in {1..120}; do
-            if curl -fsS http://localhost:8081/internal/health >/dev/null; then
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/internal/health || true)
+            if [ "$code" = "200" ]; then
               echo "auth-service is ready"
               break
             fi
             if [ "$i" = "120" ]; then
-              echo "auth-service not ready"
+              echo "auth-service not ready (last http=$code)"
+              echo "===== auth-e2e.log (tail 200) ====="
+              tail -n 200 auth-e2e.log || true
               exit 1
             fi
             sleep 2
@@ -348,12 +351,19 @@ jobs:
 
           echo "Waiting chat-service..."
           for i in {1..120}; do
-            if curl -fsS http://localhost:8082/actuator/health >/dev/null; then
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/actuator/health || true)
+            if [ "$code" = "200" ]; then
               echo "chat-service is ready"
               break
             fi
+            if [ "$((i % 15))" = "0" ]; then
+              echo "chat-service not ready yet (http=$code, attempt=$i/120)"
+              tail -n 20 chat-e2e.log || true
+            fi
             if [ "$i" = "120" ]; then
-              echo "chat-service not ready"
+              echo "chat-service not ready (last http=$code)"
+              echo "===== chat-e2e.log (tail 200) ====="
+              tail -n 200 chat-e2e.log || true
               exit 1
             fi
             sleep 2
