@@ -1,4 +1,4 @@
-﻿use async_trait::async_trait;
+use async_trait::async_trait;
 
 use crate::domain::core::gateway_orchestration::CompletionRequest::CompletionRequest;
 use crate::domain::core::gateway_orchestration::CompletionResult::CompletionResult;

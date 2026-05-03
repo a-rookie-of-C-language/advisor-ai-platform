@@ -1,4 +1,4 @@
-﻿use axum::{
+use axum::{
     routing::{get, post},
     Router,
 };

@@ -1,4 +1,4 @@
-﻿#[derive(Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct RateLimitDecision {
     pub allowed: bool,
     pub limit: u64,

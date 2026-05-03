@@ -1,4 +1,4 @@
-﻿pub mod middleware;
+pub mod middleware;
 
 #[allow(non_snake_case)]
 pub mod chat_completions;

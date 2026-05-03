@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::domain::core::gateway_orchestration::Message::Message;
 

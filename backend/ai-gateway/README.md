@@ -1,4 +1,4 @@
-﻿# AIGateway (Rust + 三层架构 + DDD)
+# AIGateway (Rust + 三层架构 + DDD)
 
 AIGateway 是面向大模型应用的高并发模型网关与限流计费系统。
 

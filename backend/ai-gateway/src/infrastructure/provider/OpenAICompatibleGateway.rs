@@ -1,4 +1,4 @@
-﻿use async_trait::async_trait;
+use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
 use std::time::Duration;

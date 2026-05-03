@@ -1,4 +1,4 @@
-﻿use anyhow::Result;
+use anyhow::Result;
 
 mod application;
 mod bootstrap;

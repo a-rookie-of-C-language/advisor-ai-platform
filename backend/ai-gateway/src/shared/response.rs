@@ -1,4 +1,4 @@
-﻿use axum::{http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 use serde_json::json;
 
 pub fn ok(data: serde_json::Value) -> Json<serde_json::Value> {

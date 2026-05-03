@@ -1,4 +1,4 @@
-﻿use once_cell::sync::Lazy;
+use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
 use serde::Serialize;
 use std::net::TcpListener;

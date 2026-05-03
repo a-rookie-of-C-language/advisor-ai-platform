@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
