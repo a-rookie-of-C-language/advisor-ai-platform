@@ -26,6 +26,7 @@ class GraphRunner:
         *,
         debug_stream: bool,
         enable_tool_use: bool,
+        skill_registry: Any = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -36,8 +37,10 @@ class GraphRunner:
         self._memory_injector = MemoryInjector(self._work_memory)
         self._debug_stream = debug_stream
         self._enable_tool_use = enable_tool_use
+        self._skill_registry = skill_registry
         self._compiled = build_chat_graph()
         self._node_order = [
+            "select_skill",
             "load_memory",
             "decide_tool",
             "generate",
@@ -60,8 +63,6 @@ class GraphRunner:
         user_id: int | None,
         session_id: int | None,
         kb_id: int | None,
-        trace_id: str | None = None,
-        turn_id: str | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         started_at = time.perf_counter()
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -75,8 +76,7 @@ class GraphRunner:
             tool_permission=self._tool_permission,
             enable_tool_use=self._enable_tool_use,
             debug_stream=self._debug_stream,
-            trace_id=trace_id or "",
-            turn_id=turn_id or "",
+            skill_registry=self._skill_registry,
         )
         token = set_runtime(runtime)
         state = {
@@ -86,17 +86,13 @@ class GraphRunner:
             "session_id": session_id,
             "kb_id": kb_id,
             "user_query": user_query,
-            "trace_id": trace_id,
-            "turn_id": turn_id,
         }
         done = asyncio.Event()
         invoke_error: list[Exception] = []
         emitted_events = 0
 
         logger.info(
-            "graph_run start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s, message_count=%s",
-            trace_id,
-            turn_id,
+            "graph_run start: session_id=%s, user_id=%s, kb_id=%s, message_count=%s",
             session_id,
             user_id,
             kb_id,
@@ -127,9 +123,7 @@ class GraphRunner:
             if invoke_error:
                 raise invoke_error[0]
             logger.info(
-                "graph_run done: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, events=%s, elapsed_ms=%s",
-                trace_id,
-                turn_id,
+                "graph_run done: session_id=%s, user_id=%s, events=%s, elapsed_ms=%s",
                 session_id,
                 user_id,
                 emitted_events,

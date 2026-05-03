@@ -19,6 +19,7 @@ from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
+from skills.presets import build_default_registry
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
@@ -97,6 +98,7 @@ class ChatStreamService:
             memory_client=memory_client,
         ):
             self._tools.register(tool)
+        self._skill_registry = build_default_registry()
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
@@ -105,6 +107,7 @@ class ChatStreamService:
             tool_permission=self._tool_permission,
             debug_stream=self._debug_stream,
             enable_tool_use=self._enable_tool_use,
+            skill_registry=self._skill_registry,
         )
 
 

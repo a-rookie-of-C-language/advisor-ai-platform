@@ -29,8 +29,7 @@ class GraphRuntime:
     tool_permission: Any
     enable_tool_use: bool
     debug_stream: bool
-    trace_id: str
-    turn_id: str
+    skill_registry: Any = None
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -64,18 +63,99 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
     )
 
 
+async def select_skill_node(state: GraphState) -> GraphState:
+    """Use LLM to autonomously select which skills to activate for this query."""
+    runtime = _runtime()
+    skill_registry = getattr(runtime, "skill_registry", None)
+    if skill_registry is None:
+        return {"active_skills": [], "skill_system_prompt": ""}
+
+    all_skills = skill_registry.list_all()
+    if not all_skills:
+        return {"active_skills": [], "skill_system_prompt": ""}
+
+    user_query = state.get("user_query", "").strip()
+    if not user_query:
+        return {"active_skills": [], "skill_system_prompt": ""}
+
+    catalog = skill_registry.catalog_prompt()
+    selection_prompt = (
+        f"你是一个技能选择器。根据用户的输入，从可用技能中选择一个或多个最合适的技能。\n"
+        f"只返回被选中的技能名称列表，用JSON数组格式，例如 [\"knowledge_qa\"]。\n"
+        f"如果没有合适的技能，返回空数组 []。\n\n"
+        f"{catalog}\n\n"
+        f"用户输入: {user_query}"
+    )
+
+    try:
+        selection_messages = [ChatMessage(role="user", content=selection_prompt)]
+        response_text = ""
+        async for chunk in provider_stream(runtime.provider, selection_messages):
+            response_text += chunk
+
+        selected_names = _parse_skill_names(response_text)
+        active_skills = [n for n in selected_names if skill_registry.get(n) is not None]
+
+        if not active_skills:
+            logger.info("graph_node select_skill: no skill selected for query=%s", user_query[:50])
+            return {"active_skills": [], "skill_system_prompt": ""}
+
+        prompts = []
+        for name in active_skills:
+            skill = skill_registry.get(name)
+            if skill is not None:
+                prompts.append(skill.system_prompt)
+
+        merged_prompt = "\n\n".join(prompts)
+        logger.info(
+            "graph_node select_skill: active_skills=%s, session_id=%s",
+            active_skills,
+            state.get("session_id"),
+        )
+        return {"active_skills": active_skills, "skill_system_prompt": merged_prompt}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Skill selection failed, degrade to no-skill mode: %s", exc)
+        return {"active_skills": [], "skill_system_prompt": ""}
+
+
+def _parse_skill_names(text: str) -> list[str]:
+    """Extract skill names from LLM response (expects JSON array)."""
+    import re
+
+    match = re.search(r"\[.*?\]", text, re.DOTALL)
+    if not match:
+        return []
+    try:
+        names = json.loads(match.group())
+        if isinstance(names, list):
+            return [str(n) for n in names if isinstance(n, str)]
+    except json.JSONDecodeError:
+        pass
+    return []
+
+
+async def provider_stream(provider: Any, messages: list[ChatMessage]):
+    """Simple streaming wrapper for LLM text generation (no tools)."""
+    async for event in provider.stream_chat_with_tools(messages, [], None, max_tool_calls=0):
+        if event.type == "delta" and event.text:
+            yield event.text
+
+
 async def load_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node load_memory: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
-        runtime.trace_id,
-        runtime.turn_id,
+        "graph_node load_memory: session_id=%s, user_id=%s, kb_id=%s",
         state.get("session_id"),
         state.get("user_id"),
         state.get("kb_id"),
     )
     messages = list(state.get("messages", []))
     model_messages = list(messages)
+
+    skill_prompt = state.get("skill_system_prompt", "")
+    if skill_prompt:
+        model_messages = [ChatMessage(role="system", content=skill_prompt)] + model_messages
+
     user_query = state.get("user_query", "")
     memory_enabled = bool(
         runtime.memory_orchestrator is not None
@@ -130,9 +210,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     rag_enabled = bool(tools) and kb_id is not None and kb_id >= 0 and bool(user_query)
     use_tool = rag_enabled and runtime.enable_tool_use
     logger.info(
-        "graph_node decide_tool: trace_id=%s, turn_id=%s, session_id=%s, rag_enabled=%s, use_tool=%s",
-        runtime.trace_id,
-        runtime.turn_id,
+        "graph_node decide_tool: session_id=%s, rag_enabled=%s, use_tool=%s",
         state.get("session_id"),
         rag_enabled,
         use_tool,
@@ -146,9 +224,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
 async def generate_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node generate: trace_id=%s, turn_id=%s, session_id=%s, use_tool=%s",
-        runtime.trace_id,
-        runtime.turn_id,
+        "graph_node generate: session_id=%s, use_tool=%s",
         state.get("session_id"),
         state.get("use_tool"),
     )
@@ -243,9 +319,7 @@ async def generate_node(state: GraphState) -> GraphState:
 async def flush_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node flush_memory: trace_id=%s, turn_id=%s, session_id=%s, memory_enabled=%s",
-        runtime.trace_id,
-        runtime.turn_id,
+        "graph_node flush_memory: session_id=%s, memory_enabled=%s",
         state.get("session_id"),
         state.get("memory_enabled"),
     )
@@ -275,9 +349,7 @@ async def flush_memory_node(state: GraphState) -> GraphState:
 async def finalize_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node finalize: trace_id=%s, turn_id=%s, session_id=%s, answer_len=%s",
-        runtime.trace_id,
-        runtime.turn_id,
+        "graph_node finalize: session_id=%s, answer_len=%s",
         state.get("session_id"),
         len(state.get("assistant_answer", "")),
     )
