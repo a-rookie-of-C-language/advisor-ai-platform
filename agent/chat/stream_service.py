@@ -680,13 +680,13 @@ class ChatStreamService:
                 )
             try:
                 yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
-            except Exception as send_error_exc: 
+            except Exception as send_error_exc:
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
 
             try:
                 yield self._serialize_event("done", {"message": "stream_finished_with_error"})
-            except Exception as send_done_exc: 
+            except Exception as send_done_exc:
                 logger.warning("Failed to send stream done event after error: %s", send_done_exc)
 
     def get_graph_health(self) -> dict:

@@ -138,8 +138,6 @@ class EvalRunner:
         """评估 RAG 检索质量。"""
         from .metrics.retrieval import retrieval_mrr, retrieval_ndcg, retrieval_recall_at_k
 
-        # TODO: 调用 RAG_service.rag_search 获取检索结果
-        # 暂时返回模拟数据，实际实现需要连接 RAG 服务
         retrieved_chunks = await self._rag_search(query)
 
         # 获取期望的 chunk_ids（需要从 dataset 中对应）
@@ -161,8 +159,6 @@ class EvalRunner:
         """评估元数据标注质量。"""
         from .metrics.annotation import annotation_accuracy
 
-        # 对检索到的切片进行标注
-        # TODO: 实际实现需要调用 AnnotationPipeline
         predicted_annotation = await self._annotate_chunks(query)
 
         # 获取期望标注

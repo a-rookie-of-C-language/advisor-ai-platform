@@ -198,7 +198,7 @@ class MemoryApiClient:
         return MemoryItem(
             id=int(data.get("id", 0)),
             user_id=int(data.get("userId", 0)),
-            kb_id=int(data.get("kbId", 0)), 
+            kb_id=int(data.get("kbId", 0)),
             content=str(data.get("content", "")),
             confidence=float(data.get("confidence", 0.5)),
             score=float(data.get("score", 0.0)),
