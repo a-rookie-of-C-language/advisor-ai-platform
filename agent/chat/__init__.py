@@ -14,6 +14,7 @@ from context.memory.core.schema import MemoryCandidate
 from context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
+from fusion.authority_boost import AuthorityBoostStrategy
 from fusion.conflict_detect import ConflictDetectStrategy
 from fusion.registry import SourcePriorityRegistry
 from fusion.source_weight import SourceWeightStrategy
@@ -39,6 +40,7 @@ _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
 def _build_default_fusion_pipeline() -> SourcePriorityRegistry:
     """构建默认的跨源优先级融合 pipeline。"""
     registry = SourcePriorityRegistry()
+    registry.register(AuthorityBoostStrategy())
     registry.register(TimeDecayStrategy())
     registry.register(SourceWeightStrategy())
     registry.register(ConflictDetectStrategy())
