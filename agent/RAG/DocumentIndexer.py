@@ -8,6 +8,7 @@ import asyncpg
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
 
+from RAG.annotator.annotation_pipeline import AnnotationPipeline
 from RAG.chunk_engine.registry import ChunkEngineRegistry
 from RAG.embedding_engine.ollama_embedding_engine import OllamaEmbeddingEngine
 
@@ -26,10 +27,12 @@ class DocumentIndexer:
         db_statement_timeout_sec: int = 10,
         max_retries: int = 2,
         retry_backoff_sec: float = 0.5,
+        annotation_pipeline: AnnotationPipeline | None = None,
     ):
         self.db_dsn = db_dsn
         self._chunk_registry = ChunkEngineRegistry()
         self._embedding_engine = OllamaEmbeddingEngine(model="bge-m3", base_url=ollama_base_url)
+        self._annotation_pipeline = annotation_pipeline
 
         self._db_pool_minconn = db_pool_minconn
         self._db_pool_maxconn = db_pool_maxconn
@@ -121,6 +124,10 @@ class DocumentIndexer:
                 await self._set_status(document_id, "FAILED")
                 return
 
+            # 三层元数据标注
+            if self._annotation_pipeline is not None:
+                chunk_results = self._annotate_chunks(chunk_results, document_id)
+
             texts = [c.text for c in chunk_results]
             vectors = self._embedding_engine.embed_texts(texts)
             await self._save_chunks(document_id, chunk_results, vectors)
@@ -151,6 +158,37 @@ class DocumentIndexer:
             None,
             lambda: self._run_with_retry("set_status", self._sync_set_status, document_id, status),
         )
+
+    def _annotate_chunks(self, chunk_results: list, document_id: int) -> list:
+        """对每个切片执行三层标注，将结果合并到 metadata。全部失败则抛出异常拒绝入库。"""
+        from RAG.annotator.base_annotator import ChunkAnnotation
+
+        annotated = []
+        failed_count = 0
+        for chunk in chunk_results:
+            ann: ChunkAnnotation = self._annotation_pipeline.annotate_chunk(chunk.text)
+            if ann.confidence <= 0.0:
+                failed_count += 1
+            chunk.metadata["type"] = ann.type
+            chunk.metadata["authority"] = ann.authority
+            chunk.metadata["effective_date"] = ann.effective_date
+            chunk.metadata["annotation_source"] = ann.source
+            chunk.metadata["annotation_confidence"] = ann.confidence
+            if ann.extra:
+                chunk.metadata.update(ann.extra)
+            annotated.append(chunk)
+
+        if failed_count == len(chunk_results):
+            logger.warning("所有切片标注失败，document_id=%s", document_id)
+            raise ValueError(f"文档质量不足，所有 {len(chunk_results)} 个切片均无法标注元数据")
+
+        logger.info(
+            "标注完成，document_id=%s, total=%d, failed=%d",
+            document_id,
+            len(chunk_results),
+            failed_count,
+        )
+        return annotated
 
     def _sync_get_document_info(self, document_id: int):
         conn = self._acquire_conn()
