@@ -1,2 +1,5 @@
 ﻿/target
 .env
+agents.md
+claude.md
+.claude/

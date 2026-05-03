@@ -21,3 +21,5 @@ pytest**/
 agent/tests/reports/*.json
 scripts/jmeter/results/
 jmeter/
+.claude/
+claude.md

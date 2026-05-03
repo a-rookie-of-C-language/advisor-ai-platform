@@ -14,6 +14,9 @@ use crate::shared::response;
 
 const MAX_MODEL_PARSE_BODY_BYTES: usize = 1024 * 1024;
 
+#[derive(Clone, Debug)]
+pub struct ExtractedModel(pub String);
+
 pub async fn rate_limit(
     State(state): State<MiddlewareState>,
     mut req: Request<Body>,
@@ -43,6 +46,9 @@ pub async fn rate_limit(
     }
 
     let model = model.unwrap_or_else(|| "default".to_string());
+
+    // Cache extracted model in extensions for downstream handlers
+    req.extensions_mut().insert(ExtractedModel(model.clone()));
 
     let tenant_key = format!("rl:{}:{}:tenant", tenant.tenant_id, tenant.app_id);
     let route_key = format!(
@@ -87,6 +93,10 @@ pub async fn rate_limit(
                 let (status, body) =
                     response::err(StatusCode::TOO_MANY_REQUESTS, "rate limit exceeded");
                 let mut resp = (status, body).into_response();
+                let retry_after_secs = (decision.reset_after_ms + 999) / 1000;
+                if let Ok(v) = HeaderValue::from_str(&retry_after_secs.to_string()) {
+                    resp.headers_mut().insert("Retry-After", v);
+                }
                 append_rate_limit_headers(
                     &mut resp,
                     decision.limit,
@@ -96,10 +106,15 @@ pub async fn rate_limit(
                 Ok(resp)
             }
         }
-        _ => Err(response::err(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "rate limiter unavailable",
-        )),
+        (Err(e), _) | (_, Err(e)) => {
+            if state.rate_limit_fail_open {
+                tracing::warn!("rate limiter unavailable, fail-open: {}", e);
+                Ok(next.run(req).await)
+            } else {
+                tracing::error!("rate limiter unavailable, fail-closed: {}", e);
+                Err(response::err(StatusCode::SERVICE_UNAVAILABLE, "rate limiter unavailable"))
+            }
+        }
     }
 }
 
