@@ -62,10 +62,20 @@ class ConflictDetectStrategy(BaseSourcePriorityStrategy):
         web_text = " ".join(c.content for c in web_items)
 
         for pos, neg in negation_pairs:
-            rag_has_pos = pos in rag_text and neg not in rag_text
-            web_has_neg = neg in web_text and pos not in web_text
-            rag_has_neg = neg in rag_text and pos not in rag_text
-            web_has_pos = pos in web_text and neg not in web_text
+            # 否定词包含肯定词时（如"不允许"包含"允许"）
+            # 只检查否定词是否存在，避免子串误判
+            neg_contains_pos = pos in neg
+
+            if neg_contains_pos:
+                rag_has_pos = pos in rag_text and neg not in rag_text
+                web_has_neg = neg in web_text
+                rag_has_neg = neg in rag_text
+                web_has_pos = pos in web_text and neg not in web_text
+            else:
+                rag_has_pos = pos in rag_text and neg not in rag_text
+                web_has_neg = neg in web_text and pos not in web_text
+                rag_has_neg = neg in rag_text and pos not in rag_text
+                web_has_pos = pos in web_text and neg not in web_text
 
             if (rag_has_pos and web_has_neg) or (rag_has_neg and web_has_pos):
                 conflicts.append({

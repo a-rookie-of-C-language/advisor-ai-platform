@@ -114,12 +114,8 @@ class TestSourceWeightStrategy:
 
 class TestConflictDetectStrategy:
     def test_detects_conflict_with_non_substring_negation(self) -> None:
-        """测试能检测到矛盾的情况（否定词不包含肯定词）。
-
-        注意：当前实现对"允许"→"不允许"这类子串否定词无法检测。
-        """
+        """测试否定词不包含肯定词的情况。"""
         strategy = ConflictDetectStrategy()
-        # 使用"必须"和"不必"（"不必"不包含"必须"）
         candidates = [
             _candidate("学生必须参加考试", "rag"),
             _candidate("学生不必参加考试", "web"),
@@ -129,12 +125,23 @@ class TestConflictDetectStrategy:
         assert hint is not None
         assert "矛盾" in hint
 
-    def test_substring_negation_not_detected(self) -> None:
-        """验证当前实现无法检测子串否定词（已知局限性）。"""
+    def test_detects_conflict_with_substring_negation(self) -> None:
+        """测试否定词包含肯定词的情况（如"不允许"包含"允许"）。"""
         strategy = ConflictDetectStrategy()
-        # "不允许"包含"允许"，当前逻辑无法检测
         candidates = [
             _candidate("学校允许转专业", "rag"),
+            _candidate("学校不允许转专业", "web"),
+        ]
+        result = strategy.rank(candidates, query="转专业", scene_hint="policy")
+        hint = result[0].metadata.get("_conflict_hint")
+        assert hint is not None
+        assert "矛盾" in hint
+
+    def test_negation_present_in_both_no_conflict(self) -> None:
+        """双方都有否定词，不算矛盾。"""
+        strategy = ConflictDetectStrategy()
+        candidates = [
+            _candidate("学校不允许转专业", "rag"),
             _candidate("学校不允许转专业", "web"),
         ]
         result = strategy.rank(candidates, query="转专业", scene_hint="policy")
