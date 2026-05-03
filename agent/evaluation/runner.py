@@ -13,6 +13,21 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _ensure_sys_path() -> None:
+    """确保 ROOT 在 sys.path 中。"""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+
+def _load_env() -> None:
+    """加载 .env 配置。"""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(ROOT / ".env")
+    except ImportError:
+        pass
+
+
 class EvalRunner:
     """全链路评估运行器。"""
 
@@ -25,10 +40,65 @@ class EvalRunner:
     ) -> None:
         from .dataset import EvalDataset
 
+        _ensure_sys_path()
+        _load_env()
+
         self._dataset = EvalDataset.load(dataset_path)
         self._kb_id = kb_id or self._dataset.kb_id
         self._top_k = top_k
         self._llm_provider = llm_provider
+        self._rag_service = None
+        self._annotation_pipeline = None
+
+    def _get_rag_service(self) -> Any:
+        """延迟初始化 RAG_service。"""
+        if self._rag_service is None:
+            from RAG.RAG_service import RAG_service
+
+            db_dsn = os.getenv("DATABASE_URL", "").strip()
+            if not db_dsn:
+                raise RuntimeError("未配置 DATABASE_URL")
+
+            self._rag_service = RAG_service(
+                db_dsn=db_dsn,
+                ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                embedding_model=os.getenv("EMBEDDING_MODEL", "bge-m3"),
+            )
+        return self._rag_service
+
+    def _get_annotation_pipeline(self) -> Any:
+        """延迟初始化 AnnotationPipeline。"""
+        if self._annotation_pipeline is None:
+            from RAG.annotator.annotation_pipeline import AnnotationPipeline
+            from RAG.annotator.rule_annotator import RuleAnnotator
+
+            # 默认只用规则引擎，HanLP 和 LLM 按需添加
+            annotators = [RuleAnnotator()]
+
+            # 如果配置了 HanLP，添加 HanLP 标注器
+            try:
+                from RAG.annotator.hanlp_annotator import HanlpAnnotator
+                annotators.append(HanlpAnnotator())
+            except Exception:
+                logger.debug("HanLP 未启用，跳过")
+
+            # 如果配置了 LLM，添加 LLM 标注器
+            try:
+                from RAG.annotator.llm_annotator import LlmAnnotator
+                annotators.append(LlmAnnotator())
+            except Exception:
+                logger.debug("LLM 标注器未启用，跳过")
+
+            self._annotation_pipeline = AnnotationPipeline(annotators=annotators)
+        return self._annotation_pipeline
+
+    def _get_chat_service(self) -> Any:
+        """创建 ChatStreamService 实例。"""
+        from chat.stream_service import ChatStreamService
+        from llm.provider_factory import build_provider_from_env
+
+        provider = self._llm_provider or build_provider_from_env()
+        return ChatStreamService(provider=provider)
 
     async def run_all(self) -> dict[str, Any]:
         """执行全部评估，返回完整报告。"""
@@ -132,50 +202,62 @@ class EvalRunner:
 
     async def _rag_search(self, query: str) -> list[str]:
         """调用 RAG 检索，返回 chunk_id 列表。"""
-        # TODO: 实际实现需要连接 RAG 服务
-        # 示例实现，实际应该调用 RAG_service
         try:
-            if str(ROOT) not in sys.path:
-                sys.path.insert(0, str(ROOT))
-
-            from dotenv import load_dotenv
-
-            from RAG.RAG_service import RAG_service
             from RAG.schema import RAGSearchRequest, SearchMode
 
-            load_dotenv(ROOT / ".env")
-
-            db_dsn = os.getenv("DATABASE_URL", "").strip()
-            if not db_dsn:
-                logger.warning("未配置 DATABASE_URL，跳过 RAG 检索")
-                return []
-
-            rag = RAG_service(
-                db_dsn=db_dsn,
-                ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-                embedding_model=os.getenv("EMBEDDING_MODEL", "bge-m3"),
-            )
-            try:
-                response = rag.rag_search(RAGSearchRequest(
-                    query=query,
-                    kb_id=self._kb_id,
-                    top_k=self._top_k,
-                    mode=SearchMode.dense,
-                    use_rerank=True,
-                    rewrite_query=False,
-                ))
-                return [hit.chunk_id for hit in response.items] if response.ok else []
-            finally:
-                rag.close()
+            rag = self._get_rag_service()
+            response = rag.rag_search(RAGSearchRequest(
+                query=query,
+                kb_id=self._kb_id,
+                top_k=self._top_k,
+                mode=SearchMode.dense,
+                use_rerank=True,
+                rewrite_query=False,
+            ))
+            return [hit.chunk_id for hit in response.items] if response.ok else []
         except Exception as exc:
             logger.warning("RAG 检索失败: %s", exc)
             return []
 
     async def _annotate_chunks(self, query: str) -> dict[str, Any]:
         """对检索到的切片进行标注。"""
-        # TODO: 实际实现需要调用 AnnotationPipeline
-        # 暂时返回模拟数据
-        return {"type": "general", "authority": "secondary", "effective_date": ""}
+        try:
+            # 先检索相关切片
+            retrieved_chunks = await self._rag_search(query)
+            if not retrieved_chunks:
+                return {"type": "general", "authority": "secondary", "effective_date": ""}
+
+            # 获取切片文本
+            from RAG.schema import RAGSearchRequest, SearchMode
+
+            rag = self._get_rag_service()
+            response = rag.rag_search(RAGSearchRequest(
+                query=query,
+                kb_id=self._kb_id,
+                top_k=1,  # 只取第一个切片做标注评估
+                mode=SearchMode.dense,
+                use_rerank=True,
+                rewrite_query=False,
+            ))
+
+            if not response.ok or not response.items:
+                return {"type": "general", "authority": "secondary", "effective_date": ""}
+
+            # 对第一个切片进行标注
+            text = response.items[0].text
+            pipeline = self._get_annotation_pipeline()
+            ann = pipeline.annotate_chunk(text)
+
+            return {
+                "type": ann.type,
+                "authority": ann.authority,
+                "effective_date": ann.effective_date,
+                "confidence": ann.confidence,
+                "source": ann.source,
+            }
+        except Exception as exc:
+            logger.warning("标注评估失败: %s", exc)
+            return {"type": "general", "authority": "secondary", "effective_date": ""}
 
     async def _run_fusion_comparison(
         self, query: str
@@ -187,9 +269,35 @@ class EvalRunner:
 
     async def _get_agent_answer(self, query: str) -> str:
         """获取 agent 的回答。"""
-        # TODO: 实际实现需要调用 ChatStreamService
-        # 暂时返回模拟数据
-        return "模拟回答"
+        try:
+            from llm.chat_message import ChatMessage
+
+            service = self._get_chat_service()
+            messages = [ChatMessage(role="user", content=query)]
+
+            answer_chunks = []
+            async for event in service.stream_events(
+                messages=messages,
+                user_id=0,
+                session_id=0,
+                kb_id=self._kb_id,
+            ):
+                # 解析 SSE 格式
+                if event.startswith("data: "):
+                    data_str = event[6:].strip()
+                    if data_str:
+                        try:
+                            import json
+                            data = json.loads(data_str)
+                            if data.get("type") == "delta":
+                                answer_chunks.append(data.get("content", ""))
+                        except json.JSONDecodeError:
+                            pass
+
+            return "".join(answer_chunks) if answer_chunks else "无回答"
+        except Exception as exc:
+            logger.warning("获取 agent 回答失败: %s", exc)
+            return f"错误: {exc}"
 
 
 def asdict(obj: Any) -> Any:
