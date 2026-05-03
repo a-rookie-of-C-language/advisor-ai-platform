@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import os
 from typing import Any, Optional
+
+from agents.base.agent import Agent
+from tools.tool_permission import PermissionConfig, ToolPermission
 
 from .base_annotator import BaseChunkAnnotator, ChunkAnnotation
 
@@ -30,22 +35,34 @@ _ANNOTATION_PROMPT = """你是一个文档元数据标注器。根据以下切�
 {text}"""
 
 
-class LlmAnnotator(BaseChunkAnnotator):
-    """第三层：大模型语义标注，继承 Agent 模式，使用当前 LLM provider。"""
+class LlmAnnotator(Agent, BaseChunkAnnotator):
+    """第三层：大模型语义标注，继承 Agent，支持 .env 配置独立 LLM。
+
+    环境变量（可选，不配则使用默认 provider）：
+    - ANNOTATION_LLM_API_KEY:   专用 API Key
+    - ANNOTATION_LLM_MODEL:     专用模型名
+    - ANNOTATION_LLM_BASE_URL:  专用 API 地址
+    """
 
     name = "llm_v1"
 
     def __init__(self, provider: Any = None) -> None:
-        self._provider = provider
+        resolved_provider = provider or _build_annotation_provider_from_env()
+        Agent.__init__(
+            self,
+            name="llm_annotator",
+            llm_provider=resolved_provider,
+            permission_config=PermissionConfig.from_allowed_tools(
+                {ToolPermission.LLM},
+            ),
+        )
 
     def annotate(self, text: str, existing: Optional[ChunkAnnotation] = None) -> ChunkAnnotation:
         ann = existing or ChunkAnnotation()
 
-        if self._provider is None:
+        if self._llm_provider is None:
             ann.source = "llm_skip"
             return ann
-
-        import asyncio
 
         try:
             loop = asyncio.get_running_loop()
@@ -59,23 +76,25 @@ class LlmAnnotator(BaseChunkAnnotator):
                 future = pool.submit(asyncio.run, self._annotate_async(text, ann))
                 return future.result(timeout=30)
         else:
-            import asyncio
-
             return asyncio.run(self._annotate_async(text, ann))
 
-    async def _annotate_async(self, text: str, ann: ChunkAnnotation) -> ChunkAnnotation:
+    async def call_llm(self, messages: list[dict[str, str]], **kwargs) -> str:
         from llm.chat_message import ChatMessage
 
+        chat_messages = [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
+        chunks: list[str] = []
+        async for chunk in self._llm_provider.stream_chat(chat_messages, **kwargs):
+            chunks.append(chunk)
+        return "".join(chunks)
+
+    async def _annotate_async(self, text: str, ann: ChunkAnnotation) -> ChunkAnnotation:
         prompt = _ANNOTATION_PROMPT.format(text=text[:1500])
-        messages = [ChatMessage(role="user", content=prompt)]
+        messages = [{"role": "user", "content": prompt}]
 
         try:
-            response_text = ""
-            async for chunk in self._provider.stream_chat(
+            response_text = await self.call_llm(
                 messages, response_format={"type": "json_object"}
-            ):
-                response_text += chunk
-
+            )
             data = json.loads(response_text)
             if isinstance(data, dict):
                 ann.type = data.get("type", ann.type)
@@ -87,3 +106,37 @@ class LlmAnnotator(BaseChunkAnnotator):
 
         ann.source = "llm"
         return ann
+
+    async def run_once(self) -> dict[str, Any]:
+        raise NotImplementedError("LlmAnnotator 不支持 run_once，请使用 annotate()")
+
+    async def run(self) -> None:
+        raise NotImplementedError("LlmAnnotator 不支持 run，请使用 annotate()")
+
+
+def _build_annotation_provider_from_env() -> Any:
+    """从 .env 构建标注专用 LLM provider，未配置则返回 None（使用默认 provider）。"""
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    api_key = os.getenv("ANNOTATION_LLM_API_KEY", "").strip()
+    model = os.getenv("ANNOTATION_LLM_MODEL", "").strip()
+
+    if not api_key or not model:
+        logger.info("未配置 ANNOTATION_LLM，将使用默认 provider")
+        return None
+
+    from llm.openai_provider import OpenAIProvider
+
+    base_url = os.getenv("ANNOTATION_LLM_BASE_URL", "").strip() or None
+    temperature = float(os.getenv("ANNOTATION_LLM_TEMPERATURE", "0.1"))
+    timeout = float(os.getenv("ANNOTATION_LLM_TIMEOUT_SEC", "30"))
+
+    logger.info("已配置标注专用 LLM: model=%s, base_url=%s", model, base_url or "default")
+    return OpenAIProvider(
+        api_key=api_key,
+        model=model,
+        base_url=base_url,
+        temperature=temperature,
+        timeout=timeout,
+    )
