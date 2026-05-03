@@ -1,0 +1,62 @@
+{
+  "name": "辅导员智库评估集",
+  "version": "1.0",
+  "kb_id": 1,
+  "cases": [
+    {
+      "id": "case_001",
+      "query": "高校辅导员素质能力提升的核心内容是什么",
+      "expected_chunks": [],
+      "expected_answer": "高校辅导员素质能力提升的核心内容包括政治素质、职业能力、专业水平三个方面。政治素质要求坚定理想信念，职业能力要求提升学生事务管理能力，专业水平要求掌握思想政治教育理论和方法。",
+      "expected_annotation": {
+        "type": "policy",
+        "authority": "official"
+      },
+      "tags": ["policy", "辅导员", "素质能力"]
+    },
+    {
+      "id": "case_002",
+      "query": "辅导员培训与考核有什么规定",
+      "expected_chunks": [],
+      "expected_answer": "辅导员培训包括入职培训、日常培训、高级研修三个层次。考核内容涵盖德、能、勤、绩、廉五个方面，考核结果作为职称评定、岗位晋升的重要依据。",
+      "expected_annotation": {
+        "type": "policy",
+        "authority": "official"
+      },
+      "tags": ["policy", "培训", "考核"]
+    },
+    {
+      "id": "case_003",
+      "query": "学生心理健康教育工作如何开展",
+      "expected_chunks": [],
+      "expected_answer": "学生心理健康教育工作包括：建立心理健康教育课程体系、开展心理咨询服务、建立心理危机预警和干预机制、加强心理健康教育队伍建设。",
+      "expected_annotation": {
+        "type": "policy",
+        "authority": "official"
+      },
+      "tags": ["policy", "心理健康"]
+    },
+    {
+      "id": "case_004",
+      "query": "如何使用辅导员智库系统查询政策文件",
+      "expected_chunks": [],
+      "expected_answer": "在辅导员智库系统中，您可以通过以下方式查询政策文件：1. 使用搜索框输入关键词进行全文检索；2. 通过分类导航浏览不同类型文件；3. 使用高级搜索按发布时间、文件类型等条件筛选。",
+      "expected_annotation": {
+        "type": "product",
+        "authority": "secondary"
+      },
+      "tags": ["product", "使用指南"]
+    },
+    {
+      "id": "case_005",
+      "query": "学生资助政策有哪些",
+      "expected_chunks": [],
+      "expected_answer": "学生资助政策包括：国家奖学金、国家励志奖学金、国家助学金、国家助学贷款、勤工助学、学费减免、绿色通道等。不同资助项目有不同的申请条件和标准。",
+      "expected_annotation": {
+        "type": "policy",
+        "authority": "official"
+      },
+      "tags": ["policy", "学生资助"]
+    }
+  ]
+}
