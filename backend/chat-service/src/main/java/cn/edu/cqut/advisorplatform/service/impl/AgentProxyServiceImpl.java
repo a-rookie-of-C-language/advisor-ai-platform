@@ -103,9 +103,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
     long startAt = System.currentTimeMillis();
     String payload =
-        aiGatewayEnabled
-            ? buildAiGatewayPayloadJson(request)
-            : buildPayloadJson(request, userId);
+        aiGatewayEnabled ? buildAiGatewayPayloadJson(request) : buildPayloadJson(request, userId);
     byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
     log.info(
@@ -365,8 +363,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         return node.path("text").asText("");
       }
       if ("raw".equals(event)) {
-        String content =
-            node.path("choices").path(0).path("delta").path("content").asText("");
+        String content = node.path("choices").path(0).path("delta").path("content").asText("");
         if (!content.isBlank()) {
           return content;
         }
