@@ -32,6 +32,7 @@ class GraphRuntime:
     debug_stream: bool
     skill_registry: Any = None
     intent_router: Any = None
+    safety_pipeline: Any = None
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -315,6 +316,18 @@ async def generate_node(state: GraphState) -> GraphState:
                         debug_chars += len(piece)
                 if runtime.debug_stream:
                     debug_count += 1
+
+        # 生成完成后：统一安全过滤
+        raw_answer = "".join(answer_parts).strip()
+        final_answer = raw_answer
+        if raw_answer and runtime.safety_pipeline is not None:
+            safety_result = runtime.safety_pipeline.filter_text(raw_answer)
+            if safety_result.has_sensitive:
+                final_answer = safety_result.redacted
+                await _emit("safety_warning", {
+                    "regex_matches": len(safety_result.regex_matches),
+                    "privacy_spans": len(safety_result.privacy_result.spans) if safety_result.privacy_result else 0,
+                })
     except Exception:  # noqa: BLE001
         logger.exception(
             "graph_node generate failed: session_id=%s, user_id=%s, kb_id=%s",
@@ -331,7 +344,7 @@ async def generate_node(state: GraphState) -> GraphState:
         }
 
     return {
-        "assistant_answer": "".join(answer_parts).strip(),
+        "assistant_answer": final_answer,
         "stream_failed": False,
         "debug_delta_count": debug_count,
         "debug_preview": "".join(debug_preview_parts),

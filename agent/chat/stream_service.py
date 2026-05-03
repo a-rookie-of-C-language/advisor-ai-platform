@@ -20,6 +20,7 @@ from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
 from prompt.QueryEngine import QueryEngine
+from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
 from tools.intent_router import IntentRouter
 from tools.tool_assembly_pool import ToolAssemblyPool
@@ -102,6 +103,7 @@ class ChatStreamService:
         self._skill_registry = build_default_registry()
         self._tools.register(ExpandSkillTool(self._skill_registry))
         self._intent_router = IntentRouter()
+        self._safety_pipeline = SafetyPipeline()
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
@@ -112,6 +114,7 @@ class ChatStreamService:
             enable_tool_use=self._enable_tool_use,
             skill_registry=self._skill_registry,
             intent_router=self._intent_router,
+            safety_pipeline=self._safety_pipeline,
         )
 
 

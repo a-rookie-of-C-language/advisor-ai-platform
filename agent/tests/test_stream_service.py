@@ -29,21 +29,21 @@ class _ProviderOk:
         self._chunks = chunks
         self.last_messages: list[ChatMessage] = []
 
-    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
         self.last_messages = list(messages)
         for chunk in self._chunks:
             yield chunk
 
 
 class _ProviderError:
-    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
         if False:
             yield ""
         raise RuntimeError("provider boom")
 
 
 class _ProviderToolUse:
-    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -56,6 +56,7 @@ class _ProviderToolUse:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
+        **kwargs: object,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
         _ = tools
@@ -67,7 +68,7 @@ class _ProviderToolUse:
 
 
 class _ProviderLegacyToolUse:
-    async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -80,6 +81,7 @@ class _ProviderLegacyToolUse:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
+        **kwargs: object,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
         _ = tools
