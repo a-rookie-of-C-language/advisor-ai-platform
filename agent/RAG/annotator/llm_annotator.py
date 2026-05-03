@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_PROMPT = """你是一个文档元数据标注器。根据以下切片文本，提取结构化元数据。
 
 返回 JSON 格式：
-{
+{{
   "type": "policy" | "product" | "general",
   "authority": "official" | "secondary",
   "effective_date": "YYYY-MM-DD" | "",
   "confidence": 0.0~1.0
-}
+}}
 
 规则：
 - policy: 政策法规、通知、办法、规定等
