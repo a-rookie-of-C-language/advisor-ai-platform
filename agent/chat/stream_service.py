@@ -19,6 +19,7 @@ from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
+from prompt.QueryEngine import QueryEngine
 from skills.presets import build_default_registry
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -276,20 +277,7 @@ class ChatStreamService:
         return {"event": event_name, "data": data}
 
     def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
-        memory = matched.get("memory", {}) if isinstance(matched, dict) else {}
-        if not isinstance(memory, dict):
-            return ""
-        reasons = memory.get("reasons", [])
-        strategy = str(memory.get("avoid_strategy", "")).strip()
-        parts = [
-            "You have a prior failure pattern for a similar query.",
-            "Avoid repeating the same mistake.",
-        ]
-        if reasons:
-            parts.append(f"Failure reasons: {reasons}")
-        if strategy:
-            parts.append(f"Recommended strategy: {strategy}")
-        return "\n".join(parts)
+        return QueryEngine.build_failure_avoid_prompt(matched)
 
     def _write_failure_memory(
         self,
@@ -369,7 +357,7 @@ class ChatStreamService:
             if matched:
                 prompt = self._build_failure_avoid_prompt(matched)
                 if prompt:
-                    validated_messages = [ChatMessage(role="system", content=prompt)] + validated_messages
+                    validated_messages = QueryEngine.assemble_messages(validated_messages, dynamic_prompts=[prompt])
 
         compact_started = time.monotonic()
         compacted_messages, compact_stats = await self._context_compactor.compact_for_model(

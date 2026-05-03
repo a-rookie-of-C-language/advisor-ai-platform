@@ -9,6 +9,7 @@ from llm.base_provider import BaseLLMProvider, ToolExecutor
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_spec import ToolSpec
+from prompt.QueryEngine import QueryEngine
 
 
 class OpenAIProvider(BaseLLMProvider):
@@ -39,19 +40,7 @@ class OpenAIProvider(BaseLLMProvider):
 
     @staticmethod
     def _to_tool_payload(tools: list[ToolSpec]) -> list[dict[str, Any]]:
-        payload: list[dict[str, Any]] = []
-        for tool in tools:
-            payload.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.parameters,
-                    },
-                }
-            )
-        return payload
+        return QueryEngine.build_tool_payload(tools)
 
     async def stream_chat(self, messages: Iterable[ChatMessage]) -> AsyncIterator[str]:
         payload = [
