@@ -162,9 +162,60 @@ class Agent:
 
         chat_messages = [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
         chunks: list[str] = []
-        async for chunk in self._llm_provider.stream_chat(chat_messages):
+        async for chunk in self._llm_provider.stream_chat(chat_messages, **kwargs):
             chunks.append(chunk)
         return "".join(chunks)
+
+    async def call_llm_json(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_retries: int = 2,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """调用 LLM 并解析 JSON 响应，解析失败时自动重试（FSM 模式）。
+
+        Args:
+            messages: 对话消息列表
+            max_retries: JSON 解析失败最大重试次数
+            **kwargs: 传递给 stream_chat 的额外参数
+
+        Returns:
+            解析后的 dict
+
+        Raises:
+            RuntimeError: 超过最大重试次数仍解析失败
+        """
+        import json
+
+        kwargs.setdefault("response_format", {"type": "json_object"})
+        last_error = ""
+        chat_messages = list(messages)
+
+        for attempt in range(max_retries + 1):
+            raw = await self.call_llm(chat_messages, **kwargs)
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    return data
+                last_error = f"期望 JSON 对象，实际类型: {type(data).__name__}"
+            except json.JSONDecodeError as exc:
+                last_error = f"JSON 解析失败: {exc}"
+
+            logger.warning(
+                "agent_call_llm_json: 解析失败 attempt=%d/%d, name=%s, error=%s",
+                attempt + 1,
+                max_retries + 1,
+                self._name,
+                last_error,
+            )
+
+            if attempt < max_retries:
+                chat_messages = list(messages) + [
+                    {"role": "user", "content": f"上次输出格式错误：{last_error}，请严格返回 JSON 格式。"},
+                ]
+
+        raise RuntimeError(f"LLM JSON 解析失败，已重试 {max_retries} 次: {last_error}")
 
     async def call_tool(self, tool_name: str, **kwargs) -> ToolCallResult:
         tool = self._tools.get(tool_name)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 from typing import Any, Optional
@@ -78,29 +77,16 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
         else:
             return asyncio.run(self._annotate_async(text, ann))
 
-    async def call_llm(self, messages: list[dict[str, str]], **kwargs) -> str:
-        from llm.chat_message import ChatMessage
-
-        chat_messages = [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
-        chunks: list[str] = []
-        async for chunk in self._llm_provider.stream_chat(chat_messages, **kwargs):
-            chunks.append(chunk)
-        return "".join(chunks)
-
     async def _annotate_async(self, text: str, ann: ChunkAnnotation) -> ChunkAnnotation:
         prompt = _ANNOTATION_PROMPT.format(text=text[:1500])
         messages = [{"role": "user", "content": prompt}]
 
         try:
-            response_text = await self.call_llm(
-                messages, response_format={"type": "json_object"}
-            )
-            data = json.loads(response_text)
-            if isinstance(data, dict):
-                ann.type = data.get("type", ann.type)
-                ann.authority = data.get("authority", ann.authority)
-                ann.effective_date = data.get("effective_date", ann.effective_date)
-                ann.confidence = float(data.get("confidence", 0.5))
+            data = await self.call_llm_json(messages)
+            ann.type = data.get("type", ann.type)
+            ann.authority = data.get("authority", ann.authority)
+            ann.effective_date = data.get("effective_date", ann.effective_date)
+            ann.confidence = float(data.get("confidence", 0.5))
         except Exception:
             logger.warning("LLM 标注失败，使用已有结果", exc_info=True)
 
