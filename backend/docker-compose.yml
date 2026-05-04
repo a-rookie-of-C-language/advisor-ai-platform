@@ -126,6 +126,7 @@ services:
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
       AI_GATEWAY_MODEL: ${AI_PROVIDER_MODEL:-gpt-4.1-mini}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      PROMETHEUS_BASE_URL: http://prometheus:9090
     depends_on:
       nacos:
         condition: service_healthy
