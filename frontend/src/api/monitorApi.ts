@@ -28,7 +28,18 @@ export interface MonitorRealtimeResponseDTO {
   alerts: string[]
 }
 
+interface ApiResponse<T> {
+  code: number
+  message: string
+  data: T
+}
+
 export const monitorApi = {
-  realtime: (params?: { minutes?: number; stepSeconds?: number }) =>
-    request.get<unknown, MonitorRealtimeResponseDTO>('/monitor/realtime', { params }),
+  realtime: async (params?: { minutes?: number; stepSeconds?: number }) => {
+    const res = await request.get<unknown, ApiResponse<MonitorRealtimeResponseDTO>>(
+      '/monitor/realtime',
+      { params },
+    )
+    return res.data
+  },
 }
