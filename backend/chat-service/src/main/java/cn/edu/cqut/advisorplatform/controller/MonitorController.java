@@ -21,8 +21,8 @@ public class MonitorController {
 
   @GetMapping("/realtime")
   public ApiResponseDTO<MonitorRealtimeResponseDTO> getRealtime(
-      @RequestParam(defaultValue = "15") int minutes,
-      @RequestParam(defaultValue = "10") int stepSeconds,
+      @RequestParam(value = "minutes", defaultValue = "15") int minutes,
+      @RequestParam(value = "stepSeconds", defaultValue = "10") int stepSeconds,
       @AuthenticationPrincipal @Nullable UserDO currentUser) {
     if (currentUser == null || currentUser.getRole() != UserDO.UserRole.ADMIN) {
       throw new ForbiddenException("仅管理员可访问监控数据");

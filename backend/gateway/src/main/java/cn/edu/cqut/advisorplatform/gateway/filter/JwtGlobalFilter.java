@@ -41,6 +41,9 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
 
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+    if (exchange.getRequest().getMethod() == org.springframework.http.HttpMethod.OPTIONS) {
+      return chain.filter(exchange);
+    }
     String path = exchange.getRequest().getURI().getPath();
     boolean skip = WHITE_LIST.stream().anyMatch(path::startsWith);
 
