@@ -39,7 +39,11 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/error")
                     .permitAll()
-                    .requestMatchers("/actuator/health/**", "/actuator/info", "/internal/health")
+                    .requestMatchers(
+                        "/actuator/health/**",
+                        "/actuator/info",
+                        "/actuator/prometheus",
+                        "/internal/health")
                     .permitAll()
                     .requestMatchers("/internal/**")
                     .hasRole("INTERNAL")

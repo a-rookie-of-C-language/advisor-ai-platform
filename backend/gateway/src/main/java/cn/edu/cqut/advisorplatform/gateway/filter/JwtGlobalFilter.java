@@ -5,7 +5,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.List;
@@ -63,9 +62,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
     }
 
     String token = resolveBearerToken(withTrace.getRequest().getHeaders());
-    if (token == null && path.startsWith("/ws/")) {
-      token = resolveQueryToken(withTrace.getRequest().getURI());
-    }
     if (token == null) {
       log.warn("gateway jwt reject: missing bearer token, path={}, traceId={}", path, traceId);
       withTrace.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -93,20 +89,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
       return null;
     }
     return authHeader.substring(7);
-  }
-
-  private String resolveQueryToken(URI uri) {
-    String query = uri.getRawQuery();
-    if (query == null) {
-      return null;
-    }
-    for (String param : query.split("&")) {
-      String[] kv = param.split("=", 2);
-      if (kv.length == 2 && "token".equals(kv[0])) {
-        return kv[1];
-      }
-    }
-    return null;
   }
 
   private ValidationResult validate(String token) {

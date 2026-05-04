@@ -31,9 +31,9 @@ export function createMonitorWebSocket(
   onData: (data: MonitorRealtimeResponseDTO) => void,
   onError?: (err: Event) => void,
 ): WebSocket {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const host = window.location.host
-  const ws = new WebSocket(`${protocol}//${host}/ws/monitor?token=${encodeURIComponent(token)}`)
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsHost = import.meta.env.VITE_WS_HOST ?? window.location.hostname + ':8082'
+  const ws = new WebSocket(`${wsProtocol}//${wsHost}/ws/monitor?token=${encodeURIComponent(token)}`)
 
   ws.onmessage = (event) => {
     try {
