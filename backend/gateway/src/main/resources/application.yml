@@ -22,7 +22,7 @@ spring:
         - id: chat-service
           uri: lb://chat-service
           predicates:
-            - Path=/api/chat/**,/api/session/**
+            - Path=/api/chat/**,/api/session/**,/api/monitor/**
         - id: rag-service
           uri: lb://rag-service
           predicates:
