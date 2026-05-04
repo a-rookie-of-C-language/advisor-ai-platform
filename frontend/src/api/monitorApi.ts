@@ -1,5 +1,3 @@
-import request from './request'
-
 export interface MonitorPointDTO {
   ts: number
   value: number
@@ -28,18 +26,27 @@ export interface MonitorRealtimeResponseDTO {
   alerts: string[]
 }
 
-interface ApiResponse<T> {
-  code: number
-  message: string
-  data: T
-}
+export function createMonitorWebSocket(
+  token: string,
+  onData: (data: MonitorRealtimeResponseDTO) => void,
+  onError?: (err: Event) => void,
+): WebSocket {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const host = window.location.host
+  const ws = new WebSocket(`${protocol}//${host}/ws/monitor?token=${encodeURIComponent(token)}`)
 
-export const monitorApi = {
-  realtime: async (params?: { minutes?: number; stepSeconds?: number }) => {
-    const res = await request.get<unknown, ApiResponse<MonitorRealtimeResponseDTO>>(
-      '/monitor/realtime',
-      { params },
-    )
-    return res.data
-  },
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data) as MonitorRealtimeResponseDTO
+      onData(data)
+    } catch {
+      // ignore malformed messages
+    }
+  }
+
+  ws.onerror = (event) => {
+    onError?.(event)
+  }
+
+  return ws
 }

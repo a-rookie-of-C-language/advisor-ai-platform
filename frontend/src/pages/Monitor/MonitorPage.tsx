@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Alert, App, Card, Col, Empty, Row, Space, Tag, Typography } from 'antd'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Card, Col, Empty, Row, Space, Tag, Typography } from 'antd'
 import dayjs from 'dayjs'
-import { monitorApi, type MonitorRealtimeResponseDTO, type MonitorSeriesDTO } from '../../api/monitorApi'
+import { createMonitorWebSocket, type MonitorRealtimeResponseDTO, type MonitorSeriesDTO } from '../../api/monitorApi'
+import { useAuthStore } from '../../store/authStore'
 import styles from './MonitorPage.module.css'
 
 const { Title, Text } = Typography
+const RECONNECT_DELAY_MS = 3000
 
 function statusClass(status: string) {
   if (status === 'critical') return styles.critical
@@ -34,38 +36,56 @@ function toPolyline(points: MonitorSeriesDTO['points'], width: number, height: n
 }
 
 export default function MonitorPage() {
-  const { message } = App.useApp()
   const [data, setData] = useState<MonitorRealtimeResponseDTO | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [connected, setConnected] = useState(false)
   const [latestError, setLatestError] = useState<string | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const token = useAuthStore((s) => s.token)
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      const res = await monitorApi.realtime({ minutes: 15, stepSeconds: 10 })
-      setData(res)
-      setLatestError(null)
-    } catch (e) {
-      setLatestError(typeof e === 'string' ? e : '监控数据加载失败')
-      message.error(typeof e === 'string' ? e : '监控数据加载失败')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    void load()
-  }, [])
-
-  useEffect(() => {
-    if (!data?.refreshSeconds) {
+  const connect = useCallback(() => {
+    if (!token) {
+      setLatestError('未登录，无法连接监控')
       return
     }
-    const timer = setInterval(() => {
-      void load()
-    }, data.refreshSeconds * 1000)
-    return () => clearInterval(timer)
-  }, [data?.refreshSeconds])
+    const ws = createMonitorWebSocket(
+      token,
+      (monitorData) => {
+        setData(monitorData)
+        setConnected(true)
+        setLatestError(null)
+      },
+      () => {
+        setConnected(false)
+        setLatestError('WebSocket 连接异常')
+      },
+    )
+
+    ws.onopen = () => {
+      setConnected(true)
+      setLatestError(null)
+    }
+
+    ws.onclose = () => {
+      setConnected(false)
+      reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS)
+    }
+
+    wsRef.current = ws
+  }, [token])
+
+  useEffect(() => {
+    connect()
+    return () => {
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+      }
+      if (wsRef.current) {
+        wsRef.current.onclose = null
+        wsRef.current.close()
+      }
+    }
+  }, [connect])
 
   const generatedAtText = useMemo(() => {
     if (!data) return '-'
@@ -80,7 +100,12 @@ export default function MonitorPage() {
             监控中心（实时）
           </Title>
           <div className={styles.meta}>
-            最近刷新：{generatedAtText} · 自动刷新间隔：{data?.refreshSeconds ?? 10}s
+            {connected ? (
+              <Tag color="green">已连接</Tag>
+            ) : (
+              <Tag color="red">未连接</Tag>
+            )}
+            最近刷新：{generatedAtText} · 推送间隔：{data?.refreshSeconds ?? 10}s
           </div>
         </div>
       </div>
@@ -108,7 +133,7 @@ export default function MonitorPage() {
       <Row gutter={[12, 12]}>
         {(data?.cards ?? []).map((card) => (
           <Col key={card.key} xs={24} sm={12} lg={8} xl={6}>
-            <Card loading={loading}>
+            <Card loading={!data}>
               <Space direction="vertical" size={4}>
                 <Text type="secondary">{card.name}</Text>
                 <div className={`${styles.cardValue} ${statusClass(card.status)}`}>
@@ -125,7 +150,7 @@ export default function MonitorPage() {
       <Row gutter={[12, 12]} style={{ marginTop: 4 }}>
         {(data?.series ?? []).map((s) => (
           <Col key={s.key} xs={24} lg={12}>
-            <Card className={styles.chartCard} title={`${s.name} (${s.unit})`} loading={loading}>
+            <Card className={styles.chartCard} title={`${s.name} (${s.unit})`} loading={!data}>
               <div className={styles.chartWrap}>
                 {s.points.length === 0 ? (
                   <div className={styles.chartEmpty}>
