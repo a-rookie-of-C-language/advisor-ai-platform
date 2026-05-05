@@ -15,45 +15,48 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class BusinessComplianceFilter implements RiskFilter {
 
-    private final RiskRuleRepository riskRuleRepository;
+  private final RiskRuleRepository riskRuleRepository;
 
-    @Override
-    public String getName() {
-        return "business-compliance";
+  @Override
+  public String getName() {
+    return "business-compliance";
+  }
+
+  @Override
+  public RiskCheckResponse check(RiskCheckRequest request) {
+    String content = request.getContent();
+    if (content == null || content.isBlank()) {
+      return passed();
     }
 
-    @Override
-    public RiskCheckResponse check(RiskCheckRequest request) {
-        String content = request.getContent();
-        if (content == null || content.isBlank()) {
-            return passed();
+    List<RiskRule> rules = riskRuleRepository.findByRuleTypeAndEnabledTrue("business_compliance");
+    for (RiskRule rule : rules) {
+      try {
+        Pattern pattern = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE);
+        if (pattern.matcher(content).find()) {
+          log.warn(
+              "Business compliance violation: userId={}, rule={}, matched={}",
+              request.getUserId(),
+              rule.getName(),
+              rule.getPattern());
+          return RiskCheckResponse.builder()
+              .passed(false)
+              .action(rule.getAction())
+              .reason("业务合规违规")
+              .category("business_compliance")
+              .matchedKeyword(rule.getName())
+              .statusCode(400)
+              .message("您的问题超出服务范围，请咨询相关专业人士")
+              .build();
         }
-
-        List<RiskRule> rules = riskRuleRepository.findByRuleTypeAndEnabledTrue("business_compliance");
-        for (RiskRule rule : rules) {
-            try {
-                Pattern pattern = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE);
-                if (pattern.matcher(content).find()) {
-                    log.warn("Business compliance violation: userId={}, rule={}, matched={}",
-                            request.getUserId(), rule.getName(), rule.getPattern());
-                    return RiskCheckResponse.builder()
-                            .passed(false)
-                            .action(rule.getAction())
-                            .reason("业务合规违规")
-                            .category("business_compliance")
-                            .matchedKeyword(rule.getName())
-                            .statusCode(400)
-                            .message("您的问题超出服务范围，请咨询相关专业人士")
-                            .build();
-                }
-            } catch (Exception e) {
-                log.error("Invalid regex pattern in rule {}: {}", rule.getName(), rule.getPattern(), e);
-            }
-        }
-        return passed();
+      } catch (Exception e) {
+        log.error("Invalid regex pattern in rule {}: {}", rule.getName(), rule.getPattern(), e);
+      }
     }
+    return passed();
+  }
 
-    private RiskCheckResponse passed() {
-        return RiskCheckResponse.builder().passed(true).build();
-    }
+  private RiskCheckResponse passed() {
+    return RiskCheckResponse.builder().passed(true).build();
+  }
 }

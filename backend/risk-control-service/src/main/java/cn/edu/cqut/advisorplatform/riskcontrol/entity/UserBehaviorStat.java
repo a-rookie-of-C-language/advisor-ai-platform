@@ -18,22 +18,22 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserBehaviorStat {
 
-    @Id
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+  @Id
+  @Column(name = "user_id", nullable = false)
+  private Long userId;
 
-    @Column(name = "date", nullable = false)
-    private LocalDate date;
+  @Column(name = "date", nullable = false)
+  private LocalDate date;
 
-    @Column(name = "request_count", nullable = false)
-    private Integer requestCount;
+  @Column(name = "request_count", nullable = false)
+  private Integer requestCount;
 
-    @Column(name = "violation_count", nullable = false)
-    private Integer violationCount;
+  @Column(name = "violation_count", nullable = false)
+  private Integer violationCount;
 
-    @Column(name = "avg_interval_seconds")
-    private Double avgIntervalSeconds;
+  @Column(name = "avg_interval_seconds")
+  private Double avgIntervalSeconds;
 
-    @Column(name = "suspicious_pattern")
-    private String suspiciousPattern;
+  @Column(name = "suspicious_pattern")
+  private String suspiciousPattern;
 }

@@ -5,7 +5,7 @@ import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 
 public interface RiskFilter {
 
-    String getName();
+  String getName();
 
-    RiskCheckResponse check(RiskCheckRequest request);
+  RiskCheckResponse check(RiskCheckRequest request);
 }

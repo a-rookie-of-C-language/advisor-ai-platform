@@ -10,6 +10,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserViolationRepository extends JpaRepository<UserViolation, Long> {
 
-    @Query("SELECT COUNT(v) FROM UserViolation v WHERE v.userId = :userId AND v.createdAt >= :since")
-    long countByUserIdSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
+  @Query("SELECT COUNT(v) FROM UserViolation v WHERE v.userId = :userId AND v.createdAt >= :since")
+  long countByUserIdSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
 }

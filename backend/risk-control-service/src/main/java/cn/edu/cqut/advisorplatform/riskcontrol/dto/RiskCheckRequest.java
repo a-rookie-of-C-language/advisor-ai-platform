@@ -11,11 +11,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RiskCheckRequest {
 
-    private Long userId;
-    private String sessionId;
-    private String ipAddress;
-    private String requestPath;
-    private String requestBody;
-    private String eventType;
-    private String content;
+  private Long userId;
+  private String sessionId;
+  private String ipAddress;
+  private String requestPath;
+  private String requestBody;
+  private String eventType;
+  private String content;
 }

@@ -18,6 +18,7 @@
         <module>rag-service</module>
         <module>memory-service</module>
         <module>audit-service</module>
+        <module>risk-control-service</module>
     </modules>
 
     <properties>

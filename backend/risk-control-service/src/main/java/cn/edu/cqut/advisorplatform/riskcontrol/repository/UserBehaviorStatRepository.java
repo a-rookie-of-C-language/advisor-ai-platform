@@ -9,5 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserBehaviorStatRepository extends JpaRepository<UserBehaviorStat, Long> {
 
-    Optional<UserBehaviorStat> findByUserIdAndDate(Long userId, LocalDate date);
+  Optional<UserBehaviorStat> findByUserIdAndDate(Long userId, LocalDate date);
 }

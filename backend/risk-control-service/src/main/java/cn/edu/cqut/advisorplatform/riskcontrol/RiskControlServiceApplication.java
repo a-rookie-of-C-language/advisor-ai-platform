@@ -18,7 +18,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EntityScan(basePackages = "cn.edu.cqut.advisorplatform.riskcontrol.entity")
 public class RiskControlServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(RiskControlServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(RiskControlServiceApplication.class, args);
+  }
 }

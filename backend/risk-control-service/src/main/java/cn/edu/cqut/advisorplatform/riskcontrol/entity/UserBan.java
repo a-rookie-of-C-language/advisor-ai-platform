@@ -20,31 +20,31 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserBan {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+  @Column(name = "user_id", nullable = false)
+  private Long userId;
 
-    @Column(name = "ban_type", length = 32, nullable = false)
-    private String banType;
+  @Column(name = "ban_type", length = 32, nullable = false)
+  private String banType;
 
-    @Column(name = "reason")
-    private String reason;
+  @Column(name = "reason")
+  private String reason;
 
-    @Column(name = "start_time", nullable = false)
-    private LocalDateTime startTime;
+  @Column(name = "start_time", nullable = false)
+  private LocalDateTime startTime;
 
-    @Column(name = "end_time")
-    private LocalDateTime endTime;
+  @Column(name = "end_time")
+  private LocalDateTime endTime;
 
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
+  @Column(name = "is_active", nullable = false)
+  private Boolean isActive;
 
-    @Column(name = "created_by", length = 64)
-    private String createdBy;
+  @Column(name = "created_by", length = 64)
+  private String createdBy;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+  @Column(name = "created_at", nullable = false)
+  private LocalDateTime createdAt;
 }

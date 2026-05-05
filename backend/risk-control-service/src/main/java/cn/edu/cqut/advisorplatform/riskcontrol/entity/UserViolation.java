@@ -20,28 +20,28 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserViolation {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+  @Column(name = "user_id", nullable = false)
+  private Long userId;
 
-    @Column(name = "violation_type", length = 32, nullable = false)
-    private String violationType;
+  @Column(name = "violation_type", length = 32, nullable = false)
+  private String violationType;
 
-    @Column(name = "rule_id")
-    private Long ruleId;
+  @Column(name = "rule_id")
+  private Long ruleId;
 
-    @Column(name = "request_path", length = 512)
-    private String requestPath;
+  @Column(name = "request_path", length = 512)
+  private String requestPath;
 
-    @Column(name = "request_body")
-    private String requestBody;
+  @Column(name = "request_body")
+  private String requestBody;
 
-    @Column(name = "ip_address", length = 45)
-    private String ipAddress;
+  @Column(name = "ip_address", length = 45)
+  private String ipAddress;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+  @Column(name = "created_at", nullable = false)
+  private LocalDateTime createdAt;
 }

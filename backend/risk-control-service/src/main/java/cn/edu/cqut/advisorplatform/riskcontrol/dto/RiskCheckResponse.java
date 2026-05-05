@@ -11,11 +11,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RiskCheckResponse {
 
-    private boolean passed;
-    private String action;
-    private String reason;
-    private String category;
-    private String matchedKeyword;
-    private int statusCode;
-    private String message;
+  private boolean passed;
+  private String action;
+  private String reason;
+  private String category;
+  private String matchedKeyword;
+  private int statusCode;
+  private String message;
 }

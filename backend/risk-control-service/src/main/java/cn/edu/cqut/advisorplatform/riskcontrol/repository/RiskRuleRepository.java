@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RiskRuleRepository extends JpaRepository<RiskRule, Long> {
 
-    List<RiskRule> findByEnabledTrue();
+  List<RiskRule> findByEnabledTrue();
 
-    List<RiskRule> findByRuleTypeAndEnabledTrue(String ruleType);
+  List<RiskRule> findByRuleTypeAndEnabledTrue(String ruleType);
 }

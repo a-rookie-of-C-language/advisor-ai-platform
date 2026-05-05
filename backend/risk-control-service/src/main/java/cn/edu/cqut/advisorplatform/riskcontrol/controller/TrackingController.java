@@ -21,34 +21,39 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TrackingController {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final RiskEngine riskEngine;
+  private final KafkaTemplate<String, Object> kafkaTemplate;
+  private final RiskEngine riskEngine;
 
-    @PostMapping("/event")
-    public ResponseEntity<Void> trackEvent(@RequestBody TrackingEventMessage event) {
-        if (event.getEventId() == null) {
-            event.setEventId(UUID.randomUUID().toString());
-        }
-        if (event.getTimestamp() == null) {
-            event.setTimestamp(System.currentTimeMillis());
-        }
-
-        log.info("Received tracking event: userId={}, eventType={}, eventName={}",
-                event.getUserId(), event.getEventType(), event.getEventName());
-
-        kafkaTemplate.send(KafkaConfig.TRACKING_EVENTS_TOPIC, event.getEventId(), event);
-        return ResponseEntity.ok().build();
+  @PostMapping("/event")
+  public ResponseEntity<Void> trackEvent(@RequestBody TrackingEventMessage event) {
+    if (event.getEventId() == null) {
+      event.setEventId(UUID.randomUUID().toString());
+    }
+    if (event.getTimestamp() == null) {
+      event.setTimestamp(System.currentTimeMillis());
     }
 
-    @PostMapping("/check")
-    public ResponseEntity<RiskCheckResponse> checkRisk(@RequestBody RiskCheckRequest request) {
-        log.info("Risk check request: userId={}, requestPath={}",
-                request.getUserId(), request.getRequestPath());
+    log.info(
+        "Received tracking event: userId={}, eventType={}, eventName={}",
+        event.getUserId(),
+        event.getEventType(),
+        event.getEventName());
 
-        RiskCheckResponse response = riskEngine.check(request);
-        if (response.isPassed()) {
-            return ResponseEntity.ok(response);
-        }
-        return ResponseEntity.status(response.getStatusCode()).body(response);
+    kafkaTemplate.send(KafkaConfig.TRACKING_EVENTS_TOPIC, event.getEventId(), event);
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/check")
+  public ResponseEntity<RiskCheckResponse> checkRisk(@RequestBody RiskCheckRequest request) {
+    log.info(
+        "Risk check request: userId={}, requestPath={}",
+        request.getUserId(),
+        request.getRequestPath());
+
+    RiskCheckResponse response = riskEngine.check(request);
+    if (response.isPassed()) {
+      return ResponseEntity.ok(response);
     }
+    return ResponseEntity.status(response.getStatusCode()).body(response);
+  }
 }

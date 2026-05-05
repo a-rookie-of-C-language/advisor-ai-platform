@@ -17,14 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class InternalController {
 
-    private final RiskEngine riskEngine;
+  private final RiskEngine riskEngine;
 
-    @PostMapping("/check")
-    public ResponseEntity<RiskCheckResponse> checkRisk(@RequestBody RiskCheckRequest request) {
-        log.info("Internal risk check request: userId={}, requestPath={}",
-                request.getUserId(), request.getRequestPath());
+  @PostMapping("/check")
+  public ResponseEntity<RiskCheckResponse> checkRisk(@RequestBody RiskCheckRequest request) {
+    log.info(
+        "Internal risk check request: userId={}, requestPath={}",
+        request.getUserId(),
+        request.getRequestPath());
 
-        RiskCheckResponse response = riskEngine.check(request);
-        return ResponseEntity.ok(response);
-    }
+    RiskCheckResponse response = riskEngine.check(request);
+    return ResponseEntity.ok(response);
+  }
 }
