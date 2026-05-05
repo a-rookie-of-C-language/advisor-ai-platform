@@ -36,6 +36,7 @@ class GraphRuntime:
     intent_router: Any = None
     safety_pipeline: Any = None
     fusion_pipeline: Any = None
+    web_search_subagent: Any = None
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -410,6 +411,27 @@ async def _run_fusion_pipeline(
 
     async def _exec_web() -> list[SourceCandidate]:
         try:
+            if runtime.web_search_subagent is not None:
+                search_result = await runtime.web_search_subagent.search(user_query, max_results=3)
+                if not search_result.safe:
+                    logger.warning("fusion: web_search 结果不合规，已过滤: %s", search_result.filtered_reason)
+                    return []
+                if not search_result.sources:
+                    return []
+                return [
+                    SourceCandidate(
+                        content=search_result.summary,
+                        source="web",
+                        metadata={
+                            "source": "web",
+                            "title": src.get("title", ""),
+                            "url": src.get("url", ""),
+                            "key_facts": search_result.key_facts,
+                        },
+                    )
+                    for src in search_result.sources
+                    if src.get("snippet")
+                ]
             result = await runtime.tools.execute("web_search", {"query": user_query, "max_results": 3}, context)
             payload = json.loads(result) if isinstance(result, str) else {}
             items = payload.get("items", []) if isinstance(payload, dict) else []
