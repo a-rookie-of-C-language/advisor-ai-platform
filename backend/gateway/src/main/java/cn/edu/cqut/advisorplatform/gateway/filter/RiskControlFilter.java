@@ -13,9 +13,12 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -38,13 +41,11 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
     String path = exchange.getRequest().getURI().getPath();
 
-    // 只对需要风控的路径进行检查
     boolean needCheck = RISK_CHECK_PATHS.stream().anyMatch(path::startsWith);
     if (!needCheck) {
       return chain.filter(exchange);
     }
 
-    // 只检查POST请求
     if (exchange.getRequest().getMethod() != HttpMethod.POST) {
       return chain.filter(exchange);
     }
@@ -56,7 +57,6 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
             ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
             : "unknown";
 
-    // 读取请求体
     return DataBufferUtils.join(exchange.getRequest().getBody())
         .flatMap(
             dataBuffer -> {
@@ -69,7 +69,18 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
                   .flatMap(
                       response -> {
                         if (response.isPassed()) {
-                          return chain.filter(exchange);
+                          ServerHttpRequest decoratedRequest =
+                              new ServerHttpRequestDecorator(exchange.getRequest()) {
+                                @Override
+                                public Flux<DataBuffer> getBody() {
+                                  DataBuffer buffer =
+                                      exchange.getResponse().bufferFactory().wrap(bytes);
+                                  return Flux.just(buffer);
+                                }
+                              };
+                          ServerWebExchange mutatedExchange =
+                              exchange.mutate().request(decoratedRequest).build();
+                          return chain.filter(mutatedExchange);
                         }
 
                         log.warn(
@@ -117,6 +128,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
     request.setRequestPath(path);
     request.setRequestBody(requestBody);
     request.setContent(requestBody);
+    request.setDirection("INPUT");
 
     return webClient
         .post()
@@ -129,7 +141,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
 
   @Override
   public int getOrder() {
-    return -50; // 在JWT过滤器之后执行
+    return -50;
   }
 
   public static class RiskCheckRequest {
@@ -140,6 +152,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
     private String requestBody;
     private String eventType;
     private String content;
+    private String direction;
 
     public Long getUserId() {
       return userId;
@@ -195,6 +208,14 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
 
     public void setContent(String content) {
       this.content = content;
+    }
+
+    public String getDirection() {
+      return direction;
+    }
+
+    public void setDirection(String direction) {
+      this.direction = direction;
     }
   }
 

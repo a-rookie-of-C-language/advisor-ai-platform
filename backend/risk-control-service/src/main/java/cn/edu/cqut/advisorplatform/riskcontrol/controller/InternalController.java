@@ -2,7 +2,7 @@ package cn.edu.cqut.advisorplatform.riskcontrol.controller;
 
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
-import cn.edu.cqut.advisorplatform.riskcontrol.service.RiskEngine;
+import cn.edu.cqut.advisorplatform.riskcontrol.service.RiskFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,16 +17,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class InternalController {
 
-  private final RiskEngine riskEngine;
+  private final RiskFacade riskFacade;
 
   @PostMapping("/check")
   public ResponseEntity<RiskCheckResponse> checkRisk(@RequestBody RiskCheckRequest request) {
     log.info(
-        "Internal risk check request: userId={}, requestPath={}",
+        "Internal risk check request: userId={}, direction={}, requestPath={}",
         request.getUserId(),
+        request.getDirection(),
         request.getRequestPath());
 
-    RiskCheckResponse response = riskEngine.check(request);
+    RiskCheckResponse response = riskFacade.check(request);
     return ResponseEntity.ok(response);
   }
 }

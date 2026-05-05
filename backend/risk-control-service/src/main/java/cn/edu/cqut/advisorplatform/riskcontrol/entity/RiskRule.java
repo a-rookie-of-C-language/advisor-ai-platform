@@ -1,7 +1,10 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.entity;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -38,6 +41,11 @@ public class RiskRule {
 
   @Column(name = "severity", length = 16, nullable = false)
   private String severity;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "direction", length = 16, nullable = false)
+  @Builder.Default
+  private RiskDirection direction = RiskDirection.BOTH;
 
   @Column(name = "enabled", nullable = false)
   private Boolean enabled;

@@ -29,7 +29,9 @@ public class PromptInjectionFilter implements RiskFilter {
       return passed();
     }
 
-    List<RiskRule> rules = riskRuleRepository.findByRuleTypeAndEnabledTrue("prompt_injection");
+    List<RiskRule> rules =
+        riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+            "prompt_injection", request.getDirection());
     for (RiskRule rule : rules) {
       try {
         Pattern pattern = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE);

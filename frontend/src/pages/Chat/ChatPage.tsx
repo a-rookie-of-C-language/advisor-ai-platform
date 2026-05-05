@@ -356,6 +356,12 @@ export default function ChatPage() {
             streamFailed = true
             streamError = message ?? 'stream error'
           },
+          onRiskAlert: (alertData) => {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              streaming: false,
+              content: alertData.message || '该内容因不合规已被过滤',
+            })
+          },
         },
       )
 

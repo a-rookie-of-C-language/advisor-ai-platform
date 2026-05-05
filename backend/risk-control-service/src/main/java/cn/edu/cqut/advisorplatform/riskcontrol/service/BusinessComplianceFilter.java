@@ -29,7 +29,9 @@ public class BusinessComplianceFilter implements RiskFilter {
       return passed();
     }
 
-    List<RiskRule> rules = riskRuleRepository.findByRuleTypeAndEnabledTrue("business_compliance");
+    List<RiskRule> rules =
+        riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+            "business_compliance", request.getDirection());
     for (RiskRule rule : rules) {
       try {
         Pattern pattern = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE);

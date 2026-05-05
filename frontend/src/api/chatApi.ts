@@ -51,6 +51,7 @@ interface StreamHandlers {
   onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
   onEnd?: () => void
   onError?: (message: string) => void
+  onRiskAlert?: (data: { code: number; message: string; category: string }) => void
 }
 
 const FIRST_PACKET_TIMEOUT_MS = 30_000
@@ -208,6 +209,8 @@ export const chatApi = {
               handlers.onDelta?.(data.text)
             } else if (parsed.event === 'sources') {
               handlers.onSources?.(data.items ?? [], data.status, data.message)
+            } else if (parsed.event === 'risk_alert') {
+              handlers.onRiskAlert?.(data as { code: number; message: string; category: string })
             } else if (parsed.event === 'error') {
               sawError = true
               latestError = data.message ?? 'stream error'

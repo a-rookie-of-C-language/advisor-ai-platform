@@ -29,7 +29,9 @@ public class ContentSafetyFilter implements RiskFilter {
       return passed();
     }
 
-    List<RiskRule> rules = riskRuleRepository.findByRuleTypeAndEnabledTrue("content_safety");
+    List<RiskRule> rules =
+        riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+            "content_safety", request.getDirection());
     for (RiskRule rule : rules) {
       try {
         Pattern pattern = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE);
