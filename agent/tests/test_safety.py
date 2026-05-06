@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import pytest
-
-from safety.regex_filter import RegexFilter, RegexMatch, StreamingRegexFilter
+from safety.regex_filter import RegexFilter, StreamingRegexFilter
 from safety.safety_pipeline import SafetyPipeline, SafetyResult
 
 
