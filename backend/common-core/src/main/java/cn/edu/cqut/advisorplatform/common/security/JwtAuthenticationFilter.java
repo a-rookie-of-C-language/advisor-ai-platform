@@ -7,21 +7,29 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtUtil jwtUtil;
+
+  @Setter private UserDetailsService userDetailsService;
+
+  public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    this.jwtUtil = jwtUtil;
+  }
 
   @Override
   protected void doFilterInternal(
@@ -54,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
-      UserPrincipal principal = buildPrincipal(claims);
+      UserDetails principal = resolvePrincipal(claims);
       if (principal != null) {
         UsernamePasswordAuthenticationToken authToken =
             new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
@@ -63,6 +71,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       }
     }
     filterChain.doFilter(request, response);
+  }
+
+  private UserDetails resolvePrincipal(Claims claims) {
+    String username = claims.getSubject();
+    if (username != null && !username.isBlank() && userDetailsService != null) {
+      try {
+        return userDetailsService.loadUserByUsername(username);
+      } catch (UsernameNotFoundException ignored) {
+        // fall through to lightweight principal
+      }
+    }
+    return buildPrincipal(claims);
   }
 
   private UserPrincipal buildPrincipal(Claims claims) {
