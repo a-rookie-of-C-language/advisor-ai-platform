@@ -11,10 +11,12 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(60)
 @RequiredArgsConstructor
 public class UserBehaviorFilter implements RiskFilter {
 
@@ -35,7 +37,6 @@ public class UserBehaviorFilter implements RiskFilter {
       return passed();
     }
 
-    // 检查历史违规次数
     long violationCount =
         userViolationRepository.countByUserIdSince(
             request.getUserId(), LocalDateTime.now().minusDays(30));
@@ -47,7 +48,7 @@ public class UserBehaviorFilter implements RiskFilter {
           violationCount);
       return RiskCheckResponse.builder()
           .passed(false)
-          .action("ban_permanent")
+          .action("reject")
           .reason("用户行为异常，违规次数过多")
           .category("user_behavior")
           .statusCode(403)
@@ -55,7 +56,6 @@ public class UserBehaviorFilter implements RiskFilter {
           .build();
     }
 
-    // 检查今日行为统计
     Optional<UserBehaviorStat> statOpt =
         userBehaviorStatRepository.findByUserIdAndDate(request.getUserId(), LocalDate.now());
 
@@ -68,10 +68,11 @@ public class UserBehaviorFilter implements RiskFilter {
             stat.getSuspiciousPattern());
         return RiskCheckResponse.builder()
             .passed(false)
-            .action("warn")
+            .action("review")
             .reason("检测到可疑行为模式")
             .category("user_behavior")
-            .statusCode(200)
+            .statusCode(202)
+            .message("当前请求已进入人工复核")
             .build();
       }
     }

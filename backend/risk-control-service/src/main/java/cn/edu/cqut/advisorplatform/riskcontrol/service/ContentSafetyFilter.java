@@ -8,14 +8,17 @@ import java.util.List;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(30)
 @RequiredArgsConstructor
 public class ContentSafetyFilter implements RiskFilter {
 
   private final RiskRuleRepository riskRuleRepository;
+  private final RiskActionDecider riskActionDecider;
 
   @Override
   public String getName() {
@@ -43,7 +46,7 @@ public class ContentSafetyFilter implements RiskFilter {
               rule.getPattern());
           return RiskCheckResponse.builder()
               .passed(false)
-              .action(rule.getAction())
+              .action(riskActionDecider.decideAction(rule, "reject"))
               .reason("内容安全违规")
               .category("content_safety")
               .matchedKeyword(rule.getName())

@@ -1,7 +1,10 @@
 package cn.edu.cqut.advisorplatform.gateway.filter;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +37,11 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
   private String riskControlServiceUrl;
 
   private final WebClient webClient;
+  private final MeterRegistry meterRegistry;
 
-  public RiskResponseFilter(WebClient.Builder webClientBuilder) {
+  public RiskResponseFilter(WebClient.Builder webClientBuilder, MeterRegistry meterRegistry) {
     this.webClient = webClientBuilder.build();
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -60,11 +65,9 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
           @Override
           public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
             MediaType contentType = originalResponse.getHeaders().getContentType();
-
             if (contentType != null && contentType.toString().contains(SSE_MEDIA_TYPE)) {
               return handleSseResponse(exchange, body, bufferFactory, originalResponse);
             }
-
             return handleNormalResponse(exchange, body, bufferFactory, originalResponse);
           }
 
@@ -72,11 +75,10 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
           public Mono<Void> writeAndFlushWith(
               Publisher<? extends Publisher<? extends DataBuffer>> body) {
             MediaType contentType = originalResponse.getHeaders().getContentType();
-
             if (contentType != null && contentType.toString().contains(SSE_MEDIA_TYPE)) {
-              return handleSseFlushResponse(exchange, body, bufferFactory, originalResponse);
+              Flux<DataBuffer> merged = Flux.from(body).concatMap(Flux::from);
+              return handleSseResponse(exchange, merged, bufferFactory, originalResponse);
             }
-
             return super.writeAndFlushWith(body);
           }
         };
@@ -105,9 +107,19 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
                   .flatMap(
                       riskResponse -> {
                         if (riskResponse.isPassed()) {
+                          Counter.builder("gateway.risk.output.pass")
+                              .tag("mode", "normal")
+                              .register(meterRegistry)
+                              .increment();
                           DataBuffer buffer = bufferFactory.wrap(content);
                           return originalResponse.writeWith(Mono.just(buffer));
                         }
+
+                        Counter.builder("gateway.risk.output.block")
+                            .tag("mode", "normal")
+                            .tag("category", safeTag(riskResponse.getCategory()))
+                            .register(meterRegistry)
+                            .increment();
 
                         log.warn(
                             "Output risk control blocked: userId={}, path={}, category={}",
@@ -137,125 +149,69 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
       DataBufferFactory bufferFactory,
       ServerHttpResponse originalResponse) {
 
-    StringBuilder contentCollector = new StringBuilder();
+    String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
+    String path = exchange.getRequest().getURI().getPath();
+    AtomicBoolean blocked = new AtomicBoolean(false);
 
     Flux<DataBuffer> modifiedBody =
         Flux.from(body)
-            .map(
+            .concatMap(
                 dataBuffer -> {
+                  if (blocked.get()) {
+                    DataBufferUtils.release(dataBuffer);
+                    return Flux.<DataBuffer>empty();
+                  }
+
                   byte[] content = new byte[dataBuffer.readableByteCount()];
                   dataBuffer.read(content);
                   DataBufferUtils.release(dataBuffer);
                   String chunk = new String(content, StandardCharsets.UTF_8);
-                  contentCollector.append(chunk);
-                  return bufferFactory.wrap(content);
-                })
-            .concatWith(
-                Mono.defer(
-                    () -> {
-                      String fullContent = contentCollector.toString();
-                      String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
-                      String path = exchange.getRequest().getURI().getPath();
 
-                      return callOutputRiskCheck(userId, path, fullContent)
-                          .flatMap(
-                              riskResponse -> {
-                                if (riskResponse.isPassed()) {
-                                  return Mono.<DataBuffer>empty();
-                                }
+                  return callOutputRiskCheck(userId, path, chunk)
+                      .flatMapMany(
+                          riskResponse -> {
+                            if (riskResponse.isPassed()) {
+                              return Flux.just(bufferFactory.wrap(content));
+                            }
 
-                                log.warn(
-                                    "SSE output risk alert: userId={}, path={}, category={}",
-                                    userId,
-                                    path,
-                                    riskResponse.getCategory());
+                            blocked.set(true);
+                            Counter.builder("gateway.risk.output.block")
+                                .tag("mode", "sse")
+                                .tag("category", safeTag(riskResponse.getCategory()))
+                                .register(meterRegistry)
+                                .increment();
 
-                                String alertEvent =
-                                    "event: risk_alert\ndata: "
-                                        + "{\"code\":451,\"message\":\"内容不合规，已被过滤\","
-                                        + "\"category\":\""
-                                        + riskResponse.getCategory()
-                                        + "\"}\n\n";
-                                return Mono.just(
-                                    bufferFactory.wrap(
-                                        alertEvent.getBytes(StandardCharsets.UTF_8)));
-                              })
-                          .onErrorResume(
-                              e -> {
-                                log.error("SSE output risk check failed", e);
-                                return Mono.empty();
-                              });
-                    }));
+                            log.warn(
+                                "SSE output blocked: userId={}, path={}, category={}",
+                                userId,
+                                path,
+                                riskResponse.getCategory());
+
+                            String alertEvent =
+                                "event: risk_alert\ndata: "
+                                    + "{\"code\":451,\"message\":\"内容不合规，已被过滤\","
+                                    + "\"category\":\""
+                                    + safeTag(riskResponse.getCategory())
+                                    + "\"}\n\n"
+                                    + "event: done\ndata: {\"message\":\"stream_stopped_by_risk\"}\n\n";
+                            return Flux.just(
+                                bufferFactory.wrap(alertEvent.getBytes(StandardCharsets.UTF_8)));
+                          })
+                      .onErrorResume(
+                          e -> {
+                            log.error("SSE output risk check failed, pass chunk", e);
+                            return Flux.just(bufferFactory.wrap(content));
+                          });
+                });
 
     return originalResponse.writeWith(modifiedBody);
-  }
-
-  private Mono<Void> handleSseFlushResponse(
-      ServerWebExchange exchange,
-      Publisher<? extends Publisher<? extends DataBuffer>> body,
-      DataBufferFactory bufferFactory,
-      ServerHttpResponse originalResponse) {
-
-    StringBuilder contentCollector = new StringBuilder();
-
-    Flux<Flux<DataBuffer>> modifiedBody =
-        Flux.from(body)
-            .map(
-                publisher ->
-                    Flux.from(publisher)
-                        .map(
-                            dataBuffer -> {
-                              byte[] content = new byte[dataBuffer.readableByteCount()];
-                              dataBuffer.read(content);
-                              DataBufferUtils.release(dataBuffer);
-                              String chunk = new String(content, StandardCharsets.UTF_8);
-                              contentCollector.append(chunk);
-                              return (DataBuffer) bufferFactory.wrap(content);
-                            }))
-            .concatWith(
-                Mono.defer(
-                    () -> {
-                      String fullContent = contentCollector.toString();
-                      String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
-                      String path = exchange.getRequest().getURI().getPath();
-
-                      return callOutputRiskCheck(userId, path, fullContent)
-                          .flatMap(
-                              riskResponse -> {
-                                if (riskResponse.isPassed()) {
-                                  return Mono.<Flux<DataBuffer>>empty();
-                                }
-
-                                log.warn(
-                                    "SSE flush output risk alert: userId={}, path={}",
-                                    userId,
-                                    path);
-
-                                String alertEvent =
-                                    "event: risk_alert\ndata: "
-                                        + "{\"code\":451,\"message\":\"内容不合规，已被过滤\","
-                                        + "\"category\":\""
-                                        + riskResponse.getCategory()
-                                        + "\"}\n\n";
-                                DataBuffer buffer =
-                                    bufferFactory.wrap(alertEvent.getBytes(StandardCharsets.UTF_8));
-                                return Mono.just(Flux.just(buffer));
-                              })
-                          .onErrorResume(
-                              e -> {
-                                log.error("SSE flush output risk check failed", e);
-                                return Mono.empty();
-                              });
-                    }));
-
-    return originalResponse.writeAndFlushWith(modifiedBody);
   }
 
   private Mono<RiskControlFilter.RiskCheckResponse> callOutputRiskCheck(
       String userId, String path, String content) {
 
     RiskControlFilter.RiskCheckRequest request = new RiskControlFilter.RiskCheckRequest();
-    request.setUserId(userId != null ? Long.parseLong(userId) : null);
+    request.setUserId(parseUserId(userId));
     request.setIpAddress("internal");
     request.setRequestPath(path);
     request.setContent(content);
@@ -268,6 +224,21 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
         .retrieve()
         .bodyToMono(RiskControlFilter.RiskCheckResponse.class)
         .defaultIfEmpty(RiskControlFilter.RiskCheckResponse.passed());
+  }
+
+  private Long parseUserId(String userId) {
+    if (userId == null || userId.isBlank()) {
+      return null;
+    }
+    try {
+      return Long.parseLong(userId);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private String safeTag(String value) {
+    return value == null || value.isBlank() ? "unknown" : value;
   }
 
   @Override

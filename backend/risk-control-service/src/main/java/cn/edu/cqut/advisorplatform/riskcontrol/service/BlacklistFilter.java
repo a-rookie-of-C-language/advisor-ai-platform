@@ -6,10 +6,12 @@ import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserBanRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(10)
 @RequiredArgsConstructor
 public class BlacklistFilter implements RiskFilter {
 

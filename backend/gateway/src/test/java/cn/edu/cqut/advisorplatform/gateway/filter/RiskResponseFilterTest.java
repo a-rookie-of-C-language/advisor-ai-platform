@@ -3,6 +3,7 @@ package cn.edu.cqut.advisorplatform.gateway.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ class RiskResponseFilterTest {
   @BeforeEach
   void setUp() {
     when(webClientBuilder.build()).thenReturn(webClient);
-    riskResponseFilter = new RiskResponseFilter(webClientBuilder);
+    riskResponseFilter = new RiskResponseFilter(webClientBuilder, new SimpleMeterRegistry());
   }
 
   @Test

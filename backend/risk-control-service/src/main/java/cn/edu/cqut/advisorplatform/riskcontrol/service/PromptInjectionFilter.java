@@ -8,14 +8,17 @@ import java.util.List;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(40)
 @RequiredArgsConstructor
 public class PromptInjectionFilter implements RiskFilter {
 
   private final RiskRuleRepository riskRuleRepository;
+  private final RiskActionDecider riskActionDecider;
 
   @Override
   public String getName() {
@@ -43,8 +46,8 @@ public class PromptInjectionFilter implements RiskFilter {
               rule.getPattern());
           return RiskCheckResponse.builder()
               .passed(false)
-              .action(rule.getAction())
-              .reason("Prompt注入检测")
+              .action(riskActionDecider.decideAction(rule, "reject"))
+              .reason("Prompt 注入风险")
               .category("prompt_injection")
               .matchedKeyword(rule.getName())
               .statusCode(400)

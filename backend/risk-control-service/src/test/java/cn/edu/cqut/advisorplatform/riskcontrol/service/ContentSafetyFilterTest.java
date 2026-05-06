@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ContentSafetyFilterTest {
 
   @Mock private RiskRuleRepository riskRuleRepository;
+  @Mock private RiskActionDecider riskActionDecider;
 
   @InjectMocks private ContentSafetyFilter contentSafetyFilter;
 
@@ -49,7 +50,7 @@ class ContentSafetyFilterTest {
     RiskRule rule =
         RiskRule.builder()
             .name("test-rule")
-            .pattern("违禁词")
+            .pattern("forbidden")
             .action("reject")
             .severity("high")
             .direction(RiskDirection.INPUT)
@@ -63,7 +64,7 @@ class ContentSafetyFilterTest {
     RiskCheckRequest request =
         RiskCheckRequest.builder()
             .userId(1L)
-            .content("这是一段正常内容")
+            .content("normal content")
             .direction(RiskDirection.INPUT)
             .build();
 
@@ -77,7 +78,7 @@ class ContentSafetyFilterTest {
     RiskRule rule =
         RiskRule.builder()
             .name("sensitive-word")
-            .pattern("违禁词|敏感内容")
+            .pattern("forbidden|sensitive")
             .action("reject")
             .severity("high")
             .direction(RiskDirection.BOTH)
@@ -87,11 +88,12 @@ class ContentSafetyFilterTest {
     when(riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(rule));
+    when(riskActionDecider.decideAction(rule, "reject")).thenReturn("reject");
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
             .userId(1L)
-            .content("这里包含违禁词的内容")
+            .content("this contains forbidden text")
             .direction(RiskDirection.INPUT)
             .build();
 
@@ -112,7 +114,7 @@ class ContentSafetyFilterTest {
     RiskCheckRequest request =
         RiskCheckRequest.builder()
             .userId(1L)
-            .content("任何内容")
+            .content("any content")
             .direction(RiskDirection.OUTPUT)
             .build();
 
@@ -140,7 +142,7 @@ class ContentSafetyFilterTest {
     RiskCheckRequest request =
         RiskCheckRequest.builder()
             .userId(1L)
-            .content("正常内容")
+            .content("normal content")
             .direction(RiskDirection.INPUT)
             .build();
 

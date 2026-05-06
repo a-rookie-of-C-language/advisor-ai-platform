@@ -8,6 +8,7 @@ import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
 import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserViolationRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +33,9 @@ class RiskEngineTest {
     when(filter1.check(any())).thenReturn(RiskCheckResponse.builder().passed(true).build());
     when(filter2.check(any())).thenReturn(RiskCheckResponse.builder().passed(true).build());
 
-    RiskEngine engine = new RiskEngine(List.of(filter1, filter2), userViolationRepository);
+    RiskEngine engine =
+        new RiskEngine(
+            List.of(filter1, filter2), userViolationRepository, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -66,7 +69,9 @@ class RiskEngineTest {
     when(filter1.check(any())).thenReturn(blockedResponse);
     when(filter1.getName()).thenReturn("filter1");
 
-    RiskEngine engine = new RiskEngine(List.of(filter1, filter2), userViolationRepository);
+    RiskEngine engine =
+        new RiskEngine(
+            List.of(filter1, filter2), userViolationRepository, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -100,7 +105,8 @@ class RiskEngineTest {
     when(filter1.check(any())).thenReturn(blockedResponse);
     when(filter1.getName()).thenReturn("filter1");
 
-    RiskEngine engine = new RiskEngine(List.of(filter1), userViolationRepository);
+    RiskEngine engine =
+        new RiskEngine(List.of(filter1), userViolationRepository, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -132,7 +138,8 @@ class RiskEngineTest {
     when(filter1.check(any())).thenReturn(blockedResponse);
     when(filter1.getName()).thenReturn("filter1");
 
-    RiskEngine engine = new RiskEngine(List.of(filter1), userViolationRepository);
+    RiskEngine engine =
+        new RiskEngine(List.of(filter1), userViolationRepository, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()

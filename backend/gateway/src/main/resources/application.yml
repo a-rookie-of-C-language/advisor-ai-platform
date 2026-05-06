@@ -53,4 +53,6 @@ advisor:
     secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
   risk:
     control-service-url: ${RISK_CONTROL_SERVICE_URL:http://risk-control-service:8086}
+    fail-open-default: ${RISK_FAIL_OPEN_DEFAULT:true}
+    fail-closed-paths: ${RISK_FAIL_CLOSED_PATHS:/api/chat/,/api/rag/}
 
