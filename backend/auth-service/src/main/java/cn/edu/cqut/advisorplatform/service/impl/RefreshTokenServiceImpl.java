@@ -1,13 +1,13 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.config.security.JwtUtil;
+import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
+import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.dao.AuthRefreshTokenDao;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.exception.BadRequestException;
-import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.RefreshTokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

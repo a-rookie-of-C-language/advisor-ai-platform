@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.config;
 
-import cn.edu.cqut.advisorplatform.config.security.JwtAuthenticationFilter;
+import cn.edu.cqut.advisorplatform.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,5 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
+import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.dao.RagDocumentDao;
 import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
@@ -7,9 +10,6 @@ import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.exception.BadRequestException;
-import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
-import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.RagService;
 import cn.edu.cqut.advisorplatform.utils.Assert;
 import java.io.IOException;

@@ -6,6 +6,7 @@ import RAGPage from '../pages/RAG/RAGPage'
 import ChatPage from '../pages/Chat/ChatPage'
 import AuditPage from '../pages/Audit/AuditPage'
 import MonitorPage from '../pages/Monitor/MonitorPage'
+import NotFound from '../pages/NotFound'
 import { useAuthStore } from '../store/authStore'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,7 @@ export default function AppRouter() {
           }
         />
       </Route>
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

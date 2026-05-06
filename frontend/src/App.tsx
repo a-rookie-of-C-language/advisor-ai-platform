@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { App as AntdApp } from 'antd'
 import { BrowserRouter } from 'react-router-dom'
 import AppRouter from './router'
+import ErrorBoundary from './components/ErrorBoundary'
 import { setGlobalMessageApi } from './utils/globalMessage'
 
 function MessageApiBridge() {
@@ -16,10 +17,12 @@ function MessageApiBridge() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <MessageApiBridge />
-      <AppRouter />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <MessageApiBridge />
+        <AppRouter />
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 
