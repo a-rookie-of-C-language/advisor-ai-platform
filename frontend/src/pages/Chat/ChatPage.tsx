@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Collapse, Input, Skeleton, Space, Tag, Typography } from 'antd'
 import {
+  CloseCircleOutlined,
+  FileImageOutlined,
+  FilePdfOutlined,
   FileTextOutlined,
+  FileWordOutlined,
   LoadingOutlined,
+  PaperClipOutlined,
   RobotOutlined,
   SendOutlined,
   UserOutlined,
@@ -44,6 +49,20 @@ interface MsgBubbleProps {
   msg: ChatMessage
 }
 
+function getFileIcon(fileType: string) {
+  const t = fileType.toLowerCase()
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(t)) return <FileImageOutlined />
+  if (t === 'pdf') return <FilePdfOutlined />
+  if (['doc', 'docx'].includes(t)) return <FileWordOutlined />
+  return <FileTextOutlined />
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function MsgBubble({ msg }: MsgBubbleProps) {
   const isUser = msg.role === 'user'
 
@@ -55,6 +74,18 @@ function MsgBubble({ msg }: MsgBubbleProps) {
           : <div className={styles.avatarAI}><RobotOutlined /></div>}
       </div>
       <div className={`${styles.msgBubble} ${isUser ? styles.bubbleUser : styles.bubbleAI}`}>
+        {msg.attachments?.length ? (
+          <div style={{ marginBottom: 8 }}>
+            <Space wrap size={[4, 4]}>
+              {msg.attachments.map((file) => (
+                <Tag key={file.id} icon={getFileIcon(file.fileType)} color="default" style={{ fontSize: 11 }}>
+                  {file.fileName}
+                </Tag>
+              ))}
+            </Space>
+          </div>
+        ) : null}
+
         {msg.streaming && !msg.content
           ? (
             <Space size={8}>
@@ -338,7 +369,7 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     const text = inputText.trim()
-    if (!text || sending) {
+    if ((!text && pendingFiles.length === 0) || sending) {
       return
     }
 
@@ -371,6 +402,7 @@ export default function ChatPage() {
     const sessionId = targetSession.id
     const userMsgId = Date.now()
     const aiMsgId = userMsgId + 1
+    const currentAttachments = [...pendingFiles]
 
     const userMessage: ChatMessage = { id: userMsgId, role: 'user', content: text, streaming: false }
     const assistantPlaceholder: ChatMessage = {
@@ -385,10 +417,15 @@ export default function ChatPage() {
       ...targetSession.messages,
       userMessage,
     ]
-      .map((msg) => ({ role: msg.role, content: msg.content.trim() }))
-      .filter((msg) => msg.content.length > 0)
+      .map((msg) => ({
+        role: msg.role,
+        content: msg.content.trim(),
+        attachments: msg.attachments?.map((f) => f.id),
+      }))
+      .filter((msg) => msg.content.length > 0 || (msg.attachments && msg.attachments.length > 0))
 
     setInputText('')
+    setPendingFiles([])
     setSending(true)
     shouldAutoScrollRef.current = true
     setSessions((prev) => {
@@ -427,6 +464,7 @@ export default function ChatPage() {
         {
           messages: historyMessages,
           sessionId,
+          attachments: currentAttachments.map((f) => f.id),
         },
         {
           onDelta: (chunk) => {
@@ -555,6 +593,22 @@ export default function ChatPage() {
 
         <div className={styles.inputArea}>
           <div className={styles.inputRow}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.md,.txt"
+              style={{ display: 'none' }}
+              onChange={(e) => void handleFileSelect(e)}
+            />
+            <Button
+              icon={<PaperClipOutlined />}
+              disabled={sending || uploading || !activeSession}
+              loading={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              style={{ height: 40, borderRadius: 8 }}
+            />
+
             <Input.TextArea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -572,7 +626,7 @@ export default function ChatPage() {
             <Button
               type="primary"
               icon={sending ? <LoadingOutlined /> : <SendOutlined />}
-              disabled={!inputText.trim() || sending}
+              disabled={(!inputText.trim() && pendingFiles.length === 0) || sending}
               onClick={() => void handleSend()}
               style={{ height: 40, paddingInline: 20, borderRadius: 8 }}
             >
@@ -581,7 +635,7 @@ export default function ChatPage() {
           </div>
 
           <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block', textAlign: 'center' }}>
-            AI 回答仅供参考，请结合实际情况进行判断。
+            AI 回答仅供参考，请结合实际情况进行判断。支持上传图片/PDF/Word/Markdown（单文件20MB，最多10个）
           </Text>
         </div>
       </main>
