@@ -51,6 +51,7 @@ management:
 advisor:
   jwt:
     secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+    expiration: ${JWT_EXPIRE_MS:86400000}
   risk:
     control-service-url: ${RISK_CONTROL_SERVICE_URL:http://risk-control-service:8086}
 
