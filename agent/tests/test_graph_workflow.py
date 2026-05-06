@@ -50,5 +50,5 @@ class TestWorkflowNodes:
             "messages": [ChatMessage(role="user", content="hello")],
             "user_query": "hello",
         }
-        result = asyncio.get_event_loop().run_until_complete(mock_generate(state))
+        result = asyncio.run(mock_generate(state))
         assert result["assistant_answer"] == "test response"
