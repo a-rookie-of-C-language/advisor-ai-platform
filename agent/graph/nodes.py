@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -54,12 +54,7 @@ class GraphRuntime:
     intent_router: Any = None
     safety_pipeline: Any = None
     fusion_pipeline: Any = None
-<<<<<<< HEAD
     web_search_subagent: Any = None
-=======
-    trace_id: str = ""
-    turn_id: str = ""
->>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -156,7 +151,7 @@ def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[
     """
     import re
 
-    # 优先：尝试提取 JSON 数组
+    # 浼樺厛锛氬皾璇曟彁鍙?JSON 鏁扮粍
     match = re.search(r"\[.*?\]", text, re.DOTALL)
     if match:
         try:
@@ -166,7 +161,7 @@ def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[
         except json.JSONDecodeError:
             pass
 
-    # 兜底：从纯文本中匹配已知 skill name
+    # 鍏滃簳锛氫粠绾枃鏈腑鍖归厤宸茬煡 skill name
     if known_names:
         lower_text = text.lower()
         return [name for name in known_names if name.lower() in lower_text]
@@ -365,7 +360,7 @@ async def generate_node(state: GraphState) -> GraphState:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
 
-            # 跨源融合：预执行只读工具 + 场景识别（三路并行）
+            # 璺ㄦ簮铻嶅悎锛氶鎵ц鍙宸ュ叿 + 鍦烘櫙璇嗗埆锛堜笁璺苟琛岋級
             fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
             if fusion_context:
                 model_messages = _inject_fusion_context(model_messages, fusion_context)
@@ -466,7 +461,7 @@ async def generate_node(state: GraphState) -> GraphState:
                 if runtime.debug_stream:
                     debug_count += 1
 
-        # 生成完成后：统一安全过滤
+        # 鐢熸垚瀹屾垚鍚庯細缁熶竴瀹夊叏杩囨护
         raw_answer = "".join(answer_parts).strip()
         final_answer = raw_answer
         if raw_answer and runtime.safety_pipeline is not None:
@@ -512,7 +507,7 @@ async def _run_fusion_pipeline(
     user_query: str,
     model_messages: list,
 ) -> dict[str, Any] | None:
-    """预执行只读工具 + 场景识别（三路并行），然后走融合 pipeline。"""
+    """Pre-run read-only tools and scene detection in parallel, then run fusion pipeline."""
     from fusion.source_candidate import SourceCandidate
 
     runtime = _runtime()
@@ -538,7 +533,7 @@ async def _run_fusion_pipeline(
                     source="rag",
                     score=item.get("score", 1.0),
                     metadata={
-                        "source": item.get("source", "知识库"),
+                        "source": item.get("source", "knowledge_base"),
                         "type": item.get("type", "general"),
                         "authority": item.get("authority", "secondary"),
                         "effective_date": item.get("effective_date", ""),
@@ -548,7 +543,7 @@ async def _run_fusion_pipeline(
                 if item.get("text") or item.get("snippet")
             ]
         except Exception:
-            logger.debug("fusion: rag_search 预执行失败，跳过", exc_info=True)
+            logger.debug("fusion: rag_search pre-execution failed, skip", exc_info=True)
             return []
 
     async def _exec_web() -> list[SourceCandidate]:
@@ -556,7 +551,7 @@ async def _run_fusion_pipeline(
             if runtime.web_search_subagent is not None:
                 search_result = await runtime.web_search_subagent.search(user_query, max_results=3)
                 if not search_result.safe:
-                    logger.warning("fusion: web_search 结果不合规，已过滤: %s", search_result.filtered_reason)
+                    logger.warning("fusion: web_search result unsafe, filtered: %s", search_result.filtered_reason)
                     return []
                 if not search_result.sources:
                     return []
@@ -587,7 +582,7 @@ async def _run_fusion_pipeline(
                 if item.get("snippet")
             ]
         except Exception:
-            logger.debug("fusion: web_search 预执行失败，跳过", exc_info=True)
+            logger.debug("fusion: web_search pre-execution failed, skip", exc_info=True)
             return []
 
     async def _detect_scene() -> str:
@@ -608,7 +603,7 @@ async def _run_fusion_pipeline(
             logger.info("fusion: scene detected=%s, confidence=%s", scene, scene_data.get("confidence"))
             return scene
         except Exception:
-            logger.debug("fusion: 场景识别失败，降级为 general", exc_info=True)
+            logger.debug("fusion: scene detection failed, downgrade to general", exc_info=True)
             return "general"
 
     rag_results, web_results, scene = await asyncio.gather(
@@ -636,7 +631,7 @@ async def _run_fusion_pipeline(
 
 
 def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any]) -> list:
-    """将融合结果注入 model_messages 作为 system 提示。"""
+    """Inject fused retrieval context into model_messages as a system prompt."""
     from llm.chat_message import ChatMessage
     from prompt.QueryEngine import QueryEngine
 
@@ -651,9 +646,9 @@ def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any])
         entry = f"- {c.content}"
         meta = c.metadata
         if meta.get("authority") == "official":
-            entry += " [官方来源]"
+            entry += " [official]"
         if meta.get("effective_date"):
-            entry += f" [日期: {meta['effective_date']}]"
+            entry += f" [鏃ユ湡: {meta['effective_date']}]"
 
         if c.source == "rag":
             rag_parts.append(entry)

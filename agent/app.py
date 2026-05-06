@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import asyncio
@@ -236,9 +236,7 @@ def create_api_app() -> FastAPI:
             pass
 
         return StreamingResponse(
-<<<<<<< HEAD
             service.stream_events(messages, **stream_kwargs),
-=======
             service.stream_events(
                 messages,
                 user_id=request.userId,
@@ -247,7 +245,6 @@ def create_api_app() -> FastAPI:
                 trace_id=trace_id or None,
                 turn_id=turn_id or None,
             ),
->>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

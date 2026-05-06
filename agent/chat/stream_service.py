@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -438,10 +438,7 @@ class ChatStreamService:
             "user_query": user_query,
             "trace_id": trace_id,
             "turn_id": turn_id,
-<<<<<<< HEAD
-=======
             "permission_config": self._tool_permission,
->>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
         }
         if idempotency_key:
             context["idempotency_key"] = idempotency_key

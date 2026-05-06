@@ -5,13 +5,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemoryVectorService {
-    String storeType();
+  String storeType();
 
-    Optional<UserMemoryDO> findSimilar(Long userId, Long kbId, double[] embedding, Double threshold);
+  Optional<UserMemoryDO> findSimilar(Long userId, Long kbId, double[] embedding, Double threshold);
 
-    List<UserMemoryDO> search(Long userId, Long kbId, double[] queryEmbedding, int topK);
+  List<UserMemoryDO> search(Long userId, Long kbId, double[] queryEmbedding, int topK);
 
-    void updateEmbedding(Long memoryId, double[] embedding);
+  void updateEmbedding(Long memoryId, double[] embedding);
 
-    int getDimension();
+  int getDimension();
 }

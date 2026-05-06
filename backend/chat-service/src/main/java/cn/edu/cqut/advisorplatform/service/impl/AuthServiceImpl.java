@@ -19,34 +19,35 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private final UserDao userDao;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
-    private final AuthenticationManager authenticationManager;
+  private final UserDao userDao;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtUtil jwtUtil;
+  private final AuthenticationManager authenticationManager;
 
-    @Override
-    public LoginResponseDTO login(LoginRequestDTO request) {
-        authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
-        UserDO user = userDao.findByUsername(request.getUsername())
+  @Override
+  public LoginResponseDTO login(LoginRequestDTO request) {
+    authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+    UserDO user =
+        userDao
+            .findByUsername(request.getUsername())
             .orElseThrow(() -> new NotFoundException("用户不存在"));
-        String token = jwtUtil.generateToken(user);
-        return LoginResponseDTO.of(token, user);
-    }
+    String token = jwtUtil.generateToken(user);
+    return LoginResponseDTO.of(token, user);
+  }
 
-    @Override
-    public void register(RegisterRequestDTO request) {
-        if (userDao.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("用户名已存在");
-        }
-        UserDO user = new UserDO();
-        user.setUsername(request.getUsername());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRealName(request.getRealName());
-        user.setPhone(request.getPhone());
-        user.setEmail(request.getEmail());
-        user.setRole(UserDO.UserRole.ADVISOR);
-        userDao.save(user);
+  @Override
+  public void register(RegisterRequestDTO request) {
+    if (userDao.existsByUsername(request.getUsername())) {
+      throw new BadRequestException("用户名已存在");
     }
+    UserDO user = new UserDO();
+    user.setUsername(request.getUsername());
+    user.setPassword(passwordEncoder.encode(request.getPassword()));
+    user.setRealName(request.getRealName());
+    user.setPhone(request.getPhone());
+    user.setEmail(request.getEmail());
+    user.setRole(UserDO.UserRole.ADVISOR);
+    userDao.save(user);
+  }
 }
