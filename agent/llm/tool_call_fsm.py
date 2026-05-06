@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -44,6 +45,7 @@ class ToolCallFSM:
         tool_name: str,
         args_text: str,
         *,
+        call_id: str = "",
         max_args_retries: int = 2,
         max_exec_retries: int = 3,
     ) -> None:
@@ -53,10 +55,20 @@ class ToolCallFSM:
         self._ctx = ToolCallContext(tool_name=tool_name, args_text=args_text)
         self._args_retry_count = 0
         self._exec_retry_count = 0
+        self._idempotency_key = self._build_idempotency_key(tool_name, args_text, call_id)
 
     @property
     def state(self) -> ToolCallState:
         return self._state
+
+    @property
+    def idempotency_key(self) -> str:
+        return self._idempotency_key
+
+    @staticmethod
+    def _build_idempotency_key(tool_name: str, args_text: str, call_id: str) -> str:
+        args_hash = hashlib.sha256(args_text.encode("utf-8")).hexdigest()[:16]
+        return f"{tool_name}:{args_hash}:{call_id}"
 
     @property
     def context(self) -> ToolCallContext:

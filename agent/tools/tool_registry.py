@@ -109,7 +109,7 @@ class ToolRegistry:
                     pending.meta = safety_meta
                     return pending.to_json()
 
-        result = await tool.execute(tool_input, context)
+        result = await tool.execute_with_idempotency(tool_input, context)
         if not result.meta:
             result.meta = {}
         for key, value in safety_meta.items():
@@ -139,7 +139,7 @@ class ToolRegistry:
         if tool is None:
             return ToolResult.error(f"tool not found: {pending['tool_name']}").to_json()
 
-        result = await tool.execute(pending["tool_input"], pending["context"])
+        result = await tool.execute_with_idempotency(pending["tool_input"], pending["context"])
         if not result.meta:
             result.meta = {}
         for key, value in pending["safety_meta"].items():

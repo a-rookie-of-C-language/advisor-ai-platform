@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Literal, TypeVar
 
@@ -9,6 +10,8 @@ from llm.tool_spec import ToolSpec
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
 from tools.validation_result import ValidationResult
+
+logger = logging.getLogger(__name__)
 
 InputModelT = TypeVar("InputModelT", bound=BaseModel)
 OutputModelT = TypeVar("OutputModelT", bound=BaseModel)
@@ -43,10 +46,39 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         self._is_enabled = True
         self._interrupt_behavior: Literal["cancel", "block"] = "block"
         self._requires_user_interaction = False
+        self._idempotency_cache: dict[str, tuple[str, bool]] = {}
 
     @abstractmethod
     async def execute(self, tool_input: InputModelT, context: dict[str, Any]) -> ToolResult:
         """Execute tool and return normalized ToolResult."""
+
+    async def execute_with_idempotency(
+        self, tool_input: InputModelT, context: dict[str, Any]
+    ) -> ToolResult:
+        """Execute with idempotency cache for destructive tools.
+
+        If the tool is destructive and an idempotency_key is present in context,
+        returns the cached result on cache hit. On miss, executes and caches.
+        """
+        key = context.get("idempotency_key")
+        if key and self._is_destructive and key in self._idempotency_cache:
+            cached_output, cached_ok = self._idempotency_cache[key]
+            logger.debug("idempotency cache hit for tool=%s key=%s", self.name, key)
+            result = ToolResult(
+                ok=cached_ok,
+                status="cached" if cached_ok else "error",
+                message=cached_output,
+                items=[],
+                meta={"idempotency_cached": True},
+            )
+            return result
+
+        result = await self.execute(tool_input, context)
+
+        if key and self._is_destructive:
+            self._idempotency_cache[key] = (result.message, result.ok)
+
+        return result
 
     def _validate_behavior_flags(self) -> None:
         if self._always_load and self._should_defer:

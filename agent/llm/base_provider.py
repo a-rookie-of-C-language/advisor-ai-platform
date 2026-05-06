@@ -7,7 +7,7 @@ from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_spec import ToolSpec
 
-ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[str]]
+ToolExecutor = Callable[..., Awaitable[str]]
 
 
 class BaseLLMProvider(ABC):

@@ -339,6 +339,7 @@ class ChatStreamService:
         user_query: str,
         trace_id: str | None = None,
         turn_id: str | None = None,
+        idempotency_key: str | None = None,
     ) -> str:
         context = {
             "user_id": user_id,
@@ -352,6 +353,8 @@ class ChatStreamService:
             "permission_config": self._tool_permission,
 >>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
         }
+        if idempotency_key:
+            context["idempotency_key"] = idempotency_key
         try:
             if tool_name == "web_search" and self._web_search_subagent is not None:
                 return await self._execute_web_search_via_subagent(tool_args)
@@ -627,7 +630,7 @@ class ChatStreamService:
             if rag_enabled and self._enable_tool_use:
                 tools = self._tools.specs()
 
-                async def tool_executor(tool_name: str, tool_args: dict) -> str:
+                async def tool_executor(tool_name: str, tool_args: dict, **kwargs) -> str:
                     return await self._execute_tool(
                         tool_name=tool_name,
                         tool_args=tool_args,
@@ -637,6 +640,7 @@ class ChatStreamService:
                         user_query=user_query,
                         trace_id=trace_id,
                         turn_id=turn_id,
+                        idempotency_key=kwargs.get("idempotency_key"),
                     )
 
                 async for event in self._provider.stream_chat_with_tools(

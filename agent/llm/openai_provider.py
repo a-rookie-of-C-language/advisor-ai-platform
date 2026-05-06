@@ -197,6 +197,7 @@ class OpenAIProvider(BaseLLMProvider):
                     fsm = ToolCallFSM(
                         tool_name,
                         args_text,
+                        call_id=raw_call.id or "",
                         max_args_retries=2,
                         max_exec_retries=max_tool_retries,
                     )
@@ -288,7 +289,9 @@ class OpenAIProvider(BaseLLMProvider):
                     for attempt in range(1, max_tool_retries + 1):
                         used_attempt = attempt
                         try:
-                            tool_output = await tool_executor(tool_name, fsm.context.tool_args)
+                            tool_output = await tool_executor(
+                                tool_name, fsm.context.tool_args, idempotency_key=fsm.idempotency_key
+                            )
                             success = True
                             fsm.record_execution(tool_output, success=True)
                             break
