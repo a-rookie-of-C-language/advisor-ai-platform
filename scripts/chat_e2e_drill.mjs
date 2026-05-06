@@ -196,7 +196,7 @@ async function runSmoke(baseUrl, authBaseUrl) {
     throw new Error(`create session failed: ${JSON.stringify(diag)}`);
   }
   const sessionId = create.json?.data?.id;
-  if (!sessionId) throw new Error('session id missing');
+  if (!sessionId) throw new Error(`session id missing: status=${create.res.status} body=${create.text.slice(0, 500)}`);
 
   log('list sessions');
   const sessions = await fetchJson(`${baseUrl}/api/chat/sessions`, {
@@ -479,9 +479,9 @@ async function runAgentAuthDrill(agentBaseUrl) {
     body: JSON.stringify(payload),
   });
   const text = await res.text();
-  const ok = res.status === 401;
+  const ok = res.status === 401 || res.status === 403;
   if (!ok) {
-    throw new Error(`agent auth drill failed: expected 401, got ${res.status}, body=${text}`);
+    throw new Error(`agent auth drill failed: expected 401/403, got ${res.status}, body=${text}`);
   }
   return { ok: true, status: res.status, bodyPreview: text.slice(0, 200) };
 }
