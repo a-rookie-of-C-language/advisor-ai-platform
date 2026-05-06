@@ -15,4 +15,6 @@ public class ChatStreamRequestDTO {
   @NotNull private Long sessionId;
 
   @Nullable private Long kbId;
+
+  private List<Long> attachments;
 }

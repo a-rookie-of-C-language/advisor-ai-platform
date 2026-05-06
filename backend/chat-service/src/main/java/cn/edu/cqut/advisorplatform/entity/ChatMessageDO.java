@@ -53,6 +53,10 @@ public class ChatMessageDO {
   @Column(columnDefinition = "jsonb")
   private List<SourceReference> sources;
 
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private List<Long> attachments;
+
   @Column(updatable = false)
   private LocalDateTime createdAt;
 

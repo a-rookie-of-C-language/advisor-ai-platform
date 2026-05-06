@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Collapse, Empty, Input, Select, Space, Tag, Typography } from 'antd'
 import {
+  CloseCircleOutlined,
+  FileImageOutlined,
+  FilePdfOutlined,
   FileTextOutlined,
+  FileWordOutlined,
   LoadingOutlined,
+  PaperClipOutlined,
   RobotOutlined,
   SendOutlined,
   UserOutlined,
@@ -11,6 +16,7 @@ import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
 import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
 import { ragApi, type KnowledgeBaseDTO } from '../../api/ragApi'
+import { workspaceApi, type WorkspaceFileDTO } from '../../api/workspaceApi'
 import { globalMessage } from '../../utils/globalMessage'
 import styles from './ChatPage.module.css'
 
@@ -29,6 +35,7 @@ interface ChatMessage {
   content: string
   sources?: Source[]
   streaming?: boolean
+  attachments?: WorkspaceFileDTO[]
 }
 
 interface ChatSession {
@@ -43,6 +50,20 @@ interface MsgBubbleProps {
   msg: ChatMessage
 }
 
+function getFileIcon(fileType: string) {
+  const t = fileType.toLowerCase()
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(t)) return <FileImageOutlined />
+  if (t === 'pdf') return <FilePdfOutlined />
+  if (['doc', 'docx'].includes(t)) return <FileWordOutlined />
+  return <FileTextOutlined />
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function MsgBubble({ msg }: MsgBubbleProps) {
   const isUser = msg.role === 'user'
 
@@ -54,6 +75,18 @@ function MsgBubble({ msg }: MsgBubbleProps) {
           : <div className={styles.avatarAI}><RobotOutlined /></div>}
       </div>
       <div className={`${styles.msgBubble} ${isUser ? styles.bubbleUser : styles.bubbleAI}`}>
+        {msg.attachments?.length ? (
+          <div style={{ marginBottom: 8 }}>
+            <Space wrap size={[4, 4]}>
+              {msg.attachments.map((file) => (
+                <Tag key={file.id} icon={getFileIcon(file.fileType)} color="default" style={{ fontSize: 11 }}>
+                  {file.fileName}
+                </Tag>
+              ))}
+            </Space>
+          </div>
+        ) : null}
+
         {msg.streaming && !msg.content
           ? <LoadingOutlined style={{ color: '#2563EB' }} />
           : isUser
@@ -123,12 +156,19 @@ function toChatSession(data: ChatSessionDTO): ChatSession {
   }
 }
 
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/markdown', 'text/plain']
+const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
+const MAX_FILES = 10
+
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseDTO[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<WorkspaceFileDTO[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -205,6 +245,54 @@ export default function ChatPage() {
     })()
   }, [activeId])
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    if (pendingFiles.length + files.length > MAX_FILES) {
+      globalMessage.warning(`最多只能上传 ${MAX_FILES} 个文件`)
+      return
+    }
+
+    const sessionId = activeSession?.id
+    if (!sessionId) {
+      globalMessage.warning('请先创建会话后再上传文件')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        if (!ALLOWED_FILE_TYPES.includes(file.type) && !file.name.endsWith('.md')) {
+          globalMessage.warning(`不支持的文件类型: ${file.name}`)
+          return null
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          globalMessage.warning(`文件过大(最大20MB): ${file.name}`)
+          return null
+        }
+        const resp = await workspaceApi.uploadFile(sessionId, file)
+        return resp.data
+      })
+
+      const results = await Promise.all(uploadPromises)
+      const validFiles = results.filter((f): f is WorkspaceFileDTO => f !== null)
+      setPendingFiles((prev) => [...prev, ...validFiles])
+    } catch (error) {
+      globalMessage.error(typeof error === 'string' ? error : '文件上传失败')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const removePendingFile = (fileId: number) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== fileId))
+    void workspaceApi.deleteFile(fileId)
+  }
+
   const handleSelectKb = async (kbId: number) => {
     if (!activeSession) {
       return
@@ -253,7 +341,7 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     const text = inputText.trim()
-    if (!text || sending) {
+    if ((!text && pendingFiles.length === 0) || sending) {
       return
     }
 
@@ -278,18 +366,30 @@ export default function ChatPage() {
     const sessionId = targetSession.id
     const userMsgId = Date.now()
     const aiMsgId = userMsgId + 1
+    const currentAttachments = [...pendingFiles]
 
-    const userMessage: ChatMessage = { id: userMsgId, role: 'user', content: text, streaming: false }
+    const userMessage: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: text,
+      streaming: false,
+      attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
+    }
     const assistantPlaceholder: ChatMessage = { id: aiMsgId, role: 'assistant', content: '', streaming: true }
 
     const historyMessages = [
       ...targetSession.messages,
       userMessage,
     ]
-      .map((msg) => ({ role: msg.role, content: msg.content.trim() }))
-      .filter((msg) => msg.content.length > 0)
+      .map((msg) => ({
+        role: msg.role,
+        content: msg.content.trim(),
+        attachments: msg.attachments?.map((f) => f.id),
+      }))
+      .filter((msg) => msg.content.length > 0 || (msg.attachments && msg.attachments.length > 0))
 
     setInputText('')
+    setPendingFiles([])
     setSending(true)
     setSessions((prev) => {
       let matched = false
@@ -327,6 +427,7 @@ export default function ChatPage() {
         {
           messages: historyMessages,
           sessionId,
+          attachments: currentAttachments.map((f) => f.id),
         },
         {
           onDelta: (chunk) => {
@@ -434,7 +535,43 @@ export default function ChatPage() {
             <Empty description={<span>请先创建会话后再发送消息</span>} style={{ marginBottom: 12 }} />
           )}
 
+          {pendingFiles.length > 0 && (
+            <div style={{ marginBottom: 8, padding: '8px 12px', background: '#F8FAFC', borderRadius: 8 }}>
+              <Space wrap size={[4, 4]}>
+                {pendingFiles.map((file) => (
+                  <Tag
+                    key={file.id}
+                    icon={getFileIcon(file.fileType)}
+                    closable
+                    closeIcon={<CloseCircleOutlined />}
+                    onClose={() => removePendingFile(file.id)}
+                    color="processing"
+                    style={{ fontSize: 11 }}
+                  >
+                    {file.fileName} ({formatFileSize(file.fileSize)})
+                  </Tag>
+                ))}
+              </Space>
+            </div>
+          )}
+
           <div className={styles.inputRow}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.md,.txt"
+              style={{ display: 'none' }}
+              onChange={(e) => void handleFileSelect(e)}
+            />
+            <Button
+              icon={<PaperClipOutlined />}
+              disabled={sending || uploading || !activeSession}
+              loading={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              style={{ height: 40, borderRadius: 8 }}
+            />
+
             <Input.TextArea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -452,7 +589,7 @@ export default function ChatPage() {
             <Button
               type="primary"
               icon={sending ? <LoadingOutlined /> : <SendOutlined />}
-              disabled={!inputText.trim() || sending}
+              disabled={(!inputText.trim() && pendingFiles.length === 0) || sending}
               onClick={() => void handleSend()}
               style={{ height: 40, paddingInline: 20, borderRadius: 8 }}
             >
@@ -461,7 +598,7 @@ export default function ChatPage() {
           </div>
 
           <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block', textAlign: 'center' }}>
-            AI 回答仅供参考，请结合实际情况进行判断。
+            AI 回答仅供参考，请结合实际情况进行判断。支持上传图片/PDF/Word/Markdown（单文件20MB，最多10个）
           </Text>
         </div>
       </main>

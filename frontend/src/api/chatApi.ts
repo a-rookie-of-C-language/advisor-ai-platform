@@ -18,6 +18,7 @@ export interface ChatMessageDTO {
 export interface ChatStreamMessageDTO {
   role: 'system' | 'user' | 'assistant'
   content: string
+  attachments?: number[]
 }
 
 export interface ChatSendResponseDTO {
@@ -36,6 +37,7 @@ interface ApiResponse<T> {
 interface StreamPayload {
   messages: ChatStreamMessageDTO[]
   sessionId: number
+  attachments?: number[]
 }
 
 export interface StreamSourceItem {

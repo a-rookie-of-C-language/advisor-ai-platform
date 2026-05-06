@@ -31,9 +31,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class AttachmentDTO(BaseModel):
+    id: int
+    fileName: str | None = None
+    fileType: str | None = None
+    filePath: str | None = None
+
+
 class ChatMessageDTO(BaseModel):
     role: str = Field(..., min_length=1)
     content: str = Field(..., min_length=1)
+    attachments: list[AttachmentDTO] | None = None
 
 
 class ChatStreamRequestDTO(BaseModel):
@@ -43,6 +51,7 @@ class ChatStreamRequestDTO(BaseModel):
     kbId: int | None = None
     turnId: str | None = None
     traceId: str | None = None
+    attachments: list[AttachmentDTO] | None = None
 
 
 @lru_cache(maxsize=1)
@@ -161,7 +170,24 @@ def create_api_app() -> FastAPI:
                 raise HTTPException(status_code=401, detail="invalid agent token")
 
         service = _get_chat_stream_service()
-        messages = [ChatMessage(role=item.role, content=item.content) for item in request.messages]
+
+        def _convert_attachments(atts):
+            if not atts:
+                return None
+            return [
+                {
+                    "id": a.id,
+                    "file_name": a.fileName,
+                    "file_type": a.fileType,
+                    "file_path": a.filePath,
+                }
+                for a in atts
+            ]
+
+        messages = []
+        for item in request.messages:
+            atts = _convert_attachments(item.attachments)
+            messages.append(ChatMessage(role=item.role, content=item.content, attachments=atts))
         trace_id = (
             raw_request.headers.get("X-Trace-Id")
             or request.traceId
