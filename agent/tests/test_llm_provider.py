@@ -46,10 +46,10 @@ class TestChatMessage:
         assert msg.role == "user"
         assert msg.content == "Hello"
 
-    def test_to_dict(self):
-        msg = ChatMessage(role="assistant", content="Hi there")
-        d = msg.to_dict()
-        assert d == {"role": "assistant", "content": "Hi there"}
+    def test_frozen(self):
+        msg = ChatMessage(role="user", content="Hello")
+        with pytest.raises(AttributeError):
+            msg.role = "assistant"
 
 
 class TestLLMStreamEvent:
@@ -61,7 +61,7 @@ class TestLLMStreamEvent:
     def test_done_event(self):
         event = LLMStreamEvent(type="done")
         assert event.type == "done"
-        assert event.text is None
+        assert event.text == ""
 
 
 class TestToolSpec:
@@ -74,11 +74,11 @@ class TestToolSpec:
         assert spec.name == "search"
         assert spec.description == "Search the web"
 
-    def test_to_dict(self):
+    def test_frozen(self):
         spec = ToolSpec(
             name="search",
             description="Search",
             parameters={"query": {"type": "string"}},
         )
-        d = spec.to_dict()
-        assert d["function"]["name"] == "search"
+        with pytest.raises(AttributeError):
+            spec.name = "other"

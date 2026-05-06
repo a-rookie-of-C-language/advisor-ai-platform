@@ -40,12 +40,11 @@ class TestBaseEmbeddingEngine:
 
 
 class TestOllamaEmbeddingEngine:
-    @patch("RAG.embedding_engine.ollama_embedding_engine.requests.post")
-    def test_embed_texts_success(self, mock_post):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"embeddings": [[0.1, 0.2], [0.3, 0.4]]}
-        mock_post.return_value = mock_response
+    @patch("RAG.embedding_engine.ollama_embedding_engine.OllamaEmbeddings")
+    def test_embed_texts_success(self, mock_embeddings_cls):
+        mock_client = MagicMock()
+        mock_client.embed_documents.return_value = [[0.1, 0.2], [0.3, 0.4]]
+        mock_embeddings_cls.return_value = mock_client
 
         from RAG.embedding_engine.ollama_embedding_engine import OllamaEmbeddingEngine
 
@@ -53,16 +52,16 @@ class TestOllamaEmbeddingEngine:
         result = engine.embed_texts(["hello", "world"])
         assert result is not None
         assert len(result) == 2
+        mock_client.embed_documents.assert_called_once_with(["hello", "world"])
 
-    @patch("RAG.embedding_engine.ollama_embedding_engine.requests.post")
-    def test_embed_texts_failure(self, mock_post):
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.text = "Internal Server Error"
-        mock_post.return_value = mock_response
+    @patch("RAG.embedding_engine.ollama_embedding_engine.OllamaEmbeddings")
+    def test_embed_texts_failure(self, mock_embeddings_cls):
+        mock_client = MagicMock()
+        mock_client.embed_documents.side_effect = Exception("Connection refused")
+        mock_embeddings_cls.return_value = mock_client
 
         from RAG.embedding_engine.ollama_embedding_engine import OllamaEmbeddingEngine
 
         engine = OllamaEmbeddingEngine(model="bge-m3")
-        result = engine.embed_texts(["hello"])
-        assert result is None
+        with pytest.raises(Exception, match="Connection refused"):
+            engine.embed_texts(["hello"])

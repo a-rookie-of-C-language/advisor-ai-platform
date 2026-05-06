@@ -14,26 +14,27 @@ class TestRegexFilter:
         f = RegexFilter()
         matches = f.scan("Call me at 13812345678")
         assert len(matches) > 0
-        assert any(m.category == "phone" for m in matches)
+        assert any(m.label == "phone" for m in matches)
 
     def test_email_match(self):
         f = RegexFilter()
         matches = f.scan("Email me at test@example.com")
         assert len(matches) > 0
-        assert any(m.category == "email" for m in matches)
+        assert any(m.label == "email" for m in matches)
 
     def test_redact(self):
         f = RegexFilter()
         redacted = f.redact("My phone is 13812345678")
         assert "13812345678" not in redacted
-        assert "***" in redacted or "****" in redacted
+        assert "[MASK:" in redacted
 
 
 class TestStreamingRegexFilter:
     def test_process_chunk_no_match(self):
         f = RegexFilter()
         sf = StreamingRegexFilter(f)
-        result = sf.process_chunk("Hello World")
+        sf.process_chunk("Hello World")
+        result = sf.flush()
         assert result == "Hello World"
 
     def test_flush(self):

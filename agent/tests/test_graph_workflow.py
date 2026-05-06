@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import patch
 
 from graph.state import GraphState
@@ -49,5 +50,5 @@ class TestWorkflowNodes:
             "messages": [ChatMessage(role="user", content="hello")],
             "user_query": "hello",
         }
-        result = mock_generate(state)
+        result = asyncio.get_event_loop().run_until_complete(mock_generate(state))
         assert result["assistant_answer"] == "test response"

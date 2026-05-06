@@ -77,7 +77,9 @@ class TestBaseChunkEngine:
 class TestPlainTextChunkEngine:
     def test_can_handle(self):
         engine = PlainTextChunkEngine()
-        profile = FileProfile(file_type="txt", mime_type="text/plain")
+        profile = FileProfile(
+            path=Path("test.txt"), mime="text/plain", extension="txt", size=100
+        )
         assert engine.can_handle(profile) > 0.5
 
     def test_extract_text(self):
