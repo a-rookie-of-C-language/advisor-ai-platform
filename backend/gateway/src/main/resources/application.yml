@@ -35,6 +35,10 @@ spring:
           uri: lb://audit-service
           predicates:
             - Path=/api/audit/**
+        - id: check-in-service
+          uri: lb://check-in-service
+          predicates:
+            - Path=/api/check-in/**
 
 management:
   tracing:
@@ -54,4 +58,3 @@ advisor:
     expiration: ${JWT_EXPIRE_MS:86400000}
   risk:
     control-service-url: ${RISK_CONTROL_SERVICE_URL:http://risk-control-service:8086}
-
