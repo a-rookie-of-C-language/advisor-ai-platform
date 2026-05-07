@@ -572,7 +572,21 @@ class ChatStreamService:
         debug_delta_count = 0
         try:
             if rag_enabled and self._enable_tool_use:
-                tools = self._tools.specs()
+                all_cats = self._tools.all_categories()
+                route_decision = await self._intent_router.route_decision(
+                    user_query,
+                    all_cats,
+                    provider=self._provider,
+                )
+                tools = self._tools.specs_by_categories(route_decision.categories)
+                logger.debug(
+                    "intent_router legacy: injecting %d tools for categories=%s, matched_by=%s, confidence=%.2f, fallback_reason=%s",
+                    len(tools),
+                    route_decision.categories,
+                    route_decision.matched_by,
+                    route_decision.confidence,
+                    route_decision.fallback_reason,
+                )
 
                 async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(

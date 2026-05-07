@@ -237,6 +237,24 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
 
 
 @pytest.mark.asyncio
+async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> None:
+    provider = _ProviderRouteCapture()
+    service = ChatStreamService(
+        provider=provider,
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    service._use_langgraph = False
+    messages = [ChatMessage(role="user", content="帮我查一下最新政策消息")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+
+    assert event_names == ["start", "delta", "done"]
+    assert {tool.name for tool in provider.last_tools} == {"web_search"}
+
+
+@pytest.mark.asyncio
 async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
     provider = _ProviderRouteCapture()
     service = ChatStreamService(
