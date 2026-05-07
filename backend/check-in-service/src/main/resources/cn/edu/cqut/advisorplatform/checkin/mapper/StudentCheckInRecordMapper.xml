@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.edu.cqut.advisorplatform.checkin.mapper.StudentCheckInRecordMapper">
+    <!--查询学生打卡记录-->
+    <select id="selectCheckInRecords"
+            resultType="cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO">
+        SELECT student_id AS studentId,
+               check_date AS checkDate,
+               checked_in AS checkedIn,
+               check_time AS checkTime
+        FROM student_check_in_record
+        WHERE check_date BETWEEN #{beginDate} AND #{endDate}
+        <if test="studentId != null">
+            AND student_id = #{studentId}
+        </if>
+        ORDER BY check_date DESC, student_id ASC
+        LIMIT #{pageSize}
+        OFFSET #{offset}
+    </select>
+    <!--查询打卡记录总数-->
+    <select id="countCheckInRecords" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM student_check_in_record
+        WHERE check_date BETWEEN #{beginDate} AND #{endDate}
+        <if test="studentId != null">
+            AND student_id = #{studentId}
+        </if>
+    </select>
+    <!--查询学生是否打卡-->
+    <select id="ifStudentCheckIn" resultType="java.lang.Boolean">
+        SELECT s.checked_in FROM student_check_in_record AS s
+        WHERE student_id = #{studentId}
+        AND check_date = #{checkDate}
+    </select>
+    <!--学生打卡-->
+    <insert id="studentCheckIn" parameterType="cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord">
+        INSERT INTO student_check_in_record (
+            student_id,
+            check_date,
+            checked_in,
+            check_time,
+            created_at,
+            updated_at
+    ) VALUES (
+            #{studentId},
+            #{checkDate},
+            #{checkedIn},
+            #{checkTime},
+            #{createdAt},
+            #{updatedAt}
+    )
+      ON CONFLICT (student_id, check_date) DO NOTHING
+    </insert>
+    <!--查询学生今日打卡-->
+    <!--<select id="selectTodayRecords" resultType="cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInTodayRecords">
+        SELECT student_id,
+               check_date,
+               checked_in,
+               check_time
+        FROM student_check_in_record
+        WHERE student_id = #{studentId}
+        AND check_date = #{checkDate}
+    </select>-->
+
+</mapper>
