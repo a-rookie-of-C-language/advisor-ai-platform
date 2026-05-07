@@ -19,6 +19,7 @@
         <module>memory-service</module>
         <module>audit-service</module>
         <module>risk-control-service</module>
+        <module>student-service</module>
     </modules>
 
     <properties>
