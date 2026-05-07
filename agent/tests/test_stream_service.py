@@ -117,6 +117,34 @@ class _ProviderLegacyToolUse:
         yield LLMStreamEvent(type="delta", text="answer")
 
 
+class _ProviderRouteCapture:
+    def __init__(self) -> None:
+        self.last_tools: list[ToolSpec] = []
+
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+        if False:
+            yield ""
+        return
+
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+        **kwargs: object,
+    ) -> AsyncIterator[LLMStreamEvent]:
+        _ = messages
+        _ = tool_executor
+        _ = max_tool_calls
+        _ = max_tool_retries
+        _ = kwargs
+        self.last_tools = list(tools)
+        yield LLMStreamEvent(type="delta", text="answer")
+
+
 class _RagMiss:
     def rag_search(self, req):
         _ = req
@@ -206,6 +234,23 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
 
     assert event_names == ["start", "error", "done"]
     assert parsed[1][1]["message"] == "服务内部错误，请稍后重试"
+
+
+@pytest.mark.asyncio
+async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
+    provider = _ProviderRouteCapture()
+    service = ChatStreamService(
+        provider=provider,
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    messages = [ChatMessage(role="user", content="帮我查一下最新政策消息")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+
+    assert event_names == ["start", "delta", "done"]
+    assert {tool.name for tool in provider.last_tools} == {"web_search"}
 
 
 @pytest.mark.asyncio

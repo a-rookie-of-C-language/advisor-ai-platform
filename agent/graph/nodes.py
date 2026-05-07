@@ -259,9 +259,20 @@ async def generate_node(state: GraphState) -> GraphState:
             # 意图路由：按需注入 tool specs
             if runtime.intent_router is not None:
                 all_cats = runtime.tools.all_categories()
-                matched_cats = runtime.intent_router.route_with_fallback(user_query, all_cats)
-                tools = runtime.tools.specs_by_categories(matched_cats)
-                logger.debug("intent_router: injecting %d tools for categories=%s", len(tools), matched_cats)
+                route_decision = await runtime.intent_router.route_decision(
+                    user_query,
+                    all_cats,
+                    provider=runtime.provider,
+                )
+                tools = runtime.tools.specs_by_categories(route_decision.categories)
+                logger.debug(
+                    "intent_router: injecting %d tools for categories=%s, matched_by=%s, confidence=%.2f, fallback_reason=%s",
+                    len(tools),
+                    route_decision.categories,
+                    route_decision.matched_by,
+                    route_decision.confidence,
+                    route_decision.fallback_reason,
+                )
             else:
                 tools = runtime.tools.specs()
 
