@@ -28,7 +28,7 @@ from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
 from prompt.QueryEngine import QueryEngine
 from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
-from tools.intent_router import IntentRouter
+from tools.intent_router import IntentRouter, emit_route_observation
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_impl.expand_skill_tool import ExpandSkillTool
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -579,14 +579,13 @@ class ChatStreamService:
                     provider=self._provider,
                 )
                 tools = self._tools.specs_by_categories(route_decision.categories)
-                logger.debug(
-                    "intent_router legacy: injecting %d tools for categories=%s, matched_by=%s, confidence=%.2f, fallback_reason=%s",
-                    len(tools),
-                    route_decision.categories,
-                    route_decision.matched_by,
-                    route_decision.confidence,
-                    route_decision.fallback_reason,
+                route_payload = await emit_route_observation(
+                    route_decision,
+                    logger=logger,
+                    scope="legacy",
+                    session_id=session_id,
                 )
+                yield self._serialize_event(route_decision.event_name, route_payload)
 
                 async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(

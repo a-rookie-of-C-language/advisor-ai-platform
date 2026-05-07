@@ -28,7 +28,6 @@ public class InternalController {
         request.getDirection(),
         request.getRequestPath());
 
-    RiskCheckResponse response = riskFacade.check(request);
-    return ResponseEntity.ok(response);
+    return ResponseEntity.ok(riskFacade.check(request));
   }
 }

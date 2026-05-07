@@ -86,6 +86,35 @@ _CATEGORY_ALIASES = {
 }
 
 
+INTENT_ROUTE_EVENT = "intent_route"
+
+
+async def emit_route_observation(
+    decision: "RouteDecision",
+    *,
+    logger: logging.Logger,
+    scope: str,
+    session_id: Any,
+    emit=None,
+) -> dict[str, Any]:
+    payload = decision.to_event_payload()
+    logger.info(
+        "intent_route %s: session_id=%s, matched_by=%s, confidence=%.2f, categories=%s, fallback_reason=%s, source=%s",
+        scope,
+        session_id,
+        decision.matched_by,
+        decision.confidence,
+        payload["categories"],
+        decision.fallback_reason,
+        payload["source"],
+    )
+    if emit is not None:
+        result = emit(INTENT_ROUTE_EVENT, payload)
+        if hasattr(result, "__await__"):
+            await result
+    return payload
+
+
 @dataclass(frozen=True)
 class RouteDecision:
     categories: set[str]
@@ -94,6 +123,25 @@ class RouteDecision:
     fallback_reason: str = ""
     scores: dict[str, int] | None = None
     reason: str = ""
+
+    @property
+    def event_name(self) -> str:
+        return INTENT_ROUTE_EVENT
+
+    def to_event_payload(self) -> dict[str, Any]:
+        categories = sorted(self.categories)
+        return {
+            "matched_by": self.matched_by,
+            "confidence": self.confidence,
+            "fallback_reason": self.fallback_reason,
+            "categories": categories,
+            "scores": self.scores or {},
+            "reason": self.reason,
+            "source": {
+                "decision": self.matched_by,
+                "categories": categories,
+            },
+        }
 
 
 class IntentRouter:

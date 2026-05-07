@@ -19,6 +19,7 @@ public class RiskCheckRequest {
 
   @NotBlank(message = "requestPath不能为空")
   private String requestPath;
+
   private String requestBody;
   private String eventType;
   private String content;

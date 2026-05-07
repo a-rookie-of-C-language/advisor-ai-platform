@@ -9,6 +9,7 @@ from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.QueryEngine import QueryEngine
+from tools.intent_router import emit_route_observation
 
 from .state import GraphState
 
@@ -265,13 +266,12 @@ async def generate_node(state: GraphState) -> GraphState:
                     provider=runtime.provider,
                 )
                 tools = runtime.tools.specs_by_categories(route_decision.categories)
-                logger.debug(
-                    "intent_router: injecting %d tools for categories=%s, matched_by=%s, confidence=%.2f, fallback_reason=%s",
-                    len(tools),
-                    route_decision.categories,
-                    route_decision.matched_by,
-                    route_decision.confidence,
-                    route_decision.fallback_reason,
+                route_payload = await emit_route_observation(
+                    route_decision,
+                    logger=logger,
+                    scope="graph",
+                    session_id=state.get("session_id"),
+                    emit=_emit,
                 )
             else:
                 tools = runtime.tools.specs()
