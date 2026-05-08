@@ -283,6 +283,30 @@ services:
     ports:
       - "8086:8086"
 
+  check-in-service:
+    build:
+      context: .
+      dockerfile: check-in-service/Dockerfile
+    container_name: advisor-check-in-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8087:8087"
+
   gateway:
     build:
       context: .
@@ -308,6 +332,8 @@ services:
       audit-service:
         condition: service_started
       risk-control-service:
+        condition: service_started
+      check-in-service:
         condition: service_started
     ports:
       - "8080:8080"
