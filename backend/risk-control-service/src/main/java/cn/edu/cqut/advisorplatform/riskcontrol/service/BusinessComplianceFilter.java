@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.RiskRuleDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.RiskRule;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.RiskRuleRepository;
 import java.util.List;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class BusinessComplianceFilter implements RiskFilter {
 
-  private final RiskRuleRepository riskRuleRepository;
+  private final RiskRuleDao riskRuleDao;
 
   @Override
   public String getName() {
@@ -30,7 +30,7 @@ public class BusinessComplianceFilter implements RiskFilter {
     }
 
     List<RiskRule> rules =
-        riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+        riskRuleDao.findByRuleTypeAndDirectionEnabled(
             "business_compliance", request.getDirection());
     for (RiskRule rule : rules) {
       try {

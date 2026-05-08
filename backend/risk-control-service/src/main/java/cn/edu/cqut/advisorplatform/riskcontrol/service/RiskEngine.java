@@ -1,10 +1,10 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserViolationDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.TrackingEventMessage;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.UserViolation;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserViolationRepository;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class RiskEngine {
 
   private final List<RiskFilter> filters;
-  private final UserViolationRepository userViolationRepository;
+  private final UserViolationDao userViolationDao;
 
   public RiskCheckResponse check(RiskCheckRequest request) {
     for (RiskFilter filter : filters) {
@@ -65,7 +65,7 @@ public class RiskEngine {
               .ipAddress(request.getIpAddress())
               .createdAt(LocalDateTime.now(ZoneOffset.UTC))
               .build();
-      userViolationRepository.save(violation);
+      userViolationDao.save(violation);
     } catch (Exception e) {
       log.error("Failed to record violation: userId={}", request.getUserId(), e);
     }
