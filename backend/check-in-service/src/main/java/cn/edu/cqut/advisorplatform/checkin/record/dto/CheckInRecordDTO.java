@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CheckInRecordDTO {
-    private Long studentId;
+  private Long studentId;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate checkDate;
+  @JsonFormat(pattern = "yyyy-MM-dd")
+  private LocalDate checkDate;
 
-    private Boolean checkedIn;
+  private Boolean checkedIn;
 }
