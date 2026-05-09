@@ -1,47 +1,25 @@
 package cn.edu.cqut.advisorplatform.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@Entity
-@Table(name = "rag_document")
 public class RagDocumentDO {
-
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "knowledge_base_id", nullable = false)
+  private Long knowledgeBaseId;
   private RagKnowledgeBaseDO knowledgeBase;
-
-  @Column(nullable = false, length = 256)
   private String fileName;
-
-  @Column(nullable = false, length = 32)
   private String fileType;
-
-  @Column(nullable = false)
-  private Long fileSize = 0L;
-
-  @Column(length = 512)
+  private Long fileSize;
   private String filePath;
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 32)
+  private String content;
+  private String embedding;
   private DocumentStatus status = DocumentStatus.PENDING;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "uploaded_by")
+  private Long uploadedById;
   private UserDO uploadedBy;
-
-  @Column(updatable = false)
   private LocalDateTime createdAt;
-
   private LocalDateTime updatedAt;
 
   public enum DocumentStatus {

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.memoryservice.mapper.SessionSummaryMapper">
+
+    <resultMap id="sessionSummaryResultMap" type="cn.edu.cqut.advisorplatform.memoryservice.entity.SessionSummaryDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="session_id" property="sessionId" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="summary_text" property="summaryText" javaType="String"/>
+        <result column="key_points" property="keyPoints" javaType="String" typeHandler="org.apache.ibatis.type.JsonTypeHandler"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.memoryservice.entity.SessionSummaryDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO session_summary (session_id, user_id, summary_text, key_points, created_at, updated_at)
+        VALUES (#{sessionId}, #{userId}, #{summaryText},
+                #{keyPoints,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+                NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.memoryservice.entity.SessionSummaryDO">
+        UPDATE session_summary
+        SET session_id = #{sessionId},
+            user_id = #{userId},
+            summary_text = #{summaryText},
+            key_points = #{keyPoints,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM session_summary WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectBySessionId" parameterType="Long" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        WHERE session_id = #{sessionId}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdPageable" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM session_summary
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectAll" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectPage" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM session_summary
+    </select>
+
+    <select id="selectLatestByUserId" parameterType="Long" resultMap="sessionSummaryResultMap">
+        SELECT id, session_id, user_id, summary_text, key_points, created_at, updated_at
+        FROM session_summary
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+        LIMIT 1
+    </select>
+
+    <delete id="deleteBySessionId" parameterType="Long">
+        DELETE FROM session_summary WHERE session_id = #{sessionId}
+    </delete>
+
+</mapper>

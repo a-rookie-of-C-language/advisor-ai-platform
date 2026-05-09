@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.dao.UserDao;
+import cn.edu.cqut.advisorplatform.mapper.UserMapper;
 import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.LogoutRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.RefreshTokenRequestDTO;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-  private final UserDao userDao;
+  private final UserMapper userMapper;
   private final PasswordEncoder passwordEncoder;
   private final AuthenticationManager authenticationManager;
   private final RefreshTokenService refreshTokenService;
@@ -32,8 +32,8 @@ public class AuthServiceImpl implements AuthService {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
     UserDO user =
-        userDao
-            .findByUsername(request.getUsername())
+        userMapper
+            .selectByUsername(request.getUsername())
             .orElseThrow(() -> new NotFoundException("用户不存在"));
 
     TokenPairResponseDTO tokenPair = refreshTokenService.issueTokenPair(user);
@@ -47,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public void register(RegisterRequestDTO request) {
-    if (userDao.existsByUsername(request.getUsername())) {
+    if (userMapper.existsByUsername(request.getUsername())) {
       throw new BadRequestException("用户名已存在");
     }
     UserDO user = new UserDO();
@@ -57,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
     user.setPhone(request.getPhone());
     user.setEmail(request.getEmail());
     user.setRole(UserDO.UserRole.ADVISOR);
-    userDao.save(user);
+    userMapper.insert(user);
   }
 
   @Override

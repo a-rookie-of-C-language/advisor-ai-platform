@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.AuditLogMapper">
+
+    <resultMap id="auditLogResultMap" type="cn.edu.cqut.advisorplatform.entity.AuditLogDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="module" property="module" javaType="String"/>
+        <result column="action" property="action" javaType="String"/>
+        <result column="operation_type" property="operationType" javaType="String"/>
+        <result column="operation_result" property="operationResult" javaType="String"/>
+        <result column="timestamp" property="timestamp" javaType="java.time.LocalDateTime"/>
+        <result column="details" property="details" javaType="String"/>
+        <result column="ip_address" property="ipAddress" javaType="String"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.AuditLogDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO audit_log (user_id, module, action, operation_type, operation_result, timestamp, details, ip_address)
+        VALUES (#{userId}, #{module}, #{action}, #{operationType}, #{operationResult}, NOW(), #{details}, #{ipAddress})
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.AuditLogDO">
+        UPDATE audit_log
+        SET user_id = #{userId},
+            module = #{module},
+            action = #{action},
+            operation_type = #{operationType},
+            operation_result = #{operationResult},
+            timestamp = #{timestamp},
+            details = #{details},
+            ip_address = #{ipAddress}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM audit_log WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE user_id = #{userId}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByUserIdPageable" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE user_id = #{userId}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM audit_log
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectByModule" parameterType="String" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE module = #{module}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByAction" parameterType="String" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE action = #{action}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByOperationType" parameterType="String" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE operation_type = #{operationType}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByOperationResult" parameterType="String" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE operation_result = #{operationResult}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByDateRange" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE timestamp BETWEEN #{startTime} AND #{endTime}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByDateRangePageable" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE timestamp BETWEEN #{startTime} AND #{endTime}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByDateRange" resultType="int">
+        SELECT COUNT(*)
+        FROM audit_log
+        WHERE timestamp BETWEEN #{startTime} AND #{endTime}
+    </select>
+
+    <select id="selectByIpAddress" parameterType="String" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE ip_address = #{ipAddress}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectAll" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectPage" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM audit_log
+    </select>
+
+    <!-- 动态查询 - 支持多个条件的组合查询 -->
+    <select id="selectByDynamicCondition" resultMap="auditLogResultMap">
+        SELECT id, user_id, module, action, operation_type, operation_result, timestamp, details, ip_address
+        FROM audit_log
+        WHERE 1=1
+        <if test="userId != null">
+            AND user_id = #{userId}
+        </if>
+        <if test="module != null and module != ''">
+            AND module = #{module}
+        </if>
+        <if test="action != null and action != ''">
+            AND action = #{action}
+        </if>
+        <if test="operationType != null and operationType != ''">
+            AND operation_type = #{operationType}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND timestamp BETWEEN #{startTime} AND #{endTime}
+        </if>
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 动态查询计数 -->
+    <select id="countByDynamicCondition" resultType="int">
+        SELECT COUNT(*)
+        FROM audit_log
+        WHERE 1=1
+        <if test="userId != null">
+            AND user_id = #{userId}
+        </if>
+        <if test="module != null and module != ''">
+            AND module = #{module}
+        </if>
+        <if test="action != null and action != ''">
+            AND action = #{action}
+        </if>
+        <if test="operationType != null and operationType != ''">
+            AND operation_type = #{operationType}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND timestamp BETWEEN #{startTime} AND #{endTime}
+        </if>
+    </select>
+
+    <delete id="deleteByDateBefore" parameterType="java.time.LocalDateTime">
+        DELETE FROM audit_log WHERE timestamp &lt; #{timestamp}
+    </delete>
+
+</mapper>

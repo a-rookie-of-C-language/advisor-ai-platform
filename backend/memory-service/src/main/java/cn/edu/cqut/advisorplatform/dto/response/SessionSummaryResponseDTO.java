@@ -14,7 +14,6 @@ public class SessionSummaryResponseDTO {
   private LocalDateTime updatedAt;
 
   public static SessionSummaryResponseDTO from(SessionSummaryDO entity) {
-    return new SessionSummaryResponseDTO(
-        entity.getSession().getId(), entity.getSummary(), entity.getUpdatedAt());
+    return new SessionSummaryResponseDTO(entity.getSessionId(), entity.getSummary(), entity.getUpdatedAt());
   }
 }

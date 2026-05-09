@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.config.security.JwtUtil;
-import cn.edu.cqut.advisorplatform.dao.AuthRefreshTokenDao;
-import cn.edu.cqut.advisorplatform.dao.UserDao;
+import cn.edu.cqut.advisorplatform.mapper.AuthRefreshTokenMapper;
+import cn.edu.cqut.advisorplatform.mapper.UserMapper;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
@@ -29,8 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
-  private final AuthRefreshTokenDao authRefreshTokenDao;
-  private final UserDao userDao;
+  private final AuthRefreshTokenMapper authRefreshTokenMapper;
+  private final UserMapper userMapper;
   private final JwtUtil jwtUtil;
 
   @Value("${advisor.jwt.refresh-max-active:10}")
@@ -71,17 +71,17 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     LocalDateTime now = LocalDateTime.now();
     String tokenHash = hashToken(refreshToken);
     AuthRefreshTokenDO storedToken =
-        authRefreshTokenDao
-            .findByTokenHashAndRevokedFalseAndExpiresAtAfter(tokenHash, now)
+        authRefreshTokenMapper
+            .selectByTokenHashAndNotRevokedAndNotExpired(tokenHash, now)
             .orElseThrow(() -> new BadRequestException("refreshToken无效或已过期"));
 
     storedToken.setRevoked(true);
     storedToken.setRevokedAt(now);
-    authRefreshTokenDao.save(storedToken);
+    authRefreshTokenMapper.update(storedToken);
 
     String username = claims.getSubject();
     UserDO user =
-        userDao.findByUsername(username).orElseThrow(() -> new NotFoundException("用户不存在"));
+        userMapper.selectByUsername(username).orElseThrow(() -> new NotFoundException("用户不存在"));
 
     return issueTokenPair(user);
   }
@@ -95,13 +95,13 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     String tokenHash = hashToken(refreshToken);
     LocalDateTime now = LocalDateTime.now();
-    authRefreshTokenDao
-        .findByTokenHashAndRevokedFalseAndExpiresAtAfter(tokenHash, now)
+    authRefreshTokenMapper
+        .selectByTokenHashAndNotRevokedAndNotExpired(tokenHash, now)
         .ifPresent(
             token -> {
               token.setRevoked(true);
               token.setRevokedAt(now);
-              authRefreshTokenDao.save(token);
+              authRefreshTokenMapper.update(token);
             });
   }
 
@@ -114,13 +114,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     LocalDateTime now = LocalDateTime.now();
     List<AuthRefreshTokenDO> activeTokens =
-        authRefreshTokenDao.findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByCreatedAtAsc(
-            userId, now);
+        authRefreshTokenMapper.selectByUserIdAndNotRevokedAndNotExpired(userId, now);
     for (AuthRefreshTokenDO token : activeTokens) {
       token.setRevoked(true);
       token.setRevokedAt(now);
     }
-    authRefreshTokenDao.saveAll(activeTokens);
+    for (AuthRefreshTokenDO token : activeTokens) {
+      authRefreshTokenMapper.update(token);
+    }
   }
 
   private Map<String, Object> buildClaims(UserDO user) {
@@ -151,8 +152,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
   private void enforceActiveLimit(Long userId) {
     LocalDateTime now = LocalDateTime.now();
     List<AuthRefreshTokenDO> activeTokens =
-        authRefreshTokenDao.findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByCreatedAtAsc(
-            userId, now);
+        authRefreshTokenMapper.selectByUserIdAndNotRevokedAndNotExpired(userId, now);
 
     int overflow = activeTokens.size() - refreshMaxActive + 1;
     if (overflow <= 0) {
@@ -163,8 +163,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       AuthRefreshTokenDO token = activeTokens.get(i);
       token.setRevoked(true);
       token.setRevokedAt(now);
+      authRefreshTokenMapper.update(token);
     }
-    authRefreshTokenDao.saveAll(activeTokens.subList(0, overflow));
   }
 
   private void saveRefreshToken(Long userId, String refreshToken) {
@@ -173,7 +173,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     token.setTokenHash(hashToken(refreshToken));
     token.setExpiresAt(LocalDateTime.now().plusSeconds(jwtUtil.getRefreshExpiresInSeconds()));
     token.setRevoked(false);
-    authRefreshTokenDao.save(token);
+    authRefreshTokenMapper.insert(token);
   }
 
   private String hashToken(String token) {

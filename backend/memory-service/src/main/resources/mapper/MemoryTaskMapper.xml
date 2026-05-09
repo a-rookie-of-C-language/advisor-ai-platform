@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.memoryservice.mapper.MemoryTaskMapper">
+
+    <resultMap id="memoryTaskResultMap" type="cn.edu.cqut.advisorplatform.memoryservice.entity.MemoryTaskDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="session_id" property="sessionId" javaType="Long"/>
+        <result column="task_type" property="taskType" javaType="String"/>
+        <result column="status" property="status" javaType="String"/>
+        <result column="content" property="content" javaType="String"/>
+        <result column="result" property="result" javaType="String" typeHandler="org.apache.ibatis.type.JsonTypeHandler"/>
+        <result column="error_message" property="errorMessage" javaType="String"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+        <result column="completed_at" property="completedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.memoryservice.entity.MemoryTaskDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO memory_task (user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at)
+        VALUES (#{userId}, #{sessionId}, #{taskType}, #{status}, #{content},
+                #{result,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+                #{errorMessage}, NOW(), NOW(), #{completedAt})
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.memoryservice.entity.MemoryTaskDO">
+        UPDATE memory_task
+        SET user_id = #{userId},
+            session_id = #{sessionId},
+            task_type = #{taskType},
+            status = #{status},
+            content = #{content},
+            result = #{result,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+            error_message = #{errorMessage},
+            updated_at = NOW(),
+            completed_at = #{completedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM memory_task WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdPageable" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM memory_task
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectByStatus" parameterType="String" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE status = #{status}
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdAndStatus" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE user_id = #{userId} AND status = #{status}
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdAndStatusPageable" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE user_id = #{userId} AND status = #{status}
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserIdAndStatus" resultType="int">
+        SELECT COUNT(*)
+        FROM memory_task
+        WHERE user_id = #{userId} AND status = #{status}
+    </select>
+
+    <select id="selectBySessionId" parameterType="Long" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByDateRange" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE created_at BETWEEN #{startTime} AND #{endTime}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAll" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectPage" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM memory_task
+    </select>
+
+    <!-- 查询待处理任务 -->
+    <select id="selectPendingTasks" parameterType="int" resultMap="memoryTaskResultMap">
+        SELECT id, user_id, session_id, task_type, status, content, result, error_message, created_at, updated_at, completed_at
+        FROM memory_task
+        WHERE status = 'PENDING' OR status = 'PROCESSING'
+        ORDER BY created_at ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 更新任务状态 -->
+    <update id="updateStatus">
+        UPDATE memory_task
+        SET status = #{status}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByUserId" parameterType="Long">
+        DELETE FROM memory_task WHERE user_id = #{userId}
+    </delete>
+
+</mapper>

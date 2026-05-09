@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao">
+  <resultMap id="rm" type="cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO">
+    <id column="id" property="id"/>
+    <result column="created_by_id" property="createdById"/>
+    <result column="name" property="name"/>
+    <result column="description" property="description"/>
+    <result column="doc_count" property="docCount"/>
+    <result column="status" property="status"/>
+    <result column="is_deleted" property="isDeleted"/>
+    <result column="created_at" property="createdAt"/>
+    <result column="updated_at" property="updatedAt"/>
+  </resultMap>
+  <select id="findByCreatedByIdOrderByCreatedAtDesc" resultMap="rm">SELECT * FROM rag_knowledge_base WHERE created_by_id=#{userId} ORDER BY created_at DESC</select>
+  <select id="findAllByOrderByCreatedAtDesc" resultMap="rm">SELECT * FROM rag_knowledge_base WHERE is_deleted=false ORDER BY created_at DESC</select>
+  <select id="findById" resultMap="rm">SELECT * FROM rag_knowledge_base WHERE id=#{id}</select>
+  <select id="existsById" resultType="boolean">SELECT COUNT(1) &gt; 0 FROM rag_knowledge_base WHERE id=#{id}</select>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="id">INSERT INTO rag_knowledge_base(created_by_id,name,description,doc_count,status,is_deleted,created_at,updated_at) VALUES(#{createdById},#{name},#{description},#{docCount},#{status},#{isDeleted},NOW(),NOW())</insert>
+  <update id="update">UPDATE rag_knowledge_base SET created_by_id=#{createdById},name=#{name},description=#{description},doc_count=#{docCount},status=#{status},is_deleted=#{isDeleted},updated_at=NOW() WHERE id=#{id}</update>
+  <delete id="deleteById">DELETE FROM rag_knowledge_base WHERE id=#{id}</delete>
+</mapper>

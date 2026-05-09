@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.AuthRefreshTokenMapper">
+
+    <resultMap id="tokenResultMap" type="cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="token_hash" property="tokenHash" javaType="String"/>
+        <result column="expires_at" property="expiresAt" javaType="java.time.LocalDateTime"/>
+        <result column="revoked" property="revoked" javaType="Boolean"/>
+        <result column="revoked_at" property="revokedAt" javaType="java.time.LocalDateTime"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO auth_refresh_token (user_id, token_hash, expires_at, revoked, created_at, updated_at)
+        VALUES (#{userId}, #{tokenHash}, #{expiresAt}, #{revoked}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO">
+        UPDATE auth_refresh_token
+        SET user_id = #{userId},
+            token_hash = #{tokenHash},
+            expires_at = #{expiresAt},
+            revoked = #{revoked},
+            revoked_at = #{revokedAt},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM auth_refresh_token WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="tokenResultMap">
+        SELECT id, user_id, token_hash, expires_at, revoked, revoked_at, created_at, updated_at
+        FROM auth_refresh_token
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByTokenHashAndNotRevokedAndNotExpired" resultMap="tokenResultMap">
+        SELECT id, user_id, token_hash, expires_at, revoked, revoked_at, created_at, updated_at
+        FROM auth_refresh_token
+        WHERE token_hash = #{tokenHash} AND revoked = false AND expires_at > #{now}
+    </select>
+
+    <select id="selectByUserIdAndNotRevokedAndNotExpired" resultMap="tokenResultMap">
+        SELECT id, user_id, token_hash, expires_at, revoked, revoked_at, created_at, updated_at
+        FROM auth_refresh_token
+        WHERE user_id = #{userId} AND revoked = false AND expires_at > #{now}
+        ORDER BY created_at ASC
+    </select>
+</mapper>

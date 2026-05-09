@@ -1,16 +1,15 @@
 package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO;
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-public interface AuthRefreshTokenDao extends JpaRepository<AuthRefreshTokenDO, Long> {
+@Mapper
+public interface AuthRefreshTokenDao {
+  AuthRefreshTokenDO save(AuthRefreshTokenDO token);
 
-  Optional<AuthRefreshTokenDO> findByTokenHashAndRevokedFalseAndExpiresAtAfter(
-      String tokenHash, LocalDateTime now);
+  Optional<AuthRefreshTokenDO> findByTokenHashAndRevokedFalse(@Param("tokenHash") String tokenHash);
 
-  List<AuthRefreshTokenDO> findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByCreatedAtAsc(
-      Long userId, LocalDateTime now);
+  int revokeByUserId(@Param("userId") Long userId);
 }

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.AuditLogMapper">
+
+    <resultMap id="auditLogResultMap" type="cn.edu.cqut.advisorplatform.entity.AuditLogDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="operation" property="operation" javaType="String"/>
+        <result column="timestamp" property="timestamp" javaType="java.time.LocalDateTime"/>
+        <result column="details" property="details" javaType="String"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.AuditLogDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_audit_log (user_id, operation, timestamp, details)
+        VALUES (#{userId}, #{operation}, NOW(), #{details})
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.AuditLogDO">
+        UPDATE chat_audit_log
+        SET user_id = #{userId},
+            operation = #{operation},
+            timestamp = #{timestamp},
+            details = #{details}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM chat_audit_log WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        WHERE user_id = #{userId}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByUserIdPageable" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        WHERE user_id = #{userId}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_audit_log
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectByOperation" parameterType="String" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        WHERE operation = #{operation}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectByDateRange" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        WHERE timestamp BETWEEN #{startTime} AND #{endTime}
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectAll" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        ORDER BY timestamp DESC
+    </select>
+
+    <select id="selectPage" resultMap="auditLogResultMap">
+        SELECT id, user_id, operation, timestamp, details
+        FROM chat_audit_log
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_audit_log
+    </select>
+
+    <delete id="deleteByDateBefore" parameterType="LocalDateTime">
+        DELETE FROM chat_audit_log WHERE timestamp &lt; #{timestamp}
+    </delete>
+
+</mapper>

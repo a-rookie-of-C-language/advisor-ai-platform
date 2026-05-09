@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.ChatSessionMapper">
+
+    <resultMap id="chatSessionResultMap" type="cn.edu.cqut.advisorplatform.entity.ChatSessionDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="title" property="title" javaType="String"/>
+        <result column="is_deleted" property="isDeleted" javaType="Boolean"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.ChatSessionDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_session (user_id, title, is_deleted, created_at, updated_at)
+        VALUES (#{userId}, #{title}, #{isDeleted,jdbcType=BIT}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.ChatSessionDO">
+        UPDATE chat_session
+        SET user_id = #{userId},
+            title = #{title},
+            is_deleted = #{isDeleted,jdbcType=BIT},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM chat_session WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="chatSessionResultMap">
+        SELECT id, user_id, title, is_deleted, created_at, updated_at
+        FROM chat_session
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="chatSessionResultMap">
+        SELECT id, user_id, title, is_deleted, created_at, updated_at
+        FROM chat_session
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdAndNotDeleted" parameterType="Long" resultMap="chatSessionResultMap">
+        SELECT id, user_id, title, is_deleted, created_at, updated_at
+        FROM chat_session
+        WHERE user_id = #{userId} AND is_deleted = false
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdPageable" resultMap="chatSessionResultMap">
+        SELECT id, user_id, title, is_deleted, created_at, updated_at
+        FROM chat_session
+        WHERE user_id = #{userId} AND is_deleted = false
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_session
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByUserIdAndNotDeleted" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_session
+        WHERE user_id = #{userId} AND is_deleted = false
+    </select>
+
+    <select id="selectAll" resultMap="chatSessionResultMap">
+        SELECT id, user_id, title, is_deleted, created_at, updated_at
+        FROM chat_session
+        WHERE is_deleted = false
+        ORDER BY updated_at DESC
+    </select>
+
+    <update id="markDeleted" parameterType="Long">
+        UPDATE chat_session SET is_deleted = true, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="selectLatestByUserId" parameterType="Long" resultMap="chatSessionResultMap">
+        SELECT id, user_id, title, is_deleted, created_at, updated_at
+        FROM chat_session
+        WHERE user_id = #{userId} AND is_deleted = false
+        ORDER BY updated_at DESC
+        LIMIT 1
+    </select>
+
+</mapper>

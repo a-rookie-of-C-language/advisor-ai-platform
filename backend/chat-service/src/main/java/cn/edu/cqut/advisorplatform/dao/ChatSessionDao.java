@@ -1,10 +1,13 @@
 package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-public interface ChatSessionDao extends JpaRepository<ChatSessionDO, Long> {
+@Mapper
+public interface ChatSessionDao {
+  ChatSessionDO save(ChatSessionDO session);
 
-  List<ChatSessionDO> findByUserIdOrderByUpdatedAtDesc(Long userId);
+  Optional<ChatSessionDO> findById(@Param("id") Long id);
 }
