@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.RagDocumentMapper">
+
+    <resultMap id="ragDocumentResultMap" type="cn.edu.cqut.advisorplatform.entity.RagDocumentDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="knowledge_base_id" property="knowledgeBaseId" javaType="Long"/>
+        <result column="filename" property="filename" javaType="String"/>
+        <result column="content" property="content" javaType="String"/>
+        <result column="embedding" property="embedding" javaType="String" typeHandler="org.apache.ibatis.type.JsonTypeHandler"/>
+        <result column="status" property="status" javaType="String"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.RagDocumentDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rag_document (knowledge_base_id, filename, content, embedding, status, created_at, updated_at)
+        VALUES (#{knowledgeBaseId}, #{filename}, #{content},
+                #{embedding,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+                #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.RagDocumentDO">
+        UPDATE rag_document
+        SET knowledge_base_id = #{knowledgeBaseId},
+            filename = #{filename},
+            content = #{content},
+            embedding = #{embedding,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+            status = #{status},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM rag_document WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByKnowledgeBaseId" parameterType="Long" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByKnowledgeBaseIdPageable" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByKnowledgeBaseId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+    </select>
+
+    <select id="selectByStatus" parameterType="String" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE status = #{status}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByKnowledgeBaseIdAndStatus" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId} AND status = #{status}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByFilenameContaining" parameterType="String" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE filename LIKE CONCAT('%', #{filename}, '%')
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAll" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectPage" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM rag_document
+    </select>
+
+    <select id="selectByKnowledgeBaseIdAndFilename" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId} AND filename = #{filename}
+        LIMIT 1
+    </select>
+
+    <delete id="deleteByKnowledgeBaseId" parameterType="Long">
+        DELETE FROM rag_document WHERE knowledge_base_id = #{knowledgeBaseId}
+    </delete>
+
+    <select id="selectByKnowledgeBaseIdAndStatusPageable" resultMap="ragDocumentResultMap">
+        SELECT id, knowledge_base_id, filename, content, embedding, status, created_at, updated_at
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId} AND status = #{status}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByKnowledgeBaseIdAndStatus" resultType="int">
+        SELECT COUNT(*)
+        FROM rag_document
+        WHERE knowledge_base_id = #{knowledgeBaseId} AND status = #{status}
+    </select>
+
+</mapper>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.UserMapper">
+
+    <resultMap id="userResultMap" type="cn.edu.cqut.advisorplatform.entity.UserDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="username" property="username" javaType="String"/>
+        <result column="password" property="password" javaType="String"/>
+        <result column="real_name" property="realName" javaType="String"/>
+        <result column="phone" property="phone" javaType="String"/>
+        <result column="email" property="email" javaType="String"/>
+        <result column="role" property="role" javaType="cn.edu.cqut.advisorplatform.entity.UserDO.UserRole"/>
+        <result column="enabled" property="enabled" javaType="Boolean"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.UserDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user (username, password, real_name, phone, email, role, enabled, created_at, updated_at)
+        VALUES (#{username}, #{password}, #{realName}, #{phone}, #{email}, #{role}, #{enabled}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.UserDO">
+        UPDATE sys_user
+        SET username = #{username},
+            password = #{password},
+            real_name = #{realName},
+            phone = #{phone},
+            email = #{email},
+            role = #{role},
+            enabled = #{enabled},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM sys_user WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="userResultMap">
+        SELECT id, username, password, real_name, phone, email, role, enabled, created_at, updated_at
+        FROM sys_user
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUsername" parameterType="String" resultMap="userResultMap">
+        SELECT id, username, password, real_name, phone, email, role, enabled, created_at, updated_at
+        FROM sys_user
+        WHERE username = #{username}
+    </select>
+
+    <select id="existsByUsername" parameterType="String" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM sys_user
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectAll" resultMap="userResultMap">
+        SELECT id, username, password, real_name, phone, email, role, enabled, created_at, updated_at
+        FROM sys_user
+    </select>
+</mapper>

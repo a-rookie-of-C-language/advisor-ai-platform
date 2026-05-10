@@ -2,9 +2,12 @@ package cn.edu.cqut.advisorplatform.memoryservice.dao;
 
 import cn.edu.cqut.advisorplatform.memoryservice.entity.SessionSummaryDO;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-public interface SessionSummaryDao extends JpaRepository<SessionSummaryDO, Long> {
+@Mapper
+public interface SessionSummaryDao {
+  SessionSummaryDO save(SessionSummaryDO summary);
 
-  Optional<SessionSummaryDO> findBySessionId(Long sessionId);
+  Optional<SessionSummaryDO> findBySessionId(@Param("sessionId") Long sessionId);
 }

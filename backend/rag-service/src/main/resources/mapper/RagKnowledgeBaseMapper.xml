@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.RagKnowledgeBaseMapper">
+
+    <resultMap id="ragKnowledgeBaseResultMap" type="cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="created_by_id" property="createdById" javaType="Long"/>
+        <result column="name" property="name" javaType="String"/>
+        <result column="description" property="description" javaType="String"/>
+        <result column="is_deleted" property="isDeleted" javaType="Boolean"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rag_knowledge_base (created_by_id, name, description, is_deleted, created_at, updated_at)
+        VALUES (#{createdById}, #{name}, #{description}, #{isDeleted,jdbcType=BIT}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO">
+        UPDATE rag_knowledge_base
+        SET created_by_id = #{createdById},
+            name = #{name},
+            description = #{description},
+            is_deleted = #{isDeleted,jdbcType=BIT},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM rag_knowledge_base WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByCreatedById" parameterType="Long" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE created_by_id = #{createdById}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByCreatedByIdAndNotDeleted" parameterType="Long" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE created_by_id = #{createdById} AND is_deleted = false
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByCreatedByIdPageable" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE created_by_id = #{createdById} AND is_deleted = false
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByCreatedById" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM rag_knowledge_base
+        WHERE created_by_id = #{createdById}
+    </select>
+
+    <select id="countByCreatedByIdAndNotDeleted" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM rag_knowledge_base
+        WHERE created_by_id = #{createdById} AND is_deleted = false
+    </select>
+
+    <select id="selectByNameContaining" parameterType="String" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE name LIKE CONCAT('%', #{name}, '%') AND is_deleted = false
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAll" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE is_deleted = false
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectPage" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE is_deleted = false
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM rag_knowledge_base
+        WHERE is_deleted = false
+    </select>
+
+    <update id="markDeleted" parameterType="Long">
+        UPDATE rag_knowledge_base SET is_deleted = true, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="selectByName" parameterType="String" resultMap="ragKnowledgeBaseResultMap">
+        SELECT id, created_by_id, name, description, is_deleted, created_at, updated_at
+        FROM rag_knowledge_base
+        WHERE name = #{name} AND is_deleted = false
+        LIMIT 1
+    </select>
+
+</mapper>

@@ -5,15 +5,11 @@ import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
-import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -66,30 +62,26 @@ public class JdbcAuditLogStorage implements AuditLogStorage {
       LocalDateTime startTime,
       LocalDateTime endTime,
       Pageable pageable) {
-    Specification<AuditLogDO> specification =
-        (root, query, cb) -> {
-          List<Predicate> predicates = new ArrayList<>();
-          if (userId != null) {
-            predicates.add(cb.equal(root.get("userId"), userId));
-          }
-          if (module != null) {
-            predicates.add(cb.equal(root.get("module"), module));
-          }
-          if (action != null) {
-            predicates.add(cb.equal(root.get("action"), action));
-          }
-          if (startTime != null) {
-            predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), startTime));
-          }
-          if (endTime != null) {
-            predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), endTime));
-          }
-          return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-    Page<AuditLogDO> page = auditLogDao.findAll(specification, pageable);
-    return PageResponseDTO.of(
-        page.getContent(), page.getTotalElements(), page.getNumber(), page.getSize());
+    int pageNo = pageable.getPageNumber();
+    int size = pageable.getPageSize();
+    int offset = pageNo * size;
+    List<AuditLogDO> items =
+        auditLogDao.findByConditions(
+            userId,
+            module == null ? null : module.name(),
+            action == null ? null : action.name(),
+            startTime,
+            endTime,
+            offset,
+            size);
+    long total =
+        auditLogDao.countByConditions(
+            userId,
+            module == null ? null : module.name(),
+            action == null ? null : action.name(),
+            startTime,
+            endTime);
+    return PageResponseDTO.of(items, total, pageNo, size);
   }
 
   @Override
@@ -101,12 +93,13 @@ public class JdbcAuditLogStorage implements AuditLogStorage {
   @Override
   @Transactional(readOnly = true)
   public long countByUserAndModule(Long userId, AuditModule module) {
-    return auditLogDao.countByUserAndModule(userId, module);
+    return auditLogDao.countByUserAndModule(userId, module == null ? null : module.name());
   }
 
   @Override
   @Transactional(readOnly = true)
   public long countByUserAndModuleAndAction(Long userId, AuditModule module, AuditAction action) {
-    return auditLogDao.countByUserAndModuleAndAction(userId, module, action);
+    return auditLogDao.countByUserAndModuleAndAction(
+        userId, module == null ? null : module.name(), action == null ? null : action.name());
   }
 }

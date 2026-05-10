@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.mapper.ChatMessageMapper">
+
+    <resultMap id="chatMessageResultMap" type="cn.edu.cqut.advisorplatform.entity.ChatMessageDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="session_id" property="sessionId" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="role" property="role" javaType="String"/>
+        <result column="sources" property="sources" javaType="java.util.List" typeHandler="org.apache.ibatis.type.JsonTypeHandler"/>
+        <result column="content" property="content" javaType="String"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.entity.ChatMessageDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_message (session_id, user_id, role, sources, content, created_at, updated_at)
+        VALUES (#{sessionId}, #{userId}, #{role},
+                #{sources,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+                #{content}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.entity.ChatMessageDO">
+        UPDATE chat_message
+        SET session_id = #{sessionId},
+            user_id = #{userId},
+            role = #{role},
+            sources = #{sources,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+            content = #{content},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM chat_message WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" parameterType="Long" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectBySessionId" parameterType="Long" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectBySessionIdPageable" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countBySessionId" parameterType="Long" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE session_id = #{sessionId}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectBySessionIdAndRole" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE session_id = #{sessionId} AND role = #{role}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectBySessionIdOrderByCreatedAt" parameterType="Long" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectLatestBySessionId" parameterType="Long" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectBySessionIdAndDateRange" resultMap="chatMessageResultMap">
+        SELECT id, session_id, user_id, role, sources, content, created_at, updated_at
+        FROM chat_message
+        WHERE session_id = #{sessionId}
+          AND created_at BETWEEN #{startTime} AND #{endTime}
+        ORDER BY created_at ASC
+    </select>
+
+    <delete id="deleteBySessionId" parameterType="Long">
+        DELETE FROM chat_message WHERE session_id = #{sessionId}
+    </delete>
+
+</mapper>

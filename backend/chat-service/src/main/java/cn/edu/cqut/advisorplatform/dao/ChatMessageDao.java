@@ -1,18 +1,19 @@
 package cn.edu.cqut.advisorplatform.dao;
 
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
-import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-public interface ChatMessageDao extends JpaRepository<ChatMessageDO, Long> {
+@Mapper
+public interface ChatMessageDao {
+  ChatMessageDO save(ChatMessageDO message);
 
-  List<ChatMessageDO> findBySessionIdOrderByCreatedAtAscIdAsc(Long sessionId);
+  boolean existsBySessionIdAndTurnIdAndRole(
+      @Param("sessionId") Long sessionId, @Param("turnId") String turnId, @Param("role") String role);
 
-  boolean existsBySessionIdAndTurnIdAndRole(Long sessionId, String turnId, String role);
-
-  boolean existsBySessionIdAndRole(Long sessionId, String role);
+  boolean existsBySessionIdAndRole(@Param("sessionId") Long sessionId, @Param("role") String role);
 
   Optional<ChatMessageDO> findFirstBySessionIdAndTurnIdAndRole(
-      Long sessionId, String turnId, String role);
+      @Param("sessionId") Long sessionId, @Param("turnId") String turnId, @Param("role") String role);
 }

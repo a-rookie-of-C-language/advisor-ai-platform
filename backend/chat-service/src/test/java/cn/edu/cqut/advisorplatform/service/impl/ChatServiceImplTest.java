@@ -5,13 +5,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.edu.cqut.advisorplatform.client.RagServiceClient;
-import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.mapper.ChatMessageMapper;
+import cn.edu.cqut.advisorplatform.mapper.ChatSessionMapper;
 import java.util.Map;
-import java.util.Optional;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,32 +21,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class ChatServiceImplTest {
-
-  @Mock private ChatSessionDao chatSessionDao;
-
-  @Mock private ChatMessageDao chatMessageDao;
-
+  @Mock private ChatSessionMapper chatSessionMapper;
+  @Mock private ChatMessageMapper chatMessageMapper;
   @Mock private RagServiceClient ragServiceClient;
-
   @InjectMocks private ChatServiceImpl chatService;
 
   @Test
   void createSession_shouldPersistDefaultKbIdAsZero() {
     UserDO user = buildUser();
-
-    ChatSessionDO saved = new ChatSessionDO();
-    saved.setId(1001L);
-    saved.setTitle("新对话");
-    saved.setKbId(0L);
-    saved.setUser(user);
-    when(chatSessionDao.save(org.mockito.ArgumentMatchers.any(ChatSessionDO.class)))
-        .thenReturn(saved);
-
     chatService.createSession(user);
-
     ArgumentCaptor<ChatSessionDO> captor = ArgumentCaptor.forClass(ChatSessionDO.class);
-    verify(chatSessionDao).save(captor.capture());
+    verify(chatSessionMapper).insert(captor.capture());
     assertThat(captor.getValue().getKbId()).isEqualTo(0L);
+    assertThat(captor.getValue().getUserId()).isEqualTo(1L);
   }
 
   @Test
@@ -55,12 +42,9 @@ class ChatServiceImplTest {
     ChatSessionDO session = new ChatSessionDO();
     session.setId(1001L);
     session.setKbId(null);
-    session.setUser(user);
-
-    when(chatSessionDao.findById(1001L)).thenReturn(Optional.of(session));
-
+    session.setUserId(1L);
+    when(chatSessionMapper.selectById(1001L)).thenReturn(session);
     long kbId = chatService.getSessionKbId(1001L, user);
-
     assertThat(kbId).isEqualTo(0L);
   }
 
@@ -70,15 +54,10 @@ class ChatServiceImplTest {
     ChatSessionDO session = new ChatSessionDO();
     session.setId(2001L);
     session.setKbId(0L);
-    session.setUser(user);
-
-    when(chatSessionDao.findById(2001L)).thenReturn(Optional.of(session));
-    when(ragServiceClient.existsKnowledgeBase(3001L))
-        .thenReturn(ApiResponseDTO.success(Map.of("exists", true)));
-    when(chatSessionDao.save(session)).thenReturn(session);
-
+    session.setUserId(1L);
+    when(chatSessionMapper.selectById(2001L)).thenReturn(session);
+    when(ragServiceClient.existsKnowledgeBase(3001L)).thenReturn(ApiResponseDTO.success(Map.of("exists", true)));
     chatService.updateSessionKb(2001L, 3001L, user);
-
     assertThat(session.getKbId()).isEqualTo(3001L);
     verify(ragServiceClient).existsKnowledgeBase(3001L);
   }

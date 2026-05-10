@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.cqut.advisorplatform.memoryservice.mapper.UserMemoryMapper">
+
+    <resultMap id="userMemoryResultMap" type="cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO">
+        <id column="id" property="id" javaType="Long"/>
+        <result column="user_id" property="userId" javaType="Long"/>
+        <result column="kb_id" property="kbId" javaType="Long"/>
+        <result column="content" property="content" javaType="String"/>
+        <result column="confidence" property="confidence" javaType="java.math.BigDecimal"/>
+        <result column="score" property="score" javaType="java.math.BigDecimal"/>
+        <result column="memory_key" property="memoryKey" javaType="String"/>
+        <result column="source_turn_id" property="sourceTurnId" javaType="String"/>
+        <result column="tags" property="tags" javaType="java.util.Map"/>
+        <result column="is_deleted" property="isDeleted" javaType="Boolean"/>
+        <result column="expires_at" property="expiresAt" javaType="java.time.LocalDateTime"/>
+        <result column="created_at" property="createdAt" javaType="java.time.LocalDateTime"/>
+        <result column="updated_at" property="updatedAt" javaType="java.time.LocalDateTime"/>
+        <result column="access_count" property="accessCount" javaType="Integer"/>
+        <result column="last_accessed_at" property="lastAccessedAt" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_memory (user_id, kb_id, content, confidence, score, memory_key, source_turn_id, tags, is_deleted, expires_at, created_at, updated_at, access_count, last_accessed_at)
+        VALUES (#{userId}, #{kbId}, #{content}, #{confidence}, #{score}, #{memoryKey}, #{sourceTurnId}, 
+                #{tags,typeHandler=org.apache.ibatis.type.JsonTypeHandler}, #{isDeleted}, #{expiresAt}, NOW(), NOW(), #{accessCount}, #{lastAccessedAt})
+    </insert>
+
+    <update id="update" parameterType="cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO">
+        UPDATE user_memory
+        SET user_id = #{userId},
+            kb_id = #{kbId},
+            content = #{content},
+            confidence = #{confidence},
+            score = #{score},
+            memory_key = #{memoryKey},
+            source_turn_id = #{sourceTurnId},
+            tags = #{tags,typeHandler=org.apache.ibatis.type.JsonTypeHandler},
+            is_deleted = #{isDeleted},
+            expires_at = #{expiresAt},
+            updated_at = NOW(),
+            access_count = #{accessCount},
+            last_accessed_at = #{lastAccessedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM user_memory WHERE id = #{id}
+    </delete>
+
+    <update id="markDeleted" parameterType="Long">
+        UPDATE user_memory SET is_deleted = true, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="selectById" parameterType="Long" resultMap="userMemoryResultMap">
+        SELECT * FROM user_memory WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" parameterType="Long" resultMap="userMemoryResultMap">
+        SELECT * FROM user_memory
+        WHERE user_id = #{userId} AND is_deleted = false
+        ORDER BY updated_at DESC
+    </select>
+
+    <!-- 复杂的搜索查询 -->
+    <select id="searchByScope" resultMap="userMemoryResultMap">
+        SELECT m.* FROM user_memory m
+        WHERE m.user_id = #{userId}
+          AND (#{kbId} = 0 OR m.kb_id = #{kbId})
+          AND m.is_deleted = false
+          AND (m.expires_at IS NULL OR m.expires_at > #{now})
+          <if test="query != null and query != ''">
+            AND LOWER(m.content) LIKE LOWER(CONCAT('%', #{query}, '%'))
+          </if>
+        ORDER BY m.updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="searchByScopeCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM user_memory m
+        WHERE m.user_id = #{userId}
+          AND (#{kbId} = 0 OR m.kb_id = #{kbId})
+          AND m.is_deleted = false
+          AND (m.expires_at IS NULL OR m.expires_at > #{now})
+          <if test="query != null and query != ''">
+            AND LOWER(m.content) LIKE LOWER(CONCAT('%', #{query}, '%'))
+          </if>
+    </select>
+
+    <!-- PostgreSQL pgvector 向量相似度查询 -->
+    <select id="findMostSimilarByVector" resultMap="userMemoryResultMap">
+        SELECT *
+        FROM user_memory
+        WHERE user_id = #{userId}
+          AND (#{kbId} = 0 OR kb_id = #{kbId})
+          AND is_deleted = false
+          AND embedding IS NOT NULL
+          AND (embedding &lt;=&gt; CAST(#{embedding} AS vector)) &lt;= #{maxDistance}
+        ORDER BY embedding &lt;=&gt; CAST(#{embedding} AS vector)
+        LIMIT 1
+    </select>
+</mapper>

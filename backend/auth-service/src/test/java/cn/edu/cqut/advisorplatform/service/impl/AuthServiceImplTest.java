@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
-import cn.edu.cqut.advisorplatform.dao.UserDao;
+import cn.edu.cqut.advisorplatform.mapper.UserMapper;
 import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
@@ -33,7 +33,7 @@ class AuthServiceImplTest {
 
   @InjectMocks private AuthServiceImpl authService;
 
-  @Mock private UserDao userDao;
+  @Mock private UserMapper userMapper;
 
   @Mock private PasswordEncoder passwordEncoder;
 
@@ -58,7 +58,7 @@ class AuthServiceImplTest {
 
     when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
         .thenReturn(null);
-    when(userDao.findByUsername("testuser")).thenReturn(Optional.of(user));
+    when(userMapper.selectByUsername("testuser")).thenReturn(Optional.of(user));
     when(refreshTokenService.issueTokenPair(user)).thenReturn(tokenPair);
 
     LoginResponseDTO result = authService.login(request);
@@ -66,7 +66,7 @@ class AuthServiceImplTest {
     assertNotNull(result);
     assertEquals("access-token", result.getAccessToken());
     verify(authenticationManager).authenticate(any());
-    verify(userDao).findByUsername("testuser");
+    verify(userMapper).selectByUsername("testuser");
   }
 
   @Test
@@ -88,15 +88,15 @@ class AuthServiceImplTest {
     request.setPassword("password123");
     request.setRealName("New User");
 
-    when(userDao.existsByUsername("newuser")).thenReturn(false);
+    when(userMapper.existsByUsername("newuser")).thenReturn(false);
     when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
-    when(userDao.save(any(UserDO.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    doNothing().when(userMapper).insert(any(UserDO.class));
 
     authService.register(request);
 
-    verify(userDao).existsByUsername("newuser");
+    verify(userMapper).existsByUsername("newuser");
     verify(passwordEncoder).encode("password123");
-    verify(userDao).save(any(UserDO.class));
+    verify(userMapper).insert(any(UserDO.class));
   }
 
   @Test
@@ -106,10 +106,10 @@ class AuthServiceImplTest {
     request.setPassword("password123");
     request.setRealName("User");
 
-    when(userDao.existsByUsername("existinguser")).thenReturn(true);
+    when(userMapper.existsByUsername("existinguser")).thenReturn(true);
 
     assertThrows(BadRequestException.class, () -> authService.register(request));
-    verify(userDao, never()).save(any());
+    verify(userMapper, never()).insert(any());
   }
 
   @Test

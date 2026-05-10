@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -126,7 +125,8 @@ public class MemoryServiceImpl implements MemoryService {
         request.getKbId(),
         query,
         LocalDateTime.now(),
-        PageRequest.of(0, topK));
+        0,
+        topK);
   }
 
   private List<UserMemoryDO> searchHybrid(MemorySearchRequestDTO request, String query, int topK) {
@@ -152,7 +152,8 @@ public class MemoryServiceImpl implements MemoryService {
             request.getKbId(),
             query,
             LocalDateTime.now(),
-            PageRequest.of(0, recallK));
+            0,
+            recallK);
 
     return mergeHybridResults(vectorResults, textResults, topK);
   }
@@ -324,7 +325,7 @@ public class MemoryServiceImpl implements MemoryService {
             .orElseGet(
                 () -> {
                   SessionSummaryDO row = new SessionSummaryDO();
-                  row.setSession(session);
+                  row.setSessionId(session.getId());
                   row.setVersion(1);
                   row.setCreatedAt(LocalDateTime.now());
                   return row;
@@ -361,8 +362,7 @@ public class MemoryServiceImpl implements MemoryService {
     }
 
     List<UserMemoryDO> staleRows =
-        userMemoryDao.findLowConfidenceStale(
-            BigDecimal.valueOf(0.3), staleCutoff, PageRequest.of(0, 200));
+        userMemoryDao.findLowConfidenceStale(BigDecimal.valueOf(0.3), staleCutoff, 0, 200);
     if (!staleRows.isEmpty()) {
       List<Long> ids = staleRows.stream().map(UserMemoryDO::getId).toList();
       userMemoryDao.deleteAllByIdInBatch(ids);
@@ -421,7 +421,7 @@ public class MemoryServiceImpl implements MemoryService {
   @Transactional
   public List<MemoryTaskResponseDTO> fetchPendingTasks(int limit) {
     int safeLimit = Math.max(1, Math.min(limit, 50));
-    List<MemoryTaskDO> tasks = memoryTaskDao.findPendingTasks(3, PageRequest.of(0, safeLimit));
+    List<MemoryTaskDO> tasks = memoryTaskDao.findPendingTasks(3, 0, safeLimit);
     for (MemoryTaskDO task : tasks) {
       memoryTaskDao.updateStatus(task.getId(), "processing");
     }
