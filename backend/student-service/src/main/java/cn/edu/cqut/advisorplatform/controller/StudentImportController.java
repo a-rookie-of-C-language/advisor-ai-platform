@@ -36,7 +36,11 @@ public class StudentImportController {
 
     com.alibaba.excel.write.metadata.style.WriteCellStyle headStyle =
         new com.alibaba.excel.write.metadata.style.WriteCellStyle();
-    headStyle.setWriteFont(new com.alibaba.excel.write.metadata.style.WriteFont(12, true));
+    com.alibaba.excel.write.metadata.style.WriteFont headFont =
+        new com.alibaba.excel.write.metadata.style.WriteFont();
+    headFont.setFontHeightInPoints((short) 12);
+    headFont.setBold(true);
+    headStyle.setWriteFont(headFont);
     headStyle.setHorizontalAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
 
     com.alibaba.excel.write.metadata.style.WriteCellStyle dataStyle =

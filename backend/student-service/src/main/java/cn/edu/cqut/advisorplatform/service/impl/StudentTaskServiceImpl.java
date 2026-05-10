@@ -132,7 +132,7 @@ public class StudentTaskServiceImpl implements StudentTaskService {
   @Override
   public Page<StudentTaskResponse> getTasksByStudentId(Long studentId, int page, int size) {
     PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-    Page<StudentTask> page = taskDao.findByStudentId(studentId, pageRequest);
-    return page.map(StudentTaskResponse::fromEntity);
+    Page<StudentTask> taskPage = taskDao.findByStudentId(studentId, pageRequest);
+    return taskPage.map(StudentTaskResponse::fromEntity);
   }
 }

@@ -13,7 +13,7 @@
     <artifactId>student-service</artifactId>
 
     <properties>
-        <easyexcel.version>3.3.5</easyexcel.version>
+        <easyexcel.version>3.3.4</easyexcel.version>
     </properties>
 
     <dependencies>
@@ -65,7 +65,7 @@
             <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.alibaba.excel</groupId>
+            <groupId>com.alibaba</groupId>
             <artifactId>easyexcel</artifactId>
             <version>${easyexcel.version}</version>
         </dependency>
