@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.config.websocket;
 
-import cn.edu.cqut.advisorplatform.config.security.JwtUtil;
+import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.service.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;

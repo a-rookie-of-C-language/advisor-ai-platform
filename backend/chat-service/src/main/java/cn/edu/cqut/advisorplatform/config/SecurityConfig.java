@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.config;
 
-import cn.edu.cqut.advisorplatform.config.security.InternalServiceTokenFilter;
-import cn.edu.cqut.advisorplatform.config.security.JwtAuthenticationFilter;
+import cn.edu.cqut.advisorplatform.common.security.InternalServiceTokenFilter;
+import cn.edu.cqut.advisorplatform.common.security.JwtAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +37,7 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    jwtAuthenticationFilter.setUserDetailsService(userDetailsService);
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .authorizeHttpRequests(

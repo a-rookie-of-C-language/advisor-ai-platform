@@ -1,10 +1,10 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorMetricCardDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorPointDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorRealtimeResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorSeriesDTO;
-import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.service.MonitorService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
