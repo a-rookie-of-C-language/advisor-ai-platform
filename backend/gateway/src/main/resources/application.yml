@@ -35,6 +35,10 @@ spring:
           uri: lb://audit-service
           predicates:
             - Path=/api/audit/**
+        - id: check-in-service
+          uri: lb://check-in-service
+          predicates:
+            - Path=/api/check-in/**
 
 management:
   tracing:
@@ -51,8 +55,8 @@ management:
 advisor:
   jwt:
     secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+    expiration: ${JWT_EXPIRE_MS:86400000}
   risk:
     control-service-url: ${RISK_CONTROL_SERVICE_URL:http://risk-control-service:8086}
     fail-open-default: ${RISK_FAIL_OPEN_DEFAULT:true}
     fail-closed-paths: ${RISK_FAIL_CLOSED_PATHS:/api/chat/,/api/rag/}
-

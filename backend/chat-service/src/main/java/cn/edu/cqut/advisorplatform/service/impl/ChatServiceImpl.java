@@ -1,14 +1,14 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.client.RagServiceClient;
+import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
+import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
-import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.ChatService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

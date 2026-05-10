@@ -1,10 +1,10 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserBehaviorStatDao;
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserViolationDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.UserBehaviorStat;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserBehaviorStatRepository;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserViolationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -20,8 +20,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserBehaviorFilter implements RiskFilter {
 
-  private final UserBehaviorStatRepository userBehaviorStatRepository;
-  private final UserViolationRepository userViolationRepository;
+  private final UserBehaviorStatDao userBehaviorStatDao;
+  private final UserViolationDao userViolationDao;
 
   @Value("${advisor.risk.ban.permanent-threshold:20}")
   private int permanentThreshold;
@@ -38,8 +38,7 @@ public class UserBehaviorFilter implements RiskFilter {
     }
 
     long violationCount =
-        userViolationRepository.countByUserIdSince(
-            request.getUserId(), LocalDateTime.now().minusDays(30));
+        userViolationDao.countByUserIdSince(request.getUserId(), LocalDateTime.now().minusDays(30));
 
     if (violationCount >= permanentThreshold) {
       log.warn(
@@ -57,7 +56,7 @@ public class UserBehaviorFilter implements RiskFilter {
     }
 
     Optional<UserBehaviorStat> statOpt =
-        userBehaviorStatRepository.findByUserIdAndDate(request.getUserId(), LocalDate.now());
+        userBehaviorStatDao.findByUserIdAndDate(request.getUserId(), LocalDate.now());
 
     if (statOpt.isPresent()) {
       UserBehaviorStat stat = statOpt.get();

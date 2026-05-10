@@ -1,5 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
 import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.LogoutRequestDTO;
@@ -8,8 +10,6 @@ import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.exception.BadRequestException;
-import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuthService;
 import cn.edu.cqut.advisorplatform.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;

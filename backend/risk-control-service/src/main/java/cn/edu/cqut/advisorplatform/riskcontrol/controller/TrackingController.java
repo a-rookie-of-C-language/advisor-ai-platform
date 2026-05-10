@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.TrackingEventMessage;
 import cn.edu.cqut.advisorplatform.riskcontrol.kafka.KafkaConfig;
 import cn.edu.cqut.advisorplatform.riskcontrol.service.RiskEngine;
+import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ public class TrackingController {
   private final RiskEngine riskEngine;
 
   @PostMapping("/event")
-  public ResponseEntity<Void> trackEvent(@RequestBody TrackingEventMessage event) {
+  public ResponseEntity<Void> trackEvent(@Valid @RequestBody TrackingEventMessage event) {
     if (event.getEventId() == null) {
       event.setEventId(UUID.randomUUID().toString());
     }
@@ -44,7 +45,7 @@ public class TrackingController {
   }
 
   @PostMapping("/check")
-  public ResponseEntity<RiskCheckResponse> checkRisk(@RequestBody RiskCheckRequest request) {
+  public ResponseEntity<RiskCheckResponse> checkRisk(@Valid @RequestBody RiskCheckRequest request) {
     log.info(
         "Risk check request: userId={}, requestPath={}",
         request.getUserId(),

@@ -10,6 +10,7 @@ import StudentListPage from '../pages/Student/StudentListPage'
 import TaskManagementPage from '../pages/Student/TaskManagementPage'
 import ImportManagementPage from '../pages/Student/ImportManagementPage'
 import StatOverviewPage from '../pages/Student/StatOverviewPage'
+import NotFound from '../pages/NotFound'
 import { useAuthStore } from '../store/authStore'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -59,6 +60,7 @@ export default function AppRouter() {
         <Route path="student/import" element={<ImportManagementPage />} />
         <Route path="student/stat" element={<StatOverviewPage />} />
       </Route>
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

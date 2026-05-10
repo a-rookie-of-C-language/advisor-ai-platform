@@ -1,0 +1,36 @@
+server:
+  port: 8087
+
+spring:
+  config:
+    import: optional:nacos:advisor-ai-platform-common.yaml
+  application:
+    name: check-in-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+mybatis:
+  mapper-locations: classpath:cn/edu/cqut/advisorplatform/checkin/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+advisor:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:arookieofc}
+  jwt:
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+    expiration: ${JWT_EXPIRE_MS:86400000}

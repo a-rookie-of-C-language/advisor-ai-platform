@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.config;
 
-import cn.edu.cqut.advisorplatform.config.security.InternalServiceTokenFilter;
-import cn.edu.cqut.advisorplatform.config.security.JwtAuthenticationFilter;
+import cn.edu.cqut.advisorplatform.common.security.InternalServiceTokenFilter;
+import cn.edu.cqut.advisorplatform.common.security.JwtAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

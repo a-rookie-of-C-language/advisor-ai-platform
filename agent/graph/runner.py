@@ -30,6 +30,7 @@ class GraphRunner:
         intent_router: Any = None,
         safety_pipeline: Any = None,
         fusion_pipeline: Any = None,
+        web_search_subagent: Any = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -44,6 +45,7 @@ class GraphRunner:
         self._intent_router = intent_router
         self._safety_pipeline = safety_pipeline
         self._fusion_pipeline = fusion_pipeline
+        self._web_search_subagent = web_search_subagent
         self._compiled = build_chat_graph()
         self._node_order = [
             "select_skill",
@@ -90,6 +92,7 @@ class GraphRunner:
             intent_router=self._intent_router,
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
+            web_search_subagent=self._web_search_subagent,
         )
         token = set_runtime(runtime)
         state = {

@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.controller;
 
+import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorRealtimeResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.service.MonitorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;

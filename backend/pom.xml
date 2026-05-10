@@ -20,6 +20,7 @@
         <module>audit-service</module>
         <module>risk-control-service</module>
         <module>student-service</module>
+        <module>check-in-service</module>
     </modules>
 
     <properties>

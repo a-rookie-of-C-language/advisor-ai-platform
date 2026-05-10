@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.kafka;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.TrackingEventDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.TrackingEventMessage;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.TrackingEvent;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.TrackingEventRepository;
 import cn.edu.cqut.advisorplatform.riskcontrol.service.RiskEngine;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class TrackingEventConsumer {
 
-  private final TrackingEventRepository trackingEventRepository;
+  private final TrackingEventDao trackingEventDao;
   private final RiskEngine riskEngine;
 
   @KafkaListener(topics = KafkaConfig.TRACKING_EVENTS_TOPIC, groupId = "risk-control-group")
@@ -43,7 +43,7 @@ public class TrackingEventConsumer {
               .createdAt(
                   LocalDateTime.ofEpochSecond(message.getTimestamp() / 1000, 0, ZoneOffset.UTC))
               .build();
-      trackingEventRepository.save(event);
+      trackingEventDao.save(event);
 
       // 执行风控检查
       riskEngine.processEvent(message);

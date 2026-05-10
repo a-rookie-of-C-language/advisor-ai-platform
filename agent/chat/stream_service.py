@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
+from agents.search import WebSearchSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor
 from context.compaction.TranscriptStore import TranscriptStore
@@ -86,6 +87,7 @@ class ChatStreamService:
         self._compaction_subagent = ContextCompactionSubAgent(self._provider)
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
+        self._web_search_subagent = self._build_web_search_subagent()
         self._tool_permission = PermissionConfig.from_allowed_tools(
             {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
              ToolPermission.MEMORY_WRITE, ToolPermission.SEARCH},
@@ -133,6 +135,7 @@ class ChatStreamService:
             intent_router=self._intent_router,
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
+            web_search_subagent=self._web_search_subagent,
         )
 
 
@@ -346,6 +349,8 @@ class ChatStreamService:
             "turn_id": turn_id,
         }
         try:
+            if tool_name == "web_search" and self._web_search_subagent is not None:
+                return await self._execute_web_search_via_subagent(tool_args)
             return await self._tools.execute(tool_name, tool_args, context)
         except Exception:
             logger.exception(
@@ -363,6 +368,42 @@ class ChatStreamService:
                     "items": [],
                 }
             )
+
+    def _build_web_search_subagent(self) -> WebSearchSubAgent | None:
+        web_search_tool = self._tools.get("web_search")
+        if web_search_tool is None:
+            return None
+        return WebSearchSubAgent(
+            llm_provider=self._provider,
+            web_search_tool=web_search_tool,
+        )
+
+    async def _execute_web_search_via_subagent(self, tool_args: dict) -> str:
+        query = tool_args.get("query", "")
+        max_results = tool_args.get("max_results", 5)
+        result = await self._web_search_subagent.search(query, max_results=max_results)
+        if not result.safe:
+            return json.dumps({
+                "ok": False,
+                "status": "denied",
+                "message": result.filtered_reason or "搜索结果不合规，已过滤",
+                "items": [],
+            })
+        items = [
+            {
+                "title": src.get("title", ""),
+                "snippet": result.summary,
+                "url": src.get("url", ""),
+                "source": "web",
+            }
+            for src in result.sources
+        ]
+        return json.dumps({
+            "ok": True,
+            "status": "hit" if items else "miss",
+            "message": "hit" if items else "no results",
+            "items": items,
+        })
 
     async def stream_events(
         self,
