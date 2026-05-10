@@ -15,7 +15,10 @@ import {
   EditOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  CheckCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { studentApi, type StudentDetailResponse, type StudentQueryRequest } from '../../api/studentApi'
 import { globalMessage } from '../../utils/globalMessage'
 import styles from './StudentListPage.module.css'
@@ -36,6 +39,7 @@ const RISK_LEVEL_OPTIONS = [
 ]
 
 export default function StudentListPage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [dataSource, setDataSource] = useState<StudentDetailResponse[]>([])
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
@@ -179,9 +183,15 @@ export default function StudentListPage() {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 220,
       render: (_: unknown, record: StudentDetailResponse) => (
         <Space size="small">
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/student/${record.id}`)}>
+            详情
+          </Button>
+          <Button type="link" size="small" icon={<CheckCircleOutlined />} onClick={() => navigate(`/student/${record.id}`)}>
+            打卡
+          </Button>
           <Button type="link" size="small" icon={<EditOutlined />}>
             编辑
           </Button>

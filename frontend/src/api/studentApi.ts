@@ -34,6 +34,28 @@ export interface StudentQueryRequest {
   grade?: string
 }
 
+export interface StudentCheckInSummaryResponse {
+  studentId: number
+  studentNo: string
+  studentName: string
+  totalCount: number
+  checkedInCount: number
+  missedCount: number
+  checkInRate: number
+  lastCheckInTime?: string
+}
+
+export interface StudentCheckInDetailResponse {
+  summary: StudentCheckInSummaryResponse
+  recentRecords: StudentCheckInRecordItem[]
+}
+
+export interface StudentCheckInRecordItem {
+  checkDate: string
+  checkedIn: boolean
+  checkTime?: string
+}
+
 interface ApiResponse<T> {
   code: number
   message: string
@@ -70,8 +92,15 @@ export const studentApi = {
   list: (params: StudentQueryRequest) =>
     request.get<unknown, ApiResponse<PageResponse<StudentDetailResponse>>>('/student/list', { params }),
 
-  getById: (id: number) =>
-    request.get<unknown, ApiResponse<StudentDetailResponse>>(`/student/${id}`),
+  getById: (id: number) => request.get<unknown, ApiResponse<StudentDetailResponse>>(`/student/${id}`),
+
+  getCheckInSummary: (id: number) =>
+    request.get<unknown, ApiResponse<StudentCheckInSummaryResponse>>(`/student/${id}/check-in/summary`),
+
+  getCheckInDetail: (id: number, limit = 10) =>
+    request.get<unknown, ApiResponse<StudentCheckInDetailResponse>>(`/student/${id}/check-in/detail`, {
+      params: { limit },
+    }),
 
   create: (data: StudentCreateRequest) =>
     request.post<unknown, ApiResponse<StudentDetailResponse>>('/student', data),
@@ -79,6 +108,5 @@ export const studentApi = {
   update: (data: StudentUpdateRequest) =>
     request.put<unknown, ApiResponse<StudentDetailResponse>>('/student', data),
 
-  delete: (id: number) =>
-    request.delete<unknown, ApiResponse<null>>(`/student/${id}`),
+  delete: (id: number) => request.delete<unknown, ApiResponse<null>>(`/student/${id}`),
 }

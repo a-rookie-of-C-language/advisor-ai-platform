@@ -2,6 +2,7 @@ package cn.edu.cqut.advisorplatform.checkin.mapper;
 
 import cn.edu.cqut.advisorplatform.checkin.annotation.AutoFill;
 import cn.edu.cqut.advisorplatform.checkin.enums.OperationType;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import java.time.LocalDate;
@@ -25,6 +26,9 @@ public interface StudentCheckInRecordMapper {
       @Param("studentId") Long studentId,
       @Param("beginDate") LocalDate begin,
       @Param("endDate") LocalDate end);
+
+  List<StudentCheckInSummaryResponse> selectCheckInSummaries(
+      @Param("studentIds") List<Long> studentIds);
 
   /** 查询某个学生今日是否打卡 */
   Boolean ifStudentCheckIn(StudentCheckInRecord dto);

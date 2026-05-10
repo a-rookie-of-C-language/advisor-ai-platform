@@ -5,9 +5,13 @@ import cn.edu.cqut.advisorplatform.dto.request.StudentQueryRequest;
 import cn.edu.cqut.advisorplatform.dto.request.StudentUpdateRequest;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponse;
 import cn.edu.cqut.advisorplatform.dto.response.PageResponse;
+import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInDetailResponse;
+import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.dto.response.StudentDetailResponse;
+import cn.edu.cqut.advisorplatform.service.StudentCheckInService;
 import cn.edu.cqut.advisorplatform.service.StudentService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,9 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class StudentController {
 
   private final StudentService studentService;
+  private final StudentCheckInService studentCheckInService;
 
-  public StudentController(StudentService studentService) {
+  public StudentController(
+      StudentService studentService, StudentCheckInService studentCheckInService) {
     this.studentService = studentService;
+    this.studentCheckInService = studentCheckInService;
   }
 
   @GetMapping("/page")
@@ -39,6 +47,27 @@ public class StudentController {
   public ApiResponse<StudentDetailResponse> getStudentById(@PathVariable Long id) {
     StudentDetailResponse response = studentService.getStudentById(id);
     return ApiResponse.success(response);
+  }
+
+  @GetMapping("/{id}/check-in/summary")
+  public ApiResponse<StudentCheckInSummaryResponse> getStudentCheckInSummary(
+      @PathVariable Long id) {
+    return ApiResponse.success(studentCheckInService.getStudentCheckInSummary(id));
+  }
+
+  @GetMapping("/{id}/check-in/detail")
+  public ApiResponse<StudentCheckInDetailResponse> getStudentCheckInDetail(
+      @PathVariable Long id, @RequestParam(defaultValue = "10") Integer limit) {
+    return ApiResponse.success(studentCheckInService.getStudentCheckInDetail(id, limit));
+  }
+
+  @GetMapping("/check-in/summaries")
+  public ApiResponse<List<StudentCheckInSummaryResponse>> listStudentCheckInSummaries(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.success(
+        studentCheckInService.listStudentCheckInSummaries(keyword, page, size));
   }
 
   @PostMapping

@@ -2,6 +2,8 @@ package cn.edu.cqut.advisorplatform.checkin.service.impl;
 
 import cn.edu.cqut.advisorplatform.checkin.constant.CheckInConstant;
 import cn.edu.cqut.advisorplatform.checkin.mapper.StudentCheckInRecordMapper;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDetailResponse;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.PageResultVO;
@@ -81,6 +83,34 @@ public class CheckInServiceImpl implements CheckInService {
     return new PageResultVO<>(total, records);
   }
 
+  @Override
+  public List<StudentCheckInSummaryResponse> listStudentCheckInSummaries(List<Long> studentIds) {
+    return mapper.selectCheckInSummaries(studentIds);
+  }
+
+  @Override
+  public StudentCheckInDetailResponse getStudentCheckInDetail(Long studentId, Integer limit) {
+    if (studentId == null) {
+      throw new BadRequestException("学生ID不能为空");
+    }
+    if (limit == null || limit < 1) {
+      limit = 10;
+    }
+
+    StudentCheckInSummaryResponse summary =
+        mapper.selectCheckInSummaries(List.of(studentId)).stream()
+            .findFirst()
+            .orElseThrow(() -> new BadRequestException("学生不存在"));
+    List<CheckInRecordVO> records =
+        mapper.selectCheckInRecords(
+            studentId, LocalDate.now().minusDays(3650), LocalDate.now(), limit, 0);
+
+    StudentCheckInDetailResponse response = new StudentCheckInDetailResponse();
+    response.setSummary(summary);
+    response.setRecentRecords(records.stream().map(this::toRecordItem).toList());
+    return response;
+  }
+
   /** 学生打卡 */
   @Override
   public String studentCheckIn(Long studentId) {
@@ -106,5 +136,14 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     return CheckInConstant.ALREADY_CHECKED_IN;
+  }
+
+  private StudentCheckInDetailResponse.CheckInRecordItem toRecordItem(CheckInRecordVO record) {
+    StudentCheckInDetailResponse.CheckInRecordItem item =
+        new StudentCheckInDetailResponse.CheckInRecordItem();
+    item.setCheckDate(record.getCheckDate().toString());
+    item.setCheckedIn(record.getCheckedIn());
+    item.setCheckTime(record.getCheckTime());
+    return item;
   }
 }

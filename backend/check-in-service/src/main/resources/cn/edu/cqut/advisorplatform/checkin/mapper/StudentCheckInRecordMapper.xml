@@ -29,6 +29,30 @@
             AND student_id = #{studentId}
         </if>
     </select>
+    <select id="selectCheckInSummaries"
+            resultType="cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse">
+        SELECT s.id AS studentId,
+               s.student_no AS studentNo,
+               s.name AS studentName,
+               COUNT(r.id) AS totalCount,
+               COALESCE(SUM(CASE WHEN r.checked_in = TRUE THEN 1 ELSE 0 END), 0) AS checkedInCount,
+               COALESCE(SUM(CASE WHEN r.checked_in = FALSE THEN 1 ELSE 0 END), 0) AS missedCount,
+               CASE WHEN COUNT(r.id) = 0 THEN 0
+                    ELSE ROUND(CAST(SUM(CASE WHEN r.checked_in = TRUE THEN 1 ELSE 0 END) AS NUMERIC) / COUNT(r.id) * 100, 2)
+               END AS checkInRate,
+               MAX(r.check_time) AS lastCheckInTime
+        FROM student_profile s
+                 LEFT JOIN student_check_in_record r ON r.student_id = s.id
+        WHERE s.deleted = 0
+        <if test="studentIds != null and studentIds.size() > 0">
+            AND s.id IN
+            <foreach collection="studentIds" item="studentId" open="(" separator="," close=")">
+                #{studentId}
+            </foreach>
+        </if>
+        GROUP BY s.id, s.student_no, s.name
+        ORDER BY s.id DESC
+    </select>
     <!--查询学生是否打卡-->
     <select id="ifStudentCheckIn" resultType="java.lang.Boolean">
         SELECT s.checked_in FROM student_check_in_record AS s
@@ -54,15 +78,4 @@
     )
       ON CONFLICT (student_id, check_date) DO NOTHING
     </insert>
-    <!--查询学生今日打卡-->
-    <!--<select id="selectTodayRecords" resultType="cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInTodayRecords">
-        SELECT student_id,
-               check_date,
-               checked_in,
-               check_time
-        FROM student_check_in_record
-        WHERE student_id = #{studentId}
-        AND check_date = #{checkDate}
-    </select>-->
-
 </mapper>

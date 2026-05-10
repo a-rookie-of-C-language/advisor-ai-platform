@@ -12,6 +12,7 @@ import {
   FileTextOutlined,
   UploadOutlined,
   PieChartOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
@@ -62,6 +63,7 @@ export default function MainLayout() {
   const menuItems = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
     { key: '/student', icon: <TeamOutlined />, label: '学生管理' },
+    { key: '/student/check-in', icon: <CheckCircleOutlined />, label: '打卡管理' },
     { key: '/student/task', icon: <FileTextOutlined />, label: '任务管理' },
     { key: '/student/import', icon: <UploadOutlined />, label: '导入管理' },
     { key: '/student/stat', icon: <PieChartOutlined />, label: '数据统计' },

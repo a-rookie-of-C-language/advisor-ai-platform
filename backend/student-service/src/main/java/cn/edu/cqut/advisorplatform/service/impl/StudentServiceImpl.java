@@ -1,17 +1,22 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.client.CheckInServiceClient;
 import cn.edu.cqut.advisorplatform.dao.StudentFieldChangeDao;
 import cn.edu.cqut.advisorplatform.dao.StudentProfileDao;
 import cn.edu.cqut.advisorplatform.dto.request.StudentCreateRequest;
 import cn.edu.cqut.advisorplatform.dto.request.StudentQueryRequest;
 import cn.edu.cqut.advisorplatform.dto.request.StudentUpdateRequest;
+import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInDetailResponse;
+import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.dto.response.StudentDetailResponse;
 import cn.edu.cqut.advisorplatform.entity.StudentFieldChange;
 import cn.edu.cqut.advisorplatform.entity.StudentProfile;
 import cn.edu.cqut.advisorplatform.enums.InfoCompleteness;
 import cn.edu.cqut.advisorplatform.exception.BusinessException;
+import cn.edu.cqut.advisorplatform.service.StudentCheckInService;
 import cn.edu.cqut.advisorplatform.service.StudentService;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,15 +25,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class StudentServiceImpl implements StudentService {
+public class StudentServiceImpl implements StudentService, StudentCheckInService {
 
   private final StudentProfileDao studentProfileDao;
   private final StudentFieldChangeDao fieldChangeDao;
+  private final CheckInServiceClient checkInServiceClient;
 
   public StudentServiceImpl(
-      StudentProfileDao studentProfileDao, StudentFieldChangeDao fieldChangeDao) {
+      StudentProfileDao studentProfileDao,
+      StudentFieldChangeDao fieldChangeDao,
+      CheckInServiceClient checkInServiceClient) {
     this.studentProfileDao = studentProfileDao;
     this.fieldChangeDao = fieldChangeDao;
+    this.checkInServiceClient = checkInServiceClient;
   }
 
   @Override
@@ -145,6 +154,31 @@ public class StudentServiceImpl implements StudentService {
   public void calculateAndUpdateInfoCompleteness(StudentProfile profile) {
     InfoCompleteness completeness = profile.calculateInfoCompleteness();
     profile.setInfoCompleteness(completeness.getCode());
+  }
+
+  @Override
+  public StudentCheckInSummaryResponse getStudentCheckInSummary(Long studentId) {
+    return checkInServiceClient.listStudentCheckInSummaries(List.of(studentId)).stream()
+        .findFirst()
+        .orElseThrow(() -> new BusinessException("学生不存在"));
+  }
+
+  @Override
+  public StudentCheckInDetailResponse getStudentCheckInDetail(Long studentId, int limit) {
+    return checkInServiceClient.getStudentCheckInDetail(studentId, limit);
+  }
+
+  @Override
+  public List<StudentCheckInSummaryResponse> listStudentCheckInSummaries(
+      String keyword, int page, int size) {
+    Page<StudentProfile> profiles =
+        studentProfileDao.findByConditions(
+            null, null, null, null, null, keyword, PageRequest.of(page, size));
+    List<Long> studentIds = profiles.stream().map(StudentProfile::getId).toList();
+    if (studentIds.isEmpty()) {
+      return List.of();
+    }
+    return checkInServiceClient.listStudentCheckInSummaries(studentIds);
   }
 
   private void recordFieldChanges(
