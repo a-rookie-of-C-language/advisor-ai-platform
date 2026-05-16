@@ -39,6 +39,7 @@ from tools.tool_registry import ToolRegistry
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
+_EVENT_VERSION = "1.0"
 
 def _u(*codes: int) -> str:
     return "".join(chr(code) for code in codes)
@@ -299,6 +300,34 @@ class ChatStreamService:
         return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
     @staticmethod
+    def _event_envelope(
+        *,
+        source: str,
+        trace_id: str | None,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        return {
+            "event_version": _EVENT_VERSION,
+            "trace_id": trace_id or "",
+            "timestamp": int(time.time() * 1000),
+            "source": source,
+            "payload": payload,
+        }
+
+    def _serialize_protocol_event(
+        self,
+        *,
+        event: str,
+        source: str,
+        trace_id: str | None,
+        payload: dict[str, object],
+    ) -> str:
+        return self._serialize_event(
+            event,
+            self._event_envelope(source=source, trace_id=trace_id, payload=payload),
+        )
+
+    @staticmethod
     def _validate_messages(messages: Iterable[ChatMessage]) -> list[ChatMessage]:
         validated = []
         for message in messages:
@@ -344,9 +373,17 @@ class ChatStreamService:
                         data = parsed
                 except json.JSONDecodeError:
                     data = {}
+        payload = data.get("payload")
+        if isinstance(payload, dict):
+            data = payload
         return {"event": event_name, "data": data}
 
-    async def _stream_with_progress(self, event_stream: AsyncIterator[str]) -> AsyncIterator[str]:
+    async def _stream_with_progress(
+        self,
+        event_stream: AsyncIterator[str],
+        *,
+        trace_id: str | None,
+    ) -> AsyncIterator[str]:
         iterator = event_stream.__aiter__()
         progress_seconds = 0
         saw_delta = False
@@ -362,9 +399,11 @@ class ChatStreamService:
             except TimeoutError:
                 if not saw_delta:
                     progress_seconds += 1
-                    yield self._serialize_event(
-                        "progress",
-                        {"message": "模型思考中，请稍候...", "elapsedSec": progress_seconds},
+                    yield self._serialize_protocol_event(
+                        event="sys_progress",
+                        source="system",
+                        trace_id=trace_id,
+                        payload={"message": "模型思考中，请稍候...", "elapsed_sec": progress_seconds},
                     )
                 continue
             except StopAsyncIteration:
@@ -373,7 +412,6 @@ class ChatStreamService:
                         "error",
                         {"message": "stream finished without content"},
                     )
-                    yield self._serialize_event("done", {"message": "stream_finished_with_error"})
                 return
             except Exception:
                 pending_next = None
@@ -381,7 +419,7 @@ class ChatStreamService:
 
             parsed = self._parse_serialized_event(event)
             event_name = str(parsed.get("event", ""))
-            if event_name in {"delta", "raw"}:
+            if event_name in {"llm_delta", "raw"}:
                 saw_delta = True
             if event_name == "error":
                 saw_error = True
@@ -392,7 +430,6 @@ class ChatStreamService:
                     "error",
                     {"message": "stream finished without content"},
                 )
-                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
                 return
             yield event
 
@@ -565,7 +602,7 @@ class ChatStreamService:
                 session_id=session_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
-            )):
+            ), trace_id=trace_id):
                 trace_events.append(self._parse_serialized_event(event))
                 yield event
         else:
@@ -575,7 +612,7 @@ class ChatStreamService:
                 session_id=session_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
-            )):
+            ), trace_id=trace_id):
                 trace_events.append(self._parse_serialized_event(event))
                 yield event
 
@@ -614,7 +651,12 @@ class ChatStreamService:
         turn_id: str | None,
     ) -> AsyncIterator[str]:
         user_query = self._last_user_message(validated_messages)
-        yield self._serialize_event("start", {"message": "stream_started"})
+        yield self._serialize_protocol_event(
+            event="sys_start",
+            source="system",
+            trace_id=trace_id,
+            payload={"message": "stream_started"},
+        )
         saw_content = False
         try:
             async for event in self._graph_runner.run_stream(
@@ -625,13 +667,25 @@ class ChatStreamService:
                 trace_id=trace_id,
                 turn_id=turn_id,
             ):
-                event_name = str(event.get("event", ""))
+                raw_event_name = str(event.get("event", ""))
+                event_name = {
+                    "delta": "llm_delta",
+                    "sources": "tool_result",
+                    "error": "sys_error",
+                    "done": "sys_done",
+                    "start": "sys_start",
+                }.get(raw_event_name, raw_event_name)
                 event_data = event.get("data", {})
-                if event_name in {"delta", "raw"} and isinstance(event_data, dict):
+                if event_name in {"llm_delta", "raw"} and isinstance(event_data, dict):
                     text = str(event_data.get("text", "") or event_data.get("raw", ""))
                     if text:
                         saw_content = True
-                yield self._serialize_event(event_name, event_data)
+                yield self._serialize_protocol_event(
+                    event=event_name,
+                    source="llm" if event_name == "llm_delta" else ("tool" if event_name.startswith("tool_") else "system"),
+                    trace_id=trace_id,
+                    payload=event_data if isinstance(event_data, dict) else {},
+                )
             if not saw_content:
                 logger.warning(
                     "Graph stream produced no content, fallback to legacy: user_id=%s, session_id=%s",
@@ -646,11 +700,16 @@ class ChatStreamService:
                     turn_id=turn_id,
                 ):
                     parsed = self._parse_serialized_event(legacy_event)
-                    if str(parsed.get("event", "")) == "start":
+                    if str(parsed.get("event", "")) == "sys_start":
                         continue
                     yield legacy_event
                 return
-            yield self._serialize_event("done", {"message": "stream_finished"})
+            yield self._serialize_protocol_event(
+                event="sys_done",
+                source="system",
+                trace_id=trace_id,
+                payload={"finish_reason": "stream_finished"},
+            )
         except Exception as exc:  # noqa: BLE001
             logger.exception(
                 "Graph stream failed: user_id=%s, session_id=%s",
@@ -660,13 +719,23 @@ class ChatStreamService:
             if self._debug_stream:
                 logger.warning("debug_stream python error(graph): error=%s", exc)
             try:
-                yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
+                yield self._serialize_protocol_event(
+                    event="sys_error",
+                    source="system",
+                    trace_id=trace_id,
+                    payload={"code": "internal_error", "message": _STREAM_ERROR_MESSAGE, "retryable": True},
+                )
             except Exception as send_error_exc:  # noqa: BLE001
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
 
             try:
-                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
+                yield self._serialize_protocol_event(
+                    event="sys_done",
+                    source="system",
+                    trace_id=trace_id,
+                    payload={"finish_reason": "stream_finished_with_error"},
+                )
             except Exception as send_done_exc:  # noqa: BLE001
                 logger.warning("Failed to send stream done event after error: %s", send_done_exc)
 
@@ -721,7 +790,12 @@ class ChatStreamService:
                     exc,
                 )
 
-        yield self._serialize_event("start", {"message": "stream_started"})
+        yield self._serialize_protocol_event(
+            event="sys_start",
+            source="system",
+            trace_id=trace_id,
+            payload={"message": "stream_started"},
+        )
 
         answer_parts: list[str] = []
         debug_preview: list[str] = []
@@ -747,7 +821,12 @@ class ChatStreamService:
                     scope="legacy",
                     session_id=session_id,
                 )
-                yield self._serialize_event(route_decision.event_name, route_payload)
+                yield self._serialize_protocol_event(
+                    event=f"sys_{route_decision.event_name}",
+                    source="system",
+                    trace_id=trace_id,
+                    payload=route_payload,
+                )
 
                 async def tool_executor(tool_name: str, tool_args: dict, **kwargs) -> str:
                     return await self._execute_tool(
@@ -768,6 +847,18 @@ class ChatStreamService:
                     max_tool_calls=1,
                     max_tool_retries=3,
                 ):
+                    if event.type == "tool_call":
+                        yield self._serialize_protocol_event(
+                            event="tool_use",
+                            source="tool",
+                            trace_id=trace_id,
+                            payload={
+                                "tool_name": event.tool_name,
+                                "tool_call_id": f"{event.tool_name}-{event.attempt or 1}",
+                                "input": event.tool_args or {},
+                            },
+                        )
+                        continue
                     if event.type == "tool_result":
                         try:
                             payload = json.loads(event.tool_output) if event.tool_output else {}
@@ -778,17 +869,31 @@ class ChatStreamService:
                                 (event.tool_output or "")[:200],
                             )
                             payload = {}
-                        yield self._serialize_event(
-                            "sources",
-                            {
-                                "tool": event.tool_name,
-                                "success": event.success,
-                                "attempt": event.attempt,
-                                "status": payload.get("status", "error"),
-                                "message": payload.get("message", "tool execute failed"),
-                                "items": payload.get("items", []),
-                            },
-                        )
+                        base_payload = {
+                            "tool_name": event.tool_name,
+                            "tool_call_id": f"{event.tool_name}-{event.attempt or 1}",
+                            "attempt": event.attempt,
+                            "status": payload.get("status", "error"),
+                            "message": payload.get("message", "tool execute failed"),
+                        }
+                        if event.success:
+                            yield self._serialize_protocol_event(
+                                event="tool_result",
+                                source="tool",
+                                trace_id=trace_id,
+                                payload={**base_payload, "output": payload, "items": payload.get("items", [])},
+                            )
+                        else:
+                            yield self._serialize_protocol_event(
+                                event="tool_error",
+                                source="tool",
+                                trace_id=trace_id,
+                                payload={
+                                    **base_payload,
+                                    "code": payload.get("status", "error"),
+                                    "retryable": False,
+                                },
+                            )
                         continue
 
                     if event.type != "delta" or not event.text:
@@ -803,7 +908,12 @@ class ChatStreamService:
                             debug_chars += len(piece)
                     if self._debug_stream:
                         debug_delta_count += 1
-                    yield self._serialize_event("delta", {"text": delta})
+                    yield self._serialize_protocol_event(
+                        event="llm_delta",
+                        source="llm",
+                        trace_id=trace_id,
+                        payload={"text": delta},
+                    )
             else:
                 async for delta in self._provider.stream_chat(model_messages):
                     answer_parts.append(delta)
@@ -815,7 +925,12 @@ class ChatStreamService:
                             debug_chars += len(piece)
                     if self._debug_stream:
                         debug_delta_count += 1
-                    yield self._serialize_event("delta", {"text": delta})
+                    yield self._serialize_protocol_event(
+                        event="llm_delta",
+                        source="llm",
+                        trace_id=trace_id,
+                        payload={"text": delta},
+                    )
 
             answer = "".join(answer_parts).strip()
             if self._debug_stream:
@@ -838,7 +953,12 @@ class ChatStreamService:
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("Memory flush failed, skip writeback: %s", exc)
 
-            yield self._serialize_event("done", {"message": "stream_finished"})
+            yield self._serialize_protocol_event(
+                event="sys_done",
+                source="system",
+                trace_id=trace_id,
+                payload={"finish_reason": "stream_finished"},
+            )
         except Exception as exc:
             logger.exception(
                 "Legacy stream failed: user_id=%s, session_id=%s",
@@ -853,13 +973,23 @@ class ChatStreamService:
                     exc,
                 )
             try:
-                yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
+                yield self._serialize_protocol_event(
+                    event="sys_error",
+                    source="system",
+                    trace_id=trace_id,
+                    payload={"code": "internal_error", "message": _STREAM_ERROR_MESSAGE, "retryable": True},
+                )
             except Exception as send_error_exc:
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
 
             try:
-                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
+                yield self._serialize_protocol_event(
+                    event="sys_done",
+                    source="system",
+                    trace_id=trace_id,
+                    payload={"finish_reason": "stream_finished_with_error"},
+                )
             except Exception as send_done_exc:
                 logger.warning("Failed to send stream done event after error: %s", send_done_exc)
 
@@ -890,3 +1020,4 @@ class ChatStreamService:
         except Exception as exc:  # noqa: BLE001
             logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
             return ""
+
