@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.edu.cqut.advisorplatform.client.RagServiceClient;
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
@@ -32,13 +33,13 @@ class ChatServiceImplTest {
 
   @Test
   void createSession_shouldPersistDefaultKbIdAsZero() {
-    UserDO user = buildUser();
+    UserPrincipal user = buildPrincipal();
 
     ChatSessionDO saved = new ChatSessionDO();
     saved.setId(1001L);
     saved.setTitle("新对话");
     saved.setKbId(0L);
-    saved.setUser(user);
+    saved.setUser(buildUser());
     when(chatSessionDao.save(org.mockito.ArgumentMatchers.any(ChatSessionDO.class)))
         .thenReturn(saved);
 
@@ -51,11 +52,11 @@ class ChatServiceImplTest {
 
   @Test
   void getSessionKbId_shouldFallbackToZeroWhenNull() {
-    UserDO user = buildUser();
+    UserPrincipal user = buildPrincipal();
     ChatSessionDO session = new ChatSessionDO();
     session.setId(1001L);
     session.setKbId(null);
-    session.setUser(user);
+    session.setUser(buildUser());
 
     when(chatSessionDao.findById(1001L)).thenReturn(Optional.of(session));
 
@@ -66,11 +67,11 @@ class ChatServiceImplTest {
 
   @Test
   void updateSessionKb_shouldUseRemoteRagCheck() {
-    UserDO user = buildUser();
+    UserPrincipal user = buildPrincipal();
     ChatSessionDO session = new ChatSessionDO();
     session.setId(2001L);
     session.setKbId(0L);
-    session.setUser(user);
+    session.setUser(buildUser());
 
     when(chatSessionDao.findById(2001L)).thenReturn(Optional.of(session));
     when(ragServiceClient.existsKnowledgeBase(3001L))
@@ -81,6 +82,10 @@ class ChatServiceImplTest {
 
     assertThat(session.getKbId()).isEqualTo(3001L);
     verify(ragServiceClient).existsKnowledgeBase(3001L);
+  }
+
+  private UserPrincipal buildPrincipal() {
+    return new UserPrincipal(1L, "tester", "STUDENT");
   }
 
   private UserDO buildUser() {

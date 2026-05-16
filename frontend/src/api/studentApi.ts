@@ -90,7 +90,7 @@ export interface StudentUpdateRequest extends Partial<StudentCreateRequest> {
 
 export const studentApi = {
   list: (params: StudentQueryRequest) =>
-    request.get<unknown, ApiResponse<PageResponse<StudentDetailResponse>>>('/student/list', { params }),
+    request.get<unknown, ApiResponse<PageResponse<StudentDetailResponse>>>('/student/page', { params }),
 
   getById: (id: number) => request.get<unknown, ApiResponse<StudentDetailResponse>>(`/student/${id}`),
 

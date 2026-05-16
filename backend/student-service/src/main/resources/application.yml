@@ -31,6 +31,8 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history_student
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
@@ -42,6 +44,9 @@ spring:
 advisor:
   internal:
     token: ${INTERNAL_SERVICE_TOKEN:arookieofc}
+  jwt:
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}}
+    expiration: ${JWT_EXPIRE_MS:86400000}
   student:
     import:
       batch-size: 500

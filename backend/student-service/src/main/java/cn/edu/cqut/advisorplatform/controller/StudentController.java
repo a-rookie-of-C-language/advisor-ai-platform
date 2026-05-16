@@ -44,28 +44,28 @@ public class StudentController {
   }
 
   @GetMapping("/{id}")
-  public ApiResponse<StudentDetailResponse> getStudentById(@PathVariable Long id) {
+  public ApiResponse<StudentDetailResponse> getStudentById(@PathVariable("id") Long id) {
     StudentDetailResponse response = studentService.getStudentById(id);
     return ApiResponse.success(response);
   }
 
   @GetMapping("/{id}/check-in/summary")
   public ApiResponse<StudentCheckInSummaryResponse> getStudentCheckInSummary(
-      @PathVariable Long id) {
+      @PathVariable("id") Long id) {
     return ApiResponse.success(studentCheckInService.getStudentCheckInSummary(id));
   }
 
   @GetMapping("/{id}/check-in/detail")
   public ApiResponse<StudentCheckInDetailResponse> getStudentCheckInDetail(
-      @PathVariable Long id, @RequestParam(defaultValue = "10") Integer limit) {
+      @PathVariable("id") Long id, @RequestParam("limit") Integer limit) {
     return ApiResponse.success(studentCheckInService.getStudentCheckInDetail(id, limit));
   }
 
   @GetMapping("/check-in/summaries")
   public ApiResponse<List<StudentCheckInSummaryResponse>> listStudentCheckInSummaries(
-      @RequestParam(required = false) String keyword,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size) {
+      @RequestParam(value = "keyword", required = false) String keyword,
+      @RequestParam(value = "page", defaultValue = "0") int page,
+      @RequestParam(value = "size", defaultValue = "10") int size) {
     return ApiResponse.success(
         studentCheckInService.listStudentCheckInSummaries(keyword, page, size));
   }
@@ -79,14 +79,14 @@ public class StudentController {
 
   @PutMapping("/{id}")
   public ApiResponse<StudentDetailResponse> updateStudent(
-      @PathVariable Long id, @Valid @RequestBody StudentUpdateRequest request) {
+      @PathVariable("id") Long id, @Valid @RequestBody StudentUpdateRequest request) {
     request.setId(id);
     StudentDetailResponse response = studentService.updateStudent(request, "system");
     return ApiResponse.success(response);
   }
 
   @DeleteMapping("/{id}")
-  public ApiResponse<Void> deleteStudent(@PathVariable Long id) {
+  public ApiResponse<Void> deleteStudent(@PathVariable("id") Long id) {
     studentService.deleteStudent(id, "system");
     return ApiResponse.success(null);
   }

@@ -35,6 +35,10 @@ spring:
           uri: lb://audit-service
           predicates:
             - Path=/api/audit/**
+        - id: student-service
+          uri: lb://student-service
+          predicates:
+            - Path=/api/student/**
         - id: check-in-service
           uri: lb://check-in-service
           predicates:

@@ -76,7 +76,8 @@ public class StudentImportController {
 
   @GetMapping("/batches")
   public ApiResponse<Page<ImportBatchResponse>> listBatches(
-      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+      @RequestParam(value = "page", defaultValue = "0") int page,
+      @RequestParam(value = "size", defaultValue = "10") int size) {
     PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
     Page<ImportBatchResponse> result = importService.listBatches(pageRequest);
     return ApiResponse.success(result);

@@ -52,6 +52,7 @@ services:
       retries: 20
 
   zookeeper:
+    platform: linux/amd64
     image: confluentinc/cp-zookeeper:7.6.1
     container_name: advisor-zookeeper
     environment:
@@ -64,23 +65,27 @@ services:
       retries: 20
 
   kafka:
-    image: confluentinc/cp-kafka:7.6.1
+    image: apache/kafka:3.7.1
     container_name: advisor-kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://kafka:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -154,7 +159,7 @@ services:
       INTERNAL_SERVICE_TOKEN: arookieofc
       MEMORY_API_TOKEN: arookieofc
       AGENT_API_TOKEN: arookieofc
-      AGENT_BASE_URL: http://host.docker.internal:8001
+      AGENT_BASE_URL: http://agent:8001
       AI_GATEWAY_ENABLED: "false"
       AI_GATEWAY_BASE_URL: http://ai-gateway:8080
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
@@ -169,6 +174,8 @@ services:
       auth-service:
         condition: service_started
       ai-gateway:
+        condition: service_started
+      agent:
         condition: service_started
     ports:
       - "8082:8082"
@@ -198,6 +205,8 @@ services:
         condition: service_healthy
     ports:
       - "8083:8083"
+    volumes:
+      - rag_uploads:/app/uploads
 
   memory-service:
     build:
@@ -225,6 +234,40 @@ services:
         condition: service_healthy
     ports:
       - "8084:8084"
+
+  agent:
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
+    container_name: advisor-agent
+    env_file:
+      - ../agent/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/advisor_ai
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      AGENT_MODE: all
+      AGENT_API_HOST: 0.0.0.0
+      AGENT_API_PORT: 8001
+      AGENT_API_TOKEN: arookieofc
+      CLI_BACKEND_BASE_URL: http://gateway:8080
+      OPENAI_TEMPERATURE: 0.2
+      OPENAI_TIMEOUT_SEC: 60
+      EMBEDDING_PROVIDER: openai
+      EMBEDDING_MODEL: BAAI/bge-m3
+      ENABLE_TOOL_USE: "true"
+      ENABLED_TOOLS: web_search,rag_search
+      MEMORY_API_BASE_URL: http://memory-service:8084
+      MEMORY_API_TOKEN: arookieofc
+      DEBUG_STREAM: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      memory-service:
+        condition: service_started
+    ports:
+      - "8001:8001"
+    volumes:
+      - rag_uploads:/app/uploads
 
   audit-service:
     build:
@@ -319,6 +362,8 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
+      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
       INTERNAL_SERVICE_TOKEN: arookieofc
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -329,7 +374,7 @@ services:
       check-in-service:
         condition: service_started
     ports:
-      - "8088:8085"
+      - "8089:8085"
 
   gateway:
     build:
@@ -340,6 +385,7 @@ services:
       NACOS_SERVER_ADDR: nacos:8848
       JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
       ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
+      INTERNAL_SERVICE_TOKEN: arookieofc
       RISK_CONTROL_SERVICE_URL: http://risk-control-service:8086
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -439,5 +485,6 @@ services:
 
 volumes:
   backend_pg_data:
+  rag_uploads:
   prometheus_data:
   grafana_data:

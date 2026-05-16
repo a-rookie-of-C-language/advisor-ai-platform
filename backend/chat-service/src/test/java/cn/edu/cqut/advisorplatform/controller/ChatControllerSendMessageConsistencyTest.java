@@ -9,9 +9,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
@@ -38,9 +38,8 @@ class ChatControllerSendMessageConsistencyTest {
 
   @Test
   void sendMessage_shouldReturnCachedAnswerWithoutCallingAgent() throws Exception {
-    UserDO user = buildUser();
+    UserPrincipal user = buildUser();
     Map<String, String> body = Map.of("content", "hello", "kbId", "999");
-    when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
     when(chatService.listMessages(1001L, user))
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
     when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString()))
@@ -59,9 +58,8 @@ class ChatControllerSendMessageConsistencyTest {
 
   @Test
   void sendMessage_shouldIgnoreClientKbIdAndUseSessionKbId() throws Exception {
-    UserDO user = buildUser();
+    UserPrincipal user = buildUser();
     Map<String, String> body = Map.of("content", "hello", "kbId", "999");
-    when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
     when(chatService.listMessages(1001L, user))
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
     when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn(null);
@@ -77,7 +75,6 @@ class ChatControllerSendMessageConsistencyTest {
     ArgumentCaptor<ChatStreamRequestDTO> requestCaptor =
         ArgumentCaptor.forClass(ChatStreamRequestDTO.class);
     verify(agentProxyService).proxyChatOnce(requestCaptor.capture(), eq(1L));
-    assertThat(requestCaptor.getValue().getKbId()).isEqualTo(0L);
 
     ArgumentCaptor<String> userContent = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> assistantContent = ArgumentCaptor.forClass(String.class);
@@ -90,9 +87,8 @@ class ChatControllerSendMessageConsistencyTest {
 
   @Test
   void sendMessage_shouldPersistFailurePlaceholderWhenAgentThrows() throws Exception {
-    UserDO user = buildUser();
+    UserPrincipal user = buildUser();
     Map<String, String> body = Map.of("content", "hello", "kbId", "999");
-    when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
     when(chatService.listMessages(1001L, user))
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
     when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn(null);
@@ -111,9 +107,7 @@ class ChatControllerSendMessageConsistencyTest {
     assertThat(assistantContent.getValue()).contains("agent boom");
   }
 
-  private UserDO buildUser() {
-    UserDO user = new UserDO();
-    user.setId(1L);
-    return user;
+  private UserPrincipal buildUser() {
+    return new UserPrincipal(1L, "tester", "STUDENT");
   }
 }

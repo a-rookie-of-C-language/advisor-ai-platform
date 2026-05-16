@@ -4,8 +4,12 @@ import json
 import logging
 import os
 import time
+import sys
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
+
+if __package__ and __package__.startswith("agent."):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor

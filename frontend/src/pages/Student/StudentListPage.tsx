@@ -108,7 +108,7 @@ export default function StudentListPage() {
   }
 
   const handleDownloadTemplate = () => {
-    window.open('/api/student/import/template', '_blank')
+    window.open('/templates/student-import-template.xlsx', '_blank')
   }
 
   const columns = [

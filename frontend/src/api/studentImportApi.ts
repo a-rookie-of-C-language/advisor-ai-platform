@@ -41,7 +41,7 @@ interface PageResponse<T> {
 }
 
 export const studentImportApi = {
-  getTemplateUrl: () => '/student/import/template',
+  getTemplateUrl: () => '/templates/student-import-template.xlsx',
 
   upload: (file: File, overwrite = true) => {
     const formData = new FormData()

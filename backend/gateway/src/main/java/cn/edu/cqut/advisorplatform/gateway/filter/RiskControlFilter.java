@@ -36,6 +36,9 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
   @Value("${advisor.risk.control-service-url:http://risk-control-service:8086}")
   private String riskControlServiceUrl;
 
+  @Value("${INTERNAL_SERVICE_TOKEN:${advisor.internal.token:}}")
+  private String internalServiceToken;
+
   @Value("${advisor.risk.fail-open-default:true}")
   private boolean failOpenDefault;
 
@@ -71,11 +74,16 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
             : "unknown";
 
     return DataBufferUtils.join(exchange.getRequest().getBody())
-        .flatMap(
+        .map(
             dataBuffer -> {
               byte[] bytes = new byte[dataBuffer.readableByteCount()];
               dataBuffer.read(bytes);
               DataBufferUtils.release(dataBuffer);
+              return bytes;
+            })
+        .defaultIfEmpty(new byte[0])
+        .flatMap(
+            bytes -> {
               String requestBody = new String(bytes, StandardCharsets.UTF_8);
 
               return callRiskControlService(userId, sessionId, ipAddress, path, requestBody)
@@ -87,15 +95,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
                               .register(meterRegistry)
                               .increment();
 
-                          ServerHttpRequest decoratedRequest =
-                              new ServerHttpRequestDecorator(exchange.getRequest()) {
-                                @Override
-                                public Flux<DataBuffer> getBody() {
-                                  DataBuffer buffer =
-                                      exchange.getResponse().bufferFactory().wrap(bytes);
-                                  return Flux.just(buffer);
-                                }
-                              };
+                          ServerHttpRequest decoratedRequest = decorateRequest(exchange, bytes);
                           ServerWebExchange mutatedExchange =
                               exchange.mutate().request(decoratedRequest).build();
                           return chain.filter(mutatedExchange);
@@ -173,6 +173,19 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
             });
   }
 
+  private ServerHttpRequest decorateRequest(ServerWebExchange exchange, byte[] bytes) {
+    return new ServerHttpRequestDecorator(exchange.getRequest()) {
+      @Override
+      public Flux<DataBuffer> getBody() {
+        if (bytes.length == 0) {
+          return Flux.empty();
+        }
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+        return Flux.just(buffer);
+      }
+    };
+  }
+
   private Mono<RiskCheckResponse> callRiskControlService(
       String userId, String sessionId, String ipAddress, String path, String requestBody) {
 
@@ -188,6 +201,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
     return webClient
         .post()
         .uri(riskControlServiceUrl + "/internal/risk/check")
+        .header("X-Internal-Token", internalServiceToken)
         .bodyValue(request)
         .retrieve()
         .bodyToMono(RiskCheckResponse.class)
@@ -320,8 +334,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
     private String action;
     private String reason;
     private String category;
-    private String matchedKeyword;
-    private int statusCode;
+    private Integer statusCode;
     private String message;
 
     public static RiskCheckResponse passed() {
@@ -363,19 +376,11 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
       this.category = category;
     }
 
-    public String getMatchedKeyword() {
-      return matchedKeyword;
+    public Integer getStatusCode() {
+      return statusCode == null ? 200 : statusCode;
     }
 
-    public void setMatchedKeyword(String matchedKeyword) {
-      this.matchedKeyword = matchedKeyword;
-    }
-
-    public int getStatusCode() {
-      return statusCode;
-    }
-
-    public void setStatusCode(int statusCode) {
+    public void setStatusCode(Integer statusCode) {
       this.statusCode = statusCode;
     }
 

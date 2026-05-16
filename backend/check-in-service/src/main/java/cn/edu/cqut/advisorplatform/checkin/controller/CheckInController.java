@@ -42,11 +42,13 @@ public class CheckInController {
   @GetMapping("/records")
   public ApiResponseDTO<PageResultVO<CheckInRecordVO>> listCheckInRecords(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(required = false) Long studentId,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end,
-      @RequestParam(defaultValue = "1") Integer page,
-      @RequestParam(defaultValue = "10") Integer pageSize) {
+      @RequestParam(value = "studentId", required = false) Long studentId,
+      @RequestParam(value = "begin", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd")
+          LocalDate begin,
+      @RequestParam(value = "end", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd")
+          LocalDate end,
+      @RequestParam(value = "page", defaultValue = "1") Integer page,
+      @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
     log.info("统计学生的打卡记录,查询{},{},{},页数为{}，每页{}个", studentId, begin, end, page, pageSize);
     return ApiResponseDTO.success(
         checkInService.listCheckInRecords(userPrincipal, studentId, begin, end, page, pageSize));

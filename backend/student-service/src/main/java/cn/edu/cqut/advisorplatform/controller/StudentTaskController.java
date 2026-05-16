@@ -29,13 +29,14 @@ public class StudentTaskController {
   }
 
   @GetMapping("/page")
-  public ApiResponse<PageResponse<StudentTaskResponse>> queryTasks(TaskQueryRequest request) {
+  public ApiResponse<PageResponse<StudentTaskResponse>> queryTasks(
+      @org.springframework.web.bind.annotation.ModelAttribute TaskQueryRequest request) {
     Page<StudentTaskResponse> page = taskService.queryTasks(request);
     return ApiResponse.success(PageResponse.from(page));
   }
 
   @GetMapping("/{id}")
-  public ApiResponse<StudentTaskResponse> getTaskById(@PathVariable Long id) {
+  public ApiResponse<StudentTaskResponse> getTaskById(@PathVariable("id") Long id) {
     StudentTaskResponse response = taskService.getTaskById(id);
     return ApiResponse.success(response);
   }
@@ -49,16 +50,16 @@ public class StudentTaskController {
 
   @PutMapping("/{id}/status")
   public ApiResponse<StudentTaskResponse> updateTaskStatus(
-      @PathVariable Long id, @Valid @RequestBody TaskStatusUpdateRequest request) {
+      @PathVariable("id") Long id, @Valid @RequestBody TaskStatusUpdateRequest request) {
     StudentTaskResponse response = taskService.updateTaskStatus(id, request, "system");
     return ApiResponse.success(response);
   }
 
   @GetMapping("/student/{studentId}")
   public ApiResponse<PageResponse<StudentTaskResponse>> getTasksByStudentId(
-      @PathVariable Long studentId,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @PathVariable("studentId") Long studentId,
+      @RequestParam(value = "page", defaultValue = "0") int page,
+      @RequestParam(value = "size", defaultValue = "20") int size) {
     Page<StudentTaskResponse> response = taskService.getTasksByStudentId(studentId, page, size);
     return ApiResponse.success(PageResponse.from(response));
   }

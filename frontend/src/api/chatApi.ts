@@ -47,6 +47,7 @@ export interface StreamSourceItem {
 
 interface StreamHandlers {
   onStart?: () => void
+  onProgress?: (message: string, elapsedSec?: number) => void
   onDelta?: (text: string) => void
   onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
   onEnd?: () => void
@@ -92,7 +93,7 @@ function parseSseBlock(block: string): { event: string; data: string } | null {
 export const chatApi = {
   listSessions: () => request.get<unknown, ApiResponse<ChatSessionDTO[]>>('/chat/sessions'),
 
-  createSession: () => request.post<unknown, ApiResponse<ChatSessionDTO>>('/chat/sessions'),
+  createSession: () => request.post<unknown, ApiResponse<ChatSessionDTO>>('/chat/sessions', {}),
 
   deleteSession: (id: number) => request.delete<unknown, ApiResponse<null>>(`/chat/sessions/${id}`),
 
@@ -164,6 +165,7 @@ export const chatApi = {
       let sawAnyEvent = false
       let sawDone = false
       let sawError = false
+      let sawDelta = false
       let latestError = ''
       let doneReason = ''
       let streamClosed = false
@@ -191,13 +193,20 @@ export const chatApi = {
             }
             resetIdleTimer()
 
-            let data: { text?: string; message?: string; status?: string; items?: StreamSourceItem[] } = {}
+            let data: {
+              text?: string
+              message?: string
+              status?: string
+              items?: StreamSourceItem[]
+              elapsedSec?: number
+            } = {}
             try {
               data = JSON.parse(parsed.data) as {
                 text?: string
                 message?: string
                 status?: string
                 items?: StreamSourceItem[]
+                elapsedSec?: number
               }
             } catch {
               data = { message: parsed.data }
@@ -205,7 +214,12 @@ export const chatApi = {
 
             if (parsed.event === 'start') {
               handlers.onStart?.()
+            } else if (parsed.event === 'progress') {
+              const maybeElapsed = (data as { elapsedSec?: unknown }).elapsedSec
+              const elapsedSec = typeof maybeElapsed === 'number' ? maybeElapsed : undefined
+              handlers.onProgress?.(data.message ?? '模型思考中，请稍候...', elapsedSec)
             } else if (parsed.event === 'delta' && data.text) {
+              sawDelta = true
               handlers.onDelta?.(data.text)
             } else if (parsed.event === 'sources') {
               handlers.onSources?.(data.items ?? [], data.status, data.message)
@@ -218,6 +232,12 @@ export const chatApi = {
             } else if (parsed.event === 'done' || parsed.event === 'end') {
               sawDone = true
               doneReason = data.message ?? parsed.event
+              if (!sawDelta) {
+                sawError = true
+                latestError = 'stream done without delta'
+                handlers.onError?.(latestError)
+                throw new Error(latestError)
+              }
               handlers.onEnd?.()
               await reader.cancel()
               return

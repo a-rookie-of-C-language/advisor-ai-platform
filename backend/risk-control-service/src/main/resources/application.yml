@@ -23,7 +23,7 @@ spring:
       ddl-auto: none
     show-sql: false
   flyway:
-    enabled: false
+    enabled: ${FLYWAY_ENABLED:false}
   data:
     redis:
       host: ${REDIS_HOST:localhost}

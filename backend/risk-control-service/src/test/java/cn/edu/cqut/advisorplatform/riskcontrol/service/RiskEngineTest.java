@@ -2,40 +2,32 @@ package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserViolationDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserViolationRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class RiskEngineTest {
-
-  @Mock private List<RiskFilter> filters;
-
-  @Mock private UserViolationRepository userViolationRepository;
-
-  @InjectMocks private RiskEngine riskEngine;
 
   @Test
   void shouldPassWhenAllFiltersPass() {
     RiskFilter filter1 = mock(RiskFilter.class);
     RiskFilter filter2 = mock(RiskFilter.class);
+    UserViolationDao userViolationDao = mock(UserViolationDao.class);
 
     when(filter1.check(any())).thenReturn(RiskCheckResponse.builder().passed(true).build());
     when(filter2.check(any())).thenReturn(RiskCheckResponse.builder().passed(true).build());
 
     RiskEngine engine =
-        new RiskEngine(
-            List.of(filter1, filter2), userViolationRepository, new SimpleMeterRegistry());
+        new RiskEngine(List.of(filter1, filter2), userViolationDao, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -55,6 +47,7 @@ class RiskEngineTest {
   void shouldStopAtFirstFailedFilter() {
     RiskFilter filter1 = mock(RiskFilter.class);
     RiskFilter filter2 = mock(RiskFilter.class);
+    UserViolationDao userViolationDao = mock(UserViolationDao.class);
 
     RiskCheckResponse blockedResponse =
         RiskCheckResponse.builder()
@@ -70,8 +63,7 @@ class RiskEngineTest {
     when(filter1.getName()).thenReturn("filter1");
 
     RiskEngine engine =
-        new RiskEngine(
-            List.of(filter1, filter2), userViolationRepository, new SimpleMeterRegistry());
+        new RiskEngine(List.of(filter1, filter2), userViolationDao, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -91,6 +83,7 @@ class RiskEngineTest {
   @Test
   void shouldRecordViolationWhenUserIdPresent() {
     RiskFilter filter1 = mock(RiskFilter.class);
+    UserViolationDao userViolationDao = mock(UserViolationDao.class);
 
     RiskCheckResponse blockedResponse =
         RiskCheckResponse.builder()
@@ -106,7 +99,7 @@ class RiskEngineTest {
     when(filter1.getName()).thenReturn("filter1");
 
     RiskEngine engine =
-        new RiskEngine(List.of(filter1), userViolationRepository, new SimpleMeterRegistry());
+        new RiskEngine(List.of(filter1), userViolationDao, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -118,12 +111,13 @@ class RiskEngineTest {
 
     engine.check(request);
 
-    verify(userViolationRepository).save(any());
+    verify(userViolationDao).save(any());
   }
 
   @Test
   void shouldNotRecordViolationWhenUserIdNull() {
     RiskFilter filter1 = mock(RiskFilter.class);
+    UserViolationDao userViolationDao = mock(UserViolationDao.class);
 
     RiskCheckResponse blockedResponse =
         RiskCheckResponse.builder()
@@ -139,7 +133,7 @@ class RiskEngineTest {
     when(filter1.getName()).thenReturn("filter1");
 
     RiskEngine engine =
-        new RiskEngine(List.of(filter1), userViolationRepository, new SimpleMeterRegistry());
+        new RiskEngine(List.of(filter1), userViolationDao, new SimpleMeterRegistry());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -150,6 +144,6 @@ class RiskEngineTest {
 
     engine.check(request);
 
-    verify(userViolationRepository, never()).save(any());
+    verify(userViolationDao, never()).save(any());
   }
 }

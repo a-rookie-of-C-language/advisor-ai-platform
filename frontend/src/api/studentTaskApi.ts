@@ -58,7 +58,7 @@ export interface TaskStatusUpdateRequest {
 
 export const studentTaskApi = {
   list: (params: TaskQueryRequest) =>
-    request.get<unknown, ApiResponse<PageResponse<StudentTaskResponse>>>('/student/task/list', { params }),
+    request.get<unknown, ApiResponse<PageResponse<StudentTaskResponse>>>('/student/task/page', { params }),
 
   getById: (id: number) =>
     request.get<unknown, ApiResponse<StudentTaskResponse>>(`/student/task/${id}`),

@@ -101,20 +101,23 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
 
 
 def _build_annotation_provider_from_env() -> Any:
-    """从 .env 构建标注专用 LLM provider，未配置则返回 None（使用默认 provider）。"""
+    """从 .env 构建标注专用 LLM provider，优先读取 ANNOTATION_*，缺失时回退 OPENAI_*。"""
     from dotenv import load_dotenv
 
     load_dotenv()
-    api_key = os.getenv("ANNOTATION_LLM_API_KEY", "").strip()
-    model = os.getenv("ANNOTATION_LLM_MODEL", "").strip()
+    api_key = os.getenv("ANNOTATION_LLM_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    model = os.getenv("ANNOTATION_LLM_MODEL", "").strip() or os.getenv("OPENAI_MODEL", "").strip()
+    base_url = os.getenv("ANNOTATION_LLM_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
 
-    if not api_key or not model:
-        logger.info("未配置 ANNOTATION_LLM，将使用默认 provider")
-        return None
+    if not api_key:
+        raise RuntimeError("Missing ANNOTATION_LLM_API_KEY and OPENAI_API_KEY")
+    if not model:
+        raise RuntimeError("Missing ANNOTATION_LLM_MODEL and OPENAI_MODEL")
+    if not base_url:
+        raise RuntimeError("Missing ANNOTATION_LLM_BASE_URL and OPENAI_BASE_URL")
 
     from llm.openai_provider import OpenAIProvider
 
-    base_url = os.getenv("ANNOTATION_LLM_BASE_URL", "").strip() or None
     temperature = float(os.getenv("ANNOTATION_LLM_TEMPERATURE", "0.1"))
     timeout = float(os.getenv("ANNOTATION_LLM_TIMEOUT_SEC", "30"))
 

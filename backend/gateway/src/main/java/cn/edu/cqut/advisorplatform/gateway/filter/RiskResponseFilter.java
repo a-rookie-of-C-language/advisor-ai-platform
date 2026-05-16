@@ -31,10 +31,14 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
   private static final Logger log = LoggerFactory.getLogger(RiskResponseFilter.class);
   private static final List<String> RISK_CHECK_PATHS =
       List.of("/api/chat/", "/api/session/", "/api/rag/", "/api/memory/");
+  private static final String CHAT_STREAM_PATH = "/api/chat/stream";
   private static final String SSE_MEDIA_TYPE = "text/event-stream";
 
   @Value("${advisor.risk.control-service-url:http://risk-control-service:8086}")
   private String riskControlServiceUrl;
+
+  @Value("${INTERNAL_SERVICE_TOKEN:${advisor.internal.token:}}")
+  private String internalServiceToken;
 
   private final WebClient webClient;
   private final MeterRegistry meterRegistry;
@@ -50,6 +54,9 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
 
     boolean needCheck = RISK_CHECK_PATHS.stream().anyMatch(path::startsWith);
     if (!needCheck) {
+      return chain.filter(exchange);
+    }
+    if (CHAT_STREAM_PATH.equals(path)) {
       return chain.filter(exchange);
     }
 
@@ -220,6 +227,7 @@ public class RiskResponseFilter implements GlobalFilter, Ordered {
     return webClient
         .post()
         .uri(riskControlServiceUrl + "/internal/risk/check")
+        .header("X-Internal-Token", internalServiceToken)
         .bodyValue(request)
         .retrieve()
         .bodyToMono(RiskControlFilter.RiskCheckResponse.class)

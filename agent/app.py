@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import inspect
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -22,7 +23,7 @@ from llm.provider_factory import build_provider_from_env
 from RAG.DocumentIndexer import DocumentIndexer
 from RAG.RAG_service import RAG_service
 
-load_dotenv()
+load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,7 +41,6 @@ class ChatStreamRequestDTO(BaseModel):
     messages: list[ChatMessageDTO] = Field(..., min_length=1)
     userId: int | None = None
     sessionId: int | None = None
-    kbId: int | None = None
     turnId: str | None = None
     traceId: str | None = None
 
@@ -74,10 +74,14 @@ def _get_memory_orchestrator() -> MemoryOrchestrator | None:
 def _get_llm_extractor() -> OpenAILLMExtractor | None:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     model = os.getenv("OPENAI_MODEL", "").strip()
-    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip()
 
-    if not api_key or not model:
-        return None
+    if not api_key:
+        raise RuntimeError("Missing OPENAI_API_KEY for llm extractor")
+    if not model:
+        raise RuntimeError("Missing OPENAI_MODEL for llm extractor")
+    if not base_url:
+        raise RuntimeError("Missing OPENAI_BASE_URL for llm extractor")
     return OpenAILLMExtractor(api_key=api_key, model=model, base_url=base_url)
 
 
@@ -89,13 +93,19 @@ def _get_rag_service() -> RAG_service | None:
         return None
 
     ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+    embedding_provider = os.getenv("EMBEDDING_PROVIDER", "ollama").strip().lower()
     embedding_model = os.getenv("EMBEDDING_MODEL", "bge-m3").strip()
+    embedding_openai_base_url = os.getenv("EMBEDDING_OPENAI_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
+    embedding_openai_api_key = os.getenv("EMBEDDING_OPENAI_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
 
     try:
         return RAG_service(
             db_dsn=db_dsn,
             ollama_base_url=ollama_base_url,
+            embedding_provider=embedding_provider,
             embedding_model=embedding_model,
+            embedding_openai_base_url=embedding_openai_base_url or None,
+            embedding_openai_api_key=embedding_openai_api_key or None,
         )
     except Exception as exc:
         logger.error("Failed to initialize RAG service: %s", exc)
@@ -173,19 +183,17 @@ def create_api_app() -> FastAPI:
             or ""
         )
         logger.info(
-            "agent_chat_stream accepted: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s, messages=%s",
+            "agent_chat_stream accepted: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, messages=%s",
             trace_id,
             turn_id,
             request.sessionId,
             request.userId,
-            request.kbId,
             len(messages),
         )
 
         stream_kwargs = {
             "user_id": request.userId,
             "session_id": request.sessionId,
-            "kb_id": request.kbId,
         }
         # Backward compatible with fake/legacy stream services in tests.
         try:
@@ -339,13 +347,91 @@ def run_all() -> None:
         logger.info("All-mode stopped by keyboard interrupt")
 
 
+def _parse_sse_event(raw: str) -> dict[str, object]:
+    event_name = "message"
+    data: dict[str, object] = {}
+    for line in raw.strip().split("\n"):
+        if line.startswith("event:"):
+            event_name = line.split(":", 1)[1].strip()
+        elif line.startswith("data:"):
+            payload = line.split(":", 1)[1].strip()
+            try:
+                parsed = json.loads(payload)
+                if isinstance(parsed, dict):
+                    data = parsed
+            except json.JSONDecodeError:
+                data = {}
+    return {"event": event_name, "data": data}
+
+
+async def _run_cli_loop(service: ChatStreamService) -> None:
+    print("CLI 模式已启动。输入消息后按 Enter 发送。输入 'exit' 退出，输入 'new' 开始新会话。")
+    messages: list[ChatMessage] = []
+
+    while True:
+        try:
+            raw_input = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            logger.info("CLI stopped by user")
+            return
+
+        if not raw_input:
+            continue
+        if raw_input.lower() == "exit":
+            logger.info("CLI exit command received")
+            return
+        if raw_input.lower() == "new":
+            messages.clear()
+            print("新会话已创建。")
+            continue
+
+        messages.append(ChatMessage(role="user", content=raw_input))
+        answer_parts: list[str] = []
+        try:
+            async for event in service.stream_events(messages):
+                parsed = _parse_sse_event(event)
+                event_name = str(parsed.get("event", ""))
+                data = parsed.get("data", {})
+
+                if event_name == "delta":
+                    text = str(data.get("text", ""))
+                    answer_parts.append(text)
+                    print(text, end="", flush=True)
+                elif event_name == "done":
+                    print()
+                elif event_name == "error":
+                    print(f"\n[error] {data.get('message', '')}")
+                elif event_name == "progress":
+                    message = data.get("message", "")
+                    print(f"\n[{message}]", end="", flush=True)
+                elif event_name == "start":
+                    continue
+                else:
+                    print(f"\n[{event_name}] {data}", end="", flush=True)
+            answer = "".join(answer_parts).strip()
+            if answer:
+                messages.append(ChatMessage(role="assistant", content=answer))
+        except Exception as exc:  # noqa: BLE001
+            print(f"\nCLI error: {exc}")
+            logger.exception("CLI stream failed")
+
+
+def run_cli() -> None:
+    service = _get_chat_stream_service()
+    try:
+        asyncio.run(_run_cli_loop(service))
+    except KeyboardInterrupt:
+        logger.info("CLI interrupted by keyboard")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Advisor AI Agent")
     parser.add_argument(
         "--mode",
-        choices=["all", "indexer", "api"],
+        choices=["all", "indexer", "api", "cli"],
         default=os.getenv("AGENT_MODE", "all"),
-        help="Run mode: all or indexer or api",
+        help="Run mode: all or indexer or api or cli",
     )
     args = parser.parse_args()
 
@@ -355,6 +441,10 @@ def main() -> None:
 
     if args.mode == "indexer":
         run_indexer()
+        return
+
+    if args.mode == "cli":
+        run_cli()
         return
 
     run_all()
