@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from llm.chat_message import ChatMessage
-from prompt.QueryEngine import QueryEngine
+from prompt.PromptBuilder import PromptBuilder
 from tools.intent_router import emit_route_observation
 
 from .state import GraphState
@@ -106,7 +106,7 @@ async def select_skill_node(state: GraphState) -> GraphState:
         return {"active_skills": [], "skill_system_prompt": ""}
 
     catalog = skill_registry.catalog_prompt()
-    selection_prompt = QueryEngine.build_skill_selection_prompt(catalog, user_query)
+    selection_prompt = PromptBuilder.build_skill_selection_prompt(catalog, user_query)
 
     try:
         selection_messages = [ChatMessage(role="user", content=selection_prompt)]
@@ -213,7 +213,7 @@ async def load_memory_node(state: GraphState) -> GraphState:
             model_context = runtime.memory_injector.build_model_context(memory_context)
             memory_prompt = model_context.render(source_filter={"memory"})
             if memory_prompt:
-                dynamic_prompts.append(QueryEngine.build_memory_context_prompt(memory_prompt))
+                dynamic_prompts.append(PromptBuilder.build_memory_context_prompt(memory_prompt))
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, error=%s",
@@ -222,7 +222,7 @@ async def load_memory_node(state: GraphState) -> GraphState:
                 exc,
             )
 
-    model_messages = QueryEngine.assemble_messages(
+    model_messages = PromptBuilder.assemble_messages(
         list(messages),
         skill_prompts=skill_prompts,
         dynamic_prompts=dynamic_prompts,
@@ -544,7 +544,7 @@ async def _run_fusion_pipeline(
         "permission_config": runtime.tool_permission,
     }
 
-    # 三路并行：RAG 检索 + Web 搜索 + 场景识别
+    # 涓夎矾骞惰锛歊AG 妫€绱?+ Web 鎼滅储 + 鍦烘櫙璇嗗埆
     async def _exec_rag() -> list[SourceCandidate]:
         try:
             result = await runtime.tools.execute("rag_search", {"query": user_query, "top_k": 5}, context)
@@ -610,9 +610,9 @@ async def _run_fusion_pipeline(
 
     async def _detect_scene() -> str:
         try:
-            from prompt.QueryEngine import QueryEngine
+            from prompt.PromptBuilder import PromptBuilder
 
-            scene_prompt = QueryEngine.build_scene_detection_prompt(user_query)
+            scene_prompt = PromptBuilder.build_scene_detection_prompt(user_query)
             scene_messages = [ChatMessage(role="user", content=scene_prompt)]
             response_text = ""
             async for chunk in provider_stream(
@@ -643,7 +643,7 @@ async def _run_fusion_pipeline(
     for strategy in runtime.fusion_pipeline.get_enabled_ordered():
         ranked = strategy.rank(ranked, user_query, scene)
 
-    # 检查是否有冲突提示
+    # 妫€鏌ユ槸鍚︽湁鍐茬獊鎻愮ず
     conflict_hint = ranked[0].metadata.get("_conflict_hint") if ranked else None
 
     return {
@@ -656,13 +656,13 @@ async def _run_fusion_pipeline(
 def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any]) -> list:
     """Inject fused retrieval context into model_messages as a system prompt."""
     from llm.chat_message import ChatMessage
-    from prompt.QueryEngine import QueryEngine
+    from prompt.PromptBuilder import PromptBuilder
 
     candidates = fusion_context.get("candidates", [])
     if not candidates:
         return model_messages
 
-    # 构建融合结果提示
+    # 鏋勫缓铻嶅悎缁撴灉鎻愮ず
     rag_parts = []
     web_parts = []
     for c in candidates:
@@ -678,7 +678,7 @@ def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any])
         elif c.source == "web":
             web_parts.append(entry)
 
-    lines = ["以下是多源检索结果，供你参考："]
+    lines = ["浠ヤ笅鏄婧愭绱㈢粨鏋滐紝渚涗綘鍙傝€冿細"]
     if rag_parts:
         lines.append("\n【知识库检索结果】")
         lines.extend(rag_parts)
@@ -688,10 +688,10 @@ def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any])
 
     fusion_prompt = "\n".join(lines)
 
-    # 注入冲突提示
+    # 娉ㄥ叆鍐茬獊鎻愮ず
     conflict_hint = fusion_context.get("conflict_hint")
     if conflict_hint:
-        fusion_prompt += "\n\n" + QueryEngine.build_conflict_hint_prompt(conflict_hint)
+        fusion_prompt += "\n\n" + PromptBuilder.build_conflict_hint_prompt(conflict_hint)
 
     system_msg = ChatMessage(role="system", content=fusion_prompt)
     return [system_msg] + model_messages
@@ -741,3 +741,4 @@ async def finalize_node(state: GraphState) -> GraphState:
             state.get("debug_preview", ""),
         )
     return {}
+

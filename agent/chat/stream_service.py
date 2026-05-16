@@ -27,7 +27,11 @@ from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
-from prompt.QueryEngine import QueryEngine
+from prompt.PromptBuilder import PromptBuilder
+from query_engine.ConversationQueryEngine import ConversationQueryEngine
+from query_engine.EngineContext import EngineContext
+from query_engine.GraphEngineStrategy import GraphEngineStrategy
+from query_engine.LegacyEngineStrategy import LegacyEngineStrategy
 from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
 from tools.intent_router import IntentRouter, emit_route_observation
@@ -403,7 +407,7 @@ class ChatStreamService:
                         event="sys_progress",
                         source="system",
                         trace_id=trace_id,
-                        payload={"message": "模型思考中，请稍候...", "elapsed_sec": progress_seconds},
+                        payload={"message": "妯″瀷鎬濊€冧腑锛岃绋嶅€?..", "elapsed_sec": progress_seconds},
                     )
                 continue
             except StopAsyncIteration:
@@ -434,7 +438,7 @@ class ChatStreamService:
             yield event
 
     def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
-        return QueryEngine.build_failure_avoid_prompt(matched)
+        return PromptBuilder.build_failure_avoid_prompt(matched)
 
     def _write_failure_memory(
         self,
@@ -553,7 +557,7 @@ class ChatStreamService:
             if matched:
                 prompt = self._build_failure_avoid_prompt(matched)
                 if prompt:
-                    validated_messages = QueryEngine.assemble_messages(validated_messages, dynamic_prompts=[prompt])
+                    validated_messages = PromptBuilder.assemble_messages(validated_messages, dynamic_prompts=[prompt])
 
         compact_started = time.monotonic()
         compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
@@ -1020,4 +1024,5 @@ class ChatStreamService:
         except Exception as exc:  # noqa: BLE001
             logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
             return ""
+
 
