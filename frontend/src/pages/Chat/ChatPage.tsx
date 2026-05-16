@@ -180,8 +180,16 @@ export default function ChatPage() {
 
   const reloadSessions = async (preferredSessionId?: number, syncRoute = false): Promise<ChatSession[]> => {
     const response = await chatApi.listSessions()
-    const nextSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
-    setSessions(nextSessions)
+    const baseSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
+    let nextSessions: ChatSession[] = baseSessions
+    setSessions((prev) => {
+      const messageMap = new Map(prev.map((session) => [session.id, session.messages]))
+      nextSessions = baseSessions.map((session) => ({
+        ...session,
+        messages: messageMap.get(session.id) ?? [],
+      }))
+      return nextSessions
+    })
     const targetId = preferredSessionId ?? Number(searchParams.get('sessionId') ?? '')
     if (nextSessions.length === 0) {
       setActiveId(null)
