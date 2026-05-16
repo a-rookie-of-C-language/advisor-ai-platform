@@ -10,7 +10,6 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
 import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
-import { ragApi, type KnowledgeBaseDTO } from '../../api/ragApi'
 import { globalMessage } from '../../utils/globalMessage'
 import { emitChatSessionsRefresh, onChatSessionsRefresh } from './chatSessionEvents'
 import styles from './ChatPage.module.css'
@@ -40,8 +39,6 @@ interface ChatSession {
   kbId: number
   messages: ChatMessage[]
 }
-
-type SessionViewState = 'loading' | 'ready' | 'empty'
 
 interface MsgBubbleProps {
   msg: ChatMessage
@@ -157,11 +154,10 @@ function isSessionNotFoundError(error: unknown): boolean {
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseDTO[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
-  const [sessionViewState, setSessionViewState] = useState<SessionViewState>('loading')
+  const [messagesLoading, setMessagesLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const msgListRef = useRef<HTMLDivElement>(null)
   const messageLoadSeqRef = useRef(0)
@@ -173,14 +169,6 @@ export default function ChatPage() {
     () => sessions.find((session) => session.id === activeId) ?? null,
     [sessions, activeId],
   )
-  const activeKnowledgeBaseName = useMemo(() => {
-    if (!activeSession || activeSession.kbId <= 0) {
-      return ''
-    }
-    const matched = knowledgeBases.find((kb) => kb.id === activeSession.kbId)
-    return matched?.name ?? `知识库 #${activeSession.kbId}`
-  }, [activeSession, knowledgeBases])
-
   const applyRouteSessionId = (sessionId: number | null) => {
     routeSyncRef.current = true
     if (sessionId == null) {
@@ -197,7 +185,6 @@ export default function ChatPage() {
     const targetId = preferredSessionId ?? Number(searchParams.get('sessionId') ?? '')
     if (nextSessions.length === 0) {
       setActiveId(null)
-      setSessionViewState('empty')
       if (syncRoute) {
         applyRouteSessionId(null)
       }
@@ -207,11 +194,7 @@ export default function ChatPage() {
       ? nextSessions.find((item) => item.id === targetId)
       : null
     const nextActiveId = matched ? matched.id : nextSessions[0].id
-    const previousActiveId = activeId
     setActiveId(nextActiveId)
-    if (previousActiveId == null || previousActiveId !== nextActiveId) {
-      setSessionViewState('loading')
-    }
     if (syncRoute) {
       applyRouteSessionId(nextActiveId)
     }
@@ -264,7 +247,6 @@ export default function ChatPage() {
     if (!Number.isFinite(routeSessionId) || routeSessionId <= 0) {
       if (sessions.length > 0 && activeId !== sessions[0].id) {
         shouldAutoScrollRef.current = true
-        setSessionViewState('loading')
         setActiveId(sessions[0].id)
       }
       return
@@ -278,29 +260,17 @@ export default function ChatPage() {
 
     if (routeSessionId !== activeId) {
       shouldAutoScrollRef.current = true
-      setSessionViewState('loading')
       setActiveId(routeSessionId)
     }
   }, [searchParams, activeId, sessions, setSearchParams])
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const response = await ragApi.listKnowledgeBases()
-        setKnowledgeBases(response.data ?? [])
-      } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载知识库失败')
-      }
-    })()
-  }, [])
-
-  useEffect(() => {
     if (activeId == null) {
-      setSessionViewState('empty')
+      setMessagesLoading(false)
       return
     }
 
-    setSessionViewState('loading')
+    setMessagesLoading(true)
     const currentSeq = ++messageLoadSeqRef.current
     void (async () => {
       try {
@@ -309,7 +279,6 @@ export default function ChatPage() {
           return
         }
         const messages = (response.data ?? []).map(toChatMessage)
-        setSessionViewState(messages.length > 0 ? 'ready' : 'empty')
         setSessions((prev) => prev.map((session) => (
           session.id === activeId
             ? { ...session, messages }
@@ -322,33 +291,14 @@ export default function ChatPage() {
         if (await recoverInvalidSession(error)) {
           return
         }
-        setSessionViewState('empty')
         globalMessage.error(typeof error === 'string' ? error : '加载消息失败')
+      } finally {
+        if (currentSeq === messageLoadSeqRef.current) {
+          setMessagesLoading(false)
+        }
       }
     })()
   }, [activeId])
-
-  const ensureDefaultKbBound = async () => {
-    if (!activeSession || activeSession.kbId > 0 || knowledgeBases.length === 0) {
-      return
-    }
-    const defaultKbId = knowledgeBases[0].id
-    try {
-      const response = await chatApi.updateSessionKb(activeSession.id, defaultKbId)
-      const updated = response.data
-      setSessions((prev) => prev.map((session) => (
-        session.id === activeSession.id
-          ? { ...session, kbId: updated.kbId ?? 0, updatedAt: updated.updatedAt }
-          : session
-      )))
-    } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '自动绑定默认知识库失败')
-    }
-  }
-
-  useEffect(() => {
-    void ensureDefaultKbBound()
-  }, [activeSession?.id, activeSession?.kbId, knowledgeBases])
 
   const updateAssistantMessage = (sessionId: number, messageId: number, patch: Partial<ChatMessage>) => {
     setSessions((prev) => prev.map((session) => {
@@ -562,17 +512,7 @@ export default function ChatPage() {
   return (
     <div className={styles.container}>
       <main className={styles.main}>
-        {activeSession && (
-          <div style={{ padding: '16px 20px 0' }}>
-            <Space align="center" wrap>
-              <Text type="secondary">当前知识库</Text>
-              <Tag color={activeSession.kbId > 0 ? 'blue' : 'default'}>
-                {activeKnowledgeBaseName || '暂无可用知识库'}
-              </Tag>
-            </Space>
-          </div>
-        )}
-        {sessionViewState === 'loading'
+        {messagesLoading && (!activeSession || activeSession.messages.length === 0)
           ? (
             <div className={styles.emptyChat}>
               <div style={{ width: 'min(780px, 100%)' }}>
@@ -580,7 +520,7 @@ export default function ChatPage() {
               </div>
             </div>
             )
-          : sessionViewState === 'empty' || !activeSession || activeSession.messages.length === 0
+          : !activeSession || activeSession.messages.length === 0
           ? (
             <div className={styles.emptyChat}>
               <RobotOutlined style={{ fontSize: 52, color: '#CBD5E1', marginBottom: 16 }} />

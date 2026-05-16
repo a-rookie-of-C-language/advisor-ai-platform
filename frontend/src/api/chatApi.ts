@@ -97,9 +97,6 @@ export const chatApi = {
 
   deleteSession: (id: number) => request.delete<unknown, ApiResponse<null>>(`/chat/sessions/${id}`),
 
-  updateSessionKb: (sessionId: number, kbId: number) =>
-    request.patch<unknown, ApiResponse<ChatSessionDTO>>(`/chat/sessions/${sessionId}/kb`, { kbId }),
-
   listMessages: (sessionId: number) =>
     request.get<unknown, ApiResponse<ChatMessageDTO[]>>(`/chat/sessions/${sessionId}/messages`),
 
