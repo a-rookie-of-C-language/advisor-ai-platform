@@ -20,13 +20,14 @@ public class CheckInInternalController {
 
   @GetMapping("/summary")
   public List<StudentCheckInSummaryResponse> listStudentCheckInSummaries(
-      @RequestParam List<Long> studentIds) {
+      @RequestParam("studentIds") List<Long> studentIds) {
     return checkInService.listStudentCheckInSummaries(studentIds);
   }
 
   @GetMapping("/{studentId}")
   public StudentCheckInDetailResponse getStudentCheckInDetail(
-      @PathVariable Long studentId, @RequestParam(defaultValue = "10") Integer limit) {
+      @PathVariable("studentId") Long studentId,
+      @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
     return checkInService.getStudentCheckInDetail(studentId, limit);
   }
 }
