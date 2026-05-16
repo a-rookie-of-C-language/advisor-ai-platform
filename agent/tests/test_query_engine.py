@@ -6,25 +6,26 @@ import pytest
 
 from query_engine.ConversationQueryEngine import ConversationQueryEngine
 from query_engine.EngineContext import EngineContext
+from query_engine.EngineEvent import EngineEvent
 
 
 class _NoDoneStrategy:
-    async def run(self, context: EngineContext) -> AsyncIterator[str]:
+    async def run(self, context: EngineContext) -> AsyncIterator[EngineEvent]:
         _ = context
-        yield 'event: llm_delta\ndata: {"payload":{"text":"hello"}}\n\n'
+        yield EngineEvent.llm_delta("hello")
 
 
 class _WithDoneStrategy:
-    async def run(self, context: EngineContext) -> AsyncIterator[str]:
+    async def run(self, context: EngineContext) -> AsyncIterator[EngineEvent]:
         _ = context
-        yield 'event: llm_delta\ndata: {"payload":{"text":"hello"}}\n\n'
-        yield 'event: sys_done\ndata: {"payload":{"finish_reason":"stream_finished"}}\n\n'
+        yield EngineEvent.llm_delta("hello")
+        yield EngineEvent.sys_done("stream_finished")
 
 
 class _ErrorNoDoneStrategy:
-    async def run(self, context: EngineContext) -> AsyncIterator[str]:
+    async def run(self, context: EngineContext) -> AsyncIterator[EngineEvent]:
         _ = context
-        yield 'event: sys_error\ndata: {"payload":{"code":"x","message":"boom","retryable":false}}\n\n'
+        yield EngineEvent.sys_error(code="x", message="boom", retryable=False)
 
 
 @pytest.mark.asyncio

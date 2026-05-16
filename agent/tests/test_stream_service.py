@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from typing import AsyncIterator, Iterable
@@ -21,6 +21,8 @@ def _parse_event(raw: str) -> tuple[str, dict]:
             event = line.split(":", 1)[1].strip()
         if line.startswith("data:"):
             payload = json.loads(line.split(":", 1)[1].strip())
+    if isinstance(payload.get("payload"), dict):
+        payload = payload["payload"]
     return event, payload
 
 
@@ -207,7 +209,7 @@ async def test_stream_success_done_and_flush_failure_not_interrupt() -> None:
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "delta", "delta", "done"]
+    assert event_names == ["sys_start", "llm_delta", "llm_delta", "sys_done"]
     assert memory.load_called == 1
     assert memory.flush_called == 1
 
@@ -223,7 +225,7 @@ async def test_stream_memory_load_failure_degrades_without_breaking_chat() -> No
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "delta", "done"]
+    assert event_names == ["sys_start", "llm_delta", "sys_done"]
     assert memory.load_called == 1
     assert memory.flush_called == 1
     assert provider.last_messages[0].role == "user"
@@ -239,7 +241,7 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "error", "done"]
+    assert event_names == ["sys_start", "sys_error", "sys_done"]
     assert parsed[1][1]["message"] == "服务内部错误，请稍后重试"
 
 
@@ -258,7 +260,7 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> Non
     event_names = [name for name, _ in parsed]
     route_payload = parsed[1][1]
 
-    assert event_names == ["start", "intent_route", "delta", "done"]
+    assert event_names == ["sys_start", "sys_intent_route", "llm_delta", "sys_done"]
     _assert_search_route_payload(route_payload)
     assert {tool.name for tool in provider.last_tools} == {"web_search"}
 
@@ -277,7 +279,7 @@ async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
     event_names = [name for name, _ in parsed]
     route_payload = parsed[1][1]
 
-    assert event_names == ["start", "intent_route", "delta", "done"]
+    assert event_names == ["sys_start", "sys_intent_route", "llm_delta", "sys_done"]
     _assert_search_route_payload(route_payload)
     assert {tool.name for tool in provider.last_tools} == {"web_search"}
 
@@ -294,7 +296,7 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "intent_route", "sources", "delta", "done"]
+    assert event_names == ["sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"]
     assert parsed[1][1]["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
 
 
@@ -310,7 +312,7 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "intent_route", "sources", "delta", "done"]
+    assert event_names == ["sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"]
     assert parsed[1][1]["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
     assert parsed[2][1]["status"] == "miss"
     assert parsed[2][1]["items"] == []
@@ -329,7 +331,7 @@ async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.Monke
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "delta", "done"]
+    assert event_names == ["sys_start", "llm_delta", "sys_done"]
 
 
 @pytest.mark.asyncio
@@ -345,7 +347,7 @@ async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "intent_route", "sources", "delta", "done"]
+    assert event_names == ["sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"]
     route_payload = parsed[1][1]
     assert route_payload["matched_by"] == "fallback"
     assert route_payload["categories"] == ["retrieval", "search"]
@@ -368,3 +370,4 @@ async def test_graph_health_contains_context_compaction_stats() -> None:
     assert "tokens_after" in stats
     assert "tokens_released" in stats
     assert "latency_ms" in stats
+
