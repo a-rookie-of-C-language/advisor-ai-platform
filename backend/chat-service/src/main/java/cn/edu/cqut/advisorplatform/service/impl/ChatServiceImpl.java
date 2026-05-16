@@ -66,8 +66,7 @@ public class ChatServiceImpl implements ChatService {
   @Transactional
   public Map<String, Object> updateSessionKb(
       Long sessionId, Long kbId, @Nullable UserPrincipal currentUser) {
-    ChatSessionDO session =
-        chatSessionDao.findById(sessionId).orElseThrow(() -> new NotFoundException("会话不存在"));
+    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
     if (kbId == null || kbId <= 0) {
       session.setKbId(DEFAULT_KB_ID);
     } else {
@@ -91,14 +90,19 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public long getSessionKbId(Long sessionId, @Nullable UserPrincipal currentUser) {
-    ChatSessionDO session = getOwnedSession(sessionId, currentUser);
+    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
     Long kbId = session.getKbId();
     return kbId == null ? DEFAULT_KB_ID : kbId;
   }
 
+  private ChatSessionDO getSessionForLoggedInUser(
+      Long sessionId, @Nullable UserPrincipal currentUser) {
+    requireUserId(currentUser);
+    return chatSessionDao.findById(sessionId).orElseThrow(() -> new NotFoundException("会话不存在"));
+  }
+
   private ChatSessionDO getOwnedSession(Long sessionId, UserPrincipal currentUser) {
-    ChatSessionDO session =
-        chatSessionDao.findById(sessionId).orElseThrow(() -> new NotFoundException("会话不存在"));
+    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
     Long currentUserId = requireUserId(currentUser);
     Long ownerId = session.getUser() == null ? null : session.getUser().getId();
     if (ownerId == null || !ownerId.equals(currentUserId)) {

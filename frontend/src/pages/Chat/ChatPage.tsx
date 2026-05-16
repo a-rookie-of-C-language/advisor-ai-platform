@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Collapse, Input, Select, Skeleton, Space, Tag, Typography } from 'antd'
+import { Button, Collapse, Input, Skeleton, Space, Tag, Typography } from 'antd'
 import {
   FileTextOutlined,
   LoadingOutlined,
@@ -173,6 +173,13 @@ export default function ChatPage() {
     () => sessions.find((session) => session.id === activeId) ?? null,
     [sessions, activeId],
   )
+  const activeKnowledgeBaseName = useMemo(() => {
+    if (!activeSession || activeSession.kbId <= 0) {
+      return ''
+    }
+    const matched = knowledgeBases.find((kb) => kb.id === activeSession.kbId)
+    return matched?.name ?? `知识库 #${activeSession.kbId}`
+  }, [activeSession, knowledgeBases])
 
   const applyRouteSessionId = (sessionId: number | null) => {
     routeSyncRef.current = true
@@ -321,23 +328,27 @@ export default function ChatPage() {
     })()
   }, [activeId])
 
-  const handleSelectKb = async (kbId: number) => {
-    if (!activeSession) {
+  const ensureDefaultKbBound = async () => {
+    if (!activeSession || activeSession.kbId > 0 || knowledgeBases.length === 0) {
       return
     }
+    const defaultKbId = knowledgeBases[0].id
     try {
-      const response = await chatApi.updateSessionKb(activeSession.id, kbId)
+      const response = await chatApi.updateSessionKb(activeSession.id, defaultKbId)
       const updated = response.data
       setSessions((prev) => prev.map((session) => (
         session.id === activeSession.id
           ? { ...session, kbId: updated.kbId ?? 0, updatedAt: updated.updatedAt }
           : session
       )))
-      globalMessage.success(kbId > 0 ? '知识库已绑定到当前会话' : '已取消当前会话的知识库绑定')
     } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '更新会话知识库失败')
+      globalMessage.error(typeof error === 'string' ? error : '自动绑定默认知识库失败')
     }
   }
+
+  useEffect(() => {
+    void ensureDefaultKbBound()
+  }, [activeSession?.id, activeSession?.kbId, knowledgeBases])
 
   const updateAssistantMessage = (sessionId: number, messageId: number, patch: Partial<ChatMessage>) => {
     setSessions((prev) => prev.map((session) => {
@@ -555,16 +566,9 @@ export default function ChatPage() {
           <div style={{ padding: '16px 20px 0' }}>
             <Space align="center" wrap>
               <Text type="secondary">当前知识库</Text>
-              <Select
-                value={activeSession.kbId}
-                style={{ minWidth: 240 }}
-                disabled={sending}
-                onChange={(value) => void handleSelectKb(value)}
-                options={[
-                  { value: 0, label: '不使用知识库' },
-                  ...knowledgeBases.map((kb) => ({ value: kb.id, label: kb.name })),
-                ]}
-              />
+              <Tag color={activeSession.kbId > 0 ? 'blue' : 'default'}>
+                {activeKnowledgeBaseName || '暂无可用知识库'}
+              </Tag>
             </Space>
           </div>
         )}
