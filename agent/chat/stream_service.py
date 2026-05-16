@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -27,7 +27,11 @@ from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
 from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
-from prompt.QueryEngine import QueryEngine
+from prompt.PromptBuilder import PromptBuilder
+from query_engine.ConversationQueryEngine import ConversationQueryEngine
+from query_engine.EngineContext import EngineContext
+from query_engine.GraphEngineStrategy import GraphEngineStrategy
+from query_engine.LegacyEngineStrategy import LegacyEngineStrategy
 from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
 from tools.intent_router import IntentRouter, emit_route_observation
@@ -380,7 +384,7 @@ class ChatStreamService:
                         event="sys_progress",
                         source="system",
                         trace_id=trace_id,
-                        payload={"message": "模型思考中，请稍候...", "elapsed_sec": progress_seconds},
+                        payload={"message": "妯″瀷鎬濊€冧腑锛岃绋嶅€?..", "elapsed_sec": progress_seconds},
                     )
                 continue
             except StopAsyncIteration:
@@ -425,7 +429,7 @@ class ChatStreamService:
             yield event
 
     def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
-        return QueryEngine.build_failure_avoid_prompt(matched)
+        return PromptBuilder.build_failure_avoid_prompt(matched)
 
     def _write_failure_memory(
         self,
@@ -540,7 +544,7 @@ class ChatStreamService:
             if matched:
                 prompt = self._build_failure_avoid_prompt(matched)
                 if prompt:
-                    validated_messages = QueryEngine.assemble_messages(validated_messages, dynamic_prompts=[prompt])
+                    validated_messages = PromptBuilder.assemble_messages(validated_messages, dynamic_prompts=[prompt])
 
         compact_started = time.monotonic()
         compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
@@ -574,26 +578,22 @@ class ChatStreamService:
             )
 
         trace_events: list[dict[str, object]] = []
-        if self._use_langgraph:
-            async for event in self._stream_with_progress(self._stream_events_graph(
-                validated_messages,
-                user_id=user_id,
-                session_id=session_id,
-                trace_id=trace_id,
-                turn_id=turn_id,
-            ), trace_id=trace_id):
-                trace_events.append(self._parse_serialized_event(event))
-                yield event
-        else:
-            async for event in self._stream_with_progress(self._stream_events_legacy(
-                compacted_messages,
-                user_id=user_id,
-                session_id=session_id,
-                trace_id=trace_id,
-                turn_id=turn_id,
-            ), trace_id=trace_id):
-                trace_events.append(self._parse_serialized_event(event))
-                yield event
+        context_messages = validated_messages if self._use_langgraph else compacted_messages
+        context = EngineContext(
+            messages=context_messages,
+            user_id=user_id,
+            session_id=session_id,
+            kb_id=kb_id,
+            trace_id=trace_id,
+            turn_id=turn_id,
+        )
+        strategy = GraphEngineStrategy(self._stream_events_graph) if self._use_langgraph else LegacyEngineStrategy(
+            self._stream_events_legacy
+        )
+        engine = ConversationQueryEngine(strategy=strategy)
+        async for event in self._stream_with_progress(engine.query(context), trace_id=trace_id):
+            trace_events.append(self._parse_serialized_event(event))
+            yield event
 
         if self._feature_action_scoring:
             action_score = score_action(user_query=user_query, trace_events=trace_events)
@@ -998,4 +998,5 @@ class ChatStreamService:
         except Exception as exc:  # noqa: BLE001
             logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
             return ""
+
 

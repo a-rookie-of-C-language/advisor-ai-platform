@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -12,7 +12,7 @@ from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_call_fsm import ToolCallFSM
 from llm.tool_spec import ToolSpec
-from prompt.QueryEngine import QueryEngine
+from prompt.PromptBuilder import PromptBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class OpenAIProvider(BaseLLMProvider):
 
     @staticmethod
     def _to_tool_payload(tools: list[ToolSpec], *, strict: bool = False) -> list[dict[str, Any]]:
-        return QueryEngine.build_tool_payload(tools, strict=strict)
+        return PromptBuilder.build_tool_payload(tools, strict=strict)
 
     async def stream_chat(
         self,
@@ -183,7 +183,7 @@ class OpenAIProvider(BaseLLMProvider):
                         max_exec_retries=max_tool_retries,
                     )
 
-                    # --- 阶段一：参数解析与验证 ---
+                    # --- 闃舵涓€锛氬弬鏁拌В鏋愪笌楠岃瘉 ---
                     try:
                         tool_args = json.loads(args_text)
                     except Exception:
@@ -192,7 +192,7 @@ class OpenAIProvider(BaseLLMProvider):
                     if not fsm.validate_args(tool_args):
                         # FSM 进入 ARGS_RETRY 或 FAILED
                         if fsm.state.value == "args_retry":
-                            # 重试：通知 LLM 参数格式错误，等待下一轮修正
+                            # 参数格式错误，先回传错误结果，等待下一轮修正
                             error_output = json.dumps(
                                 {
                                     "ok": False,
@@ -224,7 +224,7 @@ class OpenAIProvider(BaseLLMProvider):
                             )
                             continue
 
-                        # FAILED：参数解析彻底失败
+                        # 参数解析彻底失败
                         error_output = json.dumps(
                             {
                                 "ok": False,
@@ -256,7 +256,7 @@ class OpenAIProvider(BaseLLMProvider):
                         )
                         continue
 
-                    # --- 阶段二：工具执行 ---
+                    # --- 闃舵浜岋細宸ュ叿鎵ц ---
                     yield LLMStreamEvent(
                         type="tool_call",
                         tool_name=tool_name,
@@ -315,3 +315,4 @@ class OpenAIProvider(BaseLLMProvider):
             for piece in self._chunk_text(final_text, 32):
                 yield LLMStreamEvent(type="delta", text=piece)
             break
+

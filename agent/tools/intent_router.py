@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import logging
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from llm.chat_message import ChatMessage
-from prompt.QueryEngine import QueryEngine
+from prompt.PromptBuilder import PromptBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ _CATEGORY_RULES: dict[str, dict[str, list[str]]] = {
     },
     "search": {
         "strong": [
-            r"(?:网上|互联网|线上).*(?:搜|查|找)",
+            r"(?:网上|互联网|线上).*(?:搜索|查询|查)",
             r"(?:最新|新闻|今日|今天|最近).*(?:消息|动态|信息|政策|规定)?",
             r"(?:天气|股价|汇率|比赛|赛事)",
         ],
@@ -58,7 +58,7 @@ _CATEGORY_RULES: dict[str, dict[str, list[str]]] = {
     "skill": {
         "strong": [
             r"(?:调用|使用|展开).*(?:技能|skill)",
-            r"(?:按|根据).*(?:技能|skill).*(?:执行|处理)",
+            r"(?:按照|根据).*(?:技能|skill).*(?:执行|处理)",
         ],
         "weak": [
             r"技能|skill",
@@ -69,7 +69,7 @@ _CATEGORY_RULES: dict[str, dict[str, list[str]]] = {
 
 _CATEGORY_DESCRIPTIONS: dict[str, str] = {
     "retrieval": "基于知识库、文档、资料做检索与问答。",
-    "search": "查询互联网/最新时效信息。",
+    "search": "查询互联网最新时效信息。",
     "memory_read": "读取长期记忆、历史备忘或已保存用户信息。",
     "memory_write": "将用户偏好、约定或备忘写入长期记忆。",
     "skill": "展开技能说明或执行指南。",
@@ -145,7 +145,7 @@ class RouteDecision:
 
 
 class IntentRouter:
-    """分层意图路由器：规则强命中 -> 打分筛选 -> LLM 轻判 -> 保守回退。"""
+    """Layered intent router: strong rules -> score -> lightweight LLM -> conservative fallback."""
 
     def __init__(
         self,
@@ -287,7 +287,7 @@ class IntentRouter:
             f"{category}: {self._describe_category(category)}"
             for category in sorted(all_categories)
         ]
-        prompt = QueryEngine.build_intent_routing_prompt(category_descriptions, query)
+        prompt = PromptBuilder.build_intent_routing_prompt(category_descriptions, query)
         messages = [ChatMessage(role="user", content=prompt)]
         response_text = ""
         try:
@@ -381,4 +381,5 @@ class IntentRouter:
         return normalized
 
     def _describe_category(self, category: str) -> str:
-        return _CATEGORY_DESCRIPTIONS.get(category, "工具类别")
+        return _CATEGORY_DESCRIPTIONS.get(category, "宸ュ叿绫诲埆")
+

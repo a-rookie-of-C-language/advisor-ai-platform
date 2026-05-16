@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any
 
@@ -6,7 +6,7 @@ from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec
 
 
-class QueryEngine:
+class PromptBuilder:
     """Centralized prompt assembly for all system/user message construction."""
 
 
@@ -14,11 +14,11 @@ class QueryEngine:
     def build_skill_selection_prompt(catalog: str, user_query: str) -> str:
         """Build the prompt sent to LLM for autonomous skill selection."""
         return (
-            "你是一个技能选择器。根据用户的输入，从可用技能中选择一个或多个最合适的技能。\n"
-            "只返回被选中的技能名称列表，用JSON数组格式，例如 [\"knowledge_qa\"]。\n"
-            "如果没有合适的技能，返回空数组 []。\n\n"
+            "浣犳槸涓€涓妧鑳介€夋嫨鍣ㄣ€傛牴鎹敤鎴风殑杈撳叆锛屼粠鍙敤鎶€鑳戒腑閫夋嫨涓€涓垨澶氫釜鏈€鍚堥€傜殑鎶€鑳姐€俓n"
+            "鍙繑鍥炶閫変腑鐨勬妧鑳藉悕绉板垪琛紝鐢↗SON鏁扮粍鏍煎紡锛屼緥濡?[\"knowledge_qa\"]銆俓n"
+            "濡傛灉娌℃湁鍚堥€傜殑鎶€鑳斤紝杩斿洖绌烘暟缁?[]銆俓n\n"
             f"{catalog}\n\n"
-            f"用户输入: {user_query}"
+            f"鐢ㄦ埛杈撳叆: {user_query}"
         )
 
 
@@ -80,7 +80,7 @@ class QueryEngine:
         """Build a text description of available tools for system prompt injection."""
         if not tools:
             return ""
-        lines = ["你可以使用以下工具："]
+        lines = ["浣犲彲浠ヤ娇鐢ㄤ互涓嬪伐鍏凤細"]
         for tool in tools:
             lines.append(f"- {tool.name}: {tool.description}")
         return "\n".join(lines)
@@ -90,12 +90,12 @@ class QueryEngine:
     def build_scene_detection_prompt(user_query: str) -> str:
         """Build the prompt sent to LLM for scene detection (product/policy/general)."""
         return (
-            "根据用户问题，判断属于以下哪个场景，返回 JSON 格式：\n"
+            "鏍规嵁鐢ㄦ埛闂锛屽垽鏂睘浜庝互涓嬪摢涓満鏅紝杩斿洖 JSON 鏍煎紡锛歕n"
             '{"scene": "product_query" | "policy_query" | "general", "confidence": 0.0~1.0}\n\n'
-            "- product_query: 产品功能、制度规范、操作指南相关\n"
-            "- policy_query: 政策法规、时效性信息、最新规定相关\n"
-            "- general: 通用查询\n\n"
-            f"用户问题: {user_query}"
+            "- product_query: 浜у搧鍔熻兘銆佸埗搴﹁鑼冦€佹搷浣滄寚鍗楃浉鍏砛n"
+            "- policy_query: 鏀跨瓥娉曡銆佹椂鏁堟€т俊鎭€佹渶鏂拌瀹氱浉鍏砛n"
+            "- general: 閫氱敤鏌ヨ\n\n"
+            f"鐢ㄦ埛闂: {user_query}"
         )
 
     @staticmethod
@@ -103,14 +103,14 @@ class QueryEngine:
         """Build the prompt sent to LLM for high-precision tool category routing."""
         category_block = "\n".join(f"- {item}" for item in category_descriptions)
         return (
-            "你是一个高精度工具路由器。请根据用户问题，从候选工具类别中选择最需要注入给模型的类别。\n"
-            "遵循宁缺毋滥原则：只有在高度相关时才选择该类别，不要为了覆盖面而多选。\n"
-            "如果问题不需要某个类别，不要返回它。\n"
-            "返回 JSON 对象，格式如下：\n"
-            '{"categories": ["category1"], "confidence": 0.0, "reason": "简短原因"}\n\n'
-            "候选类别说明：\n"
+            "浣犳槸涓€涓珮绮惧害宸ュ叿璺敱鍣ㄣ€傝鏍规嵁鐢ㄦ埛闂锛屼粠鍊欓€夊伐鍏风被鍒腑閫夋嫨鏈€闇€瑕佹敞鍏ョ粰妯″瀷鐨勭被鍒€俓n"
+            "閬靛惊瀹佺己姣嬫互鍘熷垯锛氬彧鏈夊湪楂樺害鐩稿叧鏃舵墠閫夋嫨璇ョ被鍒紝涓嶈涓轰簡瑕嗙洊闈㈣€屽閫夈€俓n"
+            "濡傛灉闂涓嶉渶瑕佹煇涓被鍒紝涓嶈杩斿洖瀹冦€俓n"
+            "杩斿洖 JSON 瀵硅薄锛屾牸寮忓涓嬶細\n"
+            '{"categories": ["category1"], "confidence": 0.0, "reason": "绠€鐭師鍥?}\n\n'
+            "鍊欓€夌被鍒鏄庯細\n"
             f"{category_block}\n\n"
-            f"用户问题: {user_query}"
+            f"鐢ㄦ埛闂: {user_query}"
         )
 
     @staticmethod
@@ -128,7 +128,7 @@ class QueryEngine:
     ) -> list[ChatMessage]:
         """Assemble messages with system prompts ordered by stability (static first for cache hit).
 
-        Order: static (tool desc, base instructions) → skill → dynamic (memory, failure) → user messages
+        Order: static (tool desc, base instructions) 鈫?skill 鈫?dynamic (memory, failure) 鈫?user messages
         """
         system_msgs: list[ChatMessage] = []
         for p in static_prompts or []:
@@ -143,3 +143,4 @@ class QueryEngine:
         if not system_msgs:
             return model_messages
         return system_msgs + model_messages
+

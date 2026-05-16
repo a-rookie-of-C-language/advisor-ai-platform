@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from llm.chat_message import ChatMessage
-from prompt.QueryEngine import QueryEngine
+from prompt.PromptBuilder import PromptBuilder
 from tools.intent_router import emit_route_observation
 
 from .state import GraphState
@@ -104,7 +104,7 @@ async def select_skill_node(state: GraphState) -> GraphState:
         return {"active_skills": [], "skill_system_prompt": ""}
 
     catalog = skill_registry.catalog_prompt()
-    selection_prompt = QueryEngine.build_skill_selection_prompt(catalog, user_query)
+    selection_prompt = PromptBuilder.build_skill_selection_prompt(catalog, user_query)
 
     try:
         selection_messages = [ChatMessage(role="user", content=selection_prompt)]
@@ -149,7 +149,7 @@ def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[
     """
     import re
 
-    # 优先：尝试提取 JSON 数组
+    # 浼樺厛锛氬皾璇曟彁鍙?JSON 鏁扮粍
     match = re.search(r"\[.*?\]", text, re.DOTALL)
     if match:
         try:
@@ -159,7 +159,7 @@ def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[
         except json.JSONDecodeError:
             pass
 
-    # 兜底：从纯文本中匹配已知 skill name
+    # 鍏滃簳锛氫粠绾枃鏈腑鍖归厤宸茬煡 skill name
     if known_names:
         lower_text = text.lower()
         return [name for name in known_names if name.lower() in lower_text]
@@ -211,7 +211,7 @@ async def load_memory_node(state: GraphState) -> GraphState:
             model_context = runtime.memory_injector.build_model_context(memory_context)
             memory_prompt = model_context.render(source_filter={"memory"})
             if memory_prompt:
-                dynamic_prompts.append(QueryEngine.build_memory_context_prompt(memory_prompt))
+                dynamic_prompts.append(PromptBuilder.build_memory_context_prompt(memory_prompt))
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, error=%s",
@@ -220,7 +220,7 @@ async def load_memory_node(state: GraphState) -> GraphState:
                 exc,
             )
 
-    model_messages = QueryEngine.assemble_messages(
+    model_messages = PromptBuilder.assemble_messages(
         list(messages),
         skill_prompts=skill_prompts,
         dynamic_prompts=dynamic_prompts,
@@ -293,7 +293,7 @@ async def generate_node(state: GraphState) -> GraphState:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
 
-            # 跨源融合：预执行只读工具 + 场景识别（三路并行）
+            # 璺ㄦ簮铻嶅悎锛氶鎵ц鍙宸ュ叿 + 鍦烘櫙璇嗗埆锛堜笁璺苟琛岋級
             fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
             if fusion_context:
                 model_messages = _inject_fusion_context(model_messages, fusion_context)
@@ -414,7 +414,7 @@ async def generate_node(state: GraphState) -> GraphState:
                 if runtime.debug_stream:
                     debug_count += 1
 
-        # 生成完成后：统一安全过滤
+        # 鐢熸垚瀹屾垚鍚庯細缁熶竴瀹夊叏杩囨护
         raw_answer = "".join(answer_parts).strip()
         final_answer = raw_answer
         if raw_answer and runtime.safety_pipeline is not None:
@@ -463,7 +463,7 @@ async def _run_fusion_pipeline(
     user_query: str,
     model_messages: list,
 ) -> dict[str, Any] | None:
-    """预执行只读工具 + 场景识别（三路并行），然后走融合 pipeline。"""
+    """Run read-only tool prefetch and scene detection, then apply fusion pipeline."""
     from fusion.source_candidate import SourceCandidate
 
     runtime = _runtime()
@@ -477,7 +477,7 @@ async def _run_fusion_pipeline(
         "permission_config": runtime.tool_permission,
     }
 
-    # 三路并行：RAG 检索 + Web 搜索 + 场景识别
+    # 涓夎矾骞惰锛歊AG 妫€绱?+ Web 鎼滅储 + 鍦烘櫙璇嗗埆
     async def _exec_rag() -> list[SourceCandidate]:
         try:
             result = await runtime.tools.execute("rag_search", {"query": user_query, "top_k": 5}, context)
@@ -499,7 +499,7 @@ async def _run_fusion_pipeline(
                 if item.get("text") or item.get("snippet")
             ]
         except Exception:
-            logger.debug("fusion: rag_search 预执行失败，跳过", exc_info=True)
+            logger.debug("fusion: rag_search 棰勬墽琛屽け璐ワ紝璺宠繃", exc_info=True)
             return []
 
     async def _exec_web() -> list[SourceCandidate]:
@@ -507,7 +507,7 @@ async def _run_fusion_pipeline(
             if runtime.web_search_subagent is not None:
                 search_result = await runtime.web_search_subagent.search(user_query, max_results=3)
                 if not search_result.safe:
-                    logger.warning("fusion: web_search 结果不合规，已过滤: %s", search_result.filtered_reason)
+                    logger.warning("fusion: web_search 缁撴灉涓嶅悎瑙勶紝宸茶繃婊? %s", search_result.filtered_reason)
                     return []
                 if not search_result.sources:
                     return []
@@ -538,14 +538,14 @@ async def _run_fusion_pipeline(
                 if item.get("snippet")
             ]
         except Exception:
-            logger.debug("fusion: web_search 预执行失败，跳过", exc_info=True)
+            logger.debug("fusion: web_search 棰勬墽琛屽け璐ワ紝璺宠繃", exc_info=True)
             return []
 
     async def _detect_scene() -> str:
         try:
-            from prompt.QueryEngine import QueryEngine
+            from prompt.PromptBuilder import PromptBuilder
 
-            scene_prompt = QueryEngine.build_scene_detection_prompt(user_query)
+            scene_prompt = PromptBuilder.build_scene_detection_prompt(user_query)
             scene_messages = [ChatMessage(role="user", content=scene_prompt)]
             response_text = ""
             async for chunk in provider_stream(
@@ -559,7 +559,7 @@ async def _run_fusion_pipeline(
             logger.info("fusion: scene detected=%s, confidence=%s", scene, scene_data.get("confidence"))
             return scene
         except Exception:
-            logger.debug("fusion: 场景识别失败，降级为 general", exc_info=True)
+            logger.debug("fusion: 鍦烘櫙璇嗗埆澶辫触锛岄檷绾т负 general", exc_info=True)
             return "general"
 
     rag_results, web_results, scene = await asyncio.gather(
@@ -576,7 +576,7 @@ async def _run_fusion_pipeline(
     for strategy in runtime.fusion_pipeline.get_enabled_ordered():
         ranked = strategy.rank(ranked, user_query, scene)
 
-    # 检查是否有冲突提示
+    # 妫€鏌ユ槸鍚︽湁鍐茬獊鎻愮ず
     conflict_hint = ranked[0].metadata.get("_conflict_hint") if ranked else None
 
     return {
@@ -587,31 +587,31 @@ async def _run_fusion_pipeline(
 
 
 def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any]) -> list:
-    """将融合结果注入 model_messages 作为 system 提示。"""
+    """Inject fusion context into model messages as a system prompt."""
     from llm.chat_message import ChatMessage
-    from prompt.QueryEngine import QueryEngine
+    from prompt.PromptBuilder import PromptBuilder
 
     candidates = fusion_context.get("candidates", [])
     if not candidates:
         return model_messages
 
-    # 构建融合结果提示
+    # 鏋勫缓铻嶅悎缁撴灉鎻愮ず
     rag_parts = []
     web_parts = []
     for c in candidates:
         entry = f"- {c.content}"
         meta = c.metadata
         if meta.get("authority") == "official":
-            entry += " [官方来源]"
+            entry += " [瀹樻柟鏉ユ簮]"
         if meta.get("effective_date"):
-            entry += f" [日期: {meta['effective_date']}]"
+            entry += f" [鏃ユ湡: {meta['effective_date']}]"
 
         if c.source == "rag":
             rag_parts.append(entry)
         elif c.source == "web":
             web_parts.append(entry)
 
-    lines = ["以下是多源检索结果，供你参考："]
+    lines = ["浠ヤ笅鏄婧愭绱㈢粨鏋滐紝渚涗綘鍙傝€冿細"]
     if rag_parts:
         lines.append("\n【知识库检索结果】")
         lines.extend(rag_parts)
@@ -621,10 +621,10 @@ def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any])
 
     fusion_prompt = "\n".join(lines)
 
-    # 注入冲突提示
+    # 娉ㄥ叆鍐茬獊鎻愮ず
     conflict_hint = fusion_context.get("conflict_hint")
     if conflict_hint:
-        fusion_prompt += "\n\n" + QueryEngine.build_conflict_hint_prompt(conflict_hint)
+        fusion_prompt += "\n\n" + PromptBuilder.build_conflict_hint_prompt(conflict_hint)
 
     system_msg = ChatMessage(role="system", content=fusion_prompt)
     return [system_msg] + model_messages
@@ -674,3 +674,4 @@ async def finalize_node(state: GraphState) -> GraphState:
             state.get("debug_preview", ""),
         )
     return {}
+
