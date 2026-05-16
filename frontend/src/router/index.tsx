@@ -9,9 +9,6 @@ import MonitorPage from '../pages/Monitor/MonitorPage'
 import StudentListPage from '../pages/Student/StudentListPage'
 import StudentDetailPage from '../pages/Student/StudentDetailPage'
 import CheckInManagementPage from '../pages/Student/CheckInManagementPage'
-import TaskManagementPage from '../pages/Student/TaskManagementPage'
-import ImportManagementPage from '../pages/Student/ImportManagementPage'
-import StatOverviewPage from '../pages/Student/StatOverviewPage'
 import NotFound from '../pages/NotFound'
 import { useAuthStore } from '../store/authStore'
 
@@ -60,9 +57,6 @@ export default function AppRouter() {
         <Route path="student" element={<StudentListPage />} />
         <Route path="student/:id" element={<StudentDetailPage />} />
         <Route path="student/check-in" element={<CheckInManagementPage />} />
-        <Route path="student/task" element={<TaskManagementPage />} />
-        <Route path="student/import" element={<ImportManagementPage />} />
-        <Route path="student/stat" element={<StatOverviewPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

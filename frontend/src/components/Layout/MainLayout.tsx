@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd'
 import {
   DashboardOutlined,
@@ -9,9 +9,6 @@ import {
   UserOutlined,
   LogoutOutlined,
   TeamOutlined,
-  FileTextOutlined,
-  UploadOutlined,
-  PieChartOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
@@ -87,9 +84,6 @@ export default function MainLayout() {
     { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
     { key: '/student', icon: <TeamOutlined />, label: '学生管理' },
     { key: '/student/check-in', icon: <CheckCircleOutlined />, label: '打卡管理' },
-    { key: '/student/task', icon: <FileTextOutlined />, label: '任务管理' },
-    { key: '/student/import', icon: <UploadOutlined />, label: '导入管理' },
-    { key: '/student/stat', icon: <PieChartOutlined />, label: '数据统计' },
     { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
     { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
     ...(role === 'ADMIN'
