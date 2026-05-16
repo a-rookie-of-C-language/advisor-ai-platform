@@ -50,9 +50,13 @@ interface StreamHandlers {
   onProgress?: (message: string, elapsedSec?: number) => void
   onDelta?: (text: string) => void
   onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
+  onToolUse?: (data: { toolName: string; toolCallId: string; input: unknown }) => void
+  onToolResult?: (data: { toolName: string; toolCallId: string; output: unknown }) => void
+  onToolError?: (data: { toolName: string; toolCallId: string; message: string; code?: string }) => void
   onEnd?: () => void
   onError?: (message: string) => void
   onRiskAlert?: (data: { code: number; message: string; category: string }) => void
+  onUnknownEvent?: (event: string, data: unknown) => void
 }
 
 const FIRST_PACKET_TIMEOUT_MS = 30_000
@@ -88,6 +92,29 @@ function parseSseBlock(block: string): { event: string; data: string } | null {
     return null
   }
   return { event, data: dataLines.join('\n') }
+}
+
+type StreamData = {
+  text?: string
+  message?: string
+  status?: string
+  items?: StreamSourceItem[]
+  elapsed_sec?: number
+  finish_reason?: string
+  tool_name?: string
+  tool_call_id?: string
+  input?: unknown
+  output?: unknown
+  code?: string
+}
+
+function parseStreamData(rawData: string): StreamData {
+  try {
+    const decoded = JSON.parse(rawData) as StreamData & { payload?: StreamData }
+    return decoded.payload ?? decoded
+  } catch {
+    return { message: rawData }
+  }
 }
 
 export const chatApi = {
@@ -190,45 +217,46 @@ export const chatApi = {
             }
             resetIdleTimer()
 
-            let data: {
-              text?: string
-              message?: string
-              status?: string
-              items?: StreamSourceItem[]
-              elapsedSec?: number
-            } = {}
-            try {
-              data = JSON.parse(parsed.data) as {
-                text?: string
-                message?: string
-                status?: string
-                items?: StreamSourceItem[]
-                elapsedSec?: number
-              }
-            } catch {
-              data = { message: parsed.data }
-            }
+            const data = parseStreamData(parsed.data)
 
-            if (parsed.event === 'start') {
+            if (parsed.event === 'sys_start') {
               handlers.onStart?.()
-            } else if (parsed.event === 'progress') {
-              const maybeElapsed = (data as { elapsedSec?: unknown }).elapsedSec
-              const elapsedSec = typeof maybeElapsed === 'number' ? maybeElapsed : undefined
+            } else if (parsed.event === 'sys_progress') {
+              const elapsedSec = typeof data.elapsed_sec === 'number' ? data.elapsed_sec : undefined
               handlers.onProgress?.(data.message ?? '模型思考中，请稍候...', elapsedSec)
-            } else if (parsed.event === 'delta' && data.text) {
+            } else if (parsed.event === 'llm_delta' && data.text) {
               sawDelta = true
               handlers.onDelta?.(data.text)
-            } else if (parsed.event === 'sources') {
+            } else if (parsed.event === 'tool_use') {
+              handlers.onToolUse?.({
+                toolName: data.tool_name ?? '',
+                toolCallId: data.tool_call_id ?? '',
+                input: data.input,
+              })
+            } else if (parsed.event === 'tool_result') {
+              handlers.onToolResult?.({
+                toolName: data.tool_name ?? '',
+                toolCallId: data.tool_call_id ?? '',
+                output: data.output,
+              })
               handlers.onSources?.(data.items ?? [], data.status, data.message)
+            } else if (parsed.event === 'tool_error') {
+              handlers.onToolError?.({
+                toolName: data.tool_name ?? '',
+                toolCallId: data.tool_call_id ?? '',
+                message: data.message ?? 'tool error',
+                code: data.code,
+              })
+              handlers.onError?.(data.message ?? 'tool error')
             } else if (parsed.event === 'risk_alert') {
               handlers.onRiskAlert?.(data as { code: number; message: string; category: string })
-            } else if (parsed.event === 'error') {
+            } else if (parsed.event === 'sys_error') {
               sawError = true
               latestError = data.message ?? 'stream error'
               handlers.onError?.(latestError)
-            } else if (parsed.event === 'done' || parsed.event === 'end') {
+            } else if (parsed.event === 'sys_done') {
               sawDone = true
-              doneReason = data.message ?? parsed.event
+              doneReason = data.finish_reason ?? parsed.event
               if (!sawDelta) {
                 sawError = true
                 latestError = 'stream done without delta'
@@ -238,6 +266,8 @@ export const chatApi = {
               handlers.onEnd?.()
               await reader.cancel()
               return
+            } else {
+              handlers.onUnknownEvent?.(parsed.event, data)
             }
           }
 

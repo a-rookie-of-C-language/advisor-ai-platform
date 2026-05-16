@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 import json
@@ -320,7 +320,7 @@ async def generate_node(state: GraphState) -> GraphState:
                 async for delta in runtime.provider.stream_chat(model_messages):
                     llm_chunk_count += 1
                     answer_parts.append(delta)
-                    await _emit("delta", {"text": delta})
+                    await _emit("llm_delta", {"text": delta})
 
                     if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
                         remain = _DEBUG_PREVIEW_LIMIT - debug_chars
@@ -341,6 +341,16 @@ async def generate_node(state: GraphState) -> GraphState:
                     max_tool_calls=1,
                     max_tool_retries=3,
                 ):
+                    if event.type == "tool_call":
+                        await _emit(
+                            "tool_use",
+                            {
+                                "tool_name": event.tool_name,
+                                "tool_call_id": f"{event.tool_name}-{event.attempt or 1}",
+                                "input": event.tool_args or {},
+                            },
+                        )
+                        continue
                     if event.type == "tool_result":
                         try:
                             payload = json.loads(event.tool_output) if event.tool_output else {}
@@ -351,17 +361,27 @@ async def generate_node(state: GraphState) -> GraphState:
                                 (event.tool_output or "")[:200],
                             )
                             payload = {}
-                        await _emit(
-                            "sources",
-                            {
-                                "tool": event.tool_name,
-                                "success": event.success,
-                                "attempt": event.attempt,
-                                "status": payload.get("status", "error"),
-                                "message": payload.get("message", "tool execute failed"),
-                                "items": payload.get("items", []),
-                            },
-                        )
+                        base_payload = {
+                            "tool_name": event.tool_name,
+                            "tool_call_id": f"{event.tool_name}-{event.attempt or 1}",
+                            "attempt": event.attempt,
+                            "status": payload.get("status", "error"),
+                            "message": payload.get("message", "tool execute failed"),
+                        }
+                        if event.success:
+                            await _emit(
+                                "tool_result",
+                                {**base_payload, "output": payload, "items": payload.get("items", [])},
+                            )
+                        else:
+                            await _emit(
+                                "tool_error",
+                                {
+                                    **base_payload,
+                                    "code": payload.get("status", "error"),
+                                    "retryable": False,
+                                },
+                            )
                         continue
 
                     if event.type != "delta" or not event.text:
@@ -369,7 +389,7 @@ async def generate_node(state: GraphState) -> GraphState:
                     delta = event.text
                     llm_chunk_count += 1
                     answer_parts.append(delta)
-                    await _emit("delta", {"text": delta})
+                    await _emit("llm_delta", {"text": delta})
 
                     if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
                         remain = _DEBUG_PREVIEW_LIMIT - debug_chars
@@ -383,7 +403,7 @@ async def generate_node(state: GraphState) -> GraphState:
             async for delta in runtime.provider.stream_chat(model_messages):
                 llm_chunk_count += 1
                 answer_parts.append(delta)
-                await _emit("delta", {"text": delta})
+                await _emit("llm_delta", {"text": delta})
 
                 if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
                     remain = _DEBUG_PREVIEW_LIMIT - debug_chars
@@ -417,7 +437,10 @@ async def generate_node(state: GraphState) -> GraphState:
             state.get("session_id"),
             state.get("user_id"),
         )
-        await _emit("error", {"message": _STREAM_ERROR_MESSAGE})
+        await _emit(
+            "sys_error",
+            {"code": "internal_error", "message": _STREAM_ERROR_MESSAGE, "retryable": True},
+        )
         return {
             "assistant_answer": "".join(answer_parts).strip(),
             "stream_failed": True,
