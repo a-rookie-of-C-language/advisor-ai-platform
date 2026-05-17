@@ -47,6 +47,7 @@ def build_provider_from_env() -> BaseLLMProvider:
     max_retries = _read_int_env("OPENAI_MAX_RETRIES", 0)
     stream_timeout_sec = _read_float_env("OPENAI_STREAM_TIMEOUT_SEC", 45.0)
     tool_round_timeout_sec = _read_float_env("OPENAI_TOOL_ROUND_TIMEOUT_SEC", 30.0)
+    stream_idle_timeout_sec = _read_float_env("OPENAI_STREAM_IDLE_TIMEOUT_SEC", 90.0)
 
     return OpenAIProvider(
         api_key=api_key,
@@ -57,4 +58,5 @@ def build_provider_from_env() -> BaseLLMProvider:
         max_retries=max_retries,
         stream_timeout_sec=stream_timeout_sec,
         tool_round_timeout_sec=tool_round_timeout_sec,
+        stream_idle_timeout_sec=stream_idle_timeout_sec,
     )
