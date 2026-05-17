@@ -12,6 +12,12 @@ from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_call_fsm import ToolCallFSM
 from llm.tool_spec import ToolSpec
+from llm.with_retry import (
+    StreamIdleError,
+    call_with_retry,
+    is_retryable_llm_error,
+    retry_delay_seconds,
+)
 from prompt.PromptBuilder import PromptBuilder
 
 logger = logging.getLogger(__name__)
@@ -28,17 +34,20 @@ class OpenAIProvider(BaseLLMProvider):
         max_retries: int = 0,
         stream_timeout_sec: float = 45.0,
         tool_round_timeout_sec: float = 30.0,
+        stream_idle_timeout_sec: float = 90.0,
     ) -> None:
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
-            max_retries=max_retries,
+            max_retries=0,
         )
         self._model = model
         self._temperature = temperature
+        self._max_retries = max(0, max_retries)
         self._stream_timeout_sec = max(5.0, stream_timeout_sec)
         self._tool_round_timeout_sec = max(5.0, tool_round_timeout_sec)
+        self._stream_idle_timeout_sec = max(10.0, stream_idle_timeout_sec)
 
     def get_client(self) -> AsyncOpenAI:
         return self._client
@@ -59,11 +68,8 @@ class OpenAIProvider(BaseLLMProvider):
         *,
         response_format: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
-        payload = [
-            {
-                "role": message.role,
-                "content": message.content,
-            }
+        payload: list[dict[str, Any]] = [
+            {"role": message.role, "content": message.content}
             for message in messages
         ]
 
@@ -76,20 +82,81 @@ class OpenAIProvider(BaseLLMProvider):
         if response_format is not None:
             kwargs["response_format"] = response_format
 
-        try:
-            stream = await asyncio.wait_for(
-                self._client.chat.completions.create(**kwargs),
-                timeout=self._stream_timeout_sec,
-            )
-        except TimeoutError as exc:
-            raise RuntimeError("llm_stream_timeout") from exc
+        max_tokens_bumped = False
+        recovery_attempts = 0
+        _max_recovery_attempts = 3
+        _recovery_message = "你被截断了，不要道歉、不要回顾，直接从中断处继续。"
 
-        async for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
+        while True:  # 恢复循环：处理输出截断
+            attempt = 0
+            while True:  # 重试循环：处理网络/限流等瞬态错误
+                yielded = False
+                finish_reason: str | None = None
+                try:
+                    stream = await asyncio.wait_for(
+                        self._client.chat.completions.create(**kwargs),
+                        timeout=self._stream_timeout_sec,
+                    )
+                    stream_iter = stream.__aiter__()
+                    while True:
+                        try:
+                            chunk = await asyncio.wait_for(
+                                stream_iter.__anext__(),
+                                timeout=self._stream_idle_timeout_sec,
+                            )
+                        except StopAsyncIteration:
+                            break
+                        except asyncio.TimeoutError as timeout_exc:
+                            raise StreamIdleError(
+                                f"流空闲超过 {self._stream_idle_timeout_sec:.0f} 秒，自动重试"
+                            ) from timeout_exc
+                        if chunk.choices:
+                            choice = chunk.choices[0]
+                            if choice.finish_reason:
+                                finish_reason = choice.finish_reason
+                            delta = choice.delta.content
+                            if delta:
+                                yielded = True
+                                yield delta
+
+                    # 流正常结束，检查是否因 max_tokens 被截断
+                    if finish_reason == "length":
+                        if not max_tokens_bumped:
+                            kwargs["max_tokens"] = 65536
+                            max_tokens_bumped = True
+                            logger.info(
+                                "llm_output_truncated: level=1 bump_max_tokens model=%s",
+                                self._model,
+                            )
+                            break  # 跳出重试循环 → 恢复循环用新参数重试
+                        if recovery_attempts < _max_recovery_attempts:
+                            recovery_attempts += 1
+                            payload.append({"role": "user", "content": _recovery_message})
+                            logger.info(
+                                "llm_output_truncated: level=2 recovery_attempt=%s/%s model=%s",
+                                recovery_attempts,
+                                _max_recovery_attempts,
+                                self._model,
+                            )
+                            break  # 跳出重试循环 → 恢复循环注入消息重试
+                        logger.warning(
+                            "llm_output_truncated: level=3 exhausted model=%s",
+                            self._model,
+                        )
+                    return
+                except Exception as exc:
+                    if yielded or attempt >= self._max_retries or not is_retryable_llm_error(exc):
+                        raise
+                    attempt += 1
+                    delay = retry_delay_seconds(attempt)
+                    logger.warning(
+                        "llm_stream_retry: model=%s attempt=%s max_retries=%s delay=%.1f",
+                        self._model,
+                        attempt,
+                        self._max_retries,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
 
     async def stream_chat_with_tools(
         self,
@@ -115,35 +182,42 @@ class OpenAIProvider(BaseLLMProvider):
         ]
         tool_payload = self._to_tool_payload(tools, strict=strict_tools)
         tool_call_count = 0
+        max_tokens_bumped = False
+        recovery_attempts = 0
+        _max_recovery_attempts = 3
+        _recovery_message = "你被截断了，不要道歉、不要回顾，直接从中断处继续。"
 
         while True:
             tool_choice: dict[str, Any] | str = "auto"
 
-            try:
-                response = await asyncio.wait_for(
-                    self._client.chat.completions.create(
-                        model=self._model,
-                        messages=conversation,
-                        temperature=self._temperature,
-                        stream=False,
-                        tools=tool_payload,
-                        tool_choice=tool_choice,
-                    ),
+            # 捕获当前恢复状态用于闭包内 create_response
+            _bumped = max_tokens_bumped
+
+            async def create_response(
+                current_tool_choice: dict[str, Any] | str = tool_choice,
+                _bumped: bool = _bumped,  # noqa: B008
+            ):
+                kwargs: dict[str, Any] = {
+                    "model": self._model,
+                    "messages": conversation,
+                    "temperature": self._temperature,
+                    "stream": False,
+                    "tools": tool_payload,
+                    "tool_choice": current_tool_choice,
+                }
+                if _bumped:
+                    kwargs["max_tokens"] = 65536
+                return await asyncio.wait_for(
+                    self._client.chat.completions.create(**kwargs),
                     timeout=self._tool_round_timeout_sec,
                 )
-            except TimeoutError:
-                logger.warning(
-                    "llm_tool_round_timeout: tool_call_count=%s, model=%s",
-                    tool_call_count,
-                    self._model,
-                )
-                fallback_text = (
-                    "抱歉，当前检索链路响应超时。"
-                    "请稍后重试，或补充更具体的问题以缩小检索范围。"
-                )
-                for piece in self._chunk_text(fallback_text):
-                    yield LLMStreamEvent(type="delta", text=piece)
-                return
+
+            response = await call_with_retry(
+                create_response,
+                max_retries=self._max_retries,
+                operation_name="llm_tool_round",
+                logger=logger,
+            )
 
             if not response.choices:
                 raise RuntimeError("LLM returned empty choices (possibly content filter)")
@@ -310,6 +384,31 @@ class OpenAIProvider(BaseLLMProvider):
 
                 tool_call_count += 1
                 continue
+
+            # 无工具调用 — 检查输出是否被截断
+            choice_finish = getattr(choice, "finish_reason", None)
+            if choice_finish == "length":
+                if not max_tokens_bumped:
+                    max_tokens_bumped = True
+                    logger.info(
+                        "llm_tool_output_truncated: level=1 bump_max_tokens model=%s",
+                        self._model,
+                    )
+                    continue
+                if recovery_attempts < _max_recovery_attempts:
+                    recovery_attempts += 1
+                    conversation.append({"role": "user", "content": _recovery_message})
+                    logger.info(
+                        "llm_tool_output_truncated: level=2 recovery_attempt=%s/%s model=%s",
+                        recovery_attempts,
+                        _max_recovery_attempts,
+                        self._model,
+                    )
+                    continue
+                logger.warning(
+                    "llm_tool_output_truncated: level=3 exhausted model=%s",
+                    self._model,
+                )
 
             final_text = assistant_content.strip()
             for piece in self._chunk_text(final_text, 32):
