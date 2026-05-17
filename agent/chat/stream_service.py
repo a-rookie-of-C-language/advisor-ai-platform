@@ -923,7 +923,28 @@ class ChatStreamService:
                         payload={"text": delta},
                     )
             else:
-                async for delta in self._provider.stream_chat(model_messages):
+                reasoning_queue: asyncio.Queue[str] = asyncio.Queue()
+
+                async def _emit_reasoning(text: str) -> None:
+                    await reasoning_queue.put(text)
+
+                async for delta in self._provider.stream_chat(
+                    model_messages,
+                    on_reasoning=_emit_reasoning,
+                ):
+                    # 先发送排队的思考内容
+                    while not reasoning_queue.empty():
+                        try:
+                            reasoning_text = reasoning_queue.get_nowait()
+                            yield self._serialize_protocol_event(
+                                event="reasoning_delta",
+                                source="llm",
+                                trace_id=trace_id,
+                                payload={"text": reasoning_text},
+                            )
+                        except asyncio.QueueEmpty:
+                            break
+
                     answer_parts.append(delta)
                     if self._debug_stream and debug_chars < debug_limit:
                         remain = debug_limit - debug_chars
@@ -939,6 +960,18 @@ class ChatStreamService:
                         trace_id=trace_id,
                         payload={"text": delta},
                     )
+                # 流结束后清空剩余思考内容
+                while not reasoning_queue.empty():
+                    try:
+                        reasoning_text = reasoning_queue.get_nowait()
+                        yield self._serialize_protocol_event(
+                            event="reasoning_delta",
+                            source="llm",
+                            trace_id=trace_id,
+                            payload={"text": reasoning_text},
+                        )
+                    except asyncio.QueueEmpty:
+                        break
 
             answer = "".join(answer_parts).strip()
             if self._debug_stream:
