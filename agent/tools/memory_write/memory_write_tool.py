@@ -38,6 +38,7 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
         self._permission_matcher = "memory.write"
         self._should_defer = True
         self._always_load = False
+        self._search_hint = "记住,保存,备忘,记下"
         self._interrupt_behavior = "cancel"
         self._requires_user_interaction = False
 

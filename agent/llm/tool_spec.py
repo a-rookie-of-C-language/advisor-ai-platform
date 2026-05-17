@@ -9,3 +9,5 @@ class ToolSpec:
     name: str
     description: str
     parameters: dict[str, Any]
+    defer_loading: bool = False
+    search_hint: str = ""

@@ -5,6 +5,7 @@ from typing import Any
 
 from llm.tool_spec import ToolSpec
 from tools.base_tool import BaseTool
+from tools.tool_hooks import AfterHook, BeforeHook
 from tools.tool_permission import PermissionConfig
 from tools.tool_result import ToolResult
 
@@ -14,6 +15,8 @@ class ToolRegistry:
         self._tools: dict[str, BaseTool] = {}
         self._enabled_tools = enabled_tools
         self._pending_callbacks: dict[str, dict[str, Any]] = {}
+        self._before_hooks: list[BeforeHook] = []
+        self._after_hooks: list[AfterHook] = []
 
     def register(self, tool: BaseTool) -> None:
         if self._enabled_tools is not None and tool.name not in self._enabled_tools:
@@ -33,6 +36,14 @@ class ToolRegistry:
     def all_categories(self) -> set[str]:
         """返回当前注册的所有 tool category。"""
         return {tool.category for tool in self._tools.values()}
+
+    def add_before_hook(self, hook: BeforeHook) -> None:
+        """注册 before 钩子：在工具执行前调用，可修改输入或短路线。"""
+        self._before_hooks.append(hook)
+
+    def add_after_hook(self, hook: AfterHook) -> None:
+        """注册 after 钩子：在工具执行后调用，可变换输出结果。"""
+        self._after_hooks.append(hook)
 
     async def execute(self, name: str, tool_args: dict[str, Any], context: dict[str, Any]) -> str:
         tool = self.get(name)
@@ -109,7 +120,27 @@ class ToolRegistry:
                     pending.meta = safety_meta
                     return pending.to_json()
 
+        # --- before 钩子链：可修改输入或短路线 ---
+        should_proceed = True
+        for hook in self._before_hooks:
+            should_proceed, value = await hook(tool.name, tool_input, context)
+            if not should_proceed:
+                if isinstance(value, ToolResult):
+                    if not value.meta:
+                        value.meta = {}
+                    for key, val in safety_meta.items():
+                        value.meta[key] = val
+                    return value.to_json()
+                continue
+            if value is not None:
+                tool_input = value
+
         result = await tool.execute(tool_input, context)
+
+        # --- after 钩子链：可变换输出 ---
+        for hook in self._after_hooks:
+            result = await hook(tool.name, tool_input, result, context)
+
         if not result.meta:
             result.meta = {}
         for key, value in safety_meta.items():

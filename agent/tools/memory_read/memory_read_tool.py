@@ -29,6 +29,7 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
         self._permission_matcher = "memory.read"
         self._should_defer = True
         self._always_load = False
+        self._search_hint = "记忆,备忘,笔记,历史,回忆"
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 

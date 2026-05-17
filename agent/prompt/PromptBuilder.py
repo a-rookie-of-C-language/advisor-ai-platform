@@ -85,6 +85,22 @@ class PromptBuilder:
             lines.append(f"- {tool.name}: {tool.description}")
         return "\n".join(lines)
 
+    @staticmethod
+    def build_deferred_tool_catalog(tools: list[ToolSpec]) -> str:
+        """构建延迟工具的文本目录，用于注入 system prompt。
+
+        模型可通过 tool_search 按需加载完整定义。
+        """
+        if not tools:
+            return ""
+        lines = [
+            "以下工具可按需加载，调用 tool_search 并传入关键词获取完整定义：",
+        ]
+        for tool in tools:
+            hint = f" [关键词: {tool.search_hint}]" if tool.search_hint else ""
+            lines.append(f"- {tool.name}: {tool.description}{hint}")
+        return "\n".join(lines)
+
 
     @staticmethod
     def build_scene_detection_prompt(user_query: str) -> str:

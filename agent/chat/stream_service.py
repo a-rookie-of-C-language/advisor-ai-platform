@@ -39,6 +39,7 @@ from tools.intent_router import IntentRouter, emit_route_observation
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
+from tools.tool_search import ToolSearchTool
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
@@ -128,6 +129,8 @@ class ChatStreamService:
             self._tools.register(tool)
         self._skill_registry = build_default_registry()
         self._tools.register(ExpandSkillTool(self._skill_registry))
+        self._tool_search_tool = ToolSearchTool(lambda: self._tools.specs())
+        self._tools.register(self._tool_search_tool)
         self._intent_router = IntentRouter()
         self._safety_pipeline = SafetyPipeline()
         self._fusion_pipeline = _build_default_fusion_pipeline()
@@ -807,6 +810,49 @@ class ChatStreamService:
                     payload=route_payload,
                 )
 
+                # --- 延迟加载：工具数 > 阈值时拆分 always_load / deferred ---
+                _DEFER_THRESHOLD = 8
+                always_load_specs: list = []
+                deferred_specs: list = []
+                for spec in tools:
+                    if spec.defer_loading:
+                        deferred_specs.append(spec)
+                    else:
+                        always_load_specs.append(spec)
+
+                if deferred_specs and len(tools) > _DEFER_THRESHOLD:
+                    catalog = PromptBuilder.build_deferred_tool_catalog(deferred_specs)
+                    if catalog:
+                        model_messages.append(
+                            ChatMessage(role="system", content=catalog),
+                        )
+                    final_tools = always_load_specs
+                    logger.info(
+                        "tool_deferred_loading: always=%s deferred=%s total=%s threshold=%s",
+                        len(always_load_specs),
+                        len(deferred_specs),
+                        len(tools),
+                        _DEFER_THRESHOLD,
+                    )
+                else:
+                    final_tools = tools
+
+                async def on_tool_result(tool_name: str, result: dict) -> list | None:
+                    """tool_search 命中时返回匹配的延迟工具 spec。"""
+                    if tool_name != "tool_search":
+                        return None
+                    if result.get("status") != "hit":
+                        return None
+                    discovered: list = []
+                    for item in result.get("items", []):
+                        name = item.get("tool_name")
+                        if not name:
+                            continue
+                        tool = self._tools.get(name)
+                        if tool is not None:
+                            discovered.append(tool.to_tool_spec())
+                    return discovered or None
+
                 async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(
                         tool_name=tool_name,
@@ -820,10 +866,11 @@ class ChatStreamService:
 
                 async for event in self._provider.stream_chat_with_tools(
                     model_messages,
-                    tools,
+                    final_tools,
                     tool_executor,
                     max_tool_calls=1,
                     max_tool_retries=3,
+                    on_tool_result=on_tool_result if deferred_specs and len(tools) > _DEFER_THRESHOLD else None,
                 ):
                     if event.type == "tool_call":
                         yield self._serialize_protocol_event(

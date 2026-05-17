@@ -40,6 +40,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         self._permission_matcher = self.name
         self._should_defer = True
         self._always_load = False
+        self._search_hint = ""
         self._is_enabled = True
         self._interrupt_behavior: Literal["cancel", "block"] = "block"
         self._requires_user_interaction = False
@@ -76,6 +77,9 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
     def get_always_load(self) -> bool:
         self._validate_behavior_flags()
         return self._always_load
+
+    def get_search_hint(self) -> str:
+        return self._search_hint
 
     def get_is_enabled(self) -> bool:
         return self._is_enabled
@@ -115,6 +119,8 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
             name=self.name,
             description=self.description,
             parameters=self.input_json_schema(),
+            defer_loading=self.get_should_defer(),
+            search_hint=self.get_search_hint(),
         )
 
     def __repr__(self) -> str:
