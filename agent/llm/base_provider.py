@@ -17,11 +17,13 @@ class BaseLLMProvider(ABC):
         messages: Iterable[ChatMessage],
         *,
         response_format: dict[str, Any] | None = None,
+        on_reasoning: Callable[[str], Awaitable[None]] | None = None,
     ) -> AsyncIterator[str]:
         """Stream response chunks for a chat request.
 
         Args:
             response_format: Optional OpenAI response_format, e.g. {"type": "json_object"}.
+            on_reasoning: Optional callback for thinking/reasoning content (DeepSeek etc.).
         """
         raise NotImplementedError
 

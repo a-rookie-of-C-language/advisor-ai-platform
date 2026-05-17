@@ -11,6 +11,7 @@ from openai import AsyncOpenAI
 from llm.base_provider import BaseLLMProvider, ToolExecutor
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
+from llm.thinking_config import ThinkingConfig
 from llm.tool_call_fsm import ToolCallFSM
 from llm.tool_spec import ToolSpec
 from llm.with_retry import (
@@ -36,6 +37,7 @@ class OpenAIProvider(BaseLLMProvider):
         stream_timeout_sec: float = 45.0,
         tool_round_timeout_sec: float = 30.0,
         stream_idle_timeout_sec: float = 90.0,
+        thinking_config: ThinkingConfig | None = None,
     ) -> None:
         self._client = AsyncOpenAI(
             api_key=api_key,
@@ -49,6 +51,7 @@ class OpenAIProvider(BaseLLMProvider):
         self._stream_timeout_sec = max(5.0, stream_timeout_sec)
         self._tool_round_timeout_sec = max(5.0, tool_round_timeout_sec)
         self._stream_idle_timeout_sec = max(10.0, stream_idle_timeout_sec)
+        self._thinking_config = thinking_config or ThinkingConfig.disabled()
 
     def get_client(self) -> AsyncOpenAI:
         return self._client
@@ -68,6 +71,7 @@ class OpenAIProvider(BaseLLMProvider):
         messages: Iterable[ChatMessage],
         *,
         response_format: dict[str, Any] | None = None,
+        on_reasoning: Callable[[str], Awaitable[None]] | None = None,
     ) -> AsyncIterator[str]:
         payload: list[dict[str, Any]] = [
             {"role": message.role, "content": message.content}
@@ -82,6 +86,7 @@ class OpenAIProvider(BaseLLMProvider):
         }
         if response_format is not None:
             kwargs["response_format"] = response_format
+        kwargs.update(self._thinking_config.to_request_kwargs())
 
         max_tokens_bumped = False
         recovery_attempts = 0
@@ -115,6 +120,10 @@ class OpenAIProvider(BaseLLMProvider):
                             choice = chunk.choices[0]
                             if choice.finish_reason:
                                 finish_reason = choice.finish_reason
+                            # 思考模式：reasoning_content 通过回调流式输出
+                            reasoning = choice.delta.reasoning_content
+                            if reasoning and on_reasoning is not None:
+                                await on_reasoning(reasoning)
                             delta = choice.delta.content
                             if delta:
                                 yielded = True
@@ -192,19 +201,21 @@ class OpenAIProvider(BaseLLMProvider):
         while True:
             tool_choice: dict[str, Any] | str = "auto"
 
-            # 捕获当前恢复状态用于闭包内 create_response
+            # 捕获当前恢复状态与工具定义用于闭包内 create_response
             _bumped = max_tokens_bumped
+            _tool_payload = tool_payload
 
             async def create_response(
                 current_tool_choice: dict[str, Any] | str = tool_choice,
                 _bumped: bool = _bumped,  # noqa: B008
+                _tool_payload: list[dict[str, Any]] = _tool_payload,  # noqa: B008
             ):
                 kwargs: dict[str, Any] = {
                     "model": self._model,
                     "messages": conversation,
                     "temperature": self._temperature,
                     "stream": False,
-                    "tools": tool_payload,
+                    "tools": _tool_payload,
                     "tool_choice": current_tool_choice,
                 }
                 if _bumped:
