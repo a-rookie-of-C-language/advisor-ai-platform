@@ -58,10 +58,10 @@ class WebSearchSubAgent(SubAgent):
 
     async def _execute_search(self, query: str, max_results: int) -> ToolResult:
         try:
-            from tools.tool_impl.web_search_tool import WebSearchTool
+            from tools.web_search import WebSearchTool
 
             if isinstance(self._web_search_tool, WebSearchTool):
-                from tools.tool_impl.web_search_input import WebSearchInput
+                from tools.web_search import WebSearchInput
 
                 tool_input = WebSearchInput(query=query, max_results=max_results)
                 return await self._web_search_tool.execute(tool_input, context={})

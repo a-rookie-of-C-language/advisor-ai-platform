@@ -9,9 +9,9 @@ from duckduckgo_search.exceptions import DuckDuckGoSearchException, RatelimitExc
 from pydantic import BaseModel
 
 from tools.base_tool import BaseTool
-from tools.tool_impl.web_search_input import WebSearchInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
+from tools.web_search.web_search_input import WebSearchInput
 
 logger = logging.getLogger(__name__)
 
@@ -101,18 +101,10 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
                     )
                     break
 
-            if last_error is not None:
-                logger.error(
-                    "web_search degraded: query=%s error_type=%s elapsed=%.2fs",
-                    query,
-                    type(last_error).__name__,
-                    time.monotonic() - start_at,
-                )
-                return ToolResult(ok=True, status="error", message="web_search_unavailable", items=[])
-            return ToolResult(ok=True, status="miss", message="no results", items=[])
-        except Exception:
-            logger.exception("web_search failed: query=%s", query)
-            return ToolResult.error("web_search_exception")
+            return ToolResult.error(f"web_search failed after {_SEARCH_MAX_ATTEMPTS} attempts: {last_error}")
+        except Exception as exc:
+            logger.exception("web_search unexpected error: query=%s", query)
+            return ToolResult.error(f"web_search exception: {exc}")
 
     @staticmethod
     def _search(query: str, max_results: int) -> list[dict[str, str]]:
@@ -120,7 +112,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
             return [
                 {
                     "title": r.get("title", ""),
-                    "snippet": r.get("body", ""),
+                    "snippet": (r.get("body", "") or "")[:200],
                     "url": r.get("href", ""),
                     "source": "web",
                 }

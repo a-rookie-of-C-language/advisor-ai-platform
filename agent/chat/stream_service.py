@@ -34,9 +34,9 @@ from query_engine.GraphEngineStrategy import GraphEngineStrategy
 from query_engine.LegacyEngineStrategy import LegacyEngineStrategy
 from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
+from tools.expand_skill import ExpandSkillTool
 from tools.intent_router import IntentRouter, emit_route_observation
 from tools.tool_assembly_pool import ToolAssemblyPool
-from tools.tool_impl.expand_skill_tool import ExpandSkillTool
 from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
 

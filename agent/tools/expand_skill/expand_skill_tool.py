@@ -4,7 +4,7 @@ from typing import Any
 
 from skills.skill_registry import SkillRegistry
 from tools.base_tool import BaseTool
-from tools.tool_impl.expand_skill_input import ExpandSkillInput
+from tools.expand_skill.expand_skill_input import ExpandSkillInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
 
