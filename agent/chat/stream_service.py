@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
-from agents.search import WebSearchSubAgent
+from agents.search import WebFetchSubAgent, WebSearchSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor
 from context.compaction.TranscriptStore import TranscriptStore
@@ -97,6 +97,7 @@ class ChatStreamService:
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._web_search_subagent = self._build_web_search_subagent()
+        self._web_fetch_subagent = self._build_web_fetch_subagent()
         self._tool_permission = PermissionConfig.from_allowed_tools(
             {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
              ToolPermission.MEMORY_WRITE},
@@ -476,6 +477,8 @@ class ChatStreamService:
         try:
             if tool_name == "web_search" and self._web_search_subagent is not None:
                 return await self._execute_web_search_via_subagent(tool_args)
+            if tool_name == "web_fetch" and self._web_fetch_subagent is not None:
+                return await self._execute_web_fetch_via_subagent(tool_args)
             return await self._tools.execute(tool_name, tool_args, context)
         except Exception:
             logger.exception(
@@ -527,6 +530,37 @@ class ChatStreamService:
             "status": "hit" if items else "miss",
             "message": "hit" if items else "no results",
             "items": items,
+        })
+
+    def _build_web_fetch_subagent(self) -> WebFetchSubAgent | None:
+        web_fetch_tool = self._tools.get("web_fetch")
+        if web_fetch_tool is None:
+            return None
+        return WebFetchSubAgent(
+            llm_provider=self._provider,
+            web_fetch_tool=web_fetch_tool,
+        )
+
+    async def _execute_web_fetch_via_subagent(self, tool_args: dict) -> str:
+        url = tool_args.get("url", "")
+        max_content_length = tool_args.get("max_content_length", 2000)
+        result = await self._web_fetch_subagent.fetch(url, max_content_length=max_content_length)
+        if not result.safe:
+            return json.dumps({
+                "ok": False,
+                "status": "denied",
+                "message": result.filtered_reason or "网页内容不合规，已过滤",
+                "items": [],
+            })
+        return json.dumps({
+            "ok": True,
+            "status": "hit",
+            "message": "content extracted",
+            "items": [{
+                "url": result.url,
+                "content": result.content,
+                "source": result.source,
+            }],
         })
 
     async def stream_events(

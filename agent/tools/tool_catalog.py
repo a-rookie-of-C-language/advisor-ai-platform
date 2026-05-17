@@ -7,6 +7,7 @@ from tools.base_tool import BaseTool
 from tools.memory_read import MemoryReadTool
 from tools.memory_write import MemoryWriteTool
 from tools.rag_search import RAGSearchTool
+from tools.web_fetch import WebFetchTool
 from tools.web_search import WebSearchTool
 
 
@@ -33,6 +34,8 @@ class ToolCatalog:
             tools.append(MemoryWriteTool(memory_client))
         if cls._feature_enabled("WEB_SEARCH", True):
             tools.append(WebSearchTool())
+        if cls._feature_enabled("WEB_FETCH", True):
+            tools.append(WebFetchTool())
         return tools
 
     @classmethod
