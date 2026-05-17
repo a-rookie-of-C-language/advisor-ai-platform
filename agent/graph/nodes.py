@@ -3,89 +3,28 @@
 import asyncio
 import json
 import logging
-from contextvars import ContextVar
-from dataclasses import dataclass
 from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
 from tools.intent_router import emit_route_observation
 
+from .runtime import _emit, _execute_tool, _runtime
 from .state import GraphState
+
+from .helpers import (
+    _inject_fusion_context,
+    _parse_skill_names,
+    _prefer_rag_only,
+    _run_fusion_pipeline,
+    _strip_surrogates,
+    provider_stream,
+)
 
 logger = logging.getLogger(__name__)
 
 _DEBUG_PREVIEW_LIMIT = 200
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
-_RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
-_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
-_runtime_var: ContextVar["GraphRuntime"] = ContextVar("graph_runtime")
-
-
-def _strip_surrogates(text: str) -> str:
-    if not text:
-        return text
-    return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
-
-
-def _prefer_rag_only(query: str) -> bool:
-    normalized = _strip_surrogates(query).strip().lower()
-    if not normalized:
-        return False
-    has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
-    has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
-    return has_rag_hint and not has_realtime_hint
-
-
-@dataclass
-class GraphRuntime:
-    queue: asyncio.Queue[dict[str, Any]]
-    provider: Any
-    memory_orchestrator: Any
-    memory_injector: Any
-    llm_extractor: Any
-    tools: Any
-    tool_permission: Any
-    enable_tool_use: bool
-    debug_stream: bool
-    trace_id: str = ""
-    turn_id: str = ""
-    skill_registry: Any = None
-    intent_router: Any = None
-    safety_pipeline: Any = None
-    fusion_pipeline: Any = None
-    web_search_subagent: Any = None
-
-
-def set_runtime(runtime: GraphRuntime):
-    return _runtime_var.set(runtime)
-
-
-def reset_runtime(token) -> None:
-    _runtime_var.reset(token)
-
-
-def _runtime() -> GraphRuntime:
-    return _runtime_var.get()
-
-
-async def _emit(event: str, data: dict[str, Any]) -> None:
-    await _runtime().queue.put({"event": event, "data": data})
-
-
-async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: GraphState) -> str:
-    runtime = _runtime()
-    return await runtime.tools.execute(
-        tool_name,
-        tool_args,
-        {
-            "user_id": state.get("user_id"),
-            "session_id": state.get("session_id"),
-            "kb_id": 0,
-            "user_query": state.get("user_query", ""),
-            "permission_config": runtime.tool_permission,
-        },
-    )
 
 
 async def select_skill_node(state: GraphState) -> GraphState:
@@ -140,41 +79,6 @@ async def select_skill_node(state: GraphState) -> GraphState:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Skill selection failed, degrade to no-skill mode: %s", exc)
         return {"active_skills": [], "skill_system_prompt": ""}
-
-
-def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[str]:
-    """Extract skill names from LLM response (expects JSON array).
-
-    Fallback: if JSON parsing fails, try to match known skill names from plain text.
-    """
-    import re
-
-    # 浼樺厛锛氬皾璇曟彁鍙?JSON 鏁扮粍
-    match = re.search(r"\[.*?\]", text, re.DOTALL)
-    if match:
-        try:
-            names = json.loads(match.group())
-            if isinstance(names, list):
-                return [str(n) for n in names if isinstance(n, str)]
-        except json.JSONDecodeError:
-            pass
-
-    # 鍏滃簳锛氫粠绾枃鏈腑鍖归厤宸茬煡 skill name
-    if known_names:
-        lower_text = text.lower()
-        return [name for name in known_names if name.lower() in lower_text]
-    return []
-
-
-async def provider_stream(
-    provider: Any,
-    messages: list[ChatMessage],
-    *,
-    response_format: dict[str, Any] | None = None,
-):
-    """Simple streaming wrapper for LLM text generation (no tools)."""
-    async for chunk in provider.stream_chat(messages, response_format=response_format):
-        yield chunk
 
 
 async def load_memory_node(state: GraphState) -> GraphState:
@@ -293,7 +197,6 @@ async def generate_node(state: GraphState) -> GraphState:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
 
-            # 璺ㄦ簮铻嶅悎锛氶鎵ц鍙宸ュ叿 + 鍦烘櫙璇嗗埆锛堜笁璺苟琛岋級
             fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
             if fusion_context:
                 model_messages = _inject_fusion_context(model_messages, fusion_context)
@@ -414,7 +317,6 @@ async def generate_node(state: GraphState) -> GraphState:
                 if runtime.debug_stream:
                     debug_count += 1
 
-        # 鐢熸垚瀹屾垚鍚庯細缁熶竴瀹夊叏杩囨护
         raw_answer = "".join(answer_parts).strip()
         final_answer = raw_answer
         if raw_answer and runtime.safety_pipeline is not None:
@@ -456,178 +358,6 @@ async def generate_node(state: GraphState) -> GraphState:
         "debug_preview": "".join(debug_preview_parts),
         "llm_chunk_count": llm_chunk_count,
     }
-
-
-async def _run_fusion_pipeline(
-    state: GraphState,
-    user_query: str,
-    model_messages: list,
-) -> dict[str, Any] | None:
-    """Run read-only tool prefetch and scene detection, then apply fusion pipeline."""
-    from fusion.source_candidate import SourceCandidate
-
-    runtime = _runtime()
-    if runtime.fusion_pipeline is None:
-        return None
-    context = {
-        "user_id": state.get("user_id"),
-        "session_id": state.get("session_id"),
-        "kb_id": 0,
-        "user_query": user_query,
-        "permission_config": runtime.tool_permission,
-    }
-
-    # 涓夎矾骞惰锛歊AG 妫€绱?+ Web 鎼滅储 + 鍦烘櫙璇嗗埆
-    async def _exec_rag() -> list[SourceCandidate]:
-        try:
-            result = await runtime.tools.execute("rag_search", {"query": user_query, "top_k": 5}, context)
-            payload = json.loads(result) if isinstance(result, str) else {}
-            items = payload.get("items", []) if isinstance(payload, dict) else []
-            return [
-                SourceCandidate(
-                    content=item.get("text", item.get("snippet", "")),
-                    source="rag",
-                    score=item.get("score", 1.0),
-                    metadata={
-                        "source": item.get("source", "知识库"),
-                        "type": item.get("type", "general"),
-                        "authority": item.get("authority", "secondary"),
-                        "effective_date": item.get("effective_date", ""),
-                    },
-                )
-                for item in items
-                if item.get("text") or item.get("snippet")
-            ]
-        except Exception:
-            logger.debug("fusion: rag_search 棰勬墽琛屽け璐ワ紝璺宠繃", exc_info=True)
-            return []
-
-    async def _exec_web() -> list[SourceCandidate]:
-        try:
-            if runtime.web_search_subagent is not None:
-                search_result = await runtime.web_search_subagent.search(user_query, max_results=3)
-                if not search_result.safe:
-                    logger.warning("fusion: web_search 缁撴灉涓嶅悎瑙勶紝宸茶繃婊? %s", search_result.filtered_reason)
-                    return []
-                if not search_result.sources:
-                    return []
-                return [
-                    SourceCandidate(
-                        content=search_result.summary,
-                        source="web",
-                        metadata={
-                            "source": "web",
-                            "title": src.get("title", ""),
-                            "url": src.get("url", ""),
-                            "key_facts": search_result.key_facts,
-                        },
-                    )
-                    for src in search_result.sources
-                    if src.get("snippet")
-                ]
-            result = await runtime.tools.execute("web_search", {"query": user_query, "max_results": 3}, context)
-            payload = json.loads(result) if isinstance(result, str) else {}
-            items = payload.get("items", []) if isinstance(payload, dict) else []
-            return [
-                SourceCandidate(
-                    content=item.get("snippet", ""),
-                    source="web",
-                    metadata={"source": "web", "title": item.get("title", ""), "url": item.get("url", "")},
-                )
-                for item in items
-                if item.get("snippet")
-            ]
-        except Exception:
-            logger.debug("fusion: web_search 棰勬墽琛屽け璐ワ紝璺宠繃", exc_info=True)
-            return []
-
-    async def _detect_scene() -> str:
-        try:
-            from prompt.PromptBuilder import PromptBuilder
-
-            scene_prompt = PromptBuilder.build_scene_detection_prompt(user_query)
-            scene_messages = [ChatMessage(role="user", content=scene_prompt)]
-            response_text = ""
-            async for chunk in provider_stream(
-                runtime.provider,
-                scene_messages,
-                response_format={"type": "json_object"},
-            ):
-                response_text += chunk
-            scene_data = json.loads(response_text)
-            scene = scene_data.get("scene", "general")
-            logger.info("fusion: scene detected=%s, confidence=%s", scene, scene_data.get("confidence"))
-            return scene
-        except Exception:
-            logger.debug("fusion: 鍦烘櫙璇嗗埆澶辫触锛岄檷绾т负 general", exc_info=True)
-            return "general"
-
-    rag_results, web_results, scene = await asyncio.gather(
-        _exec_rag(),
-        _exec_web(),
-        _detect_scene(),
-    )
-
-    if not rag_results and not web_results:
-        return None
-
-    candidates = rag_results + web_results
-    ranked = list(candidates)
-    for strategy in runtime.fusion_pipeline.get_enabled_ordered():
-        ranked = strategy.rank(ranked, user_query, scene)
-
-    # 妫€鏌ユ槸鍚︽湁鍐茬獊鎻愮ず
-    conflict_hint = ranked[0].metadata.get("_conflict_hint") if ranked else None
-
-    return {
-        "candidates": ranked,
-        "scene": scene,
-        "conflict_hint": conflict_hint,
-    }
-
-
-def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any]) -> list:
-    """Inject fusion context into model messages as a system prompt."""
-    from llm.chat_message import ChatMessage
-    from prompt.PromptBuilder import PromptBuilder
-
-    candidates = fusion_context.get("candidates", [])
-    if not candidates:
-        return model_messages
-
-    # 鏋勫缓铻嶅悎缁撴灉鎻愮ず
-    rag_parts = []
-    web_parts = []
-    for c in candidates:
-        entry = f"- {c.content}"
-        meta = c.metadata
-        if meta.get("authority") == "official":
-            entry += " [瀹樻柟鏉ユ簮]"
-        if meta.get("effective_date"):
-            entry += f" [鏃ユ湡: {meta['effective_date']}]"
-
-        if c.source == "rag":
-            rag_parts.append(entry)
-        elif c.source == "web":
-            web_parts.append(entry)
-
-    lines = ["浠ヤ笅鏄婧愭绱㈢粨鏋滐紝渚涗綘鍙傝€冿細"]
-    if rag_parts:
-        lines.append("\n【知识库检索结果】")
-        lines.extend(rag_parts)
-    if web_parts:
-        lines.append("\n【网络搜索结果】")
-        lines.extend(web_parts)
-
-    fusion_prompt = "\n".join(lines)
-
-    # 娉ㄥ叆鍐茬獊鎻愮ず
-    conflict_hint = fusion_context.get("conflict_hint")
-    if conflict_hint:
-        fusion_prompt += "\n\n" + PromptBuilder.build_conflict_hint_prompt(conflict_hint)
-
-    system_msg = ChatMessage(role="system", content=fusion_prompt)
-    return [system_msg] + model_messages
 
 
 async def flush_memory_node(state: GraphState) -> GraphState:
@@ -674,4 +404,3 @@ async def finalize_node(state: GraphState) -> GraphState:
             state.get("debug_preview", ""),
         )
     return {}
-
