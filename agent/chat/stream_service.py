@@ -39,6 +39,7 @@ from tools.intent_router import IntentRouter, emit_route_observation
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_permission import PermissionConfig, ToolPermission
 from tools.tool_registry import ToolRegistry
+from tools.tool_search import ToolSearchTool
 
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
@@ -150,6 +151,8 @@ class ChatStreamService:
             self._tools.register(tool)
         self._skill_registry = build_default_registry()
         self._tools.register(ExpandSkillTool(self._skill_registry))
+        self._tool_search_tool = ToolSearchTool(lambda: self._tools.specs())
+        self._tools.register(self._tool_search_tool)
         self._intent_router = IntentRouter()
         self._safety_pipeline = SafetyPipeline()
         self._fusion_pipeline = _build_default_fusion_pipeline()
@@ -846,10 +849,11 @@ class ChatStreamService:
 
                 async for event in self._provider.stream_chat_with_tools(
                     model_messages,
-                    tools,
+                    final_tools,
                     tool_executor,
                     max_tool_calls=1,
                     max_tool_retries=3,
+                    on_tool_result=on_tool_result if deferred_specs and len(tools) > _DEFER_THRESHOLD else None,
                 ):
                     if event.type == "tool_call":
                         yield self._serialize_protocol_event(

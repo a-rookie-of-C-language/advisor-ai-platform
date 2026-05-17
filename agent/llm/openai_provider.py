@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any, AsyncIterator, Iterable
 
 from openai import AsyncOpenAI
@@ -216,6 +217,7 @@ class OpenAIProvider(BaseLLMProvider):
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
         strict_tools: bool = False,
+        on_tool_result: Callable[[str, dict[str, Any]], Awaitable[list[ToolSpec] | None]] | None = None,
     ) -> AsyncIterator[LLMStreamEvent]:
         if not tools:
             async for chunk in self.stream_chat(messages):
@@ -429,6 +431,22 @@ class OpenAIProvider(BaseLLMProvider):
                             "content": tool_output,
                         }
                     )
+
+                    # 动态工具注入：tool_search 返回新工具时扩展工具列表
+                    if on_tool_result is not None:
+                        try:
+                            parsed_output = json.loads(tool_output) if tool_output else {}
+                        except (json.JSONDecodeError, TypeError):
+                            parsed_output = {}
+                        new_specs = await on_tool_result(tool_name, parsed_output)
+                        if new_specs:
+                            tools = tools + new_specs
+                            tool_payload = self._to_tool_payload(tools, strict=strict_tools)
+                            logger.info(
+                                "llm_tools_extended: added=%s total=%s",
+                                len(new_specs),
+                                len(tools),
+                            )
 
                 tool_call_count += 1
                 continue

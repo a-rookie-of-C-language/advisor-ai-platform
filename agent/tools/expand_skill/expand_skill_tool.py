@@ -25,6 +25,7 @@ class ExpandSkillTool(BaseTool[ExpandSkillInput, None]):
         self._is_concurrency_safe = True
         self._should_defer = False
         self._always_load = True
+        self._search_hint = "技能,展开,指令,指南"
 
     async def execute(self, tool_input: ExpandSkillInput, context: dict[str, Any]) -> ToolResult:
         _ = context

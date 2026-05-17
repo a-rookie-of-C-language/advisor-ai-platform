@@ -42,6 +42,7 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
         self._permission_matcher = "rag.read"
         self._always_load = True
         self._should_defer = False
+        self._search_hint = "知识库,文档,资料,检索,查找"
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 

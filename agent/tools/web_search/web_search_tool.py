@@ -35,6 +35,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
         self._permission_matcher = "web.search"
         self._always_load = True
         self._should_defer = False
+        self._search_hint = "搜索,网络,实时,新闻,天气"
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 
