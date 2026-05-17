@@ -22,5 +22,6 @@ class GraphState(TypedDict, total=False):
     stream_failed: bool
     debug_delta_count: int
     debug_preview: str
+    llm_chunk_count: int
     active_skills: list[str]
     skill_system_prompt: str

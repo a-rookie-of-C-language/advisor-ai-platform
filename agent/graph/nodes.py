@@ -3,15 +3,23 @@
 import asyncio
 import json
 import logging
-from contextvars import ContextVar
-from dataclasses import dataclass
 from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
 from tools.intent_router import emit_route_observation
 
+from .runtime import _emit, _execute_tool, _runtime
 from .state import GraphState
+
+from .helpers import (
+    _inject_fusion_context,
+    _parse_skill_names,
+    _prefer_rag_only,
+    _run_fusion_pipeline,
+    _strip_surrogates,
+    provider_stream,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -142,41 +150,6 @@ async def select_skill_node(state: GraphState) -> GraphState:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Skill selection failed, degrade to no-skill mode: %s", exc)
         return {"active_skills": [], "skill_system_prompt": ""}
-
-
-def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[str]:
-    """Extract skill names from LLM response (expects JSON array).
-
-    Fallback: if JSON parsing fails, try to match known skill names from plain text.
-    """
-    import re
-
-    # 浼樺厛锛氬皾璇曟彁鍙?JSON 鏁扮粍
-    match = re.search(r"\[.*?\]", text, re.DOTALL)
-    if match:
-        try:
-            names = json.loads(match.group())
-            if isinstance(names, list):
-                return [str(n) for n in names if isinstance(n, str)]
-        except json.JSONDecodeError:
-            pass
-
-    # 鍏滃簳锛氫粠绾枃鏈腑鍖归厤宸茬煡 skill name
-    if known_names:
-        lower_text = text.lower()
-        return [name for name in known_names if name.lower() in lower_text]
-    return []
-
-
-async def provider_stream(
-    provider: Any,
-    messages: list[ChatMessage],
-    *,
-    response_format: dict[str, Any] | None = None,
-):
-    """Simple streaming wrapper for LLM text generation (no tools)."""
-    async for chunk in provider.stream_chat(messages, response_format=response_format):
-        yield chunk
 
 
 async def load_memory_node(state: GraphState) -> GraphState:
@@ -360,7 +333,6 @@ async def generate_node(state: GraphState) -> GraphState:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
 
-            # 璺ㄦ簮铻嶅悎锛氶鎵ц鍙宸ュ叿 + 鍦烘櫙璇嗗埆锛堜笁璺苟琛岋級
             fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
             if fusion_context:
                 model_messages = _inject_fusion_context(model_messages, fusion_context)
@@ -481,7 +453,6 @@ async def generate_node(state: GraphState) -> GraphState:
                 if runtime.debug_stream:
                     debug_count += 1
 
-        # 鐢熸垚瀹屾垚鍚庯細缁熶竴瀹夊叏杩囨护
         raw_answer = "".join(answer_parts).strip()
         final_answer = raw_answer
         if raw_answer and runtime.safety_pipeline is not None:
@@ -741,4 +712,3 @@ async def finalize_node(state: GraphState) -> GraphState:
             state.get("debug_preview", ""),
         )
     return {}
-

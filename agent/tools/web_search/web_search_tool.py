@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 
-from duckduckgo_search import DDGS
-from duckduckgo_search.exceptions import DuckDuckGoSearchException, RatelimitException
+from tavily import TavilyClient
 from pydantic import BaseModel
 
 from tools.base_tool import BaseTool
@@ -16,15 +16,13 @@ from tools.web_search.web_search_input import WebSearchInput
 logger = logging.getLogger(__name__)
 
 _SEARCH_TOTAL_TIMEOUT_SEC = 8.0
-_SEARCH_MAX_ATTEMPTS = 3
-_SEARCH_BACKOFF_SEC = (0.35, 0.8)
 
 
 class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
     def __init__(self) -> None:
         super().__init__(
             name="web_search",
-            description="Search the web for real-time information using DuckDuckGo.",
+            description="Search the web for real-time information using Tavily.",
             input_model=WebSearchInput,
             required_permissions={ToolPermission.SEARCH},
             category="search",
@@ -38,6 +36,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
         self._search_hint = "搜索,网络,实时,新闻,天气"
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
+        self._api_key = os.getenv("TAVILY_API_KEY", "")
 
     async def execute(self, tool_input: WebSearchInput, context: dict[str, object]) -> ToolResult:
         _ = context
@@ -45,77 +44,43 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
         if not query:
             return ToolResult.error("empty query")
 
+        if not self._api_key:
+            return ToolResult.error("TAVILY_API_KEY not configured")
+
         start_at = time.monotonic()
         try:
-            last_error: Exception | None = None
-            for attempt in range(1, _SEARCH_MAX_ATTEMPTS + 1):
-                elapsed = time.monotonic() - start_at
-                remain = _SEARCH_TOTAL_TIMEOUT_SEC - elapsed
-                if remain <= 0:
-                    logger.warning(
-                        "web_search timeout before attempt: query=%s attempts=%s elapsed=%.2fs",
-                        query,
-                        attempt - 1,
-                        elapsed,
-                    )
-                    break
-
-                try:
-                    results = await asyncio.wait_for(
-                        asyncio.to_thread(self._search, query, tool_input.max_results),
-                        timeout=remain,
-                    )
-                    if results:
-                        return ToolResult(ok=True, status="hit", message="hit", items=results)
-                    return ToolResult(ok=True, status="miss", message="no results", items=[])
-                except RatelimitException as exc:
-                    last_error = exc
-                    if attempt >= _SEARCH_MAX_ATTEMPTS:
-                        break
-                    delay = _SEARCH_BACKOFF_SEC[min(attempt - 1, len(_SEARCH_BACKOFF_SEC) - 1)]
-                    logger.warning(
-                        "web_search ratelimited: query=%s attempt=%s/%s sleep=%.2fs",
-                        query,
-                        attempt,
-                        _SEARCH_MAX_ATTEMPTS,
-                        delay,
-                    )
-                    await asyncio.sleep(delay)
-                except asyncio.TimeoutError as exc:
-                    last_error = exc
-                    logger.warning(
-                        "web_search timeout: query=%s attempt=%s/%s total_elapsed=%.2fs",
-                        query,
-                        attempt,
-                        _SEARCH_MAX_ATTEMPTS,
-                        time.monotonic() - start_at,
-                    )
-                    break
-                except DuckDuckGoSearchException as exc:
-                    last_error = exc
-                    logger.warning(
-                        "web_search provider error: query=%s attempt=%s/%s error=%s",
-                        query,
-                        attempt,
-                        _SEARCH_MAX_ATTEMPTS,
-                        str(exc),
-                    )
-                    break
-
-            return ToolResult.error(f"web_search failed after {_SEARCH_MAX_ATTEMPTS} attempts: {last_error}")
+            remain = _SEARCH_TOTAL_TIMEOUT_SEC
+            results = await asyncio.wait_for(
+                asyncio.to_thread(self._search, query, tool_input.max_results),
+                timeout=remain,
+            )
+            if results:
+                return ToolResult(ok=True, status="hit", message="hit", items=results)
+            return ToolResult(ok=True, status="miss", message="no results", items=[])
+        except asyncio.TimeoutError as exc:
+            logger.warning(
+                "web_search timeout: query=%s elapsed=%.2fs",
+                query,
+                time.monotonic() - start_at,
+            )
+            return ToolResult.error(f"web_search timeout after {_SEARCH_TOTAL_TIMEOUT_SEC}s")
         except Exception as exc:
-            logger.exception("web_search unexpected error: query=%s", query)
-            return ToolResult.error(f"web_search exception: {exc}")
+            logger.warning(
+                "web_search error: query=%s error=%s",
+                query,
+                str(exc),
+            )
+            return ToolResult.error(f"web_search error: {exc}")
 
-    @staticmethod
-    def _search(query: str, max_results: int) -> list[dict[str, str]]:
-        with DDGS() as ddgs:
-            return [
-                {
-                    "title": r.get("title", ""),
-                    "snippet": (r.get("body", "") or "")[:200],
-                    "url": r.get("href", ""),
-                    "source": "web",
-                }
-                for r in ddgs.text(query, max_results=max_results)
-            ]
+    def _search(self, query: str, max_results: int) -> list[dict[str, str]]:
+        client = TavilyClient(api_key=self._api_key)
+        response = client.search(query, max_results=max_results)
+        return [
+            {
+                "title": r.get("title", ""),
+                "snippet": (r.get("content", "") or "")[:200],
+                "url": r.get("url", ""),
+                "source": "web",
+            }
+            for r in response.get("results", [])
+        ]

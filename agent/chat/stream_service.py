@@ -932,8 +932,7 @@ class ChatStreamService:
                     model_messages,
                     on_reasoning=_emit_reasoning,
                 ):
-                    # 先发送排队的思考内容
-                    while not reasoning_queue.empty():
+                    while True:
                         try:
                             reasoning_text = reasoning_queue.get_nowait()
                             yield self._serialize_protocol_event(
@@ -960,8 +959,7 @@ class ChatStreamService:
                         trace_id=trace_id,
                         payload={"text": delta},
                     )
-                # 流结束后清空剩余思考内容
-                while not reasoning_queue.empty():
+                while True:
                     try:
                         reasoning_text = reasoning_queue.get_nowait()
                         yield self._serialize_protocol_event(

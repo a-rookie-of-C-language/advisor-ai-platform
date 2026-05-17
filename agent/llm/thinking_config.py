@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ThinkingProvider = Literal["deepseek", "openai", "qwen", "none"]
+ThinkingProvider = Literal["deepseek", "openai", "qwen"]
 ReasoningEffort = Literal["low", "medium", "high"]
 
 
@@ -12,17 +12,17 @@ class ThinkingConfig:
     """统一管理不同模型厂商的思考模式参数。"""
 
     enabled: bool = True
-    provider: ThinkingProvider = "deepseek"
+    provider: ThinkingProvider | None = None
     reasoning_effort: ReasoningEffort = "medium"
     extra_body: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def disabled(cls) -> "ThinkingConfig":
-        return cls(enabled=False, provider="none")
+        return cls(enabled=False)
 
     def to_request_kwargs(self) -> dict[str, Any]:
         """转换为 OpenAI-compatible API 请求参数。"""
-        if not self.enabled or self.provider == "none":
+        if not self.enabled or self.provider is None:
             return {}
 
         if self.provider == "deepseek":
