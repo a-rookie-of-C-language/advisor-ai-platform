@@ -4,10 +4,10 @@ import os
 from typing import Any
 
 from tools.base_tool import BaseTool
-from tools.tool_impl.memory_read_tool import MemoryReadTool
-from tools.tool_impl.memory_write_tool import MemoryWriteTool
-from tools.tool_impl.rag_search_tool import RAGSearchTool
-from tools.tool_impl.web_search_tool import WebSearchTool
+from tools.memory_read import MemoryReadTool
+from tools.memory_write import MemoryWriteTool
+from tools.rag_search import RAGSearchTool
+from tools.web_search import WebSearchTool
 
 
 class ToolCatalog:
