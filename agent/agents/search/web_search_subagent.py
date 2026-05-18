@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-from agents.base.subagent import SubAgent
+from agents.search.base_subagent import WebToolSubAgent
 from agents.search.schema import WebSearchResult
-from tools.tool_permission import PermissionConfig, ToolPermission
-from tools.tool_result import ToolResult
-
-logger = logging.getLogger(__name__)
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个搜索结果分析助手。请根据搜索结果完成两个任务：\n"
@@ -21,21 +16,20 @@ _JUDGE_SYSTEM_PROMPT = (
 )
 
 
-class WebSearchSubAgent(SubAgent):
+class WebSearchSubAgent(WebToolSubAgent):
     def __init__(self, llm_provider: Any, web_search_tool: Any) -> None:
         super().__init__(
             name="web_search_subagent",
             llm_provider=llm_provider,
-            permission_config=PermissionConfig.from_allowed_tools(
-                {ToolPermission.LLM, ToolPermission.SEARCH},
-                read_resources={"context"},
-                write_resources=set(),
-            ),
+            tool=web_search_tool,
+            judge_system_prompt=_JUDGE_SYSTEM_PROMPT,
         )
-        self._web_search_tool = web_search_tool
 
     async def search(self, query: str, max_results: int = 5) -> WebSearchResult:
-        raw_result = await self._execute_search(query, max_results)
+        from tools.web_search import WebSearchInput
+
+        tool_input = WebSearchInput(query=query, max_results=max_results)
+        raw_result = await self._execute_tool(tool_input)
 
         if not raw_result.ok or not raw_result.items:
             return WebSearchResult(
@@ -46,7 +40,7 @@ class WebSearchSubAgent(SubAgent):
             )
 
         sources = raw_result.items
-        judgment = await self._judge(query, sources)
+        judgment = await self._judge_search(query, sources)
 
         return WebSearchResult(
             summary=judgment.get("summary", ""),
@@ -56,44 +50,10 @@ class WebSearchSubAgent(SubAgent):
             key_facts=judgment.get("key_facts", []),
         )
 
-    async def _execute_search(self, query: str, max_results: int) -> ToolResult:
-        try:
-            from tools.web_search import WebSearchTool
-
-            if isinstance(self._web_search_tool, WebSearchTool):
-                from tools.web_search import WebSearchInput
-
-                tool_input = WebSearchInput(query=query, max_results=max_results)
-                return await self._web_search_tool.execute(tool_input, context={})
-            result = await self._web_search_tool(query=query, max_results=max_results)
-            if isinstance(result, ToolResult):
-                return result
-            return ToolResult(ok=True, status="hit", message="hit", items=result if isinstance(result, list) else [])
-        except Exception as e:
-            logger.error("web_search_subagent search failed: %s", e)
-            return ToolResult(ok=False, status="error", message=str(e), items=[])
-
-    async def _judge(self, query: str, sources: list[dict[str, Any]]) -> dict[str, Any]:
+    async def _judge_search(self, query: str, sources: list[dict[str, Any]]) -> dict[str, Any]:
         sources_text = "\n".join(
             f"- [{item.get('title', '')}]({item.get('url', '')}): {item.get('snippet', '')}"
             for item in sources
         )
         user_content = f"用户查询：{query}\n\n搜索结果：\n{sources_text}"
-
-        try:
-            result = await self.call_llm_json(
-                [
-                    {"role": "system", "content": _JUDGE_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_content},
-                ]
-            )
-            return result
-        except Exception as e:
-            logger.error("web_search_subagent judge failed: %s", e)
-            return {"summary": sources_text, "safe": True, "key_facts": []}
-
-    async def run_once(self) -> dict[str, Any]:
-        return {}
-
-    async def run(self) -> None:
-        return None
+        return await self._judge(user_content)
