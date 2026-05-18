@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-from agents.base.subagent import SubAgent
+from agents.search.base_subagent import WebToolSubAgent
 from agents.search.schema import WebFetchResult
-from tools.tool_permission import PermissionConfig, ToolPermission
-from tools.tool_result import ToolResult
-
-logger = logging.getLogger(__name__)
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个网页内容审核助手。请分析网页内容并完成两个任务：\n"
@@ -20,21 +15,20 @@ _JUDGE_SYSTEM_PROMPT = (
 )
 
 
-class WebFetchSubAgent(SubAgent):
+class WebFetchSubAgent(WebToolSubAgent):
     def __init__(self, llm_provider: Any, web_fetch_tool: Any) -> None:
         super().__init__(
             name="web_fetch_subagent",
             llm_provider=llm_provider,
-            permission_config=PermissionConfig.from_allowed_tools(
-                {ToolPermission.LLM, ToolPermission.SEARCH},
-                read_resources={"context"},
-                write_resources=set(),
-            ),
+            tool=web_fetch_tool,
+            judge_system_prompt=_JUDGE_SYSTEM_PROMPT,
         )
-        self._web_fetch_tool = web_fetch_tool
 
     async def fetch(self, url: str, max_content_length: int = 2000) -> WebFetchResult:
-        raw_result = await self._execute_fetch(url, max_content_length)
+        from tools.web_fetch.web_fetch_input import WebFetchInput
+
+        tool_input = WebFetchInput(url=url, max_content_length=max_content_length)
+        raw_result = await self._execute_tool(tool_input)
 
         if not raw_result.ok:
             return WebFetchResult(
@@ -64,37 +58,3 @@ class WebFetchSubAgent(SubAgent):
             safe=judgment.get("safe", True),
             filtered_reason=judgment.get("filtered_reason"),
         )
-
-    async def _execute_fetch(self, url: str, max_content_length: int) -> ToolResult:
-        try:
-            from tools.web_fetch import WebFetchInput
-
-            if isinstance(self._web_fetch_tool, self._web_fetch_tool.__class__):
-                tool_input = WebFetchInput(url=url, max_content_length=max_content_length)
-                return await self._web_fetch_tool.execute(tool_input, context={})
-            result = await self._web_fetch_tool(url=url, max_content_length=max_content_length)
-            if isinstance(result, ToolResult):
-                return result
-            return ToolResult(ok=True, status="hit", message="hit", items=[{"content": result}])
-        except Exception as e:
-            logger.error("web_fetch_subagent fetch failed: %s", e)
-            return ToolResult(ok=False, status="error", message=str(e), items=[])
-
-    async def _judge(self, content: str) -> dict[str, Any]:
-        try:
-            result = await self.call_llm_json(
-                [
-                    {"role": "system", "content": _JUDGE_SYSTEM_PROMPT},
-                    {"role": "user", "content": f"网页内容：\n{content[:2000]}"},
-                ]
-            )
-            return result
-        except Exception as e:
-            logger.error("web_fetch_subagent judge failed: %s", e)
-            return {"summary": content[:500], "safe": True, "filtered_reason": None}
-
-    async def run_once(self) -> dict[str, Any]:
-        return {}
-
-    async def run(self) -> None:
-        return None
