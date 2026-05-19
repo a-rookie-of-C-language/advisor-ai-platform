@@ -12,7 +12,7 @@ class ToolAssemblyPool:
     """工具组装池：按 builtin -> custom -> mcp 顺序稳定组装并去重。"""
 
     @classmethod
-    def build(
+    async def build(
         cls,
         *,
         rag_service: Any | None = None,
@@ -34,7 +34,7 @@ class ToolAssemblyPool:
             key=lambda tool: tool.name,
         )
         mcp_tools = sorted(
-            ToolCatalog.get_mcp_tools(
+            await ToolCatalog.get_mcp_tools(
                 rag_service=rag_service,
                 memory_client=memory_client,
             ),

@@ -123,7 +123,7 @@ class ChatStreamService:
             "latency_ms": 0,
         }
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
-        for tool in ToolAssemblyPool.build(
+        for tool in await ToolAssemblyPool.build(
             rag_service=rag_service,
             memory_client=memory_client,
         ):
