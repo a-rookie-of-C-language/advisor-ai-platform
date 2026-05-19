@@ -24,6 +24,9 @@ class _DummyTool(BaseTool[_DummyInput, BaseModel]):
 
 
 def _set_catalog(monkeypatch, *, builtin: list[BaseTool], custom: list[BaseTool], mcp: list[BaseTool]) -> None:
+    async def mock_get_mcp_tools(cls, **kwargs):  # type: ignore[no-untyped-def]
+        return mcp
+
     monkeypatch.setattr(
         ToolCatalog,
         "get_builtin_tools",
@@ -34,47 +37,47 @@ def _set_catalog(monkeypatch, *, builtin: list[BaseTool], custom: list[BaseTool]
         "get_custom_tools",
         classmethod(lambda cls, **kwargs: custom),
     )
-    monkeypatch.setattr(
-        ToolCatalog,
-        "get_mcp_tools",
-        classmethod(lambda cls, **kwargs: mcp),
-    )
+    monkeypatch.setattr(ToolCatalog, "get_mcp_tools", classmethod(mock_get_mcp_tools))
 
 
-def test_assembly_order_and_stable_sort(monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_assembly_order_and_stable_sort(monkeypatch) -> None:
     _set_catalog(
         monkeypatch,
         builtin=[_DummyTool("b2"), _DummyTool("b1")],
         custom=[_DummyTool("c2"), _DummyTool("c1")],
         mcp=[_DummyTool("m2"), _DummyTool("m1")],
     )
-    tools = ToolAssemblyPool.build()
+    tools = await ToolAssemblyPool.build()
     assert [tool.name for tool in tools] == ["b1", "b2", "c1", "c2", "m1", "m2"]
 
 
-def test_conflict_policy_keep_first_default(monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_conflict_policy_keep_first_default(monkeypatch) -> None:
     _set_catalog(
         monkeypatch,
         builtin=[_DummyTool("dup")],
         custom=[_DummyTool("dup")],
         mcp=[],
     )
-    tools = ToolAssemblyPool.build()
+    tools = await ToolAssemblyPool.build()
     assert [tool.name for tool in tools] == ["dup"]
     assert tools[0].description == "dup"
 
 
-def test_conflict_policy_keep_last(monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_conflict_policy_keep_last(monkeypatch) -> None:
     first = _DummyTool("dup")
     second = _DummyTool("dup")
     second._permission_matcher = "from_last"
     _set_catalog(monkeypatch, builtin=[first], custom=[second], mcp=[])
-    tools = ToolAssemblyPool.build(conflict_policy="keep_last")
+    tools = await ToolAssemblyPool.build(conflict_policy="keep_last")
     assert len(tools) == 1
     assert tools[0].get_permission_matcher(_DummyInput()) == "from_last"
 
 
-def test_conflict_policy_error(monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_conflict_policy_error(monkeypatch) -> None:
     _set_catalog(
         monkeypatch,
         builtin=[_DummyTool("dup")],
@@ -82,5 +85,5 @@ def test_conflict_policy_error(monkeypatch) -> None:
         mcp=[],
     )
     with pytest.raises(ValueError, match="duplicate tool name"):
-        ToolAssemblyPool.build(conflict_policy="error")
+        await ToolAssemblyPool.build(conflict_policy="error")
 

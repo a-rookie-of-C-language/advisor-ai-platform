@@ -50,18 +50,25 @@ class ToolCatalog:
         return []
 
     @classmethod
-    def get_mcp_tools(
+    async def get_mcp_tools(
         cls,
         *,
-        rag_service: Any | None,
-        memory_client: Any | None,
+        rag_service: Any | None = None,
+        memory_client: Any | None = None,
     ) -> list[BaseTool]:
         _ = rag_service
         _ = memory_client
-        return []
+        if not cls._feature_enabled("MCP_TOOLS", False):
+            return []
+        try:
+            from tools.mcp_tool_loader import load_mcp_tools
+
+            return await load_mcp_tools()
+        except Exception:
+            return []
 
     @classmethod
-    def get_all_base_tools(
+    async def get_all_base_tools(
         cls,
         *,
         rag_service: Any | None = None,
@@ -70,5 +77,5 @@ class ToolCatalog:
         tools: list[BaseTool] = []
         tools.extend(cls.get_builtin_tools(rag_service=rag_service, memory_client=memory_client))
         tools.extend(cls.get_custom_tools(rag_service=rag_service, memory_client=memory_client))
-        tools.extend(cls.get_mcp_tools(rag_service=rag_service, memory_client=memory_client))
+        tools.extend(await cls.get_mcp_tools(rag_service=rag_service, memory_client=memory_client))
         return tools
