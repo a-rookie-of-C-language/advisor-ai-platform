@@ -11,7 +11,6 @@ from llm.chat_message import ChatMessage
 
 from .nodes import select_skill_node
 from .runtime import GraphRuntime, reset_runtime, set_runtime
-from .state import GraphState
 from .workflow import build_chat_graph
 
 logger = logging.getLogger(__name__)
@@ -97,7 +96,7 @@ class GraphRunner:
             fusion_pipeline=self._fusion_pipeline,
             web_search_subagent=self._web_search_subagent,
         )
-        state: GraphState = {
+        state = {
             "messages": messages,
             "model_messages": messages,
             "user_id": user_id,

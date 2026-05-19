@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agents.search.base_subagent import WebToolSubAgent
 from agents.search.schema import WebFetchResult
+from agents.search.WebToolSubAgent import WebToolSubAgent
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个网页内容审核助手。请分析网页内容并完成两个任务：\n"
