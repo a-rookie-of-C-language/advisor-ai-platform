@@ -85,7 +85,7 @@ class ChatServiceImplTest {
   }
 
   private UserPrincipal buildPrincipal() {
-    return new UserPrincipal(1L, "tester", "STUDENT");
+    return new UserPrincipal(1L, "tester", "ADVISOR");
   }
 
   private UserDO buildUser() {

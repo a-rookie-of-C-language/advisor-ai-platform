@@ -11,6 +11,7 @@ import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +32,7 @@ class RagServiceImplTest {
 
   @Test
   void createKnowledgeBase_shouldPersistReadyStatus() {
-    UserPrincipal user = new UserPrincipal(1L, "tester", "STUDENT");
+    UserPrincipal user = new UserPrincipal(1L, "tester", "ADVISOR");
 
     RagKnowledgeBaseDO saved = new RagKnowledgeBaseDO();
     saved.setId(10L);
@@ -53,12 +54,14 @@ class RagServiceImplTest {
   void deleteDocument_shouldUpdateDocCountAndDeleteRecord() {
     ReflectionTestUtils.setField(ragService, "uploadDir", "uploads");
 
-    UserPrincipal user = new UserPrincipal(2L, "tester", "STUDENT");
+    UserPrincipal user = new UserPrincipal(2L, "tester", "ADVISOR");
 
     RagKnowledgeBaseDO kb = new RagKnowledgeBaseDO();
     kb.setId(20L);
     kb.setDocCount(3);
-    kb.setCreatedBy(null);
+    UserDO owner = new UserDO();
+    owner.setId(2L);
+    kb.setCreatedBy(owner);
 
     RagDocumentDO doc = new RagDocumentDO();
     doc.setId(30L);

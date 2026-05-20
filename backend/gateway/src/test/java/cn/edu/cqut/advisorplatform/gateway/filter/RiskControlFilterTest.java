@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -39,9 +40,13 @@ class RiskControlFilterTest {
   private RiskControlFilter riskControlFilter;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     when(webClientBuilder.build()).thenReturn(webClient);
     riskControlFilter = new RiskControlFilter(webClientBuilder, new SimpleMeterRegistry());
+    // 通过反射设置 failClosedPaths，避免 @Value 注入在测试中不生效的问题
+    Field failClosedPathsField = RiskControlFilter.class.getDeclaredField("failClosedPaths");
+    failClosedPathsField.setAccessible(true);
+    failClosedPathsField.set(riskControlFilter, "/api/chat/,/api/rag/");
   }
 
   @Test
@@ -94,6 +99,9 @@ class RiskControlFilterTest {
 
     when(webClient.post()).thenReturn(requestBodyUriSpec);
     when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
+    // Mock header to return itself (fluent API)
+    when(requestBodySpec.header(any(String.class), any(String[].class)))
+        .thenReturn(requestBodySpec);
     when(requestBodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
     when(headersSpec.retrieve()).thenReturn(responseSpec);
 

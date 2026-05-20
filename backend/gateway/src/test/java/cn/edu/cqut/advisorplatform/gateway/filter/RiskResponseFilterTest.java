@@ -53,7 +53,6 @@ class RiskResponseFilterTest {
   void shouldSkipGetRequests() {
     when(exchange.getRequest()).thenReturn(request);
     when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/stream"));
-    when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(chain.filter(exchange)).thenReturn(Mono.empty());
 
     Mono<Void> result = riskResponseFilter.filter(exchange, chain);
@@ -65,20 +64,22 @@ class RiskResponseFilterTest {
   @Test
   void shouldDecorateResponseForPostOnRiskPaths() {
     when(exchange.getRequest()).thenReturn(request);
-    when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/stream"));
+    // Use a risk path that is NOT the chat/stream special path
+    when(request.getURI()).thenReturn(URI.create("http://localhost/api/rag/search"));
     when(request.getMethod()).thenReturn(HttpMethod.POST);
     when(exchange.getResponse()).thenReturn(response);
 
     ServerWebExchange.Builder exchangeBuilder = mock(ServerWebExchange.Builder.class);
+    ServerWebExchange decoratedExchange = mock(ServerWebExchange.class);
     when(exchange.mutate()).thenReturn(exchangeBuilder);
     when(exchangeBuilder.response(any())).thenReturn(exchangeBuilder);
-    when(exchangeBuilder.build()).thenReturn(exchange);
+    when(exchangeBuilder.build()).thenReturn(decoratedExchange);
     when(chain.filter(any())).thenReturn(Mono.empty());
 
     Mono<Void> result = riskResponseFilter.filter(exchange, chain);
 
     StepVerifier.create(result).verifyComplete();
-    verify(exchange.mutate()).response(any());
+    verify(exchangeBuilder).response(any());
   }
 
   @Test
