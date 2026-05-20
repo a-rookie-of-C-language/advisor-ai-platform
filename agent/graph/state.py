@@ -18,6 +18,7 @@ class GraphState(TypedDict, total=False):
     web_search_enabled: bool
     use_tool: bool
     route_categories: set[str]
+    matched_tools: list[str]
     assistant_answer: str
     stream_failed: bool
     debug_delta_count: int

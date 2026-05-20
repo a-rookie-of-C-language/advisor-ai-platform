@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import Dict, List, Set
 
 from context.memory.core.schema import MemoryItem
 from context.memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
+
+# 预编译正则，避免每次调用都重新编译
+_RE_TOKEN = re.compile(r"[a-z0-9_]+|[一-鿿]+")
 
 
 class DiversityRerank(BaseMemoryRerankStrategy):
@@ -30,17 +33,28 @@ class DiversityRerank(BaseMemoryRerankStrategy):
         remaining = list(items)
         query_vec = self._tokenize_to_set(query)
 
+        # 🚀 优化：循环外预切所有候选的词，避免内层循环中重复切词
+        candidate_tokens: Dict[str, Set[str]] = {}
+        for item in remaining:
+            candidate_tokens[item.id] = self._tokenize_to_set(item.content)
+
         while len(selected) < top_k and remaining:
             best_item = None
             best_score = -1.0
 
             for candidate in remaining:
-                relevance = self._similarity(candidate.content, query_vec)
+                relevance = self._jaccard_similarity(
+                    candidate_tokens[candidate.id], query_vec
+                )
                 if not selected:
                     score = relevance
                 else:
+                    # 🚀 优化：复用预切好的 tokens，只做集合运算
                     max_sim = max(
-                        self._similarity(candidate.content, sel.content)
+                        self._jaccard_similarity(
+                            candidate_tokens[candidate.id],
+                            candidate_tokens[sel.id],
+                        )
                         for sel in selected
                     )
                     mmr_score = self._lambda * relevance - (1 - self._lambda) * max_sim
@@ -61,13 +75,13 @@ class DiversityRerank(BaseMemoryRerankStrategy):
     @staticmethod
     def _tokenize_to_set(text: str) -> set[str]:
         lowered = text.lower()
-        return set(re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]", lowered))
+        return set(_RE_TOKEN.findall(lowered))
 
     @staticmethod
-    def _similarity(text_a: str, token_set_b: set[str]) -> float:
-        tokens_a = DiversityRerank._tokenize_to_set(text_a)
-        if not tokens_a or not token_set_b:
+    def _jaccard_similarity(set_a: set[str], set_b: set[str]) -> float:
+        """计算杰卡德相似度，接收已切好的两个集合"""
+        if not set_a or not set_b:
             return 0.0
-        intersection = len(tokens_a.intersection(token_set_b))
-        union = len(tokens_a.union(token_set_b))
+        intersection = len(set_a & set_b)
+        union = len(set_a | set_b)
         return intersection / max(union, 1)

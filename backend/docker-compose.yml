@@ -238,9 +238,7 @@ services:
       - "8084:8084"
 
   agent:
-    build:
-      context: ../agent
-      dockerfile: Dockerfile
+    image: advisor-agent:local
     container_name: advisor-agent
     env_file:
       - ../agent/.env
@@ -252,19 +250,24 @@ services:
       AGENT_API_PORT: 8001
       AGENT_API_TOKEN: arookieofc
       CLI_BACKEND_BASE_URL: http://gateway:8080
+      LLM_THINKING_PROVIDER: none
+      MCP_SERVERS: student:http:http://student-service:8085/mcp/message
+      MCP_TOKEN_STUDENT: arookieofc
       OPENAI_TEMPERATURE: 0.2
-      OPENAI_TIMEOUT_SEC: 60
       EMBEDDING_PROVIDER: openai
       EMBEDDING_MODEL: BAAI/bge-m3
       ENABLE_TOOL_USE: "true"
-      ENABLED_TOOLS: web_search,rag_search
+      ENABLED_TOOLS: web_search,rag_search,mcp__student__list_students,mcp__student__get_student,mcp__student__get_student_checkin_summary,mcp__student__get_student_checkin_detail
       MEMORY_API_BASE_URL: http://memory-service:8084
       MEMORY_API_TOKEN: arookieofc
+      FEATURE_MCP_TOOLS: "true"
       DEBUG_STREAM: "false"
     depends_on:
       postgres:
         condition: service_healthy
       memory-service:
+        condition: service_started
+      student-service:
         condition: service_started
     ports:
       - "8001:8001"
@@ -367,6 +370,8 @@ services:
       JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
       ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
       INTERNAL_SERVICE_TOKEN: arookieofc
+      FEATURE_MCP_SERVER: "true"
+      MCP_SERVER_TOKEN: arookieofc
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       SERVER_PORT: 8091
     depends_on:

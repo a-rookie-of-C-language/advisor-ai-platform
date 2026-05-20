@@ -96,6 +96,10 @@ class McpToolAdapter(BaseTool):
         self._is_open_world = open_world
         self._search_hint = search_hint or ""
         self._always_load = always_load
+        self._max_result_size_chars = 20000
+        # MCP 工具默认只读，可并发执行
+        self._is_concurrency_safe = True
+        self._is_read_only = True
 
     async def execute(self, tool_input: Any, context: dict[str, Any]) -> ToolResult:
         """执行 MCP 工具调用"""
@@ -177,6 +181,37 @@ class McpToolAdapter(BaseTool):
 
     def get_should_defer(self) -> bool:
         return not self._always_load
+
+    def get_query_patterns(self) -> list[str]:
+        """根据 MCP 工具名称返回对应的查询模式，用于意图路由自动选择工具"""
+        patterns_map = {
+            "list_students": [
+                r"学生(列表|名单|有哪些)",
+                r"查询.*学生",
+                r"查看.*学生",
+                r"获取.*学生.*列表",
+                r"所有学生",
+                r"学生信息列表",
+            ],
+            "get_student": [
+                r"(?:查询|获取|查看).*(?:学生|学号|姓名).*(?:详情|信息|资料)",
+                r"学生.*(?:学号|姓名).*(?:多少|是什么|查询)",
+                r"(?:学号|姓名).*学生",
+                r"学生详情",
+            ],
+            "get_student_checkin_summary": [
+                r"学生签到.*(?:汇总|统计|概况|总)",
+                r"签到.*(?:情况|状态|汇总)",
+                r"学生.*(?:考勤|签到).*(?:汇总|统计)",
+            ],
+            "get_student_checkin_detail": [
+                r"学生签到.*(?:明细|详情|记录)",
+                r"签到.*(?:明细|详情|记录|历史)",
+                r"学生.*(?:考勤|签到).*(?:明细|详情|记录)",
+            ],
+        }
+
+        return patterns_map.get(self._mcp_tool_name, [])
 
     def __repr__(self) -> str:
         return f"McpToolAdapter(name={self.name}, server={self._server_name})"

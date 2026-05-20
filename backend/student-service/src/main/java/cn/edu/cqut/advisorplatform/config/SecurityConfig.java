@@ -36,7 +36,8 @@ public class SecurityConfig {
                         "/actuator/health/**",
                         "/actuator/info",
                         "/actuator/prometheus",
-                        "/internal/health")
+                        "/internal/health",
+                        "/mcp/**")
                     .permitAll()
                     .requestMatchers("/internal/**")
                     .hasRole("INTERNAL")

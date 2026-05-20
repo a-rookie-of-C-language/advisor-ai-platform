@@ -33,6 +33,10 @@ class ToolRegistry:
         """返回指定 category 下的 tool specs，用于意图路由后按需注入。"""
         return [tool.to_tool_spec() for tool in self._tools.values() if tool.category in categories]
 
+    def specs_by_names(self, names: list[str]) -> list[ToolSpec]:
+        """返回指定工具名的 tool specs，用于意图路由根据查询模式匹配的工具。"""
+        return [self._tools[name].to_tool_spec() for name in names if name in self._tools]
+
     def all_categories(self) -> set[str]:
         """返回当前注册的所有 tool category。"""
         return {tool.category for tool in self._tools.values()}

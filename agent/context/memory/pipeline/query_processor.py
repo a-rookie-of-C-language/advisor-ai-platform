@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Dict, List, Set
 
 DEFAULT_STOP_WORDS: Set[str] = {
@@ -27,6 +28,26 @@ DEFAULT_SYNONYMS: Dict[str, List[str]] = {
     "帮助": ["协助", "支持", "援助"],
 }
 
+# 预编译正则，避免每次调用都重新编译
+_RE_TOKEN = re.compile(r"[a-z0-9_]+|[一-鿿]+")
+_RE_WHITESPACE = re.compile(r"[　\s]+")
+
+
+def _build_synonym_pattern(synonyms: Dict[str, List[str]]) -> re.Pattern | None:
+    """把所有同义词关键词合并成一个正则，按长度降序避免短词优先匹配"""
+    if not synonyms:
+        return None
+    all_keys = list(synonyms.keys())
+    all_keys.sort(key=len, reverse=True)
+    pattern = "|".join(re.escape(k) for k in all_keys)
+    return re.compile(pattern)
+
+
+@lru_cache(maxsize=2048)
+def _tokenize_cached(text: str) -> tuple[str, ...]:
+    """缓存分词结果，同一文本只计算一次"""
+    return tuple(_RE_TOKEN.findall(text.lower()))
+
 
 @dataclass(slots=True)
 class ProcessedQuery:
@@ -49,6 +70,7 @@ class QueryProcessor:
         self._synonyms = synonyms or DEFAULT_SYNONYMS
         self._enable_synonyms = enable_synonym_expansion
         self._enable_norm = enable_normalization
+        self._syn_pattern = _build_synonym_pattern(self._synonyms) if enable_synonym_expansion else None
 
     def process(self, query: str) -> ProcessedQuery:
         if not query or not query.strip():
@@ -76,21 +98,22 @@ class QueryProcessor:
     @staticmethod
     def _normalize(text: str) -> str:
         normalized = unicodedata.normalize("NFKC", text)
-        normalized = re.sub(r"[\u3000\s]+", " ", normalized).strip()
+        normalized = _RE_WHITESPACE.sub(" ", normalized).strip()
         return normalized
 
     @staticmethod
     def _tokenize(text: str) -> List[str]:
-        lowered = text.lower()
-        return re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]+", lowered)
+        return list(_tokenize_cached(text.lower()))
 
     def _expand_synonyms(self, tokens: List[str]) -> Set[str]:
+        if not self._synonyms or not self._enable_synonyms:
+            return set()
+
         expanded: Set[str] = set()
         for token in tokens:
             if token in self._synonyms:
                 for syn in self._synonyms[token]:
-                    syn_tokens = self._tokenize(syn)
-                    expanded.update(syn_tokens)
+                    expanded.update(self._tokenize(syn))
         return expanded
 
     def build_search_query(self, processed: ProcessedQuery) -> str:

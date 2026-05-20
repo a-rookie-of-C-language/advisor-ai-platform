@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from functools import lru_cache
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem
+
+
+@lru_cache(maxsize=1024)
+def _normalize_text_cached(text: str) -> str:
+    """缓存归一化结果，避免重复处理"""
+    return " ".join(text.lower().strip().split())
 
 
 class MemoryGovernance:
@@ -53,7 +60,7 @@ class MemoryGovernance:
         seen: set[str] = set()
         result: list[MemoryCandidate] = []
         for candidate in sorted(candidates, key=lambda item: item.confidence, reverse=True):
-            key = self._normalize_text(candidate.content)
+            key = _normalize_text_cached(candidate.content)
             if key in seen:
                 continue
             seen.add(key)
@@ -69,17 +76,29 @@ class MemoryGovernance:
     def resolve_conflicts(self, items: list[MemoryItem]) -> list[MemoryItem]:
         grouped: dict[str, MemoryItem] = {}
         for item in items:
-            key = str(item.tags.get("memory_key", "")).strip() or self._normalize_text(item.content)
+            key = str(item.tags.get("memory_key", "")).strip()
+            if not key:
+                key = _normalize_text_cached(item.content)
             existing = grouped.get(key)
             if existing is None:
                 grouped[key] = item
                 continue
-            if (item.confidence, item.updated_at or datetime.min) > (
-                existing.confidence,
-                existing.updated_at or datetime.min,
-            ):
+            # 🚀 优化1: 使用时间戳比较，避免时区问题
+            item_ts = self._get_timestamp(item.updated_at)
+            existing_ts = self._get_timestamp(existing.updated_at)
+            if (item.confidence, item_ts) > (existing.confidence, existing_ts):
                 grouped[key] = item
         return list(grouped.values())
+
+    @staticmethod
+    def _get_timestamp(dt: datetime | None) -> float:
+        """将 datetime 转为时间戳，处理时区问题"""
+        if dt is None:
+            return 0.0
+        # 统一转为 UTC 时间戳
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
 
     def compute_time_decay(self, item: MemoryItem, now: datetime | None = None) -> float:
         reference = item.updated_at or item.created_at
@@ -96,4 +115,4 @@ class MemoryGovernance:
 
     @staticmethod
     def _normalize_text(value: str) -> str:
-        return " ".join(value.lower().strip().split())
+        return _normalize_text_cached(value)

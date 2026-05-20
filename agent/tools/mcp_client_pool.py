@@ -88,7 +88,8 @@ class McpClientPool:
                 continue
 
             name, transport_type, url_or_command = parts[0], parts[1], ":".join(parts[2:])
-            token_key = f"MCP_TOKEN_{name.upper()}"
+            # 将连字符替换为下划线，以匹配环境变量命名约定（如 MCP_TOKEN_STUDENT_SERVICE）
+            token_key = f"MCP_TOKEN_{name.upper().replace('-', '_')}"
             token = os.getenv(token_key)
 
             configs.append(
@@ -163,7 +164,7 @@ class McpClientPool:
             raise ImportError("Please install mcp: pip install mcp")
 
         from mcp import ClientSession
-        from mcp.transport.stdio import StdioClientTransport
+        from mcp.client.stdio import stdio_client
 
         semaphore = self._get_semaphore(config)
 
@@ -181,33 +182,30 @@ class McpClientPool:
                         key, val = s.split("=", 1)
                         stdio_env[key] = val
 
-            transport = StdioClientTransport(command=command, args=args, env=stdio_env)
-
-            client = ClientSession()
-            await client.connect(transport)
-            return client
+            async with stdio_client(
+                command=command,
+                args=args,
+                env=stdio_env,
+            ) as (read_stream, write_stream):
+                client = ClientSession(read_stream, write_stream)
+                await client.initialize()
+                return client
 
     async def _connect_http(self, config: McpServerConfig) -> Any:
-        """通过 HTTP/SSE 连接到 MCP 服务器"""
+        """通过 HTTP 连接到 MCP 服务器（直接 JSON-RPC POST）"""
         import importlib.util
 
         if importlib.util.find_spec("mcp") is None:
             raise ImportError("Please install mcp: pip install mcp")
 
         from mcp import ClientSession
-        from mcp.transport.sse import SSEClientTransport
 
         semaphore = self._get_semaphore(config)
 
         async with semaphore:
-            headers = {}
-            if config.token:
-                headers["Authorization"] = f"Bearer {config.token}"
-
-            transport = SSEClientTransport(url=config.url_or_command, headers=headers)
-
-            client = ClientSession()
-            await client.connect(transport)
+            # 创建自定义 HTTP 客户端来连接 MCP 服务器
+            client = DirectHttpMcpClient(config)
+            await client.initialize()
             return client
 
     async def call_tool(
@@ -217,8 +215,6 @@ class McpClientPool:
         arguments: dict[str, Any],
     ) -> dict[str, Any]:
         """调用 MCP 工具，自动处理重连"""
-        from mcp import CallToolResult
-
         MAX_RETRIES = 1
 
         for attempt in range(MAX_RETRIES + 1):
@@ -231,8 +227,8 @@ class McpClientPool:
                 result = await client.call_tool(tool_name, arguments)
                 conn.last_used = asyncio.get_event_loop().time()
 
-                # 处理结果
-                if isinstance(result, CallToolResult):
+                # 处理结果 - DirectHttpMcpClient 返回的是模拟的 CallToolResult
+                if hasattr(result, 'content'):
                     return self._parse_tool_result(result)
                 return {"ok": True, "content": str(result)}
 
@@ -321,3 +317,74 @@ class McpClientPool:
     def get_server_names(self) -> list[str]:
         """获取所有已配置的服务名称"""
         return list(self._connections.keys())
+
+
+class DirectHttpMcpClient:
+    """直接 HTTP JSON-RPC MCP 客户端
+
+    用于连接到简单的 HTTP POST MCP 服务器（如 Spring Boot 实现）。
+    不依赖复杂的 SSE/Streamable HTTP 协议。
+    """
+
+    def __init__(self, config: McpServerConfig) -> None:
+        import httpx
+
+        self._config = config
+        self._url = config.url_or_command
+        self._headers = {"Content-Type": "application/json"}
+        if config.token:
+            self._headers["Authorization"] = f"Bearer {config.token}"
+        self._http_client = httpx.AsyncClient(timeout=30.0)
+
+    async def initialize(self) -> None:
+        """发送 initialize 请求"""
+        response = await self._post({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+        # Response is ignored, just ensure connection works
+        return response
+
+    async def list_tools(self) -> Any:
+        """列出所有工具"""
+        response = await self._post({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
+        result = response.get("result", {})
+        tools = result.get("tools", [])
+
+        # 返回带 name 属性的对象列表
+        class Tool:
+            def __init__(self, data: dict) -> None:
+                self.name = data.get("name", "")
+                self.description = data.get("description", "")
+                self.inputSchema = data.get("inputSchema", {})
+
+        return type("ToolsResult", (), {"tools": [Tool(t) for t in tools]})()
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        """调用工具"""
+        response = await self._post({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+        result = response.get("result", {})
+        content = result.get("content", [])
+        return type("CallToolResult", (), {
+            "content": [
+                type("TextContent", (), {"text": item.get("text", "")})()
+                for item in content
+            ],
+            "isError": False
+        })()
+
+    async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """发送 JSON-RPC POST 请求"""
+        response = await self._http_client.post(
+            self._url,
+            json=payload,
+            headers=self._headers,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def close(self) -> None:
+        """关闭连接"""
+        await self._http_client.aclose()
