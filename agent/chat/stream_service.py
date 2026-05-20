@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 import json
@@ -725,9 +725,13 @@ class ChatStreamService:
                     text = str(event_data.get("text", "") or event_data.get("raw", ""))
                     if text:
                         saw_content = True
+                event_source = (
+                    "llm" if event_name == "llm_delta"
+                    else ("tool" if event_name.startswith("tool_") else "system")
+                )
                 yield self._serialize_protocol_event(
                     event=event_name,
-                    source="llm" if event_name == "llm_delta" else ("tool" if event_name.startswith("tool_") else "system"),
+                    source=event_source,
                     trace_id=trace_id,
                     payload=event_data if isinstance(event_data, dict) else {},
                 )

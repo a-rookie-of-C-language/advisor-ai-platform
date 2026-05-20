@@ -1,6 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import Any
@@ -11,9 +10,6 @@ from safety.regex_filter import StreamingRegexFilter
 from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
-from .runtime import _emit, _execute_tool, _runtime
-from .state import GraphState
-
 from .helpers import (
     _inject_fusion_context,
     _parse_skill_names,
@@ -22,6 +18,8 @@ from .helpers import (
     _strip_surrogates,
     provider_stream,
 )
+from .runtime import _emit, _execute_tool, _runtime
+from .state import GraphState
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +414,8 @@ async def generate_node(state: GraphState) -> GraphState:
                     tools = [rag_tool.to_tool_spec()]
 
             logger.info(
-                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, matched_tools=%s, direct_generate=%s",
+                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, "
+                "matched_tools=%s, direct_generate=%s",
                 state.get("session_id"),
                 [tool.name for tool in tools],
                 sorted(route_categories),

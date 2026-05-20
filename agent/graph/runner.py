@@ -9,7 +9,6 @@ from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.work_memory import WorkMemory
 from llm.chat_message import ChatMessage
 
-from .nodes import select_skill_node
 from .runtime import GraphRuntime, reset_runtime, set_runtime
 from .workflow import build_chat_graph
 

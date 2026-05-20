@@ -5,8 +5,8 @@ import logging
 import os
 import time
 
-from tavily import TavilyClient
 from pydantic import BaseModel
+from tavily import TavilyClient
 
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
@@ -57,7 +57,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
             if results:
                 return ToolResult(ok=True, status="hit", message="hit", items=results)
             return ToolResult(ok=True, status="miss", message="no results", items=[])
-        except asyncio.TimeoutError as exc:
+        except asyncio.TimeoutError:
             logger.warning(
                 "web_search timeout: query=%s elapsed=%.2fs",
                 query,
