@@ -33,7 +33,7 @@ class TestWebSearchSubAgent:
     @pytest.mark.asyncio
     async def test_search_returns_empty_when_no_results(self, subagent):
         with patch.object(
-            subagent, "_execute_search", new_callable=AsyncMock
+            subagent, "_execute_tool", new_callable=AsyncMock
         ) as mock_exec:
             mock_exec.return_value = ToolResult(ok=True, status="miss", message="miss", items=[])
 
@@ -47,7 +47,7 @@ class TestWebSearchSubAgent:
     @pytest.mark.asyncio
     async def test_search_returns_empty_when_tool_fails(self, subagent):
         with patch.object(
-            subagent, "_execute_search", new_callable=AsyncMock
+            subagent, "_execute_tool", new_callable=AsyncMock
         ) as mock_exec:
             mock_exec.return_value = ToolResult(
                 ok=False, status="error", message="network error", items=[]
@@ -72,7 +72,7 @@ class TestWebSearchSubAgent:
         }
 
         with patch.object(
-            subagent, "_execute_search", new_callable=AsyncMock
+            subagent, "_execute_tool", new_callable=AsyncMock
         ) as mock_exec, patch.object(
             subagent, "_judge", new_callable=AsyncMock
         ) as mock_judge:
@@ -102,7 +102,7 @@ class TestWebSearchSubAgent:
         }
 
         with patch.object(
-            subagent, "_execute_search", new_callable=AsyncMock
+            subagent, "_execute_tool", new_callable=AsyncMock
         ) as mock_exec, patch.object(
             subagent, "_judge", new_callable=AsyncMock
         ) as mock_judge:
@@ -124,7 +124,7 @@ class TestWebSearchSubAgent:
         ]
 
         with patch.object(
-            subagent, "_execute_search", new_callable=AsyncMock
+            subagent, "_execute_tool", new_callable=AsyncMock
         ) as mock_exec, patch.object(
             subagent, "call_llm_json", new_callable=AsyncMock
         ) as mock_llm:
@@ -141,10 +141,14 @@ class TestWebSearchSubAgent:
     @pytest.mark.asyncio
     async def test_search_passes_max_results(self, subagent):
         with patch.object(
-            subagent, "_execute_search", new_callable=AsyncMock
+            subagent, "_execute_tool", new_callable=AsyncMock
         ) as mock_exec:
             mock_exec.return_value = ToolResult(ok=True, status="miss", message="miss", items=[])
 
             await subagent.search("query", max_results=10)
 
-            mock_exec.assert_called_once_with("query", 10)
+            # 验证传入的是 WebSearchInput 对象
+            mock_exec.assert_called_once()
+            call_args = mock_exec.call_args[0][0]
+            assert call_args.query == "query"
+            assert call_args.max_results == 10
