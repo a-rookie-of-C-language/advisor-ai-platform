@@ -108,6 +108,6 @@ class ChatControllerSendMessageConsistencyTest {
   }
 
   private UserPrincipal buildUser() {
-    return new UserPrincipal(1L, "tester", "STUDENT");
+    return new UserPrincipal(1L, "tester", "ADVISOR");
   }
 }

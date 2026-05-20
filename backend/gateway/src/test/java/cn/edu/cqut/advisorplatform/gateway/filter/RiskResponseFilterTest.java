@@ -69,9 +69,10 @@ class RiskResponseFilterTest {
     when(exchange.getResponse()).thenReturn(response);
 
     ServerWebExchange.Builder exchangeBuilder = mock(ServerWebExchange.Builder.class);
+    ServerWebExchange decoratedExchange = mock(ServerWebExchange.class);
     when(exchange.mutate()).thenReturn(exchangeBuilder);
     when(exchangeBuilder.response(any())).thenReturn(exchangeBuilder);
-    when(exchangeBuilder.build()).thenReturn(exchange);
+    when(exchangeBuilder.build()).thenReturn(decoratedExchange);
     when(chain.filter(any())).thenReturn(Mono.empty());
 
     Mono<Void> result = riskResponseFilter.filter(exchange, chain);
