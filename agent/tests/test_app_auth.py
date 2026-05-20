@@ -138,6 +138,7 @@ def test_build_provider_from_env_falls_back_on_invalid_float(monkeypatch):
 
     monkeypatch.setenv("OPENAI_API_KEY", "k")
     monkeypatch.setenv("OPENAI_MODEL", "m")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost")
     monkeypatch.setenv("OPENAI_TEMPERATURE", "bad-temp")
     monkeypatch.setenv("OPENAI_TIMEOUT_SEC", "bad-timeout")
     monkeypatch.setattr(provider_factory, "OpenAIProvider", _FakeProvider)
