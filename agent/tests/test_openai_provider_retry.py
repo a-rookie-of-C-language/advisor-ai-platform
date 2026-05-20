@@ -46,8 +46,11 @@ def make_provider(results: list[Any], *, max_retries: int = 0) -> tuple[OpenAIPr
     return provider, completions
 
 
-def chunk(text: str):
-    return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])
+def chunk(text: str, finish_reason: str | None = None):
+    choice = SimpleNamespace(delta=SimpleNamespace(content=text))
+    if finish_reason is not None:
+        choice.finish_reason = finish_reason
+    return SimpleNamespace(choices=[choice])
 
 
 async def stream_chunks(*texts: str):

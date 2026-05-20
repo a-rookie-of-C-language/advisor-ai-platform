@@ -413,7 +413,7 @@ class OpenAIProvider(BaseLLMProvider):
                             ) from timeout_exc
                         if chunk.choices:
                             choice = chunk.choices[0]
-                            if choice.finish_reason:
+                            if hasattr(choice, "finish_reason") and choice.finish_reason:
                                 finish_reason = choice.finish_reason
                             # 思考模式：reasoning_content 通过回调流式输出
                             # DeepSeek-R1 等模型使用 reasoning_content，需要检查属性存在性
