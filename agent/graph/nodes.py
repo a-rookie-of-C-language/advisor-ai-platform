@@ -1,6 +1,5 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import Any
@@ -11,9 +10,6 @@ from safety.regex_filter import StreamingRegexFilter
 from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
-from .runtime import _emit, _execute_tool, _runtime
-from .state import GraphState
-
 from .helpers import (
     _inject_fusion_context,
     _parse_skill_names,
@@ -22,6 +18,8 @@ from .helpers import (
     _strip_surrogates,
     provider_stream,
 )
+from .runtime import _emit, _execute_tool, _runtime
+from .state import GraphState
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +213,8 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     logger.info(
-        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, use_tool=%s, route_categories=%s, matched_tools=%s",
+        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, "
+        "use_tool=%s, route_categories=%s, matched_tools=%s",
         state.get("session_id"),
         rag_enabled,
         web_search_enabled,
@@ -280,7 +279,8 @@ async def generate_node(state: GraphState) -> GraphState:
                     tools = [rag_tool.to_tool_spec()]
 
             logger.info(
-                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, matched_tools=%s, direct_generate=%s",
+                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, "
+                "matched_tools=%s, direct_generate=%s",
                 state.get("session_id"),
                 [tool.name for tool in tools],
                 sorted(route_categories),

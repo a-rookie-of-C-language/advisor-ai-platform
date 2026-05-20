@@ -95,8 +95,14 @@ def _get_rag_service() -> RAG_service | None:
     ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
     embedding_provider = os.getenv("EMBEDDING_PROVIDER", "ollama").strip().lower()
     embedding_model = os.getenv("EMBEDDING_MODEL", "bge-m3").strip()
-    embedding_openai_base_url = os.getenv("EMBEDDING_OPENAI_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
-    embedding_openai_api_key = os.getenv("EMBEDDING_OPENAI_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    embedding_openai_base_url = (
+        os.getenv("EMBEDDING_OPENAI_BASE_URL", "").strip()
+        or os.getenv("OPENAI_BASE_URL", "").strip()
+    )
+    embedding_openai_api_key = (
+        os.getenv("EMBEDDING_OPENAI_API_KEY", "").strip()
+        or os.getenv("OPENAI_API_KEY", "").strip()
+    )
 
     try:
         return RAG_service(

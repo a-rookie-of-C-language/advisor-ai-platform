@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import logging
@@ -242,7 +242,12 @@ class IntentRouter:
             return llm_decision
 
         fallback_reason = rule_decision.fallback_reason or "llm_unavailable"
-        fallback = self._build_fallback(normalized_categories, reason=fallback_reason, scores=rule_decision.scores, matched_tools=rule_decision.matched_tools)
+        fallback = self._build_fallback(
+            normalized_categories,
+            reason=fallback_reason,
+            scores=rule_decision.scores,
+            matched_tools=rule_decision.matched_tools,
+        )
         self._last_decision = fallback
         return fallback
 
@@ -339,7 +344,13 @@ class IntentRouter:
             and decision.matched_by in {"strong_rule", "score"}
         )
 
-    async def _route_by_llm(self, query: str, all_categories: set[str], provider: Any | None, rule_decision: RouteDecision | None = None) -> RouteDecision | None:
+    async def _route_by_llm(
+        self,
+        query: str,
+        all_categories: set[str],
+        provider: Any | None,
+        rule_decision: RouteDecision | None = None,
+    ) -> RouteDecision | None:
         classifier = self._llm_classifier or provider
         if classifier is None:
             return None

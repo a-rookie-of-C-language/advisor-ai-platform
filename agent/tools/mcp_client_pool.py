@@ -163,8 +163,8 @@ class McpClientPool:
         if importlib.util.find_spec("mcp") is None:
             raise ImportError("Please install mcp: pip install mcp")
 
-        from mcp import ClientSession
-        from mcp.client.stdio import stdio_client
+        from mcp import ClientSession  # noqa: F401  # noqa: F401
+        from mcp.client.stdio import stdio_client  # noqa: F401
 
         semaphore = self._get_semaphore(config)
 
@@ -198,7 +198,7 @@ class McpClientPool:
         if importlib.util.find_spec("mcp") is None:
             raise ImportError("Please install mcp: pip install mcp")
 
-        from mcp import ClientSession
+        from mcp import ClientSession  # noqa: F401
 
         semaphore = self._get_semaphore(config)
 

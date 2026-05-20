@@ -22,7 +22,7 @@ class ToolAssemblyPool:
         import asyncio
         try:
             # 尝试获取运行中的事件循环
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # 在已有事件循环中，使用 nest_asyncio 或者在新的线程中运行
             import threading
             result = None
