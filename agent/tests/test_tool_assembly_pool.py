@@ -48,7 +48,7 @@ async def test_assembly_order_and_stable_sort(monkeypatch) -> None:
         custom=[_DummyTool("c2"), _DummyTool("c1")],
         mcp=[_DummyTool("m2"), _DummyTool("m1")],
     )
-    tools = await ToolAssemblyPool.build()
+    tools = ToolAssemblyPool.build()
     assert [tool.name for tool in tools] == ["b1", "b2", "c1", "c2", "m1", "m2"]
 
 
@@ -60,7 +60,7 @@ async def test_conflict_policy_keep_first_default(monkeypatch) -> None:
         custom=[_DummyTool("dup")],
         mcp=[],
     )
-    tools = await ToolAssemblyPool.build()
+    tools = ToolAssemblyPool.build()
     assert [tool.name for tool in tools] == ["dup"]
     assert tools[0].description == "dup"
 
@@ -71,7 +71,7 @@ async def test_conflict_policy_keep_last(monkeypatch) -> None:
     second = _DummyTool("dup")
     second._permission_matcher = "from_last"
     _set_catalog(monkeypatch, builtin=[first], custom=[second], mcp=[])
-    tools = await ToolAssemblyPool.build(conflict_policy="keep_last")
+    tools = ToolAssemblyPool.build(conflict_policy="keep_last")
     assert len(tools) == 1
     assert tools[0].get_permission_matcher(_DummyInput()) == "from_last"
 
@@ -85,5 +85,5 @@ async def test_conflict_policy_error(monkeypatch) -> None:
         mcp=[],
     )
     with pytest.raises(ValueError, match="duplicate tool name"):
-        await ToolAssemblyPool.build(conflict_policy="error")
+        ToolAssemblyPool.build(conflict_policy="error")
 
