@@ -1,0 +1,22 @@
+import asyncio
+import sys
+sys.path.insert(0, "/app")
+from tools.mcp_client_pool import McpClientPool, McpServerConfig
+
+async def test():
+    config = McpServerConfig(
+        name="student",
+        transport_type="http",
+        url_or_command="http://advisor-student-service:8085/mcp/message",
+        token="arookieofc"
+    )
+    pool = McpClientPool()
+    try:
+        result = await pool.call_tool(config, "get_student", {"student_id": 1})
+        print("Result:", result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print("Error:", e)
+
+asyncio.run(test())
