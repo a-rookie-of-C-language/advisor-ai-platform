@@ -3,7 +3,8 @@
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
+from typing import Any, Awaitable, Callable, Literal
 from typing import Any, AsyncIterator, Iterable
 
 from openai import AsyncOpenAI
@@ -23,6 +24,252 @@ from llm.with_retry import (
 from prompt.PromptBuilder import PromptBuilder
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TrackedTool:
+    """跟踪单个工具调用的状态"""
+
+    raw_call: Any  # 原始 tool_call 对象
+    tool_name: str
+    args_text: str
+    fsm: ToolCallFSM
+    is_concurrency_safe: bool = False
+    is_read_only: bool = True
+    status: Literal["queued", "executing", "completed", "cancelled"] = "queued"
+    tool_output: str = ""
+    success: bool = False
+    used_attempt: int = 0
+    is_cascade_error: bool = False  # 是否因级联错误被取消
+
+
+class ToolScheduler:
+    """工具并发调度器，支持并发安全和错误级联"""
+
+    def __init__(
+        self,
+        tool_executor: ToolExecutor,
+        max_retries: int,
+        tool_specs: dict[str, ToolSpec],
+        abort_event: asyncio.Event,
+    ) -> None:
+        self._tool_executor = tool_executor
+        self._max_retries = max_retries
+        self._tool_specs = tool_specs
+        self._abort_event = abort_event
+        self._executing: list[TrackedTool] = []
+        self._lock = asyncio.Lock()
+        self._has_critical_error = False
+
+    def get_tool_spec(self, tool_name: str) -> ToolSpec | None:
+        """根据工具名查找 ToolSpec"""
+        return self._tool_specs.get(tool_name)
+
+    def can_execute_concurrent(self, tool: TrackedTool) -> bool:
+        """判断工具是否可以并发执行"""
+        if not tool.is_concurrency_safe:
+            return False
+        return all(t.is_concurrency_safe for t in self._executing)
+
+    async def execute_tools(
+        self,
+        tools: list[TrackedTool],
+        yield_func: Callable[[LLMStreamEvent], Awaitable[None]],
+        conversation: list[dict[str, Any]],
+    ) -> list[TrackedTool]:
+        """执行工具调用列表，支持并发调度和错误级联"""
+        results: list[TrackedTool] = []
+
+        # 分组：并发安全的只读工具 vs 其他
+        concurrent_tools = [t for t in tools if t.is_concurrency_safe and t.is_read_only]
+        serial_tools = [t for t in tools if not t.is_concurrency_safe or not t.is_read_only]
+
+        # 1. 先并行执行并发安全的只读工具
+        if concurrent_tools:
+            await self._execute_concurrent(concurrent_tools, yield_func)
+            results.extend(concurrent_tools)
+
+        # 2. 如果有严重错误，跳过串行工具
+        if self._has_critical_error:
+            for tool in serial_tools:
+                tool.status = "cancelled"
+                tool.is_cascade_error = True
+                tool.tool_output = json.dumps(
+                    {
+                        "ok": False,
+                        "status": "error",
+                        "message": "cancelled: sibling tool failed",
+                        "items": [],
+                    },
+                    ensure_ascii=False,
+                )
+                tool.success = False
+                results.append(tool)
+            return results
+
+        # 3. 串行执行非并发安全或非只读的工具
+        for tool in serial_tools:
+            if self._abort_event.is_set():
+                tool.status = "cancelled"
+                tool.is_cascade_error = True
+                tool.tool_output = json.dumps(
+                    {
+                        "ok": False,
+                        "status": "error",
+                        "message": "cancelled: aborted",
+                        "items": [],
+                    },
+                    ensure_ascii=False,
+                )
+                tool.success = False
+                results.append(tool)
+                continue
+
+            await self._execute_single(tool, yield_func)
+            results.append(tool)
+
+            # 错误级联：非只读工具失败时设置 abort 标志
+            if not tool.success and not tool.is_read_only:
+                self._has_critical_error = True
+                self._abort_event.set()
+
+        return results
+
+    async def _execute_concurrent(
+        self,
+        tools: list[TrackedTool],
+        yield_func: Callable[[LLMStreamEvent], Awaitable[None]],
+    ) -> None:
+        """并行执行一组并发安全的工具"""
+        if not tools:
+            return
+
+        async def execute_one(tool: TrackedTool) -> TrackedTool:
+            async with self._lock:
+                if self._abort_event.is_set():
+                    tool.status = "cancelled"
+                    tool.is_cascade_error = True
+                    return tool
+                tool.status = "executing"
+                self._executing.append(tool)
+
+            try:
+                await yield_func(
+                    LLMStreamEvent(
+                        type="tool_call",
+                        tool_name=tool.tool_name,
+                        tool_args=tool.fsm.context.tool_args,
+                    )
+                )
+
+                last_error = ""
+                for attempt in range(1, self._max_retries + 1):
+                    tool.used_attempt = attempt
+                    try:
+                        tool.tool_output = await self._tool_executor(
+                            tool.tool_name, tool.fsm.context.tool_args
+                        )
+                        tool.success = True
+                        tool.fsm.record_execution(tool.tool_output, success=True)
+                        break
+                    except Exception as exc:  # noqa: BLE001
+                        last_error = str(exc)
+                        tool.fsm.record_execution(str(exc), success=False)
+                        if tool.fsm.state.value == "failed":
+                            break
+
+                if not tool.success:
+                    tool.tool_output = json.dumps(
+                        {
+                            "ok": False,
+                            "status": "error",
+                            "message": f"tool_execute_failed: {last_error}",
+                            "items": [],
+                        },
+                        ensure_ascii=False,
+                    )
+            finally:
+                async with self._lock:
+                    self._executing.remove(tool)
+                    tool.status = "completed"
+
+                await yield_func(
+                    LLMStreamEvent(
+                        type="tool_result",
+                        tool_name=tool.tool_name,
+                        tool_args=tool.fsm.context.tool_args,
+                        tool_output=tool.tool_output,
+                        attempt=tool.used_attempt,
+                        success=tool.success,
+                    )
+                )
+
+            return tool
+
+        await asyncio.gather(*[execute_one(t) for t in tools], return_exceptions=False)
+
+    async def _execute_single(
+        self,
+        tool: TrackedTool,
+        yield_func: Callable[[LLMStreamEvent], Awaitable[None]],
+    ) -> TrackedTool:
+        """执行单个工具"""
+        tool.status = "executing"
+        async with self._lock:
+            self._executing.append(tool)
+
+        try:
+            await yield_func(
+                LLMStreamEvent(
+                    type="tool_call",
+                    tool_name=tool.tool_name,
+                    tool_args=tool.fsm.context.tool_args,
+                )
+            )
+
+            last_error = ""
+            for attempt in range(1, self._max_retries + 1):
+                tool.used_attempt = attempt
+                try:
+                    tool.tool_output = await self._tool_executor(
+                        tool.tool_name, tool.fsm.context.tool_args
+                    )
+                    tool.success = True
+                    tool.fsm.record_execution(tool.tool_output, success=True)
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_error = str(exc)
+                    tool.fsm.record_execution(str(exc), success=False)
+                    if tool.fsm.state.value == "failed":
+                        break
+
+            if not tool.success:
+                tool.tool_output = json.dumps(
+                    {
+                        "ok": False,
+                        "status": "error",
+                        "message": f"tool_execute_failed: {last_error}",
+                        "items": [],
+                    },
+                    ensure_ascii=False,
+                )
+        finally:
+            async with self._lock:
+                self._executing.remove(tool)
+                tool.status = "completed"
+
+            await yield_func(
+                LLMStreamEvent(
+                    type="tool_result",
+                    tool_name=tool.tool_name,
+                    tool_args=tool.fsm.context.tool_args,
+                    tool_output=tool.tool_output,
+                    attempt=tool.used_attempt,
+                    success=tool.success,
+                )
+            )
+
+        return tool
 
 
 class OpenAIProvider(BaseLLMProvider):

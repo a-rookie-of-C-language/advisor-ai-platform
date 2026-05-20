@@ -1,15 +1,31 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import logging
 import re
+from collections import OrderedDict
 from typing import Awaitable, Callable
 
 from llm.chat_message import ChatMessage
 
+logger = logging.getLogger(__name__)
+
 
 class ContextCompactor:
-    """分层上下文压缩器（Level 1 + 2 + 3 + 4）。"""
+    """分层上下文压缩器（Level 1 + 2 + 3 + 4）。
+
+    特性：
+    - LRU 缓存：限制 _micro_cache 最大容量，避免内存泄漏
+    - 角色判别：仅依赖 message.role 判断工具结果，避免误判
+    - 异步摘要支持：auto_compact 可配置为异步执行
+    """
+
+    # 最大缓存容量（防止内存泄漏）
+    MAX_MICRO_CACHE_SIZE = 100
+    # 摘要超时时间（秒），超时后跳过摘要继续流程
+    SUMMARIZE_TIMEOUT_SECONDS = 30.0
 
     def __init__(
         self,
@@ -33,7 +49,9 @@ class ContextCompactor:
         self._collapse_keep_last = max(collapse_keep_last, 1)
         self._auto_trigger_tokens = max(auto_trigger_tokens, 1)
         self._auto_keep_last = max(auto_keep_last, 1)
-        self._micro_cache: dict[str, str] = {}
+
+        # 🚀 优化1: 使用 LRU 有序字典替代普通 dict，避免内存泄漏
+        self._micro_cache: OrderedDict[str, str] = OrderedDict()
 
     async def compact_for_model(
         self,
@@ -70,7 +88,24 @@ class ContextCompactor:
             if persist_transcript_fn is not None:
                 transcript_path = persist_transcript_fn(session_id, projected)
             transcript_text = self._to_transcript_text(projected)
-            summary = (await summarize_fn(transcript_text)).strip()
+
+            # 🚀 优化5: 添加摘要超时保护，避免阻塞用户请求
+            summary = ""
+            try:
+                summary = await asyncio.wait_for(
+                    summarize_fn(transcript_text),
+                    timeout=self.SUMMARIZE_TIMEOUT_SECONDS,
+                )
+                summary = summary.strip()
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "autocompact_summarize_timeout session_id=%s timeout=%.1f",
+                    session_id,
+                    self.SUMMARIZE_TIMEOUT_SECONDS,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("autocompact_summarize_failed session_id=%s err=%s", session_id, exc)
+
             if summary:
                 projected = self._apply_autocompact(projected, summary, self._auto_keep_last)
                 auto_compacted = True
@@ -133,7 +168,23 @@ class ContextCompactor:
         key = hashlib.sha1(content.encode("utf-8")).hexdigest()
         cached = self._micro_cache.get(key)
         if cached is not None:
+            # 🚀 优化2: LRU 更新，将访问的 key 移到末尾
+            self._micro_cache.move_to_end(key)
             return cached
+
+        tool_name = self._extract_tool_name(content)
+        replaced = f"[Previous: used {tool_name}]"
+
+        # 🚀 优化3: LRU 淘汰，超过容量后移除最旧的
+        if len(self._micro_cache) >= self.MAX_MICRO_CACHE_SIZE:
+            self._micro_cache.popitem(last=False)
+
+        self._micro_cache[key] = replaced
+        return replaced
+
+    @staticmethod
+    def _extract_tool_name(content: str) -> str:
+        """从工具返回内容中提取工具名称"""
         tool_name = "tool"
         stripped = content.strip()
         if stripped.startswith("{") and stripped.endswith("}"):
@@ -141,23 +192,17 @@ class ContextCompactor:
                 payload = json.loads(stripped)
                 tool_name = str(payload.get("tool") or payload.get("tool_name") or tool_name)
             except Exception:  # noqa: BLE001
-                tool_name = "tool"
+                pass
         else:
             matched = re.search(r'"tool"\s*:\s*"([^"]+)"', content)
             if matched is not None:
                 tool_name = matched.group(1)
-        replaced = f"[Previous: used {tool_name}]"
-        self._micro_cache[key] = replaced
-        return replaced
+        return tool_name
 
     @staticmethod
     def _looks_like_tool_result(message: ChatMessage) -> bool:
-        if message.role == "tool":
-            return True
-        text = message.content.strip()
-        if text.startswith("{") and text.endswith("}"):
-            return '"items"' in text and ('"status"' in text or '"tool"' in text)
-        return False
+        # 🚀 优化4: 仅依赖 role 判断，避免误判 JSON 代码示例
+        return message.role == "tool"
 
     @staticmethod
     def _to_transcript_text(messages: list[ChatMessage]) -> str:

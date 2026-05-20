@@ -44,6 +44,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         self._is_enabled = True
         self._interrupt_behavior: Literal["cancel", "block"] = "block"
         self._requires_user_interaction = False
+        self._max_result_size_chars = 20000
 
     @abstractmethod
     async def execute(self, tool_input: InputModelT, context: dict[str, Any]) -> ToolResult:
@@ -90,6 +91,15 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
     def get_requires_user_interaction(self) -> bool:
         return self._requires_user_interaction
 
+    def get_max_result_size_chars(self) -> int:
+        return self._max_result_size_chars
+
+    def truncate_result(self, result: str) -> str:
+        """截断过长的结果，防止上下文窗口被淹没"""
+        if len(result) <= self._max_result_size_chars:
+            return result
+        return result[: self._max_result_size_chars] + "\n... [truncated]"
+
     async def validate_input(self, input_payload: dict[str, Any]) -> ValidationResult[InputModelT]:
         try:
             parsed = self.input_model.model_validate(input_payload or {})
@@ -114,6 +124,10 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
             return None
         return self.output_model.model_json_schema()
 
+    def get_query_patterns(self) -> list[str]:
+        """返回工具能处理的查询模式（正则表达式），用于意图路由自动选择工具。"""
+        return []
+
     def to_tool_spec(self) -> ToolSpec:
         return ToolSpec(
             name=self.name,
@@ -121,6 +135,8 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
             parameters=self.input_json_schema(),
             defer_loading=self.get_should_defer(),
             search_hint=self.get_search_hint(),
+            is_concurrency_safe=self._is_concurrency_safe,
+            is_read_only=self._is_read_only,
         )
 
     def __repr__(self) -> str:

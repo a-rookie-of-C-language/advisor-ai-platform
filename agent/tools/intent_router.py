@@ -123,6 +123,7 @@ class RouteDecision:
     fallback_reason: str = ""
     scores: dict[str, int] | None = None
     reason: str = ""
+    matched_tools: list[str] | None = None
 
     @property
     def event_name(self) -> str:
@@ -137,9 +138,11 @@ class RouteDecision:
             "categories": categories,
             "scores": self.scores or {},
             "reason": self.reason,
+            "matched_tools": self.matched_tools or [],
             "source": {
                 "decision": self.matched_by,
                 "categories": categories,
+                "matched_tools": self.matched_tools or [],
             },
         }
 
@@ -168,6 +171,25 @@ class IntentRouter:
         self._score_threshold = score_threshold
         self._allow_destructive_fallback = allow_destructive_fallback
         self._last_decision = RouteDecision(categories=set(), matched_by="none", confidence=0.0)
+        self._tools: list[Any] = []
+        self._tool_patterns: list[tuple[str, re.Pattern[str]]] = []
+
+    def register_tools(self, tools: list[Any]) -> None:
+        """注册工具，提取查询模式用于意图匹配"""
+        self._tools = tools
+        self._tool_patterns = []
+        for tool in tools:
+            patterns = tool.get_query_patterns()
+            for pattern in patterns:
+                self._tool_patterns.append((tool.name, re.compile(pattern)))
+
+    def _match_tools_by_patterns(self, query: str) -> list[str]:
+        """根据工具查询模式匹配工具，返回匹配的工具名列表"""
+        matched = set()
+        for tool_name, pattern in self._tool_patterns:
+            if pattern.search(query):
+                matched.add(tool_name)
+        return list(matched)
 
     @property
     def last_decision(self) -> RouteDecision:
@@ -217,6 +239,9 @@ class IntentRouter:
         if not query.strip():
             return RouteDecision(categories=set(), matched_by="none", confidence=0.0, fallback_reason="empty_query")
 
+        # 先匹配工具查询模式
+        matched_tools = self._match_tools_by_patterns(query)
+
         strong_hits: set[str] = set()
         scores: dict[str, int] = {}
         for category, layers in self._compiled.items():
@@ -239,6 +264,7 @@ class IntentRouter:
                 matched_by="strong_rule",
                 confidence=0.98,
                 scores=scores,
+                matched_tools=matched_tools,
             )
 
         if len(strong_hits) > 1:
@@ -249,6 +275,7 @@ class IntentRouter:
                 confidence=0.55,
                 fallback_reason="strong_conflict",
                 scores=scores,
+                matched_tools=matched_tools,
             )
 
         scored = self._pick_top_categories(scores, minimum_score=self._score_threshold)
@@ -258,6 +285,7 @@ class IntentRouter:
                 matched_by="score",
                 confidence=0.88,
                 scores=scores,
+                matched_tools=matched_tools,
             )
         if len(scored) > 1:
             return RouteDecision(
@@ -266,13 +294,27 @@ class IntentRouter:
                 confidence=0.6,
                 fallback_reason="score_conflict",
                 scores=scores,
+                matched_tools=matched_tools,
             )
+
+        # 没有匹配到任何类别，但有工具模式匹配
+        if matched_tools:
+            return RouteDecision(
+                categories={"general"},
+                matched_by="tool_pattern",
+                confidence=0.85,
+                fallback_reason="no_category_match_but_tool_matched",
+                scores=scores,
+                matched_tools=matched_tools,
+            )
+
         return RouteDecision(
             categories=set(),
             matched_by="none",
             confidence=0.0,
             fallback_reason="score_below_threshold",
             scores=scores,
+            matched_tools=matched_tools,
         )
 
     def _should_accept_without_llm(self, decision: RouteDecision) -> bool:

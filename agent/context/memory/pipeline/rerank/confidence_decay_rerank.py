@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from context.memory.core.governance import MemoryGovernance
 from context.memory.core.schema import MemoryItem
 from context.memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
+
+# 预编译正则，避免每次调用都重新编译
+_RE_TOKEN = re.compile(r"[a-z0-9_]+|[一-鿿]+")
 
 
 class ConfidenceDecayRerank(BaseMemoryRerankStrategy):
@@ -41,9 +44,14 @@ class ConfidenceDecayRerank(BaseMemoryRerankStrategy):
         now = datetime.now(timezone.utc)
         query_tokens = self._tokenize(query)
 
+        # 🚀 优化：循环外预切所有 items 的词，避免在 sorted() 的 key 函数中重复切词
+        content_tokens_cache: Dict[str, Set[str]] = {}
+        for item in items:
+            content_tokens_cache[item.id] = self._tokenize(item.content)
+
         def score(item: MemoryItem) -> float:
-            content_tokens = self._tokenize(item.content)
-            overlap = len(query_tokens.intersection(content_tokens))
+            content_tokens = content_tokens_cache[item.id]
+            overlap = len(query_tokens & content_tokens)
             lexical = overlap / max(len(query_tokens), 1)
             decay = self._governance.compute_time_decay(item, now=now)
             return (
@@ -58,4 +66,4 @@ class ConfidenceDecayRerank(BaseMemoryRerankStrategy):
     @staticmethod
     def _tokenize(text: str) -> set[str]:
         lowered = text.lower()
-        return set(re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]", lowered))
+        return set(_RE_TOKEN.findall(lowered))

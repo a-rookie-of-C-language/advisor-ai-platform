@@ -141,6 +141,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     has_query = bool(user_query)
     rag_enabled = has_query
     route_categories: set[str] = set()
+    matched_tools: list[str] = []
     if runtime.enable_tool_use and has_query:
         if runtime.intent_router is not None:
             all_cats = runtime.tools.all_categories()
@@ -150,6 +151,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
                 provider=runtime.provider,
             )
             route_categories = set(route_decision.categories)
+            matched_tools = list(route_decision.matched_tools) if route_decision.matched_tools else []
             await emit_route_observation(
                 route_decision,
                 logger=logger,
@@ -164,18 +166,20 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     logger.info(
-        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, use_tool=%s, route_categories=%s",
+        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, use_tool=%s, route_categories=%s, matched_tools=%s",
         state.get("session_id"),
         rag_enabled,
         web_search_enabled,
         use_tool,
         sorted(route_categories),
+        matched_tools,
     )
     return {
         "rag_enabled": rag_enabled,
         "web_search_enabled": web_search_enabled,
         "use_tool": use_tool,
         "route_categories": route_categories,
+        "matched_tools": matched_tools,
     }
 
 
@@ -203,19 +207,27 @@ async def generate_node(state: GraphState) -> GraphState:
             direct_generate = bool(fusion_context and fusion_context.get("candidates"))
 
             route_categories = set(state.get("route_categories", set()))
-            if route_categories:
+            matched_tools = state.get("matched_tools", [])
+
+            # 优先使用查询模式匹配的工具
+            if matched_tools:
+                tools = runtime.tools.specs_by_names(matched_tools)
+            elif route_categories:
                 tools = runtime.tools.specs_by_categories(route_categories)
             else:
                 tools = runtime.tools.specs()
+
             if _prefer_rag_only(user_query):
                 rag_tool = runtime.tools.get("rag_search")
                 if rag_tool is not None:
                     tools = [rag_tool.to_tool_spec()]
+
             logger.info(
-                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, direct_generate=%s",
+                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, matched_tools=%s, direct_generate=%s",
                 state.get("session_id"),
                 [tool.name for tool in tools],
                 sorted(route_categories),
+                matched_tools,
                 direct_generate,
             )
 

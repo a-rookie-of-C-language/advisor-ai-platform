@@ -123,16 +123,20 @@ class ChatStreamService:
             "latency_ms": 0,
         }
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
-        for tool in await ToolAssemblyPool.build(
+        # ToolAssemblyPool.build() 会自动加载 MCP 工具
+        tools = ToolAssemblyPool.build(
             rag_service=rag_service,
             memory_client=memory_client,
-        ):
+        )
+        for tool in tools:
             self._tools.register(tool)
+        # 注册工具到意图路由器，用于查询模式匹配
+        self._intent_router = IntentRouter()
+        self._intent_router.register_tools(tools)
         self._skill_registry = build_default_registry()
         self._tools.register(ExpandSkillTool(self._skill_registry))
         self._tool_search_tool = ToolSearchTool(lambda: self._tools.specs())
         self._tools.register(self._tool_search_tool)
-        self._intent_router = IntentRouter()
         self._safety_pipeline = SafetyPipeline()
         self._fusion_pipeline = _build_default_fusion_pipeline()
         self._graph_runner = GraphRunner(

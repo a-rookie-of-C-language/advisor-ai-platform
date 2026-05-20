@@ -12,7 +12,51 @@ class ToolAssemblyPool:
     """工具组装池：按 builtin -> custom -> mcp 顺序稳定组装并去重。"""
 
     @classmethod
-    async def build(
+    def build(
+        cls,
+        *,
+        rag_service: Any | None = None,
+        memory_client: Any | None = None,
+        conflict_policy: ConflictPolicy = "keep_first",
+    ) -> list[BaseTool]:
+        import asyncio
+        try:
+            # 尝试获取运行中的事件循环
+            loop = asyncio.get_running_loop()
+            # 在已有事件循环中，使用 nest_asyncio 或者在新的线程中运行
+            import threading
+            result = None
+            exception = None
+
+            def run_in_thread():
+                nonlocal result, exception
+                try:
+                    result = asyncio.run(cls._build_async(
+                        rag_service=rag_service,
+                        memory_client=memory_client,
+                        conflict_policy=conflict_policy,
+                    ))
+                except Exception as e:
+                    nonlocal exception
+                    exception = e
+
+            thread = threading.Thread(target=run_in_thread)
+            thread.start()
+            thread.join()
+
+            if exception:
+                raise exception
+            return result
+        except RuntimeError:
+            # 没有运行中的事件循环，直接用 asyncio.run()
+            return asyncio.run(cls._build_async(
+                rag_service=rag_service,
+                memory_client=memory_client,
+                conflict_policy=conflict_policy,
+            ))
+
+    @classmethod
+    async def _build_async(
         cls,
         *,
         rag_service: Any | None = None,
