@@ -251,7 +251,7 @@ export const chatApi = {
               })
               handlers.onError?.(data.message ?? 'tool error')
             } else if (parsed.event === 'risk_alert') {
-              handlers.onRiskAlert?.(data as { code: number; message: string; category: string })
+              handlers.onRiskAlert?.(data as unknown as { code: number; message: string; category: string })
             } else if (parsed.event === 'sys_error') {
               sawError = true
               latestError = data.message ?? 'stream error'
