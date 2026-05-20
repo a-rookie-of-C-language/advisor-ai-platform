@@ -7,6 +7,8 @@ from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
+from safety.regex_filter import StreamingRegexFilter
+from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
 from .runtime import _emit, _execute_tool, _runtime
@@ -25,6 +27,53 @@ logger = logging.getLogger(__name__)
 
 _DEBUG_PREVIEW_LIMIT = 200
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
+
+
+def _filter_tool_result(
+    tool_name: str, payload: dict[str, Any], pipeline: SafetyPipeline | None
+) -> tuple[dict[str, Any], int]:
+    """过滤工具结果中的敏感信息
+
+    Returns:
+        tuple: (过滤后的payload, 检测到的敏感信息数量)
+    """
+    if pipeline is None:
+        return payload, 0
+
+    sensitive_count = 0
+    result = dict(payload)
+
+    # 过滤 message 字段
+    if "message" in result and isinstance(result["message"], str):
+        safety_result = pipeline.filter_text(result["message"])
+        if safety_result.has_sensitive:
+            result["message"] = safety_result.redacted
+            sensitive_count += len(safety_result.regex_matches)
+            if safety_result.privacy_result:
+                sensitive_count += len(safety_result.privacy_result.spans)
+
+    # 过滤 items 中的文本内容
+    if "items" in result and isinstance(result["items"], list):
+        filtered_items = []
+        for item in result["items"]:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text = item.get("text", "")
+                if isinstance(text, str):
+                    safety_result = pipeline.filter_text(text)
+                    if safety_result.has_sensitive:
+                        filtered_items.append({"type": "text", "text": safety_result.redacted})
+                        sensitive_count += len(safety_result.regex_matches)
+                        if safety_result.privacy_result:
+                            sensitive_count += len(safety_result.privacy_result.spans)
+                    else:
+                        filtered_items.append(item)
+                else:
+                    filtered_items.append(item)
+            else:
+                filtered_items.append(item)
+        result["items"] = filtered_items
+
+    return result, sensitive_count
 
 
 async def select_skill_node(state: GraphState) -> GraphState:
@@ -197,6 +246,12 @@ async def generate_node(state: GraphState) -> GraphState:
     debug_count = 0
     llm_chunk_count = 0
 
+    # 安全过滤：用于实时过滤流式输出和工具结果
+    streaming_filter: StreamingRegexFilter | None = None
+    safety_regex_matches = 0
+    if runtime.safety_pipeline is not None:
+        streaming_filter = runtime.safety_pipeline.create_streaming_filter()
+
     try:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
@@ -209,7 +264,7 @@ async def generate_node(state: GraphState) -> GraphState:
             route_categories = set(state.get("route_categories", set()))
             matched_tools = state.get("matched_tools", [])
 
-            # 优先使用查询模式匹配的工具
+            # 如果已有明确匹配的 MCP 工具，优先使用
             if matched_tools:
                 tools = runtime.tools.specs_by_names(matched_tools)
             elif route_categories:
@@ -217,7 +272,9 @@ async def generate_node(state: GraphState) -> GraphState:
             else:
                 tools = runtime.tools.specs()
 
-            if _prefer_rag_only(user_query):
+            # 只有在没有匹配特定工具时才考虑 RAG 优先
+            # 避免 RAG 优先逻辑覆盖已经正确路由的 MCP 工具
+            if _prefer_rag_only(user_query) and not matched_tools:
                 rag_tool = runtime.tools.get("rag_search")
                 if rag_tool is not None:
                     tools = [rag_tool.to_tool_spec()]
@@ -234,8 +291,17 @@ async def generate_node(state: GraphState) -> GraphState:
             if direct_generate:
                 async for delta in runtime.provider.stream_chat(model_messages):
                     llm_chunk_count += 1
-                    answer_parts.append(delta)
-                    await _emit("llm_delta", {"text": delta})
+                    # 实时过滤流式输出中的敏感信息
+                    if streaming_filter is not None:
+                        filtered_delta = streaming_filter.process_chunk(delta)
+                        if filtered_delta:
+                            answer_parts.append(filtered_delta)
+                            await _emit("llm_delta", {"text": filtered_delta})
+                            if filtered_delta:
+                                safety_regex_matches += len(streaming_filter._filter.scan(filtered_delta))
+                    else:
+                        answer_parts.append(delta)
+                        await _emit("llm_delta", {"text": delta})
 
                     if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
                         remain = _DEBUG_PREVIEW_LIMIT - debug_chars
@@ -284,9 +350,18 @@ async def generate_node(state: GraphState) -> GraphState:
                             "message": payload.get("message", "tool execute failed"),
                         }
                         if event.success:
+                            # 过滤工具结果中的敏感信息
+                            filtered_payload, sensitive_count = _filter_tool_result(
+                                event.tool_name, payload, runtime.safety_pipeline
+                            )
+                            safety_regex_matches += sensitive_count
                             await _emit(
                                 "tool_result",
-                                {**base_payload, "output": payload, "items": payload.get("items", [])},
+                                {
+                                    **base_payload,
+                                    "output": filtered_payload,
+                                    "items": filtered_payload.get("items", []),
+                                },
                             )
                         else:
                             await _emit(
@@ -303,8 +378,17 @@ async def generate_node(state: GraphState) -> GraphState:
                         continue
                     delta = event.text
                     llm_chunk_count += 1
-                    answer_parts.append(delta)
-                    await _emit("llm_delta", {"text": delta})
+                    # 实时过滤流式输出中的敏感信息
+                    if streaming_filter is not None:
+                        filtered_delta = streaming_filter.process_chunk(delta)
+                        if filtered_delta:
+                            answer_parts.append(filtered_delta)
+                            await _emit("llm_delta", {"text": filtered_delta})
+                            if filtered_delta:
+                                safety_regex_matches += len(streaming_filter._filter.scan(filtered_delta))
+                    else:
+                        answer_parts.append(delta)
+                        await _emit("llm_delta", {"text": delta})
 
                     if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
                         remain = _DEBUG_PREVIEW_LIMIT - debug_chars
@@ -317,8 +401,17 @@ async def generate_node(state: GraphState) -> GraphState:
         else:
             async for delta in runtime.provider.stream_chat(model_messages):
                 llm_chunk_count += 1
-                answer_parts.append(delta)
-                await _emit("llm_delta", {"text": delta})
+                # 实时过滤流式输出中的敏感信息
+                if streaming_filter is not None:
+                    filtered_delta = streaming_filter.process_chunk(delta)
+                    if filtered_delta:
+                        answer_parts.append(filtered_delta)
+                        await _emit("llm_delta", {"text": filtered_delta})
+                        if filtered_delta:
+                            safety_regex_matches += len(streaming_filter._filter.scan(filtered_delta))
+                else:
+                    answer_parts.append(delta)
+                    await _emit("llm_delta", {"text": delta})
 
                 if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
                     remain = _DEBUG_PREVIEW_LIMIT - debug_chars
@@ -329,15 +422,26 @@ async def generate_node(state: GraphState) -> GraphState:
                 if runtime.debug_stream:
                     debug_count += 1
 
+        # 流式过滤完成后，flush 缓冲区中的剩余内容
+        if streaming_filter is not None:
+            flushed = streaming_filter.flush()
+            if flushed:
+                answer_parts.append(flushed)
+                safety_regex_matches += len(streaming_filter._filter.scan(flushed))
+
         raw_answer = "".join(answer_parts).strip()
         final_answer = raw_answer
         if raw_answer and runtime.safety_pipeline is not None:
             safety_result = runtime.safety_pipeline.filter_text(raw_answer)
             if safety_result.has_sensitive:
                 final_answer = safety_result.redacted
+            # 合并流式过滤和最终过滤的结果
+            total_regex_matches = safety_regex_matches + len(safety_result.regex_matches)
+            total_privacy_spans = len(safety_result.privacy_result.spans) if safety_result.privacy_result else 0
+            if total_regex_matches > 0 or total_privacy_spans > 0:
                 await _emit("safety_warning", {
-                    "regex_matches": len(safety_result.regex_matches),
-                    "privacy_spans": len(safety_result.privacy_result.spans) if safety_result.privacy_result else 0,
+                    "regex_matches": total_regex_matches,
+                    "privacy_spans": total_privacy_spans,
                 })
         logger.info(
             "graph_node generate done: session_id=%s, llm_chunks=%s, answer_len=%s",

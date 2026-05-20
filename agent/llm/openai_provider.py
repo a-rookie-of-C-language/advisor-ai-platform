@@ -3,9 +3,8 @@
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Literal
-from typing import Any, AsyncIterator, Iterable
+from dataclasses import dataclass
+from typing import Any, AsyncIterator, Awaitable, Callable, Iterable, Literal
 
 from openai import AsyncOpenAI
 
@@ -368,9 +367,11 @@ class OpenAIProvider(BaseLLMProvider):
                             if choice.finish_reason:
                                 finish_reason = choice.finish_reason
                             # 思考模式：reasoning_content 通过回调流式输出
-                            reasoning = choice.delta.reasoning_content
-                            if reasoning and on_reasoning is not None:
-                                await on_reasoning(reasoning)
+                            # DeepSeek-R1 等模型使用 reasoning_content，需要检查属性存在性
+                            if hasattr(choice.delta, "reasoning_content"):
+                                reasoning = choice.delta.reasoning_content
+                                if reasoning and on_reasoning is not None:
+                                    await on_reasoning(reasoning)
                             delta = choice.delta.content
                             if delta:
                                 yielded = True

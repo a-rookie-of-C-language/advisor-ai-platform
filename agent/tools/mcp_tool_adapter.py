@@ -65,6 +65,7 @@ class McpToolAdapter(BaseTool):
         client_pool: Any,
         server_config: Any,
         mcp_annotations: dict[str, Any] | None = None,
+        category: str | None = None,
     ) -> None:
         normalized_name = build_mcp_tool_name(server_name, mcp_tool_name)
         truncated_desc = truncate_description(description)
@@ -77,13 +78,16 @@ class McpToolAdapter(BaseTool):
         search_hint = annotations.get("anthropic/searchHint", "")
         always_load = annotations.get("anthropic/alwaysLoad", False)
 
+        # 根据服务器名设置类别，默认使用服务器名作为类别
+        tool_category = category or normalize_name(server_name)
+
         super().__init__(
             name=normalized_name,
             description=truncated_desc,
             input_model=McpToolInputModel,
             input_json_schema=input_schema,
             required_permissions=set(),
-            category="mcp",
+            category=tool_category,
         )
 
         self._server_name = server_name

@@ -65,6 +65,20 @@ _CATEGORY_RULES: dict[str, dict[str, list[str]]] = {
             r"执行指南|完整指令",
         ],
     },
+    "student": {
+        "strong": [
+            r"(?:查询|获取|查看).*(?:学生|学号|姓名).*(?:详情|信息|资料|列表)",
+            r"(?:学生|学号|姓名).*(?:是什么|多少|查询|获取|查看)",
+            r"学生详情|学生列表|学生信息",
+            r"签到.*(?:汇总|统计|明细|详情)",
+            r"(?:考勤|签到).*(?:情况|状态|记录)",
+        ],
+        "weak": [
+            r"学生|学号|姓名|签到|考勤",
+            r"有哪些学生",
+            r"查一下.*学生",
+        ],
+    },
 }
 
 _CATEGORY_DESCRIPTIONS: dict[str, str] = {
@@ -74,6 +88,7 @@ _CATEGORY_DESCRIPTIONS: dict[str, str] = {
     "memory_write": "将用户偏好、约定或备忘写入长期记忆。",
     "skill": "展开技能说明或执行指南。",
     "meta": "元能力工具，通常仅在明确要求展开技能时使用。",
+    "student": "查询学生信息、学号、姓名、签到记录等学生相关数据。",
 }
 
 _DEFAULT_READ_ONLY_CATEGORIES = {"retrieval", "search", "memory_read"}
@@ -221,13 +236,13 @@ class IntentRouter:
             self._last_decision = rule_decision
             return rule_decision
 
-        llm_decision = await self._route_by_llm(query, normalized_categories, provider)
+        llm_decision = await self._route_by_llm(query, normalized_categories, provider, rule_decision)
         if llm_decision is not None:
             self._last_decision = llm_decision
             return llm_decision
 
         fallback_reason = rule_decision.fallback_reason or "llm_unavailable"
-        fallback = self._build_fallback(normalized_categories, reason=fallback_reason, scores=rule_decision.scores)
+        fallback = self._build_fallback(normalized_categories, reason=fallback_reason, scores=rule_decision.scores, matched_tools=rule_decision.matched_tools)
         self._last_decision = fallback
         return fallback
 
@@ -318,9 +333,13 @@ class IntentRouter:
         )
 
     def _should_accept_without_llm(self, decision: RouteDecision) -> bool:
-        return bool(decision.categories) and decision.confidence >= 0.85 and decision.matched_by in {"strong_rule", "score"}
+        return (
+            bool(decision.categories)
+            and decision.confidence >= 0.85
+            and decision.matched_by in {"strong_rule", "score"}
+        )
 
-    async def _route_by_llm(self, query: str, all_categories: set[str], provider: Any | None) -> RouteDecision | None:
+    async def _route_by_llm(self, query: str, all_categories: set[str], provider: Any | None, rule_decision: RouteDecision | None = None) -> RouteDecision | None:
         classifier = self._llm_classifier or provider
         if classifier is None:
             return None
@@ -353,6 +372,7 @@ class IntentRouter:
             matched_by="llm",
             confidence=confidence,
             reason=reason,
+            matched_tools=rule_decision.matched_tools,
         )
 
     def _build_fallback(
@@ -361,6 +381,7 @@ class IntentRouter:
         *,
         reason: str,
         scores: dict[str, int] | None = None,
+        matched_tools: list[str] | None = None,
     ) -> RouteDecision:
         fallback_categories = set(all_categories & _DEFAULT_READ_ONLY_CATEGORIES)
         if self._allow_destructive_fallback:
@@ -373,6 +394,7 @@ class IntentRouter:
             confidence=0.2,
             fallback_reason=reason,
             scores=scores,
+            matched_tools=matched_tools,
         )
 
     @staticmethod

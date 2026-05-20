@@ -24,7 +24,6 @@ class CircuitBreaker:
     - 状态自动转换：CLOSED -> OPEN -> HALF_OPEN -> CLOSED
     - 半开状态流量限制：避免恢复时瞬间涌入大量请求
     - 指数退避：OPEN 状态持续时间随失败次数增长
-    - 线程安全：适合 asyncio 多协程并发
     """
 
     def __init__(
@@ -46,10 +45,10 @@ class CircuitBreaker:
         self._state = CircuitState.CLOSED
         self._half_open_success = 0
 
-        # 🚀 优化1: 半开状态的并发控制
+        # 半开状态的并发控制
         self._half_open_semaphore: asyncio.Semaphore | None = None
 
-        # 🚀 优化2: 保护状态变更的锁
+        # 保护状态变更的锁（asyncio 协程安全）
         self._lock = asyncio.Lock()
 
     @property
@@ -66,7 +65,7 @@ class CircuitBreaker:
             if self._state != CircuitState.OPEN:
                 return self._state == CircuitState.HALF_OPEN
 
-            # 🚀 优化3: 指数退避，根据失败次数延长 OPEN 时间
+            # 指数退避，根据失败次数延长 OPEN 时间
             failure_penalty = min(self._failure_count - self._failure_threshold, 10)
             adjusted_timeout = self._recovery_timeout * (2 ** failure_penalty)
             adjusted_timeout = min(adjusted_timeout, self._max_recovery_timeout)
@@ -87,35 +86,35 @@ class CircuitBreaker:
             )
             return True
 
-    async def record_success(self) -> None:
-        async with self._lock:
-            self._failure_count = 0
-            if self._state == CircuitState.HALF_OPEN:
-                self._half_open_success += 1
-                if self._half_open_success >= self._half_open_attempts:
-                    self._state = CircuitState.CLOSED
-                    self._half_open_semaphore = None
-                    logger.info("Circuit breaker CLOSED (recovered)")
-
-    async def record_failure(self) -> None:
-        async with self._lock:
-            self._failure_count += 1
-            self._last_failure_time = time.monotonic()
-            if self._state == CircuitState.HALF_OPEN:
-                # 半开状态失败，立即切回 OPEN
-                self._state = CircuitState.OPEN
+    def record_success(self) -> None:
+        """记录成功（同步方法，适合在 async 上下文中直接调用）"""
+        self._failure_count = 0
+        if self._state == CircuitState.HALF_OPEN:
+            self._half_open_success += 1
+            if self._half_open_success >= self._half_open_attempts:
+                self._state = CircuitState.CLOSED
                 self._half_open_semaphore = None
-                logger.warning(
-                    "Circuit breaker OPEN (half-open failure, attempts=%d)",
-                    self._half_open_success,
-                )
-            elif self._failure_count >= self._failure_threshold and self._state == CircuitState.CLOSED:
-                self._state = CircuitState.OPEN
-                logger.warning(
-                    "Circuit breaker OPEN (threshold=%d, failures=%d)",
-                    self._failure_threshold,
-                    self._failure_count,
-                )
+                logger.info("Circuit breaker CLOSED (recovered)")
+
+    def record_failure(self) -> None:
+        """记录失败（同步方法，适合在 async 上下文中直接调用）"""
+        self._failure_count += 1
+        self._last_failure_time = time.monotonic()
+        if self._state == CircuitState.HALF_OPEN:
+            # 半开状态失败，立即切回 OPEN
+            self._state = CircuitState.OPEN
+            self._half_open_semaphore = None
+            logger.warning(
+                "Circuit breaker OPEN (half-open failure, attempts=%d)",
+                self._half_open_success,
+            )
+        elif self._failure_count >= self._failure_threshold and self._state == CircuitState.CLOSED:
+            self._state = CircuitState.OPEN
+            logger.warning(
+                "Circuit breaker OPEN (threshold=%d, failures=%d)",
+                self._failure_threshold,
+                self._failure_count,
+            )
 
     async def reset(self) -> None:
         async with self._lock:
@@ -132,7 +131,7 @@ class CircuitBreaker:
                 logger.debug("Circuit breaker OPEN, skipping call")
                 return None
 
-        # 🚀 优化4: 半开状态的并发限制
+        # 半开状态的并发限制
         if self._state == CircuitState.HALF_OPEN and self._half_open_semaphore is not None:
             async with self._half_open_semaphore:
                 return await self._execute_call(func)
@@ -142,8 +141,8 @@ class CircuitBreaker:
     async def _execute_call(self, func: Callable[[], Awaitable[T]]) -> T | None:
         try:
             result = await func()
-            await self.record_success()
+            self.record_success()
             return result
         except Exception:
-            await self.record_failure()
+            self.record_failure()
             raise
