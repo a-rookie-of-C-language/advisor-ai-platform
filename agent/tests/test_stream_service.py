@@ -367,6 +367,7 @@ async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.Monke
 
 @pytest.mark.asyncio
 async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ENABLED_TOOLS", raising=False)
     monkeypatch.setenv("USE_LANGGRAPH", "false")
     monkeypatch.setenv("FEATURE_WEB_SEARCH", "true")
     service = ChatStreamService(
