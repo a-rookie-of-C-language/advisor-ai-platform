@@ -257,7 +257,8 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
 
 
 @pytest.mark.asyncio
-async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> None:
+async def test_legacy_stream_tool_route_prefers_search_for_latest_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ENABLED_TOOLS", raising=False)
     provider = _ProviderRouteCapture()
     service = ChatStreamService(
         provider=provider,
@@ -279,7 +280,8 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> Non
 
 
 @pytest.mark.asyncio
-async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
+async def test_stream_tool_route_prefers_search_for_latest_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ENABLED_TOOLS", raising=False)
     provider = _ProviderRouteCapture()
     service = ChatStreamService(
         provider=provider,
@@ -353,6 +355,7 @@ async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.Monke
 
 @pytest.mark.asyncio
 async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ENABLED_TOOLS", raising=False)
     monkeypatch.setenv("USE_LANGGRAPH", "false")
     service = ChatStreamService(
         provider=_ProviderLegacyToolUse(),
