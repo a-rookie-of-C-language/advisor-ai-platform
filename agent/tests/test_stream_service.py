@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import AsyncIterator, Iterable
 
 import pytest
@@ -293,6 +294,24 @@ class _RagMiss:
         return _Res()
 
 
+class _RagHit:
+    def rag_search(self, req):
+        _ = req
+
+        class _Res:
+            ok = True
+            items = [
+                SimpleNamespace(
+                    doc_id=1,
+                    doc_title="高校辅导员素质能力提升",
+                    text="辅导员能力建设应围绕思想政治、学生管理、心理辅导和就业指导展开。",
+                    score=0.98,
+                )
+            ]
+
+        return _Res()
+
+
 class _RagMustNotRun:
     def rag_search(self, req):
         _ = req
@@ -488,6 +507,34 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     intent_route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert intent_route_payload is not None
     assert intent_route_payload.get("matched_by") in {"fallback", "strong_rule", "score", "llm"}
+
+
+@pytest.mark.asyncio
+async def test_stream_forces_rag_for_education_queries() -> None:
+    provider = _ProviderOk(["根据知识库内容回答。"])
+    service = ChatStreamService(
+        provider=provider,
+        memory_orchestrator=None,
+        rag_service=_RagHit(),
+    )
+    messages = [ChatMessage(role="user", content="高校辅导员素质能力提升怎么做？")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [_parse_event_name(e) for e in events]
+
+    assert set(event_names) >= {
+        "sys_start",
+        "sys_intent_route",
+        "sys_rag_force",
+        "tool_use",
+        "tool_result",
+        "llm_data",
+        "sys_done",
+    }
+    rag_result_payload = next((p for e, p in parsed if e == "tool_result" and p.get("tool_name") == "rag_search"), None)
+    assert rag_result_payload is not None
+    assert rag_result_payload.get("status") == "hit"
+    assert any(msg.role == "system" and "知识库检索结果" in msg.content for msg in provider.last_messages)
 
 
 @pytest.mark.asyncio

@@ -24,6 +24,7 @@ from fusion.conflict_detect import ConflictDetectStrategy
 from fusion.registry import SourcePriorityRegistry
 from fusion.source_weight import SourceWeightStrategy
 from fusion.time_decay import TimeDecayStrategy
+from graph.helpers import _build_rag_context_prompt, _should_force_education_rag
 from graph.runner import GraphRunner
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
@@ -1120,6 +1121,100 @@ class ChatStreamService:
                         turn_id=turn_id,
                     )
 
+                force_rag = _should_force_education_rag(user_query) and self._tools.get("rag_search") is not None
+                if force_rag and self._tools.get("rag_search") is not None:
+                    tools = [self._tools.get("rag_search").to_tool_spec()]
+                    yield self._serialize_protocol_event(
+                        event="sys_rag_force",
+                        source="system",
+                        trace_id=trace_id,
+                        payload={
+                            "reason": "education_domain",
+                            "query": user_query[:120],
+                            "forced": True,
+                        },
+                    )
+                    yield self._serialize_protocol_event(
+                        event="tool_use",
+                        source="tool",
+                        trace_id=trace_id,
+                        payload={
+                            "tool_name": "rag_search",
+                            "tool_call_id": "rag_search-1",
+                            "input": {"query": user_query, "top_k": 5},
+                        },
+                    )
+                    raw_output = await tool_executor("rag_search", {"query": user_query, "top_k": 5})
+                    try:
+                        payload = json.loads(raw_output) if raw_output else {}
+                    except Exception:
+                        payload = {}
+                    status = payload.get("status", "error")
+                    base_payload = {
+                        "tool_name": "rag_search",
+                        "tool_call_id": "rag_search-1",
+                        "attempt": 1,
+                        "status": status,
+                        "message": payload.get("message", "tool execute failed"),
+                    }
+                    if payload.get("ok"):
+                        yield self._serialize_protocol_event(
+                            event="tool_result",
+                            source="tool",
+                            trace_id=trace_id,
+                            payload=self._build_tool_result_payload("rag_search", base_payload, payload),
+                        )
+                        fetched_items = payload.get("items", [])
+                        if isinstance(fetched_items, list) and fetched_items:
+                            prompt = _build_rag_context_prompt(fetched_items)
+                            if prompt:
+                                model_messages = PromptBuilder.assemble_messages(
+                                    model_messages,
+                                    dynamic_prompts=[prompt[:4000]],
+                                )
+                                async for delta in self._provider.stream_chat(model_messages):
+                                    answer_parts.append(delta)
+                                    if self._debug_stream and debug_chars < debug_limit:
+                                        remain = debug_limit - debug_chars
+                                        piece = delta[:remain]
+                                        if piece:
+                                            debug_preview.append(piece)
+                                            debug_chars += len(piece)
+                                    if self._debug_stream:
+                                        debug_delta_count += 1
+                                    yield self._serialize_protocol_event(
+                                        event="llm_data",
+                                        source="llm",
+                                        trace_id=trace_id,
+                                        payload={"text": delta},
+                                    )
+                                answer = "".join(answer_parts).strip()
+                                if self._debug_stream:
+                                    logger.info(
+                                        "debug_stream python done: deltas=%s, answer_preview=%s",
+                                        debug_delta_count,
+                                        "".join(debug_preview),
+                                    )
+                                yield self._serialize_protocol_event(
+                                    event="sys_done",
+                                    source="system",
+                                    trace_id=trace_id,
+                                    payload={"finish_reason": "stream_finished"},
+                                )
+                                return
+                    else:
+                        yield self._serialize_protocol_event(
+                            event="tool_error",
+                            source="tool",
+                            trace_id=trace_id,
+                            payload=self._build_tool_error_payload(
+                                base_payload,
+                                status,
+                                payload.get("message", "tool execute failed"),
+                                False,
+                            ),
+                        )
+
                 should_try_explorer = (
                     "web_fetch" not in matched_tools
                     and (
@@ -1238,7 +1333,7 @@ class ChatStreamService:
                 force_fetch_url = ""
                 if matched_tools and "web_fetch" in matched_tools:
                     force_fetch_url = self._extract_first_url(user_query)
-                if force_fetch_url:
+                if force_fetch_url and not force_rag:
                     yield self._serialize_protocol_event(
                         event="tool_use",
                         source="tool",

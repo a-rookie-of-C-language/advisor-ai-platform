@@ -15,6 +15,7 @@ class GraphState(TypedDict, total=False):
     turn_id: str | None
     memory_enabled: bool
     rag_enabled: bool
+    force_rag: bool
     web_search_enabled: bool
     use_tool: bool
     route_categories: set[str]
