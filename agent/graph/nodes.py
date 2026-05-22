@@ -11,11 +11,13 @@ from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
 from .helpers import (
+    _build_rag_context_prompt,
     _extract_first_url,
     _inject_fusion_context,
     _parse_skill_names,
     _prefer_rag_only,
     _run_fusion_pipeline,
+    _should_force_education_rag,
     _strip_surrogates,
     provider_stream,
 )
@@ -296,6 +298,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     user_query = _strip_surrogates(state.get("user_query", ""))
     has_query = bool(user_query)
     rag_enabled = has_query
+    force_rag = _should_force_education_rag(user_query) and runtime.tools.get("rag_search") is not None
     route_categories: set[str] = set()
     matched_tools: list[str] = []
     if runtime.enable_tool_use and has_query:
@@ -323,6 +326,8 @@ async def decide_tool_node(state: GraphState) -> GraphState:
         and runtime.tools.get("rag_search") is not None
     ):
         route_categories = {"retrieval"}
+    if force_rag:
+        route_categories = {"retrieval"}
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     logger.info(
@@ -337,6 +342,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     )
     return {
         "rag_enabled": rag_enabled,
+        "force_rag": force_rag,
         "web_search_enabled": web_search_enabled,
         "use_tool": use_tool,
         "route_categories": route_categories,
@@ -431,14 +437,73 @@ async def generate_node(state: GraphState) -> GraphState:
     try:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
+            force_rag = bool(state.get("force_rag")) and runtime.tools.get("rag_search") is not None
             force_fetch_url = ""
             if "web_fetch" in (state.get("matched_tools", []) or []):
                 force_fetch_url = _extract_first_url(user_query)
 
-            fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
-            if fusion_context:
-                model_messages = _inject_fusion_context(model_messages, fusion_context)
-            direct_generate = bool(fusion_context and fusion_context.get("candidates"))
+            direct_generate = False
+            if force_rag:
+                await _emit(
+                    "sys_rag_force",
+                    {
+                        "reason": "education_domain",
+                        "query": user_query[:120],
+                        "forced": True,
+                    },
+                )
+                await _emit(
+                    "tool_use",
+                    {
+                        "tool_name": "rag_search",
+                        "tool_call_id": "rag_search-1",
+                        "input": {"query": user_query, "top_k": 5},
+                    },
+                )
+                forced_output = await _execute_tool(
+                    tool_name="rag_search",
+                    tool_args={"query": user_query, "top_k": 5},
+                    state=state,
+                )
+                try:
+                    forced_payload = json.loads(forced_output) if forced_output else {}
+                except Exception:
+                    forced_payload = {}
+                forced_status = str(forced_payload.get("status", "error") or "error")
+                forced_base_payload = {
+                    "tool_name": "rag_search",
+                    "tool_call_id": "rag_search-1",
+                    "attempt": 1,
+                    "status": forced_status,
+                    "message": forced_payload.get("message", "tool execute failed"),
+                }
+                if forced_payload.get("ok"):
+                    await _emit(
+                        "tool_result",
+                        _build_tool_result_payload("rag_search", forced_base_payload, forced_payload),
+                    )
+                    forced_items = forced_payload.get("items", [])
+                    if isinstance(forced_items, list) and forced_items:
+                        rag_context = _build_rag_context_prompt(forced_items)
+                        if rag_context:
+                            model_messages = [
+                                ChatMessage(role="system", content=rag_context[:4000]),
+                            ] + model_messages
+                            direct_generate = True
+                else:
+                    await _emit(
+                        "tool_error",
+                        {
+                            **forced_base_payload,
+                            "code": forced_status,
+                            "retryable": False,
+                        },
+                    )
+            else:
+                fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
+                if fusion_context:
+                    model_messages = _inject_fusion_context(model_messages, fusion_context)
+                direct_generate = bool(fusion_context and fusion_context.get("candidates"))
 
             route_categories = set(state.get("route_categories", set()))
             matched_tools = state.get("matched_tools", [])
@@ -457,6 +522,10 @@ async def generate_node(state: GraphState) -> GraphState:
                 rag_tool = runtime.tools.get("rag_search")
                 if rag_tool is not None:
                     tools = [rag_tool.to_tool_spec()]
+            if force_rag:
+                rag_tool = runtime.tools.get("rag_search")
+                if rag_tool is not None:
+                    tools = [rag_tool.to_tool_spec()]
 
             logger.info(
                 "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, "
@@ -469,7 +538,7 @@ async def generate_node(state: GraphState) -> GraphState:
             )
 
             # URL is a hard signal: if route matched web_fetch and URL exists, force one fetch first.
-            if force_fetch_url and runtime.tools.get("web_fetch") is not None:
+            if force_fetch_url and runtime.tools.get("web_fetch") is not None and not force_rag:
                 logger.info(
                     "graph_node force_web_fetch: session_id=%s, user_id=%s, url=%s",
                     state.get("session_id"),

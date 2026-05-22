@@ -24,6 +24,7 @@ from fusion.conflict_detect import ConflictDetectStrategy
 from fusion.registry import SourcePriorityRegistry
 from fusion.source_weight import SourceWeightStrategy
 from fusion.time_decay import TimeDecayStrategy
+from graph.helpers import _build_rag_context_prompt, _should_force_education_rag
 from graph.runner import GraphRunner
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
@@ -1158,7 +1159,7 @@ class ChatStreamService:
                 force_fetch_url = ""
                 if matched_tools and "web_fetch" in matched_tools:
                     force_fetch_url = self._extract_first_url(user_query)
-                if force_fetch_url:
+                if force_fetch_url and not force_rag:
                     yield self._serialize_protocol_event(
                         event="tool_use",
                         source="tool",

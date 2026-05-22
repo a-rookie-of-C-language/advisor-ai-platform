@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import patch
 
+from graph import nodes as graph_nodes
 from graph.state import GraphState
 from graph.workflow import build_chat_graph
 from llm.chat_message import ChatMessage
@@ -52,3 +53,81 @@ class TestWorkflowNodes:
         }
         result = asyncio.run(mock_generate(state))
         assert result["assistant_answer"] == "test response"
+
+
+class _DummyRagTool:
+    def to_tool_spec(self):
+        return type("ToolSpecLike", (), {"name": "rag_search"})()
+
+
+class _DummyTools:
+    def all_categories(self):
+        return {"retrieval", "search"}
+
+    def get(self, name: str):
+        if name == "rag_search":
+            return _DummyRagTool()
+        return None
+
+
+class _DummyRouteDecision:
+    def __init__(self) -> None:
+        self.categories = {"search"}
+        self.matched_tools = []
+        self.matched_by = "fallback"
+        self.confidence = 0.42
+        self.fallback_reason = "fallback"
+        self.reason = "fallback"
+
+    def to_event_payload(self):
+        return {
+            "matched_by": self.matched_by,
+            "confidence": self.confidence,
+            "fallback_reason": self.fallback_reason,
+            "categories": sorted(self.categories),
+            "scores": {},
+            "reason": self.reason,
+            "matched_tools": self.matched_tools,
+            "source": {
+                "decision": self.matched_by,
+                "categories": sorted(self.categories),
+                "matched_tools": self.matched_tools,
+            },
+        }
+
+
+class _DummyIntentRouter:
+    async def route_decision(self, *args, **kwargs):
+        _ = args
+        _ = kwargs
+        return _DummyRouteDecision()
+
+
+class _DummyRuntime:
+    def __init__(self) -> None:
+        self.enable_tool_use = True
+        self.intent_router = _DummyIntentRouter()
+        self.tools = _DummyTools()
+        self.provider = None
+
+
+async def _dummy_emit_route_observation(*args, **kwargs):
+    _ = args
+    _ = kwargs
+    return {}
+
+
+@patch("graph.nodes.emit_route_observation", new=_dummy_emit_route_observation)
+@patch("graph.nodes._runtime", return_value=_DummyRuntime())
+def test_decide_tool_node_forces_education_rag(mock_runtime):
+    _ = mock_runtime
+    state: GraphState = {
+        "user_query": "高校辅导员素质能力提升怎么做",
+        "session_id": 1,
+        "user_id": 2,
+    }
+    result = asyncio.run(graph_nodes.decide_tool_node(state))
+
+    assert result["force_rag"] is True
+    assert result["route_categories"] == {"retrieval"}
+    assert result["use_tool"] is True

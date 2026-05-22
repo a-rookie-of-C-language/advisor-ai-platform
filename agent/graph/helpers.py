@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 _URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
 
 _RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
-_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
+_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分", "最新", "现在", "目前"}
 
 
 def _strip_surrogates(text: str) -> str:
@@ -33,6 +33,55 @@ def _prefer_rag_only(query: str) -> bool:
     has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
     has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
     return has_rag_hint and not has_realtime_hint
+
+
+def _should_force_education_rag(query: str) -> bool:
+    normalized = _strip_surrogates(query).strip().lower()
+    if not normalized:
+        return False
+    if any(key in normalized for key in _REALTIME_HINTS):
+        return False
+    education_hints = (
+        "辅导员",
+        "学生",
+        "学工",
+        "学生工作",
+        "育人",
+        "资助",
+        "奖助",
+        "宿舍",
+        "心理",
+        "思政",
+        "班级",
+        "就业",
+        "评优",
+        "处分",
+        "政策",
+        "制度",
+        "校园",
+        "高校",
+        "大学",
+        "教育",
+    )
+    return any(hint in normalized for hint in education_hints)
+
+
+def _build_rag_context_prompt(items: list[dict]) -> str:
+    if not items:
+        return ""
+    lines = ["以下是知识库检索结果，请优先依据它回答："]
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        snippet = str(item.get("snippet") or item.get("text") or "").strip()
+        if not snippet:
+            continue
+        doc_name = str(item.get("docName") or item.get("title") or "").strip()
+        if doc_name:
+            lines.append(f"- [{doc_name}] {snippet}")
+        else:
+            lines.append(f"- {snippet}")
+    return "\n".join(lines)
 
 
 
