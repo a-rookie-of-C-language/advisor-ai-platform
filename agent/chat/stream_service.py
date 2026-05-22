@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
+from agent.types import JsonObject
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
@@ -424,6 +425,49 @@ class ChatStreamService:
         )
 
     @staticmethod
+    def _build_stream_error_payload(code: str, message: str, retryable: bool) -> JsonObject:
+        return {
+            "code": code,
+            "message": message,
+            "retryable": retryable,
+        }
+
+    @staticmethod
+    def _build_tool_error_payload(
+        base_payload: JsonObject,
+        code: str,
+        message: str,
+        retryable: bool,
+    ) -> JsonObject:
+        return {
+            **base_payload,
+            "code": code,
+            "message": message,
+            "retryable": retryable,
+        }
+
+    async def _emit_terminal_error(
+        self,
+        *,
+        trace_id: str | None,
+        code: str,
+        message: str,
+        retryable: bool,
+    ) -> AsyncIterator[str]:
+        yield self._serialize_protocol_event(
+            event="sys_error",
+            source="system",
+            trace_id=trace_id,
+            payload=self._build_stream_error_payload(code, message, retryable),
+        )
+        yield self._serialize_protocol_event(
+            event="sys_done",
+            source="system",
+            trace_id=trace_id,
+            payload={"finish_reason": "stream_finished_with_error"},
+        )
+
+    @staticmethod
     def _validate_messages(messages: Iterable[ChatMessage]) -> list[ChatMessage]:
         validated = []
         for message in messages:
@@ -547,22 +591,13 @@ class ChatStreamService:
                 continue
             except StopAsyncIteration:
                 if not saw_delta and not saw_done:
-                    yield self._serialize_protocol_event(
-                        event="sys_error",
-                        source="system",
+                    async for terminal_event in self._emit_terminal_error(
                         trace_id=trace_id,
-                        payload={
-                            "code": "stream_empty",
-                            "message": "stream finished without content",
-                            "retryable": False,
-                        },
-                    )
-                    yield self._serialize_protocol_event(
-                        event="sys_done",
-                        source="system",
-                        trace_id=trace_id,
-                        payload={"finish_reason": "stream_finished_with_error"},
-                    )
+                        code="stream_empty",
+                        message="stream finished without content",
+                        retryable=False,
+                    ):
+                        yield terminal_event
                 return
             except Exception:
                 pending_next = None
@@ -575,18 +610,13 @@ class ChatStreamService:
             if event_name == "sys_done":
                 saw_done = True
             if event_name == "sys_done" and not saw_delta:
-                yield self._serialize_protocol_event(
-                    event="sys_error",
-                    source="system",
+                async for terminal_event in self._emit_terminal_error(
                     trace_id=trace_id,
-                    payload={"code": "stream_empty", "message": "stream finished without content", "retryable": False},
-                )
-                yield self._serialize_protocol_event(
-                    event="sys_done",
-                    source="system",
-                    trace_id=trace_id,
-                    payload={"finish_reason": "stream_finished_with_error"},
-                )
+                    code="stream_empty",
+                    message="stream finished without content",
+                    retryable=False,
+                ):
+                    yield terminal_event
                 return
             yield event
 
@@ -974,25 +1004,16 @@ class ChatStreamService:
             if self._debug_stream:
                 logger.warning("debug_stream python error(graph): error=%s", exc)
             try:
-                yield self._serialize_protocol_event(
-                    event="sys_error",
-                    source="system",
+                async for terminal_event in self._emit_terminal_error(
                     trace_id=trace_id,
-                    payload={"code": "internal_error", "message": _STREAM_ERROR_MESSAGE, "retryable": True},
-                )
+                    code="internal_error",
+                    message=_STREAM_ERROR_MESSAGE,
+                    retryable=True,
+                ):
+                    yield terminal_event
             except Exception as send_error_exc:  # noqa: BLE001
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
-
-            try:
-                yield self._serialize_protocol_event(
-                    event="sys_done",
-                    source="system",
-                    trace_id=trace_id,
-                    payload={"finish_reason": "stream_finished_with_error"},
-                )
-            except Exception as send_done_exc:  # noqa: BLE001
-                logger.warning("Failed to send stream done event after error: %s", send_done_exc)
 
     async def _stream_events_legacy(
         self,
@@ -1256,11 +1277,12 @@ class ChatStreamService:
                             event="tool_error",
                             source="tool",
                             trace_id=trace_id,
-                            payload={
-                                **base_payload,
-                                "code": status,
-                                "retryable": False,
-                            },
+                            payload=self._build_tool_error_payload(
+                                base_payload,
+                                status,
+                                payload.get("message", "tool execute failed"),
+                                False,
+                            ),
                         )
                     fetched_items = payload.get("items", [])
                     if isinstance(fetched_items, list) and fetched_items:
@@ -1353,11 +1375,12 @@ class ChatStreamService:
                                 event="tool_error",
                                 source="tool",
                                 trace_id=trace_id,
-                                payload={
-                                    **base_payload,
-                                    "code": payload.get("status", "error"),
-                                    "retryable": False,
-                                },
+                                payload=self._build_tool_error_payload(
+                                    base_payload,
+                                    str(payload.get("status", "error") or "error"),
+                                    payload.get("message", "tool execute failed"),
+                                    False,
+                                ),
                             )
                         continue
 
@@ -1469,25 +1492,16 @@ class ChatStreamService:
                     exc,
                 )
             try:
-                yield self._serialize_protocol_event(
-                    event="sys_error",
-                    source="system",
+                async for terminal_event in self._emit_terminal_error(
                     trace_id=trace_id,
-                    payload={"code": "internal_error", "message": _STREAM_ERROR_MESSAGE, "retryable": True},
-                )
+                    code="internal_error",
+                    message=_STREAM_ERROR_MESSAGE,
+                    retryable=True,
+                ):
+                    yield terminal_event
             except Exception as send_error_exc:
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
-
-            try:
-                yield self._serialize_protocol_event(
-                    event="sys_done",
-                    source="system",
-                    trace_id=trace_id,
-                    payload={"finish_reason": "stream_finished_with_error"},
-                )
-            except Exception as send_done_exc:
-                logger.warning("Failed to send stream done event after error: %s", send_done_exc)
 
     def get_graph_health(self) -> dict:
         return {
