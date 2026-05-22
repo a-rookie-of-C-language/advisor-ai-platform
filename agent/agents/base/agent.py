@@ -3,8 +3,11 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Awaitable, Callable
 
+from agent.types import JsonObject, JsonValue
+
+from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -24,7 +27,7 @@ class AgentContext:
     user_id: int | None = None
     session_id: int | None = None
     kb_id: int | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JsonObject = field(default_factory=dict)
 
 
 @dataclass
@@ -40,8 +43,8 @@ class Agent:
         self,
         name: str,
         llm_provider: BaseLLMProvider | None = None,
-        memory_client: Any = None,
-        tools: dict[str, Any] | None = None,
+        memory_client: MemoryApiClient | None = None,
+        tools: dict[str, Callable[..., Awaitable[JsonValue]]] | None = None,
         permission_config: PermissionConfig | None = None,
     ) -> None:
         self._name = name
@@ -173,7 +176,7 @@ class Agent:
         *,
         max_retries: int = 2,
         **kwargs,
-    ) -> dict[str, Any]:
+    ) -> JsonObject:
         """调用 LLM 并解析 JSON 响应，解析失败时自动重试（FSM 模式）。
 
         Args:
@@ -229,7 +232,7 @@ class Agent:
             logger.warning("agent_tool_call_failed name=%s tool=%s err=%s", self._name, tool_name, exc)
             return ToolCallResult(tool_name=tool_name, success=False, result="", error=str(exc))
 
-    def register_tool(self, name: str, tool: Any) -> None:
+    def register_tool(self, name: str, tool: Callable[..., Awaitable[JsonValue]]) -> None:
         self._tools[name] = tool
 
     async def submit_task(
@@ -241,7 +244,7 @@ class Agent:
         user_text: str | None = None,
         assistant_text: str | None = None,
         recent_messages: list[dict[str, str]] | None = None,
-    ) -> dict[str, Any]:
+    ) -> JsonObject:
         if not self.check_tool(ToolPermission.TASK_SUBMIT):
             logger.warning("agent_submit_task_denied name=%s", self._name)
             return {}
@@ -261,7 +264,7 @@ class Agent:
             logger.warning("agent_submit_task_failed name=%s err=%s", self._name, exc)
             return {}
 
-    async def fetch_pending_tasks(self, limit: int = 10) -> list[dict[str, Any]]:
+    async def fetch_pending_tasks(self, limit: int = 10) -> list[JsonObject]:
         self.ensure_can_tool(ToolPermission.MEMORY_READ)
         self.ensure_can_read("memory")
         if self._memory_client is None:
@@ -300,7 +303,7 @@ class Agent:
             raise RuntimeError("no_memory_client")
         await self._memory_client.mark_task_failed(task_id, error)
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         raise NotImplementedError
 
     async def run(self) -> None:

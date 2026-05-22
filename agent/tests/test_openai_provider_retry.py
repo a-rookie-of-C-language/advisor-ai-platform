@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
 
@@ -17,11 +17,11 @@ class StatusError(Exception):
 
 
 class FakeCompletions:
-    def __init__(self, results: list[Any]) -> None:
+    def __init__(self, results: list[JsonValue]) -> None:
         self.results = results
-        self.calls: list[dict[str, Any]] = []
+        self.calls: list[JsonObject] = []
 
-    async def create(self, **kwargs: Any):
+    async def create(self, **kwargs: JsonValue):
         self.calls.append(kwargs)
         result = self.results.pop(0)
         if isinstance(result, BaseException):
@@ -34,7 +34,7 @@ class FakeClient:
         self.chat = SimpleNamespace(completions=completions)
 
 
-def make_provider(results: list[Any], *, max_retries: int = 0) -> tuple[OpenAIProvider, FakeCompletions]:
+def make_provider(results: list[JsonValue], *, max_retries: int = 0) -> tuple[OpenAIProvider, FakeCompletions]:
     completions = FakeCompletions(results)
     provider = OpenAIProvider(
         api_key="test-key",
@@ -205,7 +205,7 @@ async def test_stream_chat_with_tools_retries_llm_call(monkeypatch):
     provider, completions = make_provider([StatusError(503), tool_response("tool answer")], max_retries=1)
     messages = [ChatMessage(role="user", content="hi")]
 
-    async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
+    async def tool_executor(tool_name: str, tool_args: JsonObject) -> str:
         return "unused"
 
     events = [
@@ -228,7 +228,7 @@ async def test_stream_chat_with_tools_does_not_retry_auth_error(monkeypatch):
     provider, completions = make_provider([StatusError(401)], max_retries=2)
     messages = [ChatMessage(role="user", content="hi")]
 
-    async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
+    async def tool_executor(tool_name: str, tool_args: JsonObject) -> str:
         return "unused"
 
     with pytest.raises(StatusError):
@@ -256,7 +256,7 @@ async def test_stream_chat_with_tools_llm_retry_does_not_retry_tool_executor(mon
     messages = [ChatMessage(role="user", content="hi")]
     tool_calls = 0
 
-    async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
+    async def tool_executor(tool_name: str, tool_args: JsonObject) -> str:
         nonlocal tool_calls
         tool_calls += 1
         raise RuntimeError("tool failed")

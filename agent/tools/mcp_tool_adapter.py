@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import re
-from typing import Any
 
 from pydantic import BaseModel
 
 from tools.base_tool import BaseTool
+from tools.mcp_client_pool import McpClientPool, McpServerConfig
 from tools.tool_result import ToolResult
 
 MAX_MCP_DESCRIPTION_LENGTH = 2048
@@ -41,10 +42,10 @@ class McpToolAdapter(BaseTool):
         server_name: str,
         mcp_tool_name: str,
         description: str,
-        input_schema: dict[str, Any],
-        client_pool: Any,
-        server_config: Any,
-        mcp_annotations: dict[str, Any] | None = None,
+        input_schema: JsonObject,
+        client_pool: McpClientPool,
+        server_config: McpServerConfig,
+        mcp_annotations: JsonObject | None = None,
         category: str | None = None,
     ) -> None:
         annotations = mcp_annotations or {}
@@ -76,7 +77,7 @@ class McpToolAdapter(BaseTool):
         self._max_result_size_chars = 20000
         self._declared_read_only = read_only
 
-    async def execute(self, tool_input: Any, context: dict[str, Any]) -> ToolResult:
+    async def execute(self, tool_input: McpToolInputModel, context: JsonObject) -> ToolResult:
         _ = context
         try:
             if hasattr(tool_input, "model_dump"):
@@ -117,7 +118,7 @@ class McpToolAdapter(BaseTool):
             )
 
     @staticmethod
-    def _format_content(content: list[dict[str, Any]]) -> str:
+    def _format_content(content: list[JsonObject]) -> str:
         if not content:
             return ""
 
@@ -134,11 +135,11 @@ class McpToolAdapter(BaseTool):
 
         return "\n".join(parts)
 
-    def get_is_concurrency_safe(self, tool_input: Any) -> bool:
+    def get_is_concurrency_safe(self, tool_input: McpToolInputModel) -> bool:
         _ = tool_input
         return self._is_concurrency_safe
 
-    def get_is_destructive(self, tool_input: Any) -> bool:
+    def get_is_destructive(self, tool_input: McpToolInputModel) -> bool:
         _ = tool_input
         return self._is_destructive
 

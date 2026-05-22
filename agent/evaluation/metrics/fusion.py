@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 
 def fusion_score_comparison(
-    candidates_before: list[dict[str, Any]],
-    candidates_after: list[dict[str, Any]],
+    candidates_before: list[JsonObject],
+    candidates_after: list[JsonObject],
     top_k: int = 5,
-) -> dict[str, Any]:
+) -> JsonObject:
     """对比融合策略前后的排序变化。
 
     Args:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
+
+from agent.types import JsonObject, JsonValue
 
 from tools.tool_result import ToolResult
 
@@ -12,10 +14,10 @@ from tools.tool_result import ToolResult
 # before 钩子：(should_proceed, value)
 #   should_proceed=True  → value 是修改后的 tool_input（None 表示不修改原始输入）
 #   should_proceed=False → value 是 ToolResult（短路线，跳过工具执行直接返回）
-BeforeHook = Callable[[str, Any, dict[str, Any]], Awaitable[tuple[bool, Any]]]
+BeforeHook = Callable[[str, JsonValue, JsonObject], Awaitable[tuple[bool, JsonValue]]]
 
 # after 钩子：返回变换后的 ToolResult
-AfterHook = Callable[[str, Any, ToolResult, dict[str, Any]], Awaitable[ToolResult]]
+AfterHook = Callable[[str, JsonValue, ToolResult, JsonObject], Awaitable[ToolResult]]
 
 # ------------------------------------------------------------------
 # 内置钩子
@@ -37,9 +39,9 @@ class LoggingHook:
     async def __call__(
         self,
         tool_name: str,
-        tool_input: Any,
+        tool_input: JsonValue,
         result: ToolResult,
-        context: dict[str, Any],
+        context: JsonObject,
     ) -> ToolResult:
         _ = context
         try:

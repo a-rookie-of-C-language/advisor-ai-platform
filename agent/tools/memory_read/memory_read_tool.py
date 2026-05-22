@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from agent.types import JsonObject
 from pydantic import BaseModel, Field
 
 from context.memory.api.memory_api_client import MemoryApiClient
@@ -33,7 +34,7 @@ class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 
-    async def execute(self, tool_input: MemoryReadInput, context: dict[str, object]) -> ToolResult:
+    async def execute(self, tool_input: MemoryReadInput, context: JsonObject) -> ToolResult:
         user_id = context.get("user_id")
         kb_id = context.get("kb_id")
         user_query = str(context.get("user_query") or "").strip()

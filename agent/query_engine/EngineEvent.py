@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 import time
 from dataclasses import dataclass
-from typing import Any
 
 
 @dataclass(frozen=True)
 class EngineEvent:
     event: str
     source: str
-    payload: dict[str, Any]
+    payload: JsonObject
     trace_id: str | None = None
     event_version: str = "1.0"
 
@@ -24,7 +24,7 @@ class EngineEvent:
         *,
         tool_name: str,
         tool_call_id: str,
-        input_payload: dict[str, Any],
+        input_payload: JsonObject,
         trace_id: str | None = None,
     ) -> "EngineEvent":
         return cls(
@@ -35,11 +35,11 @@ class EngineEvent:
         )
 
     @classmethod
-    def tool_result(cls, payload: dict[str, Any], *, trace_id: str | None = None) -> "EngineEvent":
+    def tool_result(cls, payload: JsonObject, *, trace_id: str | None = None) -> "EngineEvent":
         return cls(event="tool_result", source="tool", payload=payload, trace_id=trace_id)
 
     @classmethod
-    def tool_error(cls, payload: dict[str, Any], *, trace_id: str | None = None) -> "EngineEvent":
+    def tool_error(cls, payload: JsonObject, *, trace_id: str | None = None) -> "EngineEvent":
         return cls(event="tool_error", source="tool", payload=payload, trace_id=trace_id)
 
     @classmethod

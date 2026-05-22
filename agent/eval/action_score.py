@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass
-from typing import Any
 
 
 @dataclass(frozen=True)
@@ -15,7 +15,7 @@ class ActionScore:
     success: bool
     reasons: list[str]
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonObject:
         return {
             "total": self.total,
             "should_call_tool": self.should_call_tool,
@@ -31,7 +31,7 @@ class ActionScore:
 def score_action(
     *,
     user_query: str,
-    trace_events: list[dict[str, Any]],
+    trace_events: list[JsonObject],
 ) -> ActionScore:
     lower_query = user_query.lower()
     should_call = bool(user_query.strip()) and any(

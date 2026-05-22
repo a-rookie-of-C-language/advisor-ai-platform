@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from tools.base_tool import BaseTool
 from agents.search.schema import WebFetchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
 from llm.base_provider import BaseLLMProvider
@@ -18,8 +17,9 @@ _JUDGE_SYSTEM_PROMPT = (
 
 class WebFetchSubAgent(WebToolSubAgent):
     MODEL_ENV_PREFIX = "WEB_FETCH"
+    DEFAULT_MODEL: str | None = None
 
-    def __init__(self, llm_provider: BaseLLMProvider, web_fetch_tool: Any) -> None:
+    def __init__(self, llm_provider: BaseLLMProvider, web_fetch_tool: BaseTool) -> None:
         super().__init__(
             name="web_fetch_subagent",
             llm_provider=llm_provider,

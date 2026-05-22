@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from agents.base.subagent import SubAgent
 from context.memory.api.memory_api_client import MemoryApiClient
@@ -14,7 +15,7 @@ from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 
-Extractor = Callable[[str, str], list | Awaitable[list]]
+Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 
 
 class MemoryWorkerSubAgent(SubAgent):
@@ -28,7 +29,7 @@ class MemoryWorkerSubAgent(SubAgent):
         poll_interval_sec: float = 5.0,
         batch_size: int = 10,
         max_retries: int = 3,
-        **kwargs: Any,
+        **kwargs: JsonValue,
     ) -> None:
         super().__init__(
             name="memory_worker",
@@ -49,7 +50,7 @@ class MemoryWorkerSubAgent(SubAgent):
         self._max_retries = max(max_retries, 0)
         self._running = False
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         """Execute one polling iteration and return processing stats."""
         stats: dict[str, int] = {"fetched": 0, "processed": 0, "done": 0, "failed": 0}
         try:

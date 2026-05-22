@@ -9,6 +9,7 @@ import os
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
+from agent.types import JsonObject
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -385,9 +386,9 @@ def run_all() -> None:
         logger.info("All-mode stopped by keyboard interrupt")
 
 
-def _parse_sse_event(raw: str) -> dict[str, object]:
-    event_name = "message"
-    data: dict[str, object] = {}
+    def _parse_sse_event(raw: str) -> JsonObject:
+        event_name = "message"
+        data: JsonObject = {}
     for line in raw.strip().split("\n"):
         if line.startswith("event:"):
             event_name = line.split(":", 1)[1].strip()

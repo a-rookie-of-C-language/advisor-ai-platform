@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from agents.base.subagent import SubAgent
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
@@ -15,13 +16,14 @@ from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 
-ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[str]]
+ToolExecutor = Callable[[str, JsonObject], Awaitable[str]]
 
 
 class ToolExplorerSubAgent(SubAgent):
     """Read-only ReAct-style subagent that explores tools and returns compact evidence."""
 
     MODEL_ENV_PREFIX = "TOOL_EXPLORER"
+    DEFAULT_MODEL: str | None = None
 
     def __init__(
         self,
@@ -49,7 +51,7 @@ class ToolExplorerSubAgent(SubAgent):
         recent_messages: list[ChatMessage],
         available_tools: list[ToolSpec],
         candidate_tools: list[ToolSpec],
-        initial_route: dict[str, Any],
+        initial_route: JsonObject,
         tool_executor: ToolExecutor,
     ) -> ToolExplorerOutcome:
         read_only_tools = self._dedupe_tools(
@@ -60,9 +62,9 @@ class ToolExplorerSubAgent(SubAgent):
 
         candidate_names = {tool.name for tool in candidate_tools if tool.is_read_only}
         events: list[ToolExplorerEvent] = []
-        evidence: list[dict[str, Any]] = []
-        tool_calls: list[dict[str, Any]] = []
-        observations: list[dict[str, Any]] = []
+        evidence: list[JsonObject] = []
+        tool_calls: list[JsonObject] = []
+        observations: list[JsonObject] = []
 
         for step_index in range(1, self._max_steps + 1):
             step = self._contextual_followup_step(
@@ -210,8 +212,8 @@ class ToolExplorerSubAgent(SubAgent):
         recent_messages: list[ChatMessage],
         available_tools: list[ToolSpec],
         candidate_names: set[str],
-        initial_route: dict[str, Any],
-        observations: list[dict[str, Any]],
+        initial_route: JsonObject,
+        observations: list[JsonObject],
     ) -> ToolExplorerStep:
         prompt = self._build_plan_prompt(
             user_query=user_query,
@@ -239,7 +241,7 @@ class ToolExplorerSubAgent(SubAgent):
         *,
         user_query: str,
         recent_messages: list[ChatMessage],
-        observations: list[dict[str, Any]],
+        observations: list[JsonObject],
     ) -> str:
         if not observations:
             return ""
@@ -269,8 +271,8 @@ class ToolExplorerSubAgent(SubAgent):
         recent_messages: list[ChatMessage],
         available_tools: list[ToolSpec],
         candidate_names: set[str],
-        initial_route: dict[str, Any],
-        observations: list[dict[str, Any]],
+        initial_route: JsonObject,
+        observations: list[JsonObject],
     ) -> str:
         payload = {
             "user_query": user_query,
@@ -283,7 +285,7 @@ class ToolExplorerSubAgent(SubAgent):
         return json.dumps(payload, ensure_ascii=False)
 
     @staticmethod
-    def _coerce_step(payload: dict[str, Any]) -> ToolExplorerStep:
+    def _coerce_step(payload: JsonObject) -> ToolExplorerStep:
         action = str(payload.get("action", "")).strip().lower()
         if action not in {"call_tool", "final", "none"}:
             action = "none"
@@ -305,7 +307,7 @@ class ToolExplorerSubAgent(SubAgent):
         user_query: str,
         recent_messages: list[ChatMessage],
         available_tools: list[ToolSpec],
-        observations: list[dict[str, Any]],
+        observations: list[JsonObject],
     ) -> ToolExplorerStep | None:
         if observations:
             return None
@@ -330,7 +332,7 @@ class ToolExplorerSubAgent(SubAgent):
         return None
 
     @staticmethod
-    def _parse_tool_output(raw_output: str) -> dict[str, Any]:
+    def _parse_tool_output(raw_output: str) -> JsonObject:
         try:
             parsed = json.loads(raw_output) if raw_output else {}
         except Exception:
@@ -339,7 +341,7 @@ class ToolExplorerSubAgent(SubAgent):
             return parsed
         return {}
 
-    def _compact_items(self, items: list[Any]) -> list[Any]:
+    def _compact_items(self, items: list[JsonValue]) -> list[JsonValue]:
         raw = json.dumps(items, ensure_ascii=False, default=str)
         if len(raw) <= self._max_evidence_chars:
             return items
@@ -358,7 +360,7 @@ class ToolExplorerSubAgent(SubAgent):
         return compacted
 
     @staticmethod
-    def _tool_to_prompt_item(tool: ToolSpec) -> dict[str, Any]:
+    def _tool_to_prompt_item(tool: ToolSpec) -> JsonObject:
         return {
             "name": tool.name,
             "description": (tool.description or "")[:800],
@@ -377,10 +379,10 @@ class ToolExplorerSubAgent(SubAgent):
         return result
 
     @staticmethod
-    def _fallback_summary(observations: list[dict[str, Any]]) -> str:
+    def _fallback_summary(observations: list[JsonObject]) -> str:
         return json.dumps({"observations": observations}, ensure_ascii=False, default=str)[:4000]
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         return {}
 
     async def run(self) -> None:

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
+from agent.types import JsonObject
 from pydantic import BaseModel, ValidationError
 
 from llm.tool_spec import ToolSpec
@@ -25,7 +26,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         name: str,
         description: str,
         input_model: type[InputModelT],
-        input_json_schema: dict[str, Any] | None = None,
+        input_json_schema: JsonObject | None = None,
         output_model: type[OutputModelT] | None = None,
         required_permissions: set[ToolPermission] | None = None,
         category: str = "general",
@@ -50,7 +51,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         self._idempotency_cache: dict[str, tuple[str, bool]] = {}
 
     @abstractmethod
-    async def execute(self, tool_input: InputModelT, context: dict[str, Any]) -> ToolResult:
+    async def execute(self, tool_input: InputModelT, context: JsonObject) -> ToolResult:
         """Execute tool and return normalized ToolResult."""
 
     async def execute_with_idempotency(
@@ -131,7 +132,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
             return result
         return result[: self._max_result_size_chars] + "\n... [truncated]"
 
-    async def validate_input(self, input_payload: dict[str, Any]) -> ValidationResult[InputModelT]:
+    async def validate_input(self, input_payload: JsonObject) -> ValidationResult[InputModelT]:
         try:
             parsed = self.input_model.model_validate(input_payload or {})
             return ValidationResult(ok=True, data=parsed)
@@ -145,12 +146,12 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
         except Exception as exc:  # noqa: BLE001
             return ValidationResult(ok=False, errors=[str(exc)])
 
-    def input_json_schema(self) -> dict[str, Any]:
+    def input_json_schema(self) -> JsonObject:
         if self._input_json_schema is not None:
             return self._input_json_schema
         return self.input_model.model_json_schema()
 
-    def output_json_schema(self) -> dict[str, Any] | None:
+    def output_json_schema(self) -> JsonObject | None:
         if self.output_model is None:
             return None
         return self.output_model.model_json_schema()

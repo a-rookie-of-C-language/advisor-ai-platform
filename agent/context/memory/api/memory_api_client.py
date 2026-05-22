@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any
+
+from agent.types import JsonObject, JsonValue
 
 import httpx
 
@@ -116,7 +117,7 @@ class MemoryApiClient:
         user_text: str | None = None,
         assistant_text: str | None = None,
         recent_messages: list[dict[str, str]] | None = None,
-    ) -> dict[str, Any]:
+    ) -> JsonObject:
         payload = {
             "userId": user_id,
             "kbId": kb_id,
@@ -132,7 +133,7 @@ class MemoryApiClient:
         data = await self._request("POST", "/api/memory/task/submit", json=payload)
         return data.get("data", {})
 
-    async def fetch_pending_tasks(self, limit: int = 10) -> list[dict[str, Any]]:
+    async def fetch_pending_tasks(self, limit: int = 10) -> list[JsonObject]:
         data = await self._request("GET", f"/api/memory/task/pending?limit={limit}")
         return data.get("data", [])
 
@@ -140,18 +141,18 @@ class MemoryApiClient:
         await self._request("POST", f"/api/memory/task/{task_id}/done")
 
     async def mark_task_failed(self, task_id: int, error: str | None = None) -> None:
-        params: dict[str, Any] = {}
+        params: JsonObject = {}
         if error:
             params["error"] = error
         await self._request("POST", f"/api/memory/task/{task_id}/fail", json=params if params else None)
 
-    async def _request(self, method: str, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def _request(self, method: str, path: str, json: JsonObject | None = None) -> JsonObject:
         url = f"{self._base_url}{path}"
         headers: dict[str, str] = {}
         if self._bearer_token:
             headers["Authorization"] = f"Bearer {self._bearer_token}"
 
-        async def _do_request() -> dict[str, Any]:
+        async def _do_request() -> JsonObject:
             async with httpx.AsyncClient(timeout=self._timeout_sec) as client:
                 response = await client.request(method=method, url=url, json=json, headers=headers)
                 response.raise_for_status()
@@ -194,7 +195,7 @@ class MemoryApiClient:
         raise RuntimeError("Memory API request failed")
 
     @staticmethod
-    def _to_memory_item(data: dict[str, Any]) -> MemoryItem:
+    def _to_memory_item(data: JsonObject) -> MemoryItem:
         return MemoryItem(
             id=int(data.get("id", 0)),
             user_id=int(data.get("userId", 0)),
@@ -209,7 +210,7 @@ class MemoryApiClient:
         )
 
     @staticmethod
-    def _parse_datetime(value: Any) -> datetime | None:
+    def _parse_datetime(value: JsonValue) -> datetime | None:
         if not value:
             return None
         if isinstance(value, datetime):

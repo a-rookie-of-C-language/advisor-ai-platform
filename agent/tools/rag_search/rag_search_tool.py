@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from agent.types import JsonObject
 from pydantic import BaseModel, Field
 
 from RAG.RAG_service import RAG_service
@@ -46,7 +47,7 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 
-    async def execute(self, tool_input: RAGSearchInput, context: dict[str, object]) -> ToolResult:
+    async def execute(self, tool_input: RAGSearchInput, context: JsonObject) -> ToolResult:
         user_id = context.get("user_id")
         session_id = context.get("session_id")
         user_query = str(context.get("user_query") or "").strip()

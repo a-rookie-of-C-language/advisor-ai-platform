@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 import logging
-from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
@@ -100,8 +100,8 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
 
 
 def _filter_tool_result(
-    tool_name: str, payload: dict[str, Any], pipeline: SafetyPipeline | None
-) -> tuple[dict[str, Any], int]:
+    tool_name: str, payload: JsonObject, pipeline: SafetyPipeline | None
+) -> tuple[JsonObject, int]:
     """过滤工具结果中的敏感信息
 
     Returns:
@@ -146,7 +146,7 @@ def _filter_tool_result(
     return result, sensitive_count
 
 
-def _derive_tool_result(tool_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _derive_tool_result(tool_name: str, payload: JsonObject) -> JsonObject:
     if tool_name != "rag_search":
         return {}
     items = payload.get("items", [])
@@ -169,9 +169,9 @@ def _derive_tool_result(tool_name: str, payload: dict[str, Any]) -> dict[str, An
 
 def _build_tool_result_payload(
     tool_name: str,
-    base_payload: dict[str, Any],
-    payload: dict[str, Any],
-) -> dict[str, Any]:
+    base_payload: JsonObject,
+    payload: JsonObject,
+) -> JsonObject:
     result_payload = {
         **base_payload,
         "output": payload,
@@ -557,7 +557,7 @@ async def generate_node(state: GraphState) -> GraphState:
                     if runtime.debug_stream:
                         debug_count += 1
             else:
-                async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
+                async def tool_executor(tool_name: str, tool_args: JsonObject) -> str:
                     return await _execute_tool(tool_name=tool_name, tool_args=tool_args, state=state)
 
                 async for event in runtime.provider.stream_chat_with_tools(

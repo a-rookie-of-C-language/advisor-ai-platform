@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Dict
 
 from RAG.schema import RAGChunkHit
 
@@ -11,4 +12,4 @@ class RetrievalCandidate:
     score: float
     recall_index: int
     hit: RAGChunkHit
-    metadata: Dict[str, Any]
+    metadata: JsonObject

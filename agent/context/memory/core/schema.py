@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 
 @dataclass(slots=True)
@@ -16,7 +16,7 @@ class MemoryItem:
     created_at: datetime | None = None
     updated_at: datetime | None = None
     expires_at: datetime | None = None
-    tags: dict[str, Any] = field(default_factory=dict)
+    tags: JsonObject = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -24,7 +24,7 @@ class MemoryCandidate:
     content: str
     confidence: float = 0.5
     source_turn_id: str | None = None
-    tags: dict[str, Any] = field(default_factory=dict)
+    tags: JsonObject = field(default_factory=dict)
 
 
 @dataclass(slots=True)

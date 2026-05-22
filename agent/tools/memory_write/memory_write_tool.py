@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class MemoryCandidateInput(BaseModel):
     content: str = Field(min_length=1)
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     source_turn_id: str | None = None
-    tags: dict[str, Any] = Field(default_factory=dict)
+    tags: JsonObject = Field(default_factory=dict)
 
 
 class MemoryWriteInput(BaseModel):
@@ -42,7 +42,7 @@ class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):
         self._interrupt_behavior = "cancel"
         self._requires_user_interaction = False
 
-    async def execute(self, tool_input: MemoryWriteInput, context: dict[str, object]) -> ToolResult:
+    async def execute(self, tool_input: MemoryWriteInput, context: JsonObject) -> ToolResult:
         user_id = context.get("user_id")
         kb_id = context.get("kb_id")
 

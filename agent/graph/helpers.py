@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import asyncio
 import json
 import logging
 import re
-from typing import Any
 
+from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 
 from .runtime import _runtime
@@ -55,10 +56,10 @@ def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[
 
 
 async def provider_stream(
-    provider: Any,
+    provider: BaseLLMProvider,
     messages: list[ChatMessage],
     *,
-    response_format: dict[str, Any] | None = None,
+    response_format: JsonObject | None = None,
 ):
     async for chunk in provider.stream_chat(messages, response_format=response_format):
         yield chunk
@@ -68,7 +69,7 @@ async def _run_fusion_pipeline(
     state: GraphState,
     user_query: str,
     model_messages: list,
-) -> dict[str, Any] | None:
+) -> JsonObject | None:
     from fusion.source_candidate import SourceCandidate
 
     runtime = _runtime()
@@ -189,7 +190,7 @@ async def _run_fusion_pipeline(
     }
 
 
-def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any]) -> list:
+def _inject_fusion_context(model_messages: list, fusion_context: JsonObject) -> list:
     from prompt.PromptBuilder import PromptBuilder
 
     candidates = fusion_context.get("candidates", [])

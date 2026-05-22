@@ -4,6 +4,7 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
+from agent.types import JsonValue
 
 from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
 from chat.stream_service import ChatStreamService
@@ -52,7 +53,7 @@ class _ProviderOk:
         self._chunks = chunks
         self.last_messages: list[ChatMessage] = []
 
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         self.last_messages = list(messages)
         for chunk in self._chunks:
             yield chunk
@@ -65,14 +66,14 @@ class _ProviderOk:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
-        **kwargs: object,
+        **kwargs: JsonValue,
     ) -> AsyncIterator[LLMStreamEvent]:
         for chunk in self._chunks:
             yield LLMStreamEvent(type="delta", text=chunk)
 
 
 class _ProviderError:
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         raise RuntimeError("provider boom")
@@ -85,13 +86,13 @@ class _ProviderError:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
-        **kwargs: object,
+        **kwargs: JsonValue,
     ) -> AsyncIterator[LLMStreamEvent]:
         raise RuntimeError("provider boom")
 
 
 class _ProviderToolUse:
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -104,7 +105,7 @@ class _ProviderToolUse:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
-        **kwargs: object,
+        **kwargs: JsonValue,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
         _ = tools
@@ -116,7 +117,7 @@ class _ProviderToolUse:
 
 
 class _ProviderLegacyToolUse:
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -129,7 +130,7 @@ class _ProviderLegacyToolUse:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
-        **kwargs: object,
+        **kwargs: JsonValue,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
         _ = tools
@@ -144,7 +145,7 @@ class _ProviderRouteCapture:
     def __init__(self) -> None:
         self.last_tools: list[ToolSpec] = []
 
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -157,7 +158,7 @@ class _ProviderRouteCapture:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
-        **kwargs: object,
+        **kwargs: JsonValue,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
         _ = tool_executor
@@ -169,7 +170,7 @@ class _ProviderRouteCapture:
 
 
 class _ProviderRouteJsonThenAnswer:
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if kwargs.get("response_format"):
             yield json.dumps({"categories": [], "confidence": 0.0, "reason": "fallback"})
             return
@@ -183,7 +184,7 @@ class _ProviderRouteJsonThenAnswer:
         *,
         max_tool_calls: int = 1,
         max_tool_retries: int = 3,
-        **kwargs: object,
+        **kwargs: JsonValue,
     ) -> AsyncIterator[LLMStreamEvent]:
         _ = messages
         _ = tools
@@ -225,7 +226,7 @@ class _CapturingOpenAIProvider:
         self.model = model
         _CapturingOpenAIProvider.instances.append(self)
 
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         _ = messages
         _ = kwargs
         if False:
@@ -233,7 +234,7 @@ class _CapturingOpenAIProvider:
 
 
 class _ExplorerUsed:
-    async def explore(self, **kwargs: object) -> ToolExplorerOutcome:
+    async def explore(self, **kwargs: JsonValue) -> ToolExplorerOutcome:
         _ = kwargs
         return ToolExplorerOutcome(
             used=True,

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 
 class FailureMemoryMatcher:
     @staticmethod
-    def match(query: str, memories: list[dict[str, Any]]) -> dict[str, Any] | None:
+    def match(query: str, memories: list[JsonObject]) -> JsonObject | None:
         q_tokens = set(FailureMemoryMatcher._tokenize(query))
         if not q_tokens:
             return None

@@ -8,7 +8,7 @@ from context.memory.api.memory_api_client import MemoryApiClient
 
 
 class _FakeAsyncClient:
-    responses: list[object] = []
+    responses: list[httpx.Response | Exception] = []
     calls: list[dict] = []
 
     def __init__(self, timeout: float) -> None:
@@ -101,4 +101,3 @@ async def test_request_does_not_retry_on_400(monkeypatch: pytest.MonkeyPatch) ->
         await client._request("GET", "/api/memory/session-summary/1")
 
     assert len(_FakeAsyncClient.calls) == 1
-

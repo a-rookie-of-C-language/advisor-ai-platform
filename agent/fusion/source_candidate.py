@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -11,7 +11,7 @@ class SourceCandidate:
     content: str
     source: str
     score: float = 1.0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JsonObject = field(default_factory=dict)
     # metadata 关键字段:
     #   type: str            — 数据类型 (product / policy / general)
     #   effective_date: str  — 生效日期 (ISO 格式)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import uuid
-from typing import Any
 
 from llm.tool_spec import ToolSpec
 from tools.base_tool import BaseTool
@@ -14,7 +14,7 @@ class ToolRegistry:
     def __init__(self, enabled_tools: set[str] | None = None) -> None:
         self._tools: dict[str, BaseTool] = {}
         self._enabled_tools = enabled_tools
-        self._pending_callbacks: dict[str, dict[str, Any]] = {}
+        self._pending_callbacks: dict[str, JsonObject] = {}
         self._before_hooks: list[BeforeHook] = []
         self._after_hooks: list[AfterHook] = []
 
@@ -49,7 +49,7 @@ class ToolRegistry:
         """注册 after 钩子：在工具执行后调用，可变换输出结果。"""
         self._after_hooks.append(hook)
 
-    async def execute(self, name: str, tool_args: dict[str, Any], context: dict[str, Any]) -> str:
+    async def execute(self, name: str, tool_args: JsonObject, context: JsonObject) -> str:
         tool = self.get(name)
         if tool is None:
             raise ValueError(f"unsupported tool: {name}")

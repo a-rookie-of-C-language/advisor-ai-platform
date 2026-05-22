@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue, SupportsModelDump
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from agents.base.subagent import SubAgent
 from llm.base_provider import BaseLLMProvider
@@ -39,7 +40,7 @@ class WebToolSubAgent(SubAgent):
         self._tool = tool
         self._judge_system_prompt = judge_system_prompt
 
-    async def _execute_tool(self, tool_input: Any) -> "ToolResult":
+    async def _execute_tool(self, tool_input: JsonValue | SupportsModelDump) -> "ToolResult":
         """统一工具执行逻辑，支持新旧两种调用方式。"""
         try:
             if hasattr(self._tool, "execute"):
@@ -54,7 +55,7 @@ class WebToolSubAgent(SubAgent):
 
             return ToolResult(ok=False, status="error", message=str(e), items=[])
 
-    async def _judge(self, content: str) -> dict[str, Any]:
+    async def _judge(self, content: str) -> JsonObject:
         """统一 LLM 审核逻辑。"""
         try:
             return await self.call_llm_json(
@@ -67,7 +68,7 @@ class WebToolSubAgent(SubAgent):
             logger.error("%s judge failed: %s", self._name, e)
             return {"summary": content[:_JUDGE_FALLBACK_MAX], "safe": True, "filtered_reason": None}
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         return {}
 
     async def run(self) -> None:

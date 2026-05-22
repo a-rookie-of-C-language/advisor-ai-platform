@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 
 class SearchMode(str, Enum):
@@ -18,7 +19,7 @@ class ScoreType(str, Enum):
 class RAGSearchFilters:
     doc_ids: Optional[List[int]] = None
     source_types: Optional[List[str]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[JsonObject] = None
 
 
 @dataclass
@@ -44,7 +45,7 @@ class RAGChunkHit:
     score: float
     score_type: ScoreType
     rank: int
-    metadata: Dict[str, Any]
+    metadata: JsonObject
 
 
 @dataclass
@@ -77,11 +78,11 @@ class RAGRawSearchData:
 
     ids: List[str] = field(default_factory=list)
     documents: List[str] = field(default_factory=list)
-    metadatas: List[Dict[str, Any]] = field(default_factory=list)
+    metadatas: list[JsonObject] = field(default_factory=list)
     distances: List[float] = field(default_factory=list)
 
     @classmethod
-    def from_dao_result(cls, raw: Dict[str, Any]) -> "RAGRawSearchData":
+    def from_dao_result(cls, raw: JsonObject) -> "RAGRawSearchData":
         ids = (raw.get("ids") or [[]])[0]
         documents = (raw.get("documents") or [[]])[0]
         metadatas = (raw.get("metadatas") or [[]])[0]

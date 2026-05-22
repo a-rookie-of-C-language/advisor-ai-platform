@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Literal
 
 ThinkingProvider = Literal["deepseek", "openai", "qwen"]
 ReasoningEffort = Literal["low", "medium", "high"]
@@ -14,13 +15,13 @@ class ThinkingConfig:
     enabled: bool = True
     provider: ThinkingProvider | None = None
     reasoning_effort: ReasoningEffort = "medium"
-    extra_body: dict[str, Any] = field(default_factory=dict)
+    extra_body: JsonObject = field(default_factory=dict)
 
     @classmethod
     def disabled(cls) -> "ThinkingConfig":
         return cls(enabled=False)
 
-    def to_request_kwargs(self) -> dict[str, Any]:
+    def to_request_kwargs(self) -> JsonObject:
         """转换为 OpenAI-compatible API 请求参数。"""
         if not self.enabled or self.provider is None:
             return {}

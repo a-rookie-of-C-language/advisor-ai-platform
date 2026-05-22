@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Callable
 
+from agent.types import JsonObject
 from pydantic import BaseModel, Field
 
 from llm.tool_spec import ToolSpec
@@ -18,7 +19,7 @@ class ToolSearchInput(BaseModel):
 class ToolSearchTool(BaseTool[ToolSearchInput, BaseModel]):
     """让模型按关键词搜索并发现延迟加载的工具。"""
 
-    def __init__(self, specs_provider: Any) -> None:
+    def __init__(self, specs_provider: Callable[[], list[ToolSpec]]) -> None:
         super().__init__(
             name="tool_search",
             description="按关键词搜索可用的延迟加载工具，获取其完整输入参数 schema。",
@@ -33,7 +34,7 @@ class ToolSearchTool(BaseTool[ToolSearchInput, BaseModel]):
         self._always_load = True
         self._search_hint = "工具,搜索,发现,加载"
 
-    async def execute(self, tool_input: ToolSearchInput, context: dict[str, Any]) -> ToolResult:
+    async def execute(self, tool_input: ToolSearchInput, context: JsonObject) -> ToolResult:
         _ = context
         keywords = [kw.strip().lower() for kw in tool_input.keywords.split() if kw.strip()]
         if not keywords:

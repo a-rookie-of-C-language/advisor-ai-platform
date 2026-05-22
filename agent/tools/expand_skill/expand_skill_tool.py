@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 from skills.skill_registry import SkillRegistry
 from tools.base_tool import BaseTool
@@ -27,7 +27,7 @@ class ExpandSkillTool(BaseTool[ExpandSkillInput, None]):
         self._always_load = True
         self._search_hint = "技能,展开,指令,指南"
 
-    async def execute(self, tool_input: ExpandSkillInput, context: dict[str, Any]) -> ToolResult:
+    async def execute(self, tool_input: ExpandSkillInput, context: JsonObject) -> ToolResult:
         _ = context
         full_prompt = self._skill_registry.expand_skill(tool_input.skill_name)
         if not full_prompt:

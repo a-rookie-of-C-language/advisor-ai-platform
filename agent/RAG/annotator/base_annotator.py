@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict
 
 
 @dataclass
@@ -14,7 +14,7 @@ class ChunkAnnotation:
     effective_date: str = ""
     confidence: float = 0.0
     source: str = ""
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: JsonObject = field(default_factory=dict)
 
 
 class BaseChunkAnnotator(ABC):

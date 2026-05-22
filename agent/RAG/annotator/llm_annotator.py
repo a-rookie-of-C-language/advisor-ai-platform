@@ -3,7 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any, Optional
+
+from agent.types import JsonObject, JsonValue
+from llm.base_provider import BaseLLMProvider
+from typing import Optional
 
 from agents.base.agent import Agent
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -45,7 +48,7 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
 
     name = "llm_v1"
 
-    def __init__(self, provider: Any = None) -> None:
+    def __init__(self, provider: BaseLLMProvider | None = None) -> None:
         resolved_provider = provider or _build_annotation_provider_from_env()
         Agent.__init__(
             self,
@@ -93,14 +96,14 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
         ann.source = "llm"
         return ann
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         raise NotImplementedError("LlmAnnotator 不支持 run_once，请使用 annotate()")
 
     async def run(self) -> None:
         raise NotImplementedError("LlmAnnotator 不支持 run，请使用 annotate()")
 
 
-def _build_annotation_provider_from_env() -> Any:
+def _build_annotation_provider_from_env() -> BaseLLMProvider:
     """从 .env 构建标注专用 LLM provider，优先读取 ANNOTATION_*，缺失时回退 OPENAI_*。"""
     from dotenv import load_dotenv
 

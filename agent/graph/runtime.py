@@ -5,7 +5,19 @@ import json
 import logging
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any
+from typing import Awaitable, Callable
+
+from agent.types import JsonObject
+from agents.search.web_search_subagent import WebSearchSubAgent
+from context.memory.memory_injector import MemoryInjector
+from context.memory.pipeline.orchestrator import MemoryOrchestrator
+from fusion.registry import SourcePriorityRegistry
+from llm.base_provider import BaseLLMProvider
+from safety.safety_pipeline import SafetyPipeline
+from skills.skill_registry import SkillRegistry
+from tools.intent_router import IntentRouter
+from tools.tool_permission import PermissionConfig
+from tools.tool_registry import ToolRegistry
 
 from .state import GraphState
 
@@ -16,22 +28,22 @@ _runtime_var: ContextVar["GraphRuntime"] = ContextVar("graph_runtime")
 
 @dataclass
 class GraphRuntime:
-    queue: asyncio.Queue[dict[str, Any]]
-    provider: Any
-    memory_orchestrator: Any
-    memory_injector: Any
-    llm_extractor: Any
-    tools: Any
-    tool_permission: Any
+    queue: asyncio.Queue[JsonObject]
+    provider: BaseLLMProvider
+    memory_orchestrator: MemoryOrchestrator | None
+    memory_injector: MemoryInjector
+    llm_extractor: Callable[[str, str], list[JsonObject] | Awaitable[list[JsonObject]]] | None
+    tools: ToolRegistry
+    tool_permission: PermissionConfig
     enable_tool_use: bool
     debug_stream: bool
     trace_id: str = ""
     turn_id: str = ""
-    skill_registry: Any = None
-    intent_router: Any = None
-    safety_pipeline: Any = None
-    fusion_pipeline: Any = None
-    web_search_subagent: Any = None
+    skill_registry: SkillRegistry | None = None
+    intent_router: IntentRouter | None = None
+    safety_pipeline: SafetyPipeline | None = None
+    fusion_pipeline: SourcePriorityRegistry | None = None
+    web_search_subagent: WebSearchSubAgent | None = None
 
 
 def set_runtime(runtime: GraphRuntime):
@@ -46,14 +58,14 @@ def _runtime() -> GraphRuntime:
     return _runtime_var.get()
 
 
-async def _emit(event: str, data: dict[str, Any]) -> None:
+async def _emit(event: str, data: JsonObject) -> None:
     await _runtime().queue.put({"event": event, "data": data})
 
 
 async def _execute_tool(
     *,
     tool_name: str,
-    tool_args: dict[str, Any],
+    tool_args: JsonObject,
     state: GraphState,
 ) -> str:
     runtime = _runtime()

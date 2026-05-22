@@ -4,6 +4,7 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
+from agent.types import JsonValue
 
 from agents.tool_explorer import ToolExplorerSubAgent
 from llm.chat_message import ChatMessage
@@ -14,7 +15,7 @@ class _ProviderJsonSequence:
     def __init__(self, payloads: list[dict]) -> None:
         self._payloads = payloads
 
-    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         _ = messages
         _ = kwargs
         payload = self._payloads.pop(0)

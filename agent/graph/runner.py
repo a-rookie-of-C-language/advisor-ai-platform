@@ -3,9 +3,19 @@
 import asyncio
 import logging
 import time
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 
+from agent.types import JsonObject
+from agents.search.web_search_subagent import WebSearchSubAgent
 from context.memory.memory_injector import MemoryInjector
+from context.memory.pipeline.orchestrator import MemoryOrchestrator
+from fusion.registry import SourcePriorityRegistry
+from llm.base_provider import BaseLLMProvider
+from safety.safety_pipeline import SafetyPipeline
+from skills.skill_registry import SkillRegistry
+from tools.intent_router import IntentRouter
+from tools.tool_permission import PermissionConfig
+from tools.tool_registry import ToolRegistry
 from context.memory.pipeline.work_memory import WorkMemory
 from llm.chat_message import ChatMessage
 
@@ -18,19 +28,19 @@ logger = logging.getLogger(__name__)
 class GraphRunner:
     def __init__(
         self,
-        provider: Any,
-        memory_orchestrator: Any,
-        llm_extractor: Any,
-        tools: Any,
-        tool_permission: Any,
+        provider: BaseLLMProvider,
+        memory_orchestrator: MemoryOrchestrator | None,
+        llm_extractor,
+        tools: ToolRegistry,
+        tool_permission: PermissionConfig,
         *,
         debug_stream: bool,
         enable_tool_use: bool,
-        skill_registry: Any = None,
-        intent_router: Any = None,
-        safety_pipeline: Any = None,
-        fusion_pipeline: Any = None,
-        web_search_subagent: Any = None,
+        skill_registry: SkillRegistry | None = None,
+        intent_router: IntentRouter | None = None,
+        safety_pipeline: SafetyPipeline | None = None,
+        fusion_pipeline: SourcePriorityRegistry | None = None,
+        web_search_subagent: WebSearchSubAgent | None = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -56,7 +66,7 @@ class GraphRunner:
             "finalize",
         ]
 
-    def health_snapshot(self) -> dict[str, Any]:
+    def health_snapshot(self) -> JsonObject:
         return {
             "compiled": self._compiled is not None,
             "checkpoint": "inmemory",
@@ -73,10 +83,10 @@ class GraphRunner:
         kb_id: int | None = None,
         trace_id: str | None = None,
         turn_id: str | None = None,
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncIterator[JsonObject]:
         _ = kb_id
         started_at = time.perf_counter()
-        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        queue: asyncio.Queue[JsonObject] = asyncio.Queue()
         runtime = GraphRuntime(
             queue=queue,
             provider=self._provider,
