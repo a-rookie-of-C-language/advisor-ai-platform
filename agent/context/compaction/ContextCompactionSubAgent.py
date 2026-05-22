@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from agents.base.subagent import SubAgent
+from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 
 class ContextCompactionSubAgent(SubAgent):
     MODEL_ENV_PREFIX = "CONTEXT_COMPACTION"
 
-    def __init__(self, llm_provider: Any) -> None:
+    def __init__(self, llm_provider: BaseLLMProvider) -> None:
         super().__init__(
             name="context_compaction_subagent",
             llm_provider=llm_provider,

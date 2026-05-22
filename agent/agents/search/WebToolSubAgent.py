@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from agents.base.subagent import SubAgent
+from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ class WebToolSubAgent(SubAgent):
     def __init__(
         self,
         name: str,
-        llm_provider: Any,
+        llm_provider: BaseLLMProvider,
         tool: "BaseTool",
         judge_system_prompt: str,
     ) -> None:

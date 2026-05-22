@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class Agent:
     def __init__(
         self,
         name: str,
-        llm_provider: Any = None,
+        llm_provider: BaseLLMProvider | None = None,
         memory_client: Any = None,
         tools: dict[str, Any] | None = None,
         permission_config: PermissionConfig | None = None,

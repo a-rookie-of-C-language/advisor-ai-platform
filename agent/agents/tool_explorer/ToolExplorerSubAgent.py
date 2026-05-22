@@ -8,6 +8,7 @@ from agents.base.subagent import SubAgent
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
 from agents.tool_explorer.ToolExplorerOutcome import ToolExplorerOutcome
 from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
+from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -24,7 +25,7 @@ class ToolExplorerSubAgent(SubAgent):
 
     def __init__(
         self,
-        llm_provider: Any,
+        llm_provider: BaseLLMProvider,
         *,
         max_steps: int = 2,
         max_evidence_chars: int = 8000,
