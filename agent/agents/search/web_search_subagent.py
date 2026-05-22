@@ -17,6 +17,8 @@ _JUDGE_SYSTEM_PROMPT = (
 
 
 class WebSearchSubAgent(WebToolSubAgent):
+    MODEL_ENV_PREFIX = "WEB_SEARCH"
+
     def __init__(self, llm_provider: Any, web_search_tool: Any) -> None:
         super().__init__(
             name="web_search_subagent",

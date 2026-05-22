@@ -20,6 +20,8 @@ ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[str]]
 class ToolExplorerSubAgent(SubAgent):
     """Read-only ReAct-style subagent that explores tools and returns compact evidence."""
 
+    MODEL_ENV_PREFIX = "TOOL_EXPLORER"
+
     def __init__(
         self,
         llm_provider: Any,

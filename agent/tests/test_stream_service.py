@@ -5,9 +5,10 @@ from typing import AsyncIterator, Iterable
 
 import pytest
 
+from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
 from chat.stream_service import ChatStreamService
 from context.memory.core.schema import MemoryContext
-from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
+from llm import openai_provider as openai_provider_module
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_spec import ToolSpec
@@ -193,6 +194,44 @@ class _ProviderRouteJsonThenAnswer:
         yield LLMStreamEvent(type="delta", text="should not use main tool loop")
 
 
+class _CapturingOpenAIProvider:
+    instances: list["_CapturingOpenAIProvider"] = []
+
+    def __init__(
+        self,
+        api_key,
+        model,
+        base_url=None,
+        temperature=0.2,
+        timeout=60.0,
+        max_retries=0,
+        stream_timeout_sec=45.0,
+        tool_round_timeout_sec=30.0,
+        stream_idle_timeout_sec=90.0,
+        thinking_config=None,
+    ) -> None:
+        self.kwargs = {
+            "api_key": api_key,
+            "model": model,
+            "base_url": base_url,
+            "temperature": temperature,
+            "timeout": timeout,
+            "max_retries": max_retries,
+            "stream_timeout_sec": stream_timeout_sec,
+            "tool_round_timeout_sec": tool_round_timeout_sec,
+            "stream_idle_timeout_sec": stream_idle_timeout_sec,
+            "thinking_config": thinking_config,
+        }
+        self.model = model
+        _CapturingOpenAIProvider.instances.append(self)
+
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+        _ = messages
+        _ = kwargs
+        if False:
+            yield ""
+
+
 class _ExplorerUsed:
     async def explore(self, **kwargs: object) -> ToolExplorerOutcome:
         _ = kwargs
@@ -284,6 +323,63 @@ class _MemoryLoadError:
 
     async def flush(self, **kwargs) -> None:
         self.flush_called += 1
+
+
+@pytest.mark.asyncio
+async def test_subagent_model_overrides_fall_back_to_main_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TOOL_EXPLORER_MODEL", raising=False)
+    monkeypatch.delenv("CONTEXT_COMPACTION_MODEL", raising=False)
+    monkeypatch.delenv("WEB_SEARCH_MODEL", raising=False)
+    monkeypatch.delenv("WEB_FETCH_MODEL", raising=False)
+
+    provider = _ProviderOk(["ok"])
+    service = ChatStreamService(provider=provider, memory_orchestrator=None, rag_service=None)
+
+    assert service._build_tool_explorer_provider() is provider
+    assert service._build_context_compaction_provider() is provider
+    assert service._build_web_search_provider() is provider
+    assert service._build_web_fetch_provider() is provider
+
+
+@pytest.mark.asyncio
+async def test_subagent_model_overrides_use_env_specific_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    _CapturingOpenAIProvider.instances.clear()
+    monkeypatch.setenv("TOOL_EXPLORER_MODEL", "tool-explorer-model")
+    monkeypatch.setenv("TOOL_EXPLORER_API_KEY", "tool-explorer-key")
+    monkeypatch.setenv("TOOL_EXPLORER_BASE_URL", "http://tool-explorer.local")
+    monkeypatch.setenv("CONTEXT_COMPACTION_MODEL", "context-compaction-model")
+    monkeypatch.setenv("CONTEXT_COMPACTION_API_KEY", "context-compaction-key")
+    monkeypatch.setenv("CONTEXT_COMPACTION_BASE_URL", "http://context-compaction.local")
+    monkeypatch.setenv("WEB_SEARCH_MODEL", "web-search-model")
+    monkeypatch.setenv("WEB_SEARCH_API_KEY", "web-search-key")
+    monkeypatch.setenv("WEB_SEARCH_BASE_URL", "http://web-search.local")
+    monkeypatch.setenv("WEB_FETCH_MODEL", "web-fetch-model")
+    monkeypatch.setenv("WEB_FETCH_API_KEY", "web-fetch-key")
+    monkeypatch.setenv("WEB_FETCH_BASE_URL", "http://web-fetch.local")
+    monkeypatch.setattr(openai_provider_module, "OpenAIProvider", _CapturingOpenAIProvider)
+
+    provider = _ProviderOk(["ok"])
+    service = ChatStreamService(provider=provider, memory_orchestrator=None, rag_service=None)
+
+    built_providers = [
+        service._build_tool_explorer_provider(),
+        service._build_context_compaction_provider(),
+        service._build_web_search_provider(),
+        service._build_web_fetch_provider(),
+    ]
+
+    assert [item.kwargs["model"] for item in built_providers] == [
+        "tool-explorer-model",
+        "context-compaction-model",
+        "web-search-model",
+        "web-fetch-model",
+    ]
+    assert [item.kwargs["api_key"] for item in built_providers] == [
+        "tool-explorer-key",
+        "context-compaction-key",
+        "web-search-key",
+        "web-fetch-key",
+    ]
 
 
 @pytest.mark.asyncio

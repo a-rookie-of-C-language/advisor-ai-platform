@@ -16,6 +16,8 @@ _JUDGE_SYSTEM_PROMPT = (
 
 
 class WebFetchSubAgent(WebToolSubAgent):
+    MODEL_ENV_PREFIX = "WEB_FETCH"
+
     def __init__(self, llm_provider: Any, web_fetch_tool: Any) -> None:
         super().__init__(
             name="web_fetch_subagent",
