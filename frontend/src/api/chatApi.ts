@@ -57,10 +57,33 @@ export interface StreamToolResult {
   }
 }
 
+export interface StreamEventData extends Record<string, unknown> {
+  text?: string
+  message?: string
+  status?: string
+  items?: StreamSourceItem[]
+  elapsed_sec?: number
+  finish_reason?: string
+  tool_name?: string
+  tool_call_id?: string
+  input?: unknown
+  output?: unknown
+  code?: string
+  stage?: string
+  matched_by?: string
+  categories?: string[]
+  reason?: string
+  derived?: {
+    sources?: StreamSourceItem[]
+  }
+}
+
 interface StreamHandlers {
   onStart?: () => void
   onProgress?: (message: string, elapsedSec?: number) => void
+  onReasoningDelta?: (text: string) => void
   onDelta?: (text: string) => void
+  onSystemEvent?: (data: { event: string; payload: StreamEventData }) => void
   onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
   onToolUse?: (data: { toolName: string; toolCallId: string; input: unknown }) => void
   onToolResult?: (data: { toolName: string; toolCallId: string; result: StreamToolResult }) => void
@@ -106,26 +129,9 @@ function parseSseBlock(block: string): { event: string; data: string } | null {
   return { event, data: dataLines.join('\n') }
 }
 
-type StreamData = {
-  text?: string
-  message?: string
-  status?: string
-  items?: StreamSourceItem[]
-  elapsed_sec?: number
-  finish_reason?: string
-  tool_name?: string
-  tool_call_id?: string
-  input?: unknown
-  output?: unknown
-  code?: string
-  derived?: {
-    sources?: StreamSourceItem[]
-  }
-}
-
-function parseStreamData(rawData: string): StreamData {
+function parseStreamData(rawData: string): StreamEventData {
   try {
-    const decoded = JSON.parse(rawData) as StreamData & { payload?: StreamData }
+    const decoded = JSON.parse(rawData) as StreamEventData & { payload?: StreamEventData }
     return decoded.payload ?? decoded
   } catch {
     return { message: rawData }
@@ -234,62 +240,83 @@ export const chatApi = {
 
             const data = parseStreamData(parsed.data)
 
-            if (parsed.event === 'sys_start') {
-              handlers.onStart?.()
-            } else if (parsed.event === 'sys_progress') {
-              const elapsedSec = typeof data.elapsed_sec === 'number' ? data.elapsed_sec : undefined
-              handlers.onProgress?.(data.message ?? '模型思考中，请稍候...', elapsedSec)
-            } else if ((parsed.event === 'llm_delta' || parsed.event === 'llm_data') && data.text) {
-              sawDelta = true
-              handlers.onDelta?.(data.text)
-            } else if (parsed.event === 'tool_use') {
-              handlers.onToolUse?.({
-                toolName: data.tool_name ?? '',
-                toolCallId: data.tool_call_id ?? '',
-                input: data.input,
-              })
-            } else if (parsed.event === 'tool_result') {
-              const result: StreamToolResult = {
-                status: data.status,
-                message: data.message,
-                items: data.items,
-                output: data.output,
-                derived: data.derived,
-              }
-              handlers.onToolResult?.({
-                toolName: data.tool_name ?? '',
-                toolCallId: data.tool_call_id ?? '',
-                result,
-              })
-              if (data.derived?.sources?.length) {
-                handlers.onSources?.(data.derived.sources, data.status, data.message)
-              }
-            } else if (parsed.event === 'tool_error') {
-              handlers.onToolError?.({
-                toolName: data.tool_name ?? '',
-                toolCallId: data.tool_call_id ?? '',
-                message: data.message ?? 'tool error',
-                code: data.code,
-              })
-              handlers.onError?.(data.message ?? 'tool error')
-            } else if (parsed.event === 'risk_alert') {
-              handlers.onRiskAlert?.(data as unknown as { code: number; message: string; category: string })
-            } else if (parsed.event === 'sys_error') {
-              sawError = true
-              latestError = data.message ?? 'stream error'
-              handlers.onError?.(latestError)
-            } else if (parsed.event === 'sys_done') {
-              sawDone = true
-              doneReason = data.finish_reason ?? parsed.event
-              if (!sawDelta) {
+            const eventHandlers: Partial<Record<string, (payload: StreamEventData) => void>> = {
+              sys_start: () => {
+                handlers.onStart?.()
+              },
+              sys_progress: (payload) => {
+                const elapsedSec = typeof payload.elapsed_sec === 'number' ? payload.elapsed_sec : undefined
+                handlers.onProgress?.(payload.message ?? '模型思考中，请稍候...', elapsedSec)
+              },
+              tool_use: (payload) => {
+                handlers.onToolUse?.({
+                  toolName: payload.tool_name ?? '',
+                  toolCallId: payload.tool_call_id ?? '',
+                  input: payload.input,
+                })
+              },
+              tool_result: (payload) => {
+                const result: StreamToolResult = {
+                  status: payload.status,
+                  message: payload.message,
+                  items: payload.items,
+                  output: payload.output,
+                  derived: payload.derived,
+                }
+                handlers.onToolResult?.({
+                  toolName: payload.tool_name ?? '',
+                  toolCallId: payload.tool_call_id ?? '',
+                  result,
+                })
+                if (payload.derived?.sources?.length) {
+                  handlers.onSources?.(payload.derived.sources, payload.status, payload.message)
+                }
+              },
+              tool_error: (payload) => {
+                handlers.onToolError?.({
+                  toolName: payload.tool_name ?? '',
+                  toolCallId: payload.tool_call_id ?? '',
+                  message: payload.message ?? 'tool error',
+                  code: payload.code,
+                })
+                handlers.onError?.(payload.message ?? 'tool error')
+              },
+              risk_alert: (payload) => {
+                handlers.onRiskAlert?.(payload as unknown as { code: number; message: string; category: string })
+              },
+              sys_error: (payload) => {
                 sawError = true
-                latestError = 'stream done without delta'
+                latestError = payload.message ?? 'stream error'
                 handlers.onError?.(latestError)
-                throw new Error(latestError)
+              },
+              sys_done: (payload) => {
+                sawDone = true
+                doneReason = payload.finish_reason ?? parsed.event
+                if (!sawDelta) {
+                  sawError = true
+                  latestError = 'stream done without delta'
+                  handlers.onError?.(latestError)
+                  throw new Error(latestError)
+                }
+                handlers.onEnd?.()
+                void reader.cancel()
+              },
+            }
+
+            if (parsed.event === 'reasoning_delta' && data.text) {
+              handlers.onReasoningDelta?.(data.text)
+            } else if (parsed.event === 'llm_delta' || parsed.event === 'llm_data') {
+              if (data.text) {
+                sawDelta = true
+                handlers.onDelta?.(data.text)
               }
-              handlers.onEnd?.()
-              await reader.cancel()
-              return
+            } else if (eventHandlers[parsed.event]) {
+              eventHandlers[parsed.event]?.(data)
+              if (parsed.event === 'sys_done') {
+                return
+              }
+            } else if (parsed.event.startsWith('sys_')) {
+              handlers.onSystemEvent?.({ event: parsed.event, payload: data })
             } else {
               handlers.onUnknownEvent?.(parsed.event, data)
             }
