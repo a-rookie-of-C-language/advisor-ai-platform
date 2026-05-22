@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
+from agents.tool_explorer import ToolExplorerSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor
 from context.compaction.TranscriptStore import TranscriptStore
@@ -96,6 +97,10 @@ class ChatStreamService:
             auto_keep_last=self._read_context_auto_keep_last(),
         )
         self._compaction_subagent = ContextCompactionSubAgent(self._provider)
+        self._tool_explorer_subagent = ToolExplorerSubAgent(
+            self._build_tool_explorer_provider(),
+            max_steps=self._read_tool_explorer_max_steps(),
+        )
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.from_allowed_tools(
@@ -189,6 +194,44 @@ class ChatStreamService:
             return max(min(int(raw), 100), 0)
         except ValueError:
             return 70
+
+    @staticmethod
+    def _read_tool_explorer_max_steps() -> int:
+        raw = os.getenv("TOOL_EXPLORER_MAX_STEPS", "2").strip()
+        try:
+            return max(min(int(raw), 5), 1)
+        except ValueError:
+            return 2
+
+    def _build_tool_explorer_provider(self) -> BaseLLMProvider:
+        model = os.getenv("TOOL_EXPLORER_MODEL", "").strip()
+        if not model:
+            return self._provider
+        api_key = os.getenv("TOOL_EXPLORER_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+        base_url = os.getenv("TOOL_EXPLORER_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
+        if not api_key or not base_url:
+            logger.warning("TOOL_EXPLORER_MODEL configured but api key/base url missing, fallback to main provider")
+            return self._provider
+        try:
+            from llm.openai_provider import OpenAIProvider
+            from llm.provider_factory import _read_float_env, _read_int_env
+            from llm.thinking_config import ThinkingConfig
+
+            return OpenAIProvider(
+                api_key=api_key,
+                model=model,
+                base_url=base_url,
+                temperature=_read_float_env("TOOL_EXPLORER_TEMPERATURE", 0.0),
+                timeout=_read_float_env("TOOL_EXPLORER_TIMEOUT_SEC", 30.0),
+                max_retries=_read_int_env("TOOL_EXPLORER_MAX_RETRIES", 0),
+                stream_timeout_sec=_read_float_env("TOOL_EXPLORER_STREAM_TIMEOUT_SEC", 30.0),
+                tool_round_timeout_sec=_read_float_env("TOOL_EXPLORER_TOOL_ROUND_TIMEOUT_SEC", 20.0),
+                stream_idle_timeout_sec=_read_float_env("TOOL_EXPLORER_STREAM_IDLE_TIMEOUT_SEC", 45.0),
+                thinking_config=ThinkingConfig.disabled(),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to build tool explorer provider, fallback to main provider: %s", exc)
+            return self._provider
 
     @staticmethod
     def _read_failure_memory_dir() -> str:
@@ -353,6 +396,45 @@ class ChatStreamService:
     def _extract_first_url(text: str) -> str:
         found = _URL_PATTERN.search(text or "")
         return found.group(0) if found else ""
+
+    @staticmethod
+    def _looks_like_exploration_query(query: str, messages: Iterable[ChatMessage]) -> bool:
+        normalized = query.strip().lower()
+        if not normalized:
+            return False
+        direct_hints = (
+            "具体",
+            "哪些",
+            "名单",
+            "列表",
+            "列出",
+            "都有谁",
+            "是谁",
+            "多少",
+            "几个",
+            "几名",
+            "详情",
+            "明细",
+        )
+        if any(hint in normalized for hint in direct_hints):
+            return True
+        recent_text = "\n".join((message.content or "") for message in list(messages)[-4:]).lower()
+        follow_up_hints = ("他们", "这些", "那些", "这个", "那个", "都有哪些")
+        return any(hint in normalized for hint in follow_up_hints) and bool(recent_text)
+
+    @staticmethod
+    def _build_explorer_context(outcome) -> str:
+        payload = {
+            "summary": outcome.summary,
+            "evidence": outcome.evidence,
+            "tool_calls": outcome.tool_calls,
+        }
+        return (
+            "A read-only tool explorer has gathered evidence for the current user question. "
+            "Use only this evidence and the visible conversation to answer. "
+            "If the evidence is insufficient, say what is missing.\n"
+            f"{json.dumps(payload, ensure_ascii=False, default=str)}"
+        )
 
 
     @staticmethod
@@ -945,6 +1027,90 @@ class ChatStreamService:
                 )
 
                 # --- 延迟加载：工具数 > 阈值时拆分 always_load / deferred ---
+                async def tool_executor(tool_name: str, tool_args: dict) -> str:
+                    return await self._execute_tool(
+                        tool_name=tool_name,
+                        tool_args=tool_args,
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_query=user_query,
+                        trace_id=trace_id,
+                        turn_id=turn_id,
+                    )
+
+                should_try_explorer = (
+                    "web_fetch" not in matched_tools
+                    and (
+                        bool(matched_tools)
+                        or self._looks_like_exploration_query(user_query, validated_messages)
+                    )
+                )
+                if should_try_explorer:
+                    try:
+                        explorer_outcome = await self._tool_explorer_subagent.explore(
+                            user_query=user_query,
+                            recent_messages=validated_messages,
+                            available_tools=self._tools.specs(),
+                            candidate_tools=tools,
+                            initial_route=route_payload,
+                            tool_executor=tool_executor,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("tool_explorer failed, fallback to main tool flow: %s", exc)
+                        explorer_outcome = None
+                    if explorer_outcome is not None and explorer_outcome.used:
+                        for explorer_event in explorer_outcome.events:
+                            event_payload = explorer_event.payload
+                            if explorer_event.event == "tool_result":
+                                output = event_payload.get("output")
+                                payload_dict = output if isinstance(output, dict) else event_payload
+                                event_payload = self._build_tool_result_payload(
+                                    str(event_payload.get("tool_name", "")),
+                                    {
+                                        "tool_name": event_payload.get("tool_name", ""),
+                                        "tool_call_id": event_payload.get("tool_call_id", ""),
+                                        "attempt": event_payload.get("attempt", 1),
+                                        "status": event_payload.get("status", "success"),
+                                        "message": event_payload.get("message", ""),
+                                    },
+                                    payload_dict,
+                                )
+                            yield self._serialize_protocol_event(
+                                event=explorer_event.event,
+                                source="tool" if explorer_event.event.startswith("tool_") else "system",
+                                trace_id=trace_id,
+                                payload=event_payload,
+                            )
+                        model_messages = [
+                            ChatMessage(
+                                role="system",
+                                content=self._build_explorer_context(explorer_outcome),
+                            )
+                        ] + model_messages
+                        async for delta in self._provider.stream_chat(model_messages):
+                            answer_parts.append(delta)
+                            if self._debug_stream and debug_chars < debug_limit:
+                                remain = debug_limit - debug_chars
+                                piece = delta[:remain]
+                                if piece:
+                                    debug_preview.append(piece)
+                                    debug_chars += len(piece)
+                            if self._debug_stream:
+                                debug_delta_count += 1
+                            yield self._serialize_protocol_event(
+                                event="llm_data",
+                                source="llm",
+                                trace_id=trace_id,
+                                payload={"text": delta},
+                            )
+                        yield self._serialize_protocol_event(
+                            event="sys_done",
+                            source="system",
+                            trace_id=trace_id,
+                            payload={"finish_reason": "stream_finished"},
+                        )
+                        return
+
                 _DEFER_THRESHOLD = 8
                 always_load_specs: list = []
                 deferred_specs: list = []
@@ -986,17 +1152,6 @@ class ChatStreamService:
                         if tool is not None:
                             discovered.append(tool.to_tool_spec())
                     return discovered or None
-
-                async def tool_executor(tool_name: str, tool_args: dict) -> str:
-                    return await self._execute_tool(
-                        tool_name=tool_name,
-                        tool_args=tool_args,
-                        user_id=user_id,
-                        session_id=session_id,
-                        user_query=user_query,
-                        trace_id=trace_id,
-                        turn_id=turn_id,
-                    )
 
                 force_fetch_url = ""
                 if matched_tools and "web_fetch" in matched_tools:
