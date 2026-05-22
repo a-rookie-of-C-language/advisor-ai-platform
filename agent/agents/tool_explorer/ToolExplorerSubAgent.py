@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 import logging
 from typing import Awaitable, Callable
@@ -9,6 +8,7 @@ from agents.base.subagent import SubAgent
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
 from agents.tool_explorer.ToolExplorerOutcome import ToolExplorerOutcome
 from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
+from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from tools.base_tool import BaseTool
 from agents.search.schema import WebFetchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
 from llm.base_provider import BaseLLMProvider
+from tools.base_tool import BaseTool
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个网页内容审核助手。请分析网页内容并完成两个任务：\n"

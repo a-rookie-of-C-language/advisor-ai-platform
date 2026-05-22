@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import asyncio
 import logging
 import os
 from dataclasses import dataclass
 from typing import Protocol
+
+from json_types import JsonObject, JsonValue
 
 logger = logging.getLogger(__name__)
 

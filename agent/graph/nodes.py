@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 import logging
 
+from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
 from safety.regex_filter import StreamingRegexFilter

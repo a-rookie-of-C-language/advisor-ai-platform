@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 
 from openai import AsyncOpenAI
 
 from context.memory.core.schema import MemoryCandidate
+from json_types import JsonObject
 
 
 class OpenAILLMExtractor:

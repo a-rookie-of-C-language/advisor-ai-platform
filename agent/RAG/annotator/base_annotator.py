@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+
+from json_types import JsonObject
 
 
 @dataclass

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from dataclasses import dataclass, field
 from datetime import datetime
+
+from json_types import JsonObject
 
 
 @dataclass(slots=True)

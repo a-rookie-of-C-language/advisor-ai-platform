@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import logging
 import threading
 import time
@@ -8,6 +7,8 @@ from typing import Dict, List, Optional, Set
 
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
+
+from json_types import JsonObject
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
-
+from json_types import JsonObject
 from skills.skill_registry import SkillRegistry
 from tools.base_tool import BaseTool
 from tools.expand_skill.expand_skill_input import ExpandSkillInput

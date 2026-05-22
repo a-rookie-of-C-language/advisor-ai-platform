@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import argparse
 import json
 import os
@@ -9,6 +8,8 @@ from pathlib import Path
 
 import psycopg2
 from dotenv import load_dotenv
+
+from json_types import JsonObject
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from agent.json_types import JsonObject
 import trafilatura
 from pydantic import BaseModel
 
+from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult

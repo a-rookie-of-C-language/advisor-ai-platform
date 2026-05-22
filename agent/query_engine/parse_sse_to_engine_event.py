@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 
+from json_types import JsonObject
 from query_engine.EngineEvent import EngineEvent
 
 

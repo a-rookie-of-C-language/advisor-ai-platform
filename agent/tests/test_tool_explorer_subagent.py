@@ -4,9 +4,9 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
-from agent.json_types import JsonValue
 
 from agents.tool_explorer import ToolExplorerSubAgent
+from json_types import JsonValue
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec
 

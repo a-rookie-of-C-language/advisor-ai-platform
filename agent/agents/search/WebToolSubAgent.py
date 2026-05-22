@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue, SupportsModelDump
 import logging
 from typing import TYPE_CHECKING
 
 from agents.base.subagent import SubAgent
+from json_types import JsonObject, JsonValue, SupportsModelDump
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 

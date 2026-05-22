@@ -6,8 +6,9 @@ import sys
 from pathlib import Path
 
 import httpx
-from agent.json_types import JsonObject, JsonValue
 from dotenv import load_dotenv
+
+from json_types import JsonObject, JsonValue
 
 if __package__ and __package__.startswith("agent."):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

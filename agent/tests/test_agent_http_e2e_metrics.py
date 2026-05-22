@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import asyncio
 import json
 import math
@@ -11,6 +10,7 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 import app as app_module
+from json_types import JsonObject
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 REPORT_DIR = Path(__file__).parent / "reports"

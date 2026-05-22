@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from typing import AsyncIterator, Iterable
 
 import pytest
 
+from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent

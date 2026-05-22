@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from dataclasses import dataclass
-from typing import Dict
 
+from json_types import JsonObject
 from RAG.schema import RAGChunkHit
 
 

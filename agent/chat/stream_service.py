@@ -9,7 +9,6 @@ import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
-from agent.json_types import JsonObject
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
@@ -26,6 +25,7 @@ from fusion.registry import SourcePriorityRegistry
 from fusion.source_weight import SourceWeightStrategy
 from fusion.time_decay import TimeDecayStrategy
 from graph.runner import GraphRunner
+from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher

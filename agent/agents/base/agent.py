@@ -5,10 +5,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Awaitable, Callable
 
-from agent.json_types import JsonObject, JsonValue
-
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 

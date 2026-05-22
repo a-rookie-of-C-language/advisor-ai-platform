@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import re
 import time
 import unicodedata
@@ -10,6 +9,7 @@ from uuid import uuid4
 
 from openai import OpenAI
 
+from json_types import JsonObject, JsonValue
 from RAG.embedding_engine.ollama_embedding_engine import OllamaEmbeddingEngine
 from RAG.embedding_engine.openai_embedding_engine import OpenAIEmbeddingEngine
 from RAG.rag_dao import PgVectorDAO

@@ -3,12 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-
-from agent.json_types import JsonObject, JsonValue
-from llm.base_provider import BaseLLMProvider
 from typing import Optional
 
 from agents.base.agent import Agent
+from json_types import JsonObject
+from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 from .base_annotator import BaseChunkAnnotator, ChunkAnnotation

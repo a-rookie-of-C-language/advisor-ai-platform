@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
+
+from json_types import JsonObject
 
 logger = logging.getLogger(__name__)
 

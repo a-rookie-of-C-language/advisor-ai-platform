@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
-
 from pydantic import BaseModel, Field
 
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.schema import MemoryCandidate
+from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import uuid
 
+from json_types import JsonObject
 from llm.tool_spec import ToolSpec
 from tools.base_tool import BaseTool
 from tools.tool_hooks import AfterHook, BeforeHook

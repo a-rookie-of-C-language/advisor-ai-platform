@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Literal
 
-from RAG.RAG_service import RAG_service
 from context.memory.api.memory_api_client import MemoryApiClient
+from RAG.RAG_service import RAG_service
 from tools.base_tool import BaseTool
 from tools.tool_catalog import ToolCatalog
 

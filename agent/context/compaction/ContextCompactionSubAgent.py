@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
-
 from agents.base.subagent import SubAgent
+from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 

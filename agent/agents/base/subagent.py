@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Awaitable, Callable
 
-from agent.json_types import JsonObject, JsonValue
-
 from agents.base.agent import Agent, AgentContext
 from context.memory.api.memory_api_client import MemoryApiClient
+from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
