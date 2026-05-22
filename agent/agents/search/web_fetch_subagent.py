@@ -4,6 +4,7 @@ from typing import Any
 
 from agents.search.schema import WebFetchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
+from llm.base_provider import BaseLLMProvider
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个网页内容审核助手。请分析网页内容并完成两个任务：\n"
@@ -18,7 +19,7 @@ _JUDGE_SYSTEM_PROMPT = (
 class WebFetchSubAgent(WebToolSubAgent):
     MODEL_ENV_PREFIX = "WEB_FETCH"
 
-    def __init__(self, llm_provider: Any, web_fetch_tool: Any) -> None:
+    def __init__(self, llm_provider: BaseLLMProvider, web_fetch_tool: Any) -> None:
         super().__init__(
             name="web_fetch_subagent",
             llm_provider=llm_provider,

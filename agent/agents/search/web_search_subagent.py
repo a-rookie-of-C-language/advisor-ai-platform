@@ -4,6 +4,7 @@ from typing import Any
 
 from agents.search.schema import WebSearchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
+from llm.base_provider import BaseLLMProvider
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个搜索结果分析助手。请根据搜索结果完成两个任务：\n"
@@ -19,7 +20,7 @@ _JUDGE_SYSTEM_PROMPT = (
 class WebSearchSubAgent(WebToolSubAgent):
     MODEL_ENV_PREFIX = "WEB_SEARCH"
 
-    def __init__(self, llm_provider: Any, web_search_tool: Any) -> None:
+    def __init__(self, llm_provider: BaseLLMProvider, web_search_tool: Any) -> None:
         super().__init__(
             name="web_search_subagent",
             llm_provider=llm_provider,
