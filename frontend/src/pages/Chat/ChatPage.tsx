@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
-import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
+import { chatApi, type ChatSessionDTO, type StreamSourceItem, type StreamToolResult } from '../../api/chatApi'
 import { globalMessage } from '../../utils/globalMessage'
 import { emitChatSessionsRefresh, onChatSessionsRefresh } from './chatSessionEvents'
 import styles from './ChatPage.module.css'
@@ -23,11 +23,21 @@ interface Source {
   score?: number
 }
 
+interface ToolCall {
+  id: string
+  toolName: string
+  input?: unknown
+  status?: string
+  message?: string
+  result?: StreamToolResult
+}
+
 interface ChatMessage {
   id: number
   role: 'user' | 'assistant'
   content: string
   sources?: Source[]
+  toolCalls?: ToolCall[]
   streaming?: boolean
   progressText?: string
 }
@@ -42,6 +52,20 @@ interface ChatSession {
 
 interface MsgBubbleProps {
   msg: ChatMessage
+}
+
+function renderToolPayload(value: unknown): string {
+  if (value === undefined || value === null) {
+    return ''
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
 }
 
 function MsgBubble({ msg }: MsgBubbleProps) {
@@ -91,6 +115,46 @@ function MsgBubble({ msg }: MsgBubbleProps) {
                       <div key={source.id} style={{ background: '#F1F5F9', borderRadius: 6, padding: '8px 12px' }}>
                         <Tag color="blue" style={{ fontSize: 11, marginBottom: 4 }}>{source.docName}</Tag>
                         <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{source.snippet}</Text>
+                      </div>
+                    ))}
+                  </Space>
+                ),
+              }]}
+            />
+            )
+          : null}
+
+        {msg.toolCalls?.length
+          ? (
+            <Collapse
+              ghost
+              size="small"
+              style={{ marginTop: 8 }}
+              items={[{
+                key: 'tools',
+                label: (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    <FileTextOutlined style={{ marginRight: 4 }} />
+                    工具调用 {msg.toolCalls.length} 次
+                  </Text>
+                ),
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {msg.toolCalls.map((tool) => (
+                      <div key={tool.id} style={{ background: '#F8FAFC', borderRadius: 6, padding: '8px 12px' }}>
+                        <Tag color={tool.status === 'error' ? 'red' : 'geekblue'} style={{ fontSize: 11, marginBottom: 4 }}>
+                          tool_call: {tool.toolName}
+                        </Tag>
+                        {tool.input !== undefined && (
+                          <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
+                            input: {renderToolPayload(tool.input)}
+                          </Text>
+                        )}
+                        {(tool.message || tool.result) && (
+                          <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
+                            tool_result: {tool.message || renderToolPayload(tool.result?.items ?? tool.result?.output)}
+                          </Text>
+                        )}
                       </div>
                     ))}
                   </Space>
@@ -336,6 +400,28 @@ export default function ChatPage() {
     }]
   }
 
+  const upsertToolCall = (sessionId: number, messageId: number, patch: ToolCall) => {
+    setSessions((prev) => prev.map((session) => {
+      if (session.id !== sessionId) {
+        return session
+      }
+      return {
+        ...session,
+        messages: session.messages.map((msg) => {
+          if (msg.id !== messageId) {
+            return msg
+          }
+          const calls = msg.toolCalls ?? []
+          const index = calls.findIndex((item) => item.id === patch.id)
+          const nextCalls = index >= 0
+            ? calls.map((item) => (item.id === patch.id ? { ...item, ...patch } : item))
+            : [...calls, patch]
+          return { ...msg, toolCalls: nextCalls }
+        }),
+      }
+    }))
+  }
+
   const handleSend = async () => {
     const text = inputText.trim()
     if (!text || sending) {
@@ -451,6 +537,22 @@ export default function ChatPage() {
           },
           onEnd: () => {
             updateAssistantMessage(sessionId, aiMsgId, { streaming: false })
+          },
+          onToolUse: (data) => {
+            upsertToolCall(sessionId, aiMsgId, {
+              id: data.toolCallId || data.toolName,
+              toolName: data.toolName,
+              input: data.input,
+            })
+          },
+          onToolResult: (data) => {
+            upsertToolCall(sessionId, aiMsgId, {
+              id: data.toolCallId || data.toolName,
+              toolName: data.toolName,
+              status: data.result.status,
+              message: data.result.message,
+              result: data.result,
+            })
           },
           onSources: (items, _status, message) => {
             updateAssistantMessage(sessionId, aiMsgId, {
@@ -588,4 +690,3 @@ export default function ChatPage() {
     </div>
   )
 }
-

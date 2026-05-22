@@ -616,6 +616,38 @@ class ChatStreamService:
             }],
         })
 
+    @staticmethod
+    def _derive_tool_result(tool_name: str, payload: dict) -> dict:
+        if tool_name != "rag_search":
+            return {}
+        items = payload.get("items", [])
+        if not isinstance(items, list) or not items:
+            return {}
+        sources = []
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            sources.append(
+                {
+                    "id": item.get("id") or index + 1,
+                    "docName": item.get("docName") or "",
+                    "snippet": item.get("snippet") or "",
+                    "score": item.get("score"),
+                }
+            )
+        return {"sources": sources} if sources else {}
+
+    def _build_tool_result_payload(self, tool_name: str, base_payload: dict, payload: dict) -> dict:
+        result_payload = {
+            **base_payload,
+            "output": payload,
+            "items": payload.get("items", []),
+        }
+        derived = self._derive_tool_result(tool_name, payload)
+        if derived:
+            result_payload["derived"] = derived
+        return result_payload
+
     async def stream_events(
         self,
         messages: Iterable[ChatMessage],
@@ -1001,11 +1033,7 @@ class ChatStreamService:
                             event="tool_result",
                             source="tool",
                             trace_id=trace_id,
-                            payload={
-                                **base_payload,
-                                "output": payload,
-                                "items": payload.get("items", []),
-                            },
+                            payload=self._build_tool_result_payload("web_fetch", base_payload, payload),
                         )
                     else:
                         yield self._serialize_protocol_event(
@@ -1102,7 +1130,7 @@ class ChatStreamService:
                                 event="tool_result",
                                 source="tool",
                                 trace_id=trace_id,
-                                payload={**base_payload, "output": payload, "items": payload.get("items", [])},
+                                payload=self._build_tool_result_payload(event.tool_name, base_payload, payload),
                             )
                         else:
                             yield self._serialize_protocol_event(

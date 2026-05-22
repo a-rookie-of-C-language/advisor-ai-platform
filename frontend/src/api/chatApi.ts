@@ -45,13 +45,23 @@ export interface StreamSourceItem {
   score?: number
 }
 
+export interface StreamToolResult {
+  status?: string
+  message?: string
+  items?: unknown[]
+  output?: unknown
+  derived?: {
+    sources?: StreamSourceItem[]
+  }
+}
+
 interface StreamHandlers {
   onStart?: () => void
   onProgress?: (message: string, elapsedSec?: number) => void
   onDelta?: (text: string) => void
   onSources?: (items: StreamSourceItem[], status?: string, message?: string) => void
   onToolUse?: (data: { toolName: string; toolCallId: string; input: unknown }) => void
-  onToolResult?: (data: { toolName: string; toolCallId: string; output: unknown }) => void
+  onToolResult?: (data: { toolName: string; toolCallId: string; result: StreamToolResult }) => void
   onToolError?: (data: { toolName: string; toolCallId: string; message: string; code?: string }) => void
   onEnd?: () => void
   onError?: (message: string) => void
@@ -106,6 +116,9 @@ type StreamData = {
   input?: unknown
   output?: unknown
   code?: string
+  derived?: {
+    sources?: StreamSourceItem[]
+  }
 }
 
 function parseStreamData(rawData: string): StreamData {
@@ -234,12 +247,21 @@ export const chatApi = {
                 input: data.input,
               })
             } else if (parsed.event === 'tool_result') {
+              const result: StreamToolResult = {
+                status: data.status,
+                message: data.message,
+                items: data.items,
+                output: data.output,
+                derived: data.derived,
+              }
               handlers.onToolResult?.({
                 toolName: data.tool_name ?? '',
                 toolCallId: data.tool_call_id ?? '',
-                output: data.output,
+                result,
               })
-              handlers.onSources?.(data.items ?? [], data.status, data.message)
+              if (data.derived?.sources?.length) {
+                handlers.onSources?.(data.derived.sources, data.status, data.message)
+              }
             } else if (parsed.event === 'tool_error') {
               handlers.onToolError?.({
                 toolName: data.tool_name ?? '',

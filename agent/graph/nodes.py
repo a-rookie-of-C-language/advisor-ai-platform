@@ -75,6 +75,43 @@ def _filter_tool_result(
     return result, sensitive_count
 
 
+def _derive_tool_result(tool_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if tool_name != "rag_search":
+        return {}
+    items = payload.get("items", [])
+    if not isinstance(items, list) or not items:
+        return {}
+    sources = []
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        sources.append(
+            {
+                "id": item.get("id") or index + 1,
+                "docName": item.get("docName") or "",
+                "snippet": item.get("snippet") or "",
+                "score": item.get("score"),
+            }
+        )
+    return {"sources": sources} if sources else {}
+
+
+def _build_tool_result_payload(
+    tool_name: str,
+    base_payload: dict[str, Any],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    result_payload = {
+        **base_payload,
+        "output": payload,
+        "items": payload.get("items", []),
+    }
+    derived = _derive_tool_result(tool_name, payload)
+    if derived:
+        result_payload["derived"] = derived
+    return result_payload
+
+
 async def select_skill_node(state: GraphState) -> GraphState:
     """Use LLM to autonomously select which skills to activate for this query."""
     runtime = _runtime()
@@ -332,11 +369,7 @@ async def generate_node(state: GraphState) -> GraphState:
                 if forced_payload.get("ok"):
                     await _emit(
                         "tool_result",
-                        {
-                            **forced_base_payload,
-                            "output": forced_payload,
-                            "items": forced_payload.get("items", []),
-                        },
+                        _build_tool_result_payload("web_fetch", forced_base_payload, forced_payload),
                     )
                     forced_items = forced_payload.get("items")
                     has_items = isinstance(forced_items, list) and bool(forced_items)
@@ -434,11 +467,11 @@ async def generate_node(state: GraphState) -> GraphState:
                             safety_regex_matches += sensitive_count
                             await _emit(
                                 "tool_result",
-                                {
-                                    **base_payload,
-                                    "output": filtered_payload,
-                                    "items": filtered_payload.get("items", []),
-                                },
+                                _build_tool_result_payload(
+                                    event.tool_name,
+                                    base_payload,
+                                    filtered_payload,
+                                ),
                             )
                         else:
                             await _emit(
