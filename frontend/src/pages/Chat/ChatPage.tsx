@@ -9,7 +9,13 @@ import {
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
-import { chatApi, type ChatSessionDTO, type StreamSourceItem, type StreamToolResult } from '../../api/chatApi'
+import {
+  chatApi,
+  type ChatSessionDTO,
+  type StreamEventData,
+  type StreamSourceItem,
+  type StreamToolResult,
+} from '../../api/chatApi'
 import { globalMessage } from '../../utils/globalMessage'
 import { emitChatSessionsRefresh, onChatSessionsRefresh } from './chatSessionEvents'
 import styles from './ChatPage.module.css'
@@ -66,6 +72,25 @@ function renderToolPayload(value: unknown): string {
   } catch {
     return String(value)
   }
+}
+
+function describeSystemState(event: string, payload: StreamEventData): string {
+  const baseMessage = typeof payload.message === 'string' ? payload.message.trim() : ''
+  if (event === 'sys_intent_route') {
+    const categories = Array.isArray(payload.categories) ? payload.categories.filter(Boolean).join('、') : ''
+    const matchedBy = typeof payload.matched_by === 'string' && payload.matched_by ? payload.matched_by : ''
+    const categoryText = categories ? `：${categories}` : ''
+    const matchedText = matchedBy ? `（${matchedBy}）` : ''
+    return `正在路由工具${categoryText}${matchedText}` || baseMessage || '正在路由工具'
+  }
+  if (event === 'sys_tool_plan') {
+    const toolName = typeof payload.tool_name === 'string' && payload.tool_name ? payload.tool_name : ''
+    return toolName ? `正在规划工具步骤：${toolName}` : (baseMessage || '正在规划工具步骤')
+  }
+  if (event === 'reasoning_delta') {
+    return '模型正在整理思路'
+  }
+  return baseMessage || event.replace(/^sys_/, '正在').replace(/_/g, '')
 }
 
 function MsgBubble({ msg }: MsgBubbleProps) {
@@ -530,9 +555,19 @@ export default function ChatPage() {
               }
             }))
           },
+          onReasoningDelta: () => {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              progressText: '模型正在整理思路...',
+            })
+          },
           onProgress: (message, elapsedSec) => {
             updateAssistantMessage(sessionId, aiMsgId, {
               progressText: `${message}${typeof elapsedSec === 'number' ? ` (${elapsedSec}s)` : ''}`,
+            })
+          },
+          onSystemEvent: ({ event, payload }) => {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              progressText: describeSystemState(event, payload),
             })
           },
           onEnd: () => {
@@ -544,6 +579,9 @@ export default function ChatPage() {
               toolName: data.toolName,
               input: data.input,
             })
+            updateAssistantMessage(sessionId, aiMsgId, {
+              progressText: data.toolName ? `正在调用工具：${data.toolName}` : '正在调用工具',
+            })
           },
           onToolResult: (data) => {
             upsertToolCall(sessionId, aiMsgId, {
@@ -553,10 +591,24 @@ export default function ChatPage() {
               message: data.result.message,
               result: data.result,
             })
+            updateAssistantMessage(sessionId, aiMsgId, {
+              progressText: data.toolName ? `工具已返回：${data.toolName}` : '工具已返回',
+            })
           },
           onSources: (items, _status, message) => {
             updateAssistantMessage(sessionId, aiMsgId, {
               sources: toDisplaySources(items, message),
+            })
+          },
+          onToolError: (data) => {
+            upsertToolCall(sessionId, aiMsgId, {
+              id: data.toolCallId || data.toolName,
+              toolName: data.toolName,
+              status: 'error',
+              message: data.message,
+            })
+            updateAssistantMessage(sessionId, aiMsgId, {
+              progressText: data.toolName ? `工具调用失败：${data.toolName}` : '工具调用失败',
             })
           },
           onError: (message) => {
