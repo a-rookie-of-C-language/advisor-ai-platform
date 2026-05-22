@@ -35,6 +35,15 @@ This file documents the key runtime variables for `agent`.
 - `ENABLED_TOOLS`: comma-separated whitelist
   - Empty value means all registered tools are available
   - Recommended production value: `rag_search`
+- Subagent model overrides follow this priority:
+  - `<PREFIX>_MODEL`
+  - subagent code default
+  - main `OPENAI_MODEL`
+- Supported prefixes:
+  - `TOOL_EXPLORER`
+  - `CONTEXT_COMPACTION`
+  - `WEB_SEARCH`
+  - `WEB_FETCH`
 
 ## Memory
 

@@ -118,7 +118,9 @@ class ChatStreamService:
             auto_trigger_tokens=self._read_context_auto_trigger_tokens(),
             auto_keep_last=self._read_context_auto_keep_last(),
         )
-        self._compaction_subagent = ContextCompactionSubAgent(self._provider)
+        self._compaction_subagent = ContextCompactionSubAgent(
+            self._build_context_compaction_provider()
+        )
         self._tool_explorer_subagent = ToolExplorerSubAgent(
             self._build_tool_explorer_provider(),
             max_steps=self._read_tool_explorer_max_steps(),
@@ -225,14 +227,27 @@ class ChatStreamService:
         except ValueError:
             return 2
 
-    def _build_tool_explorer_provider(self) -> BaseLLMProvider:
-        model = os.getenv("TOOL_EXPLORER_MODEL", "").strip()
+    def _build_subagent_provider(
+        self,
+        *,
+        env_prefix: str,
+        temperature_default: float = 0.0,
+        timeout_default: float = 30.0,
+        max_retries_default: int = 0,
+        stream_timeout_default: float = 30.0,
+        tool_round_timeout_default: float = 20.0,
+        stream_idle_timeout_default: float = 45.0,
+    ) -> BaseLLMProvider:
+        model = os.getenv(f"{env_prefix}_MODEL", "").strip()
         if not model:
             return self._provider
-        api_key = os.getenv("TOOL_EXPLORER_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
-        base_url = os.getenv("TOOL_EXPLORER_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
+        api_key = os.getenv(f"{env_prefix}_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+        base_url = os.getenv(f"{env_prefix}_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
         if not api_key or not base_url:
-            logger.warning("TOOL_EXPLORER_MODEL configured but api key/base url missing, fallback to main provider")
+            logger.warning(
+                "%s_MODEL configured but api key/base url missing, fallback to main provider",
+                env_prefix,
+            )
             return self._provider
         try:
             from llm.openai_provider import OpenAIProvider
@@ -243,17 +258,47 @@ class ChatStreamService:
                 api_key=api_key,
                 model=model,
                 base_url=base_url,
-                temperature=_read_float_env("TOOL_EXPLORER_TEMPERATURE", 0.0),
-                timeout=_read_float_env("TOOL_EXPLORER_TIMEOUT_SEC", 30.0),
-                max_retries=_read_int_env("TOOL_EXPLORER_MAX_RETRIES", 0),
-                stream_timeout_sec=_read_float_env("TOOL_EXPLORER_STREAM_TIMEOUT_SEC", 30.0),
-                tool_round_timeout_sec=_read_float_env("TOOL_EXPLORER_TOOL_ROUND_TIMEOUT_SEC", 20.0),
-                stream_idle_timeout_sec=_read_float_env("TOOL_EXPLORER_STREAM_IDLE_TIMEOUT_SEC", 45.0),
+                temperature=_read_float_env(f"{env_prefix}_TEMPERATURE", temperature_default),
+                timeout=_read_float_env(f"{env_prefix}_TIMEOUT_SEC", timeout_default),
+                max_retries=_read_int_env(f"{env_prefix}_MAX_RETRIES", max_retries_default),
+                stream_timeout_sec=_read_float_env(f"{env_prefix}_STREAM_TIMEOUT_SEC", stream_timeout_default),
+                tool_round_timeout_sec=_read_float_env(
+                    f"{env_prefix}_TOOL_ROUND_TIMEOUT_SEC",
+                    tool_round_timeout_default,
+                ),
+                stream_idle_timeout_sec=_read_float_env(
+                    f"{env_prefix}_STREAM_IDLE_TIMEOUT_SEC",
+                    stream_idle_timeout_default,
+                ),
                 thinking_config=ThinkingConfig.disabled(),
             )
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to build tool explorer provider, fallback to main provider: %s", exc)
+            logger.warning(
+                "Failed to build %s provider, fallback to main provider: %s",
+                env_prefix.lower(),
+                exc,
+            )
             return self._provider
+
+    def _build_tool_explorer_provider(self) -> BaseLLMProvider:
+        return self._build_subagent_provider(
+            env_prefix=ToolExplorerSubAgent.MODEL_ENV_PREFIX,
+        )
+
+    def _build_context_compaction_provider(self) -> BaseLLMProvider:
+        return self._build_subagent_provider(
+            env_prefix=ContextCompactionSubAgent.MODEL_ENV_PREFIX,
+        )
+
+    def _build_web_search_provider(self) -> BaseLLMProvider:
+        return self._build_subagent_provider(
+            env_prefix=WebSearchSubAgent.MODEL_ENV_PREFIX,
+        )
+
+    def _build_web_fetch_provider(self) -> BaseLLMProvider:
+        return self._build_subagent_provider(
+            env_prefix=WebFetchSubAgent.MODEL_ENV_PREFIX,
+        )
 
     @staticmethod
     def _read_failure_memory_dir() -> str:
@@ -645,7 +690,7 @@ class ChatStreamService:
         if web_search_tool is None:
             return None
         return WebSearchSubAgent(
-            llm_provider=self._provider,
+            llm_provider=self._build_web_search_provider(),
             web_search_tool=web_search_tool,
         )
 
@@ -681,7 +726,7 @@ class ChatStreamService:
         if web_fetch_tool is None:
             return None
         return WebFetchSubAgent(
-            llm_provider=self._provider,
+            llm_provider=self._build_web_fetch_provider(),
             web_fetch_tool=web_fetch_tool,
         )
 

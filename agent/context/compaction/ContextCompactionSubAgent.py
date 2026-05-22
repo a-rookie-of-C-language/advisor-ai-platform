@@ -7,6 +7,8 @@ from tools.tool_permission import PermissionConfig, ToolPermission
 
 
 class ContextCompactionSubAgent(SubAgent):
+    MODEL_ENV_PREFIX = "CONTEXT_COMPACTION"
+
     def __init__(self, llm_provider: Any) -> None:
         super().__init__(
             name="context_compaction_subagent",
@@ -36,4 +38,3 @@ class ContextCompactionSubAgent(SubAgent):
 
     async def run(self) -> None:
         return None
-
