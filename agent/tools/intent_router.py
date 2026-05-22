@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 import logging
 import re
 from dataclasses import dataclass
 
+from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder

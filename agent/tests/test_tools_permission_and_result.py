@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 
 import pytest
-from agent.json_types import JsonObject, JsonValue
 from pydantic import BaseModel
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.memory_read import MemoryReadTool
 from tools.memory_write import MemoryWriteTool

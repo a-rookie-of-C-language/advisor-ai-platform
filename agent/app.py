@@ -9,7 +9,6 @@ import os
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from agent.json_types import JsonObject
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -19,6 +18,7 @@ from chat.stream_service import ChatStreamService
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
+from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from llm.provider_factory import build_provider_from_env
 from RAG.DocumentIndexer import DocumentIndexer
@@ -386,9 +386,9 @@ def run_all() -> None:
         logger.info("All-mode stopped by keyboard interrupt")
 
 
-    def _parse_sse_event(raw: str) -> JsonObject:
-        event_name = "message"
-        data: JsonObject = {}
+def _parse_sse_event(raw: str) -> JsonObject:
+    event_name = "message"
+    data: JsonObject = {}
     for line in raw.strip().split("\n"):
         if line.startswith("event:"):
             event_name = line.split(":", 1)[1].strip()

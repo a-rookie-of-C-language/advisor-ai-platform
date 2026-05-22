@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 import time
 from dataclasses import dataclass
+
+from json_types import JsonObject
 
 
 @dataclass(frozen=True)

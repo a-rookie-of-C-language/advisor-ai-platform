@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
-
+from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec
 

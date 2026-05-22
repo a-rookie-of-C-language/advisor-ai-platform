@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from types import SimpleNamespace
 
 import pytest
 
+from json_types import JsonObject, JsonValue
 from llm.chat_message import ChatMessage
 from llm.openai_provider import OpenAIProvider
 from llm.tool_spec import ToolSpec

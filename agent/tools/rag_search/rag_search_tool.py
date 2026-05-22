@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from agent.json_types import JsonObject
 from pydantic import BaseModel, Field
 
+from json_types import JsonObject
 from RAG.RAG_service import RAG_service
 from RAG.schema import RAGSearchRequest, SearchMode
 from tools.base_tool import BaseTool

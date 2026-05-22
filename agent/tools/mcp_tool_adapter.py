@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import re
 
 from pydantic import BaseModel
 
+from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.mcp_client_pool import McpClientPool, McpServerConfig
 from tools.tool_result import ToolResult

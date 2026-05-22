@@ -4,11 +4,11 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
-from agent.json_types import JsonValue
 
 from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
 from chat.stream_service import ChatStreamService
 from context.memory.core.schema import MemoryContext
+from json_types import JsonValue
 from llm import openai_provider as openai_provider_module
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent

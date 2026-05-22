@@ -7,11 +7,11 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Awaitable, Callable
 
-from agent.json_types import JsonObject
 from agents.search.web_search_subagent import WebSearchSubAgent
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from fusion.registry import SourcePriorityRegistry
+from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from safety.safety_pipeline import SafetyPipeline
 from skills.skill_registry import SkillRegistry

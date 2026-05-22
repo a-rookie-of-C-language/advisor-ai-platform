@@ -5,10 +5,10 @@ import logging
 import os
 import time
 
-from agent.json_types import JsonObject
 from pydantic import BaseModel
 from tavily import TavilyClient
 
+from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult

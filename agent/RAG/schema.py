@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
+
+from json_types import JsonObject
 
 
 class SearchMode(str, Enum):

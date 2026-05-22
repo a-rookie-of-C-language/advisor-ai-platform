@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from dataclasses import dataclass, field
 
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
+from json_types import JsonObject
 
 
 @dataclass(frozen=True)

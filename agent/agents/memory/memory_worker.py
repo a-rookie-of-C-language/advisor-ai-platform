@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import asyncio
 import logging
 from typing import Awaitable, Callable
@@ -11,6 +10,7 @@ from context.memory.core.governance import MemoryGovernance
 from context.memory.core.schema import MemoryCandidate, WritebackResult
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
+from json_types import JsonObject, JsonValue
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)

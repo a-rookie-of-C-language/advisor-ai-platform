@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 from dataclasses import dataclass, field
 from typing import Literal
+
+from json_types import JsonObject
 
 ThinkingProvider = Literal["deepseek", "openai", "qwen"]
 ReasoningEffort = Literal["low", "medium", "high"]

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from json_types import JsonObject
 
 
 @dataclass

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
-
 import pytest
 
 from agents.base.agent import Agent
 from agents.memory.memory_worker import MemoryWorkerSubAgent
 from context.memory.core.schema import WritebackResult
+from json_types import JsonObject, JsonValue
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 

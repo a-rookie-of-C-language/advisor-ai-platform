@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agent.json_types import JsonObject, JsonValue
 import asyncio
 import json
 import logging
@@ -9,6 +8,7 @@ from typing import AsyncIterator, Awaitable, Callable, Iterable, Literal, Protoc
 
 from openai import AsyncOpenAI
 
+from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider, ToolExecutor
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent

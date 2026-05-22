@@ -4,12 +4,11 @@ import asyncio
 import logging
 from datetime import datetime
 
-from agent.json_types import JsonObject, JsonValue
-
 import httpx
 
 from context.memory.core.circuit_breaker import CircuitBreaker
 from context.memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
+from json_types import JsonObject, JsonValue
 
 logger = logging.getLogger(__name__)
 
