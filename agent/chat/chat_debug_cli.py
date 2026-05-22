@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import httpx
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 from dotenv import load_dotenv
 
 if __package__ and __package__.startswith("agent."):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Awaitable, Callable
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 
 from agents.base.agent import Agent, AgentContext
 from context.memory.api.memory_api_client import MemoryApiClient

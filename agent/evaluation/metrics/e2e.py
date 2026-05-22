@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 
 logger = logging.getLogger(__name__)

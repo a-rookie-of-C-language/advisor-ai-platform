@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 from pydantic import BaseModel
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult

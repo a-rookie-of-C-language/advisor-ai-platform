@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Awaitable, Callable
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult

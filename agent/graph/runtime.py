@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Awaitable, Callable
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from agents.search.web_search_subagent import WebSearchSubAgent
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator

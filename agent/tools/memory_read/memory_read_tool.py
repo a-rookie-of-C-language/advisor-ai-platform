@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from pydantic import BaseModel, Field
 
 from context.memory.api.memory_api_client import MemoryApiClient

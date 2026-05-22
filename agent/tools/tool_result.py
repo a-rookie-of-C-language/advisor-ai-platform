@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
-from agent.types import JsonObject, JsonValue, SupportsModelDump
+from agent.json_types import JsonObject, JsonValue, SupportsModelDump
 
 
 @dataclass

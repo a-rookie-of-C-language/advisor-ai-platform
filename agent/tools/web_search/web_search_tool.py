@@ -5,7 +5,7 @@ import logging
 import os
 import time
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from pydantic import BaseModel
 from tavily import TavilyClient
 

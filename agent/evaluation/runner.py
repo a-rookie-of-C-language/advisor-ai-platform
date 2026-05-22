@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from agent.types import JsonObject, JsonValue, SupportsDataclassFields
+from agent.json_types import JsonObject, JsonValue, SupportsDataclassFields
 from llm.base_provider import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
