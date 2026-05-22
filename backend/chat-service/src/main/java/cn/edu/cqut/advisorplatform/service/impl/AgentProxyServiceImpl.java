@@ -303,9 +303,12 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         sawDoneEvent.set(true);
       } else if ("sys_error".equals(eventName)) {
         sawErrorEvent.set(true);
-      } else if ("sources".equals(eventName)) {
-        sources.clear();
-        sources.addAll(extractSources(block));
+      } else if ("sources".equals(eventName) || "tool_result".equals(eventName)) {
+        List<ChatMessageDO.SourceReference> extractedSources = extractSources(block);
+        if ("sources".equals(eventName) || !extractedSources.isEmpty()) {
+          sources.clear();
+          sources.addAll(extractedSources);
+        }
       }
       String delta = extractDelta(block);
       if (delta == null || delta.isBlank()) {
@@ -381,15 +384,23 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       }
     }
 
-    if (!"sources".equals(event) || dataBuilder.isEmpty()) {
+    if (!"sources".equals(event) && !"tool_result".equals(event)) {
+      return List.of();
+    }
+    if (dataBuilder.isEmpty()) {
       return List.of();
     }
 
     try {
       JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      JsonNode items = node.path("payload").path("items");
+      JsonNode payload = node.path("payload");
+      JsonNode items =
+          "tool_result".equals(event)
+              ? payload.path("derived").path("sources")
+              : payload.path("items");
       if (items.isMissingNode()) {
-        items = node.path("items");
+        items =
+            "tool_result".equals(event) ? node.path("derived").path("sources") : node.path("items");
       }
       if (!items.isArray()) {
         return List.of();
