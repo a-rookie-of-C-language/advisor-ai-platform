@@ -220,7 +220,7 @@ async def test_stream_success_done_and_flush_failure_not_interrupt() -> None:
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=0)]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "llm_data", "sys_done"}
     assert memory.load_called >= 1  # 可能被调用多次（fallback 机制）
     assert memory.flush_called >= 1  # 可能被调用多次（fallback 机制）
 
@@ -235,7 +235,7 @@ async def test_stream_memory_load_failure_degrades_without_breaking_chat() -> No
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=0)]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "llm_data", "sys_done"}
     assert memory.load_called >= 1  # 可能被调用多次（fallback 机制）
     assert memory.flush_called >= 1  # 可能被调用多次（fallback 机制）
     # 注：由于 fallback 机制，provider.last_messages 可能包含多次调用的历史
@@ -271,7 +271,7 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query(monkeypa
     parsed = [_parse_event(event) for event in events]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "sys_intent_route", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "sys_intent_route", "llm_data", "sys_done"}
     route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert route_payload is not None
     _assert_search_route_payload(route_payload)
@@ -294,7 +294,7 @@ async def test_stream_tool_route_prefers_search_for_latest_query(monkeypatch: py
     event_names = [_parse_event_name(e) for e in events]
     route_payload = parsed[2][1]
 
-    assert set(event_names) >= {"sys_start", "sys_intent_route", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "sys_intent_route", "llm_data", "sys_done"}
     _assert_search_route_payload(route_payload)
 
 
@@ -310,7 +310,7 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     parsed = [_parse_event(event) for event in events]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "sys_intent_route", "tool_result", "llm_data", "sys_done"}
     intent_route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert intent_route_payload is not None
     assert intent_route_payload.get("matched_by") in {"fallback", "strong_rule", "score", "llm"}
@@ -328,7 +328,7 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
     parsed = [_parse_event(event) for event in events]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "sys_intent_route", "tool_result", "llm_data", "sys_done"}
     intent_route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert intent_route_payload is not None
     assert intent_route_payload.get("matched_by") in {"fallback", "strong_rule", "score", "llm"}
@@ -350,7 +350,7 @@ async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.Monke
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "llm_data", "sys_done"}
 
 
 @pytest.mark.asyncio
@@ -367,7 +367,7 @@ async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch
     parsed = [_parse_event(event) for event in events]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert set(event_names) >= {"sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"}
+    assert set(event_names) >= {"sys_start", "sys_intent_route", "tool_result", "llm_data", "sys_done"}
     route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert route_payload is not None
     assert route_payload.get("matched_by") == "fallback"
@@ -391,4 +391,3 @@ async def test_graph_health_contains_context_compaction_stats() -> None:
     assert "tokens_after" in stats
     assert "tokens_released" in stats
     assert "latency_ms" in stats
-

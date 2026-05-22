@@ -53,6 +53,11 @@ class _FakeMemoryClient:
         return WritebackResult(accepted=len(candidates), rejected=0, message="ok")
 
 
+class _ItemObj:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+
 @pytest.mark.asyncio
 async def test_tool_registry_validation_error_before_permission_check() -> None:
     registry = ToolRegistry()
@@ -183,3 +188,9 @@ async def test_tool_registry_returns_error_on_loading_conflict() -> None:
     assert body["status"] == "error"
     assert body["message"] == "tool_configuration_invalid"
     assert body["meta"]["errors"]
+
+
+def test_tool_result_normalizes_object_items() -> None:
+    result = ToolResult(ok=True, status="hit", message="ok", items=[_ItemObj("x")])  # type: ignore[list-item]
+    payload = result.to_dict()
+    assert payload["items"] == [{"value": "x"}]

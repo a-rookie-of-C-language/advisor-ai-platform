@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -56,9 +57,45 @@ async def _execute_tool(
     state: GraphState,
 ) -> str:
     runtime = _runtime()
-    return await runtime.tools.execute(
+    result_json = await runtime.tools.execute(
         tool_name,
         tool_args,
+        {
+            "user_id": state.get("user_id"),
+            "session_id": state.get("session_id"),
+            "kb_id": 0,
+            "user_query": state.get("user_query", ""),
+            "permission_config": runtime.tool_permission,
+        },
+    )
+    if tool_name != "web_fetch" or runtime.tools.get("web_search") is None:
+        return result_json
+
+    try:
+        payload = json.loads(result_json)
+    except Exception:  # noqa: BLE001
+        return result_json
+
+    status = str(payload.get("status", "") or "")
+    ok = bool(payload.get("ok", False))
+    items = payload.get("items")
+    has_items = isinstance(items, list) and bool(items)
+    if ok and status == "hit" and has_items:
+        return result_json
+
+    fallback_query = str(tool_args.get("url", "") or state.get("user_query", "")).strip()
+    if not fallback_query:
+        return result_json
+
+    logger.info(
+        "tool_fallback web_fetch->web_search: session_id=%s, user_id=%s, query=%s",
+        state.get("session_id"),
+        state.get("user_id"),
+        fallback_query[:120],
+    )
+    return await runtime.tools.execute(
+        "web_search",
+        {"query": fallback_query, "max_results": 5},
         {
             "user_id": state.get("user_id"),
             "session_id": state.get("session_id"),

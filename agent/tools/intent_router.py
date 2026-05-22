@@ -10,6 +10,7 @@ from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
 
 logger = logging.getLogger(__name__)
+_URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
 
 _CATEGORY_RULES: dict[str, dict[str, list[str]]] = {
     "retrieval": {
@@ -188,15 +189,26 @@ class IntentRouter:
         self._last_decision = RouteDecision(categories=set(), matched_by="none", confidence=0.0)
         self._tools: list[Any] = []
         self._tool_patterns: list[tuple[str, re.Pattern[str]]] = []
+        self._tool_semantic_keywords: dict[str, set[str]] = {}
+        self._tool_categories: dict[str, str] = {}
 
     def register_tools(self, tools: list[Any]) -> None:
         """注册工具，提取查询模式用于意图匹配"""
         self._tools = tools
         self._tool_patterns = []
+        self._tool_semantic_keywords = {}
+        self._tool_categories = {}
         for tool in tools:
             patterns = tool.get_query_patterns()
             for pattern in patterns:
                 self._tool_patterns.append((tool.name, re.compile(pattern)))
+            raw_keywords = getattr(tool, "get_semantic_keywords", lambda: [])()
+            keywords = {str(item).strip().lower() for item in raw_keywords if str(item).strip()}
+            if keywords:
+                self._tool_semantic_keywords[tool.name] = keywords
+            category = str(getattr(tool, "category", "") or "").strip()
+            if category:
+                self._tool_categories[tool.name] = category
 
     def _match_tools_by_patterns(self, query: str) -> list[str]:
         """根据工具查询模式匹配工具，返回匹配的工具名列表"""
@@ -261,6 +273,36 @@ class IntentRouter:
 
         # 先匹配工具查询模式
         matched_tools = self._match_tools_by_patterns(query)
+        normalized_query = query.strip().lower()
+
+        student_list_tools = self._find_tools_by_base_names({"list_students"})
+        if (
+            "student" in all_categories
+            and student_list_tools
+            and self._looks_like_student_list_or_count_query(normalized_query)
+        ):
+            return RouteDecision(
+                categories={"student"},
+                matched_by="strong_rule",
+                confidence=0.99,
+                reason="student_list_or_count_query",
+                scores={"student": 6},
+                matched_tools=student_list_tools,
+            )
+
+        url = self._extract_first_url(query)
+        if url:
+            fetch_tools = self._find_tools_by_base_names({"web_fetch"})
+            if fetch_tools:
+                categories = {"search"} if "search" in all_categories else set(all_categories)
+                return RouteDecision(
+                    categories=categories,
+                    matched_by="strong_rule",
+                    confidence=0.99,
+                    reason="url_detected_fetch",
+                    scores={"search": 6} if "search" in categories else {},
+                    matched_tools=fetch_tools,
+                )
 
         strong_hits: set[str] = set()
         scores: dict[str, int] = {}
@@ -276,6 +318,11 @@ class IntentRouter:
                 score += weak_hit_count * 2
             if score > 0:
                 scores[category] = score
+
+        semantic_matched_tools = self._match_tools_by_semantics(normalized_query)
+        matched_tools = sorted(set(matched_tools) | set(semantic_matched_tools))
+        self._apply_tool_semantic_boost(scores, semantic_matched_tools, all_categories)
+        self._apply_structured_student_query_boost(scores, normalized_query, all_categories)
 
         if len(strong_hits) == 1:
             category = next(iter(strong_hits))
@@ -336,6 +383,85 @@ class IntentRouter:
             scores=scores,
             matched_tools=matched_tools,
         )
+
+    def _match_tools_by_semantics(self, normalized_query: str) -> list[str]:
+        if not normalized_query:
+            return []
+        matched: list[str] = []
+        for tool_name, keywords in self._tool_semantic_keywords.items():
+            if any(keyword in normalized_query for keyword in keywords):
+                matched.append(tool_name)
+        return matched
+
+    @staticmethod
+    def _extract_first_url(query: str) -> str | None:
+        found = _URL_PATTERN.search(query or "")
+        if not found:
+            return None
+        return found.group(0)
+
+    def _find_tools_by_base_names(self, base_names: set[str]) -> list[str]:
+        matched: list[str] = []
+        for tool in self._tools:
+            name = str(getattr(tool, "name", "") or "").strip()
+            if not name:
+                continue
+            if name in base_names:
+                matched.append(name)
+                continue
+            if "__" in name:
+                tail = name.split("__")[-1]
+                if tail in base_names:
+                    matched.append(name)
+        return sorted(set(matched))
+
+    @staticmethod
+    def _looks_like_student_list_or_count_query(normalized_query: str) -> bool:
+        has_student = "学生" in normalized_query
+        has_list_or_count = any(
+            token in normalized_query
+            for token in (
+                "列表",
+                "名单",
+                "有哪些",
+                "所有",
+                "全部",
+                "多少",
+                "几个",
+                "几名",
+                "数量",
+                "总数",
+                "共有",
+                "当前",
+                "现在",
+            )
+        )
+        return has_student and has_list_or_count
+
+    def _apply_tool_semantic_boost(
+        self,
+        scores: dict[str, int],
+        matched_tools: list[str],
+        all_categories: set[str],
+    ) -> None:
+        for tool_name in matched_tools:
+            category = self._tool_categories.get(tool_name, "")
+            if not category or category not in all_categories:
+                continue
+            scores[category] = scores.get(category, 0) + 3
+
+    @staticmethod
+    def _apply_structured_student_query_boost(
+        scores: dict[str, int],
+        normalized_query: str,
+        all_categories: set[str],
+    ) -> None:
+        if "student" not in all_categories:
+            return
+        has_student = any(token in normalized_query for token in ("学生", "学号", "姓名"))
+        has_structured_db_intent = any(token in normalized_query for token in ("数据库", "表", "记录", "查询", "查找"))
+        if has_student and has_structured_db_intent:
+            scores["student"] = scores.get("student", 0) + 4
 
     def _should_accept_without_llm(self, decision: RouteDecision) -> bool:
         return (
@@ -457,4 +583,3 @@ class IntentRouter:
 
     def _describe_category(self, category: str) -> str:
         return _CATEGORY_DESCRIPTIONS.get(category, "宸ュ叿绫诲埆")
-

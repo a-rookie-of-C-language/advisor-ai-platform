@@ -84,3 +84,23 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
             }
             for r in response.get("results", [])
         ]
+
+    def get_query_patterns(self) -> list[str]:
+        return [
+            r"(?:最新|现在|今日|recent|latest|current|news|price|pricing)",
+            r"(?:搜索|查一下|找一下|search|find|lookup)",
+        ]
+
+    def get_semantic_keywords(self) -> list[str]:
+        return [
+            "latest",
+            "current",
+            "recent",
+            "news",
+            "pricing",
+            "搜索",
+            "查一下",
+            "找一下",
+            "最新",
+            "现在",
+        ]

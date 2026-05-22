@@ -246,6 +246,8 @@ class McpClientPool:
     def _is_session_expired_error(self, error: Exception) -> bool:
         """判断是否为会话过期错误（MCP 规范：HTTP 404 + 错误码 -32001）"""
         error_str = str(error)
+        if "Event loop is closed" in error_str:
+            return True
         if "-32001" in error_str:
             return True
         if hasattr(error, "code"):

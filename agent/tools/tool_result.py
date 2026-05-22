@@ -13,6 +13,30 @@ class ToolResult:
     items: list[dict[str, Any]] = field(default_factory=list)
     meta: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        self.items = [self._normalize_item(item) for item in (self.items or [])]
+
+    @staticmethod
+    def _normalize_item(item: Any) -> dict[str, Any]:
+        if isinstance(item, dict):
+            return item
+        if hasattr(item, "model_dump"):
+            try:
+                dumped = item.model_dump()
+                if isinstance(dumped, dict):
+                    return dumped
+            except Exception:
+                pass
+        if hasattr(item, "__dict__"):
+            raw = {
+                key: value
+                for key, value in vars(item).items()
+                if not key.startswith("_")
+            }
+            if raw:
+                return raw
+        return {"value": str(item)}
+
     @classmethod
     def denied(cls, message: str) -> "ToolResult":
         return cls(ok=False, status="denied", message=message, items=[])
@@ -44,4 +68,3 @@ class ToolResult:
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), ensure_ascii=False)
-

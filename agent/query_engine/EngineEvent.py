@@ -16,7 +16,7 @@ class EngineEvent:
 
     @classmethod
     def llm_delta(cls, text: str, *, trace_id: str | None = None) -> "EngineEvent":
-        return cls(event="llm_delta", source="llm", payload={"text": text}, trace_id=trace_id)
+        return cls(event="llm_data", source="llm", payload={"text": text}, trace_id=trace_id)
 
     @classmethod
     def tool_use(
@@ -70,4 +70,4 @@ class EngineEvent:
             "source": self.source,
             "payload": self.payload,
         }
-        return f"event: {self.event}\\ndata: {json.dumps(data, ensure_ascii=False)}\\n\\n"
+        return f"event: {self.event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"

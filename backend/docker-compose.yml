@@ -255,7 +255,7 @@ services:
       EMBEDDING_PROVIDER: openai
       EMBEDDING_MODEL: BAAI/bge-m3
       ENABLE_TOOL_USE: "true"
-      ENABLED_TOOLS: web_search,rag_search,mcp__student__list_students,mcp__student__get_student,mcp__student__get_student_checkin_summary,mcp__student__get_student_checkin_detail
+      ENABLED_TOOLS: web_fetch,web_search,rag_search,mcp__student__list_students,mcp__student__get_student,mcp__student__get_student_checkin_summary,mcp__student__get_student_checkin_detail
       MEMORY_API_BASE_URL: http://memory-service:8084
       MEMORY_API_TOKEN: arookieofc
       FEATURE_MCP_TOOLS: "true"
