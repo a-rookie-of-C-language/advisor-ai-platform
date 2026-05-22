@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,15 @@ class PrivacyResult:
     has_sensitive: bool
 
 
+class PrivacyEngineResult(Protocol):
+    redacted_text: str
+    detected_spans: list[PrivacySpan]
+
+
+class PrivacyEngine(Protocol):
+    def redact(self, text: str) -> PrivacyEngineResult: ...
+
+
 class PrivacyFilterWrapper:
     """OpenAI Privacy Filter 封装：延迟加载，本地推理。
 
@@ -37,11 +47,11 @@ class PrivacyFilterWrapper:
         device: str = "cpu",
         model_path: str | None = None,
         enabled: bool = True,
-    ) -> None:
+        ) -> None:
         self._device = device
         self._model_path = model_path
         self._enabled = enabled
-        self._opf: Any = None
+        self._opf: PrivacyEngine | None = None
         self._loaded = False
 
     def _ensure_loaded(self) -> bool:
@@ -53,7 +63,7 @@ class PrivacyFilterWrapper:
         try:
             from opf import OPF
 
-            kwargs: dict[str, Any] = {
+            kwargs: JsonObject = {
                 "device": self._device,
                 "output_text_only": False,
             }

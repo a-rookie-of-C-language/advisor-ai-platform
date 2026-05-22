@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 import pytest
 
 from agents.base.agent import Agent
 from agents.memory.memory_worker import MemoryWorkerSubAgent
+from context.memory.core.schema import WritebackResult
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 
@@ -13,7 +14,7 @@ class _FakeMemoryApiClient:
     def __init__(self) -> None:
         self.failed: list[tuple[int, str | None]] = []
 
-    async def fetch_pending_tasks(self, limit: int = 10) -> list[dict[str, Any]]:
+    async def fetch_pending_tasks(self, limit: int = 10) -> list[JsonObject]:
         return [
             {
                 "id": 1,
@@ -29,8 +30,8 @@ class _FakeMemoryApiClient:
             }
         ]
 
-    async def upsert_candidates(self, user_id: int, kb_id: int, candidates: list[Any]) -> Any:
-        return type("R", (), {"accepted": len(candidates), "rejected": 0})()
+    async def upsert_candidates(self, user_id: int, kb_id: int, candidates: list[JsonValue]) -> WritebackResult:
+        return WritebackResult(accepted=len(candidates), rejected=0, message="ok")
 
     async def save_session_summary(self, session_id: int, summary: str) -> None:
         return None
@@ -43,7 +44,7 @@ class _FakeMemoryApiClient:
 
 
 class _DummyAgent(Agent):
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         return {}
 
     async def run(self) -> None:

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import asyncio
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any
+from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,48 @@ class McpConnection:
     """MCP 连接状态"""
 
     config: McpServerConfig
-    client: Any | None = None  # MCP SDK Client
+    client: "McpClientProtocol" | None = None
     last_used: float = 0.0
     is_connecting: bool = False
     error: str | None = None
-    _tool_list: list[dict[str, Any]] | None = None
+    _tool_list: list[JsonObject] | None = None
+
+
+class McpToolContentProtocol(Protocol):
+    type: str | None
+    text: str | None
+    data: JsonValue | None
+
+
+class McpCallToolResultProtocol(Protocol):
+    content: list[McpToolContentProtocol]
+    isError: bool
+
+
+class McpToolAnnotationsProtocol(Protocol):
+    readOnlyHint: bool
+    destructiveHint: bool
+    openWorldHint: bool
+
+
+class McpToolDescriptorProtocol(Protocol):
+    name: str
+    description: str
+    inputSchema: JsonObject
+    annotations: McpToolAnnotationsProtocol | None
+    _meta: JsonObject | None
+
+
+class McpToolListResultProtocol(Protocol):
+    tools: list[McpToolDescriptorProtocol]
+
+
+class McpClientProtocol(Protocol):
+    async def list_tools(self) -> McpToolListResultProtocol: ...
+
+    async def call_tool(self, name: str, arguments: JsonObject) -> McpCallToolResultProtocol: ...
+
+    async def close(self) -> None: ...
 
 
 class McpClientPool:
@@ -147,7 +185,7 @@ class McpClientPool:
 
         return conn
 
-    async def _connect(self, config: McpServerConfig) -> Any:
+    async def _connect(self, config: McpServerConfig) -> McpClientProtocol:
         """建立 MCP 连接"""
         if config.transport_type == "stdio":
             return await self._connect_stdio(config)
@@ -156,7 +194,7 @@ class McpClientPool:
         else:
             raise ValueError(f"Unsupported transport type: {config.transport_type}")
 
-    async def _connect_stdio(self, config: McpServerConfig) -> Any:
+    async def _connect_stdio(self, config: McpServerConfig) -> McpClientProtocol:
         """通过 stdio 连接到 MCP 服务器"""
         import importlib.util
 
@@ -191,7 +229,7 @@ class McpClientPool:
                 await client.initialize()
                 return client
 
-    async def _connect_http(self, config: McpServerConfig) -> Any:
+    async def _connect_http(self, config: McpServerConfig) -> McpClientProtocol:
         """通过 HTTP 连接到 MCP 服务器（直接 JSON-RPC POST）"""
         import importlib.util
 
@@ -212,8 +250,8 @@ class McpClientPool:
         self,
         config: McpServerConfig,
         tool_name: str,
-        arguments: dict[str, Any],
-    ) -> dict[str, Any]:
+        arguments: JsonObject,
+    ) -> JsonObject:
         """调用 MCP 工具，自动处理重连"""
         MAX_RETRIES = 1
 
@@ -254,7 +292,7 @@ class McpClientPool:
             return error.code == -32001  # type: ignore[union-attr]
         return False
 
-    def _parse_tool_result(self, result: Any) -> dict[str, Any]:
+    def _parse_tool_result(self, result: McpCallToolResultProtocol) -> JsonObject:
         """解析 MCP 工具调用结果"""
         content = []
         if hasattr(result, "content"):
@@ -344,7 +382,7 @@ class DirectHttpMcpClient:
         # Response is ignored, just ensure connection works
         return response
 
-    async def list_tools(self) -> Any:
+    async def list_tools(self) -> McpToolListResultProtocol:
         """列出所有工具"""
         response = await self._post({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
         result = response.get("result", {})
@@ -359,7 +397,7 @@ class DirectHttpMcpClient:
 
         return type("ToolsResult", (), {"tools": [Tool(t) for t in tools]})()
 
-    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+    async def call_tool(self, name: str, arguments: JsonObject) -> McpCallToolResultProtocol:
         """调用工具"""
         response = await self._post({
             "jsonrpc": "2.0",
@@ -371,13 +409,13 @@ class DirectHttpMcpClient:
         content = result.get("content", [])
         return type("CallToolResult", (), {
             "content": [
-                type("TextContent", (), {"text": item.get("text", "")})()
+                type("TextContent", (), {"type": "text", "text": item.get("text", ""), "data": None})()
                 for item in content
             ],
             "isError": False
         })()
 
-    async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _post(self, payload: JsonObject) -> JsonObject:
         """发送 JSON-RPC POST 请求"""
         response = await self._http_client.post(
             self._url,

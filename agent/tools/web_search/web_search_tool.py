@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+from agent.types import JsonObject
 from pydantic import BaseModel
 from tavily import TavilyClient
 
@@ -38,7 +39,7 @@ class WebSearchTool(BaseTool[WebSearchInput, BaseModel]):
         self._requires_user_interaction = False
         self._api_key = os.getenv("TAVILY_API_KEY", "")
 
-    async def execute(self, tool_input: WebSearchInput, context: dict[str, object]) -> ToolResult:
+    async def execute(self, tool_input: WebSearchInput, context: JsonObject) -> ToolResult:
         _ = context
         query = tool_input.query.strip()
         if not query:

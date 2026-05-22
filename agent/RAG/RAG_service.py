@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import re
 import time
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from openai import OpenAI
@@ -68,7 +69,7 @@ class RAG_service:
         return round(1.0 / (1.0 + distance), 6)
 
     @staticmethod
-    def _to_doc_id(value: Any) -> int:
+    def _to_doc_id(value: JsonValue) -> int:
         try:
             return int(value)
         except Exception:
@@ -111,7 +112,7 @@ class RAG_service:
         return int((time.time() - started_at) * 1000)
 
     @staticmethod
-    def _to_request(req: RAGSearchRequest | Dict[str, Any]) -> RAGSearchRequest:
+    def _to_request(req: RAGSearchRequest | JsonObject) -> RAGSearchRequest:
         return req if isinstance(req, RAGSearchRequest) else RAGSearchRequest(**req)
 
     @staticmethod
@@ -119,7 +120,7 @@ class RAG_service:
         return request.filters.doc_ids if request.filters else None
 
     @staticmethod
-    def _build_source_type(source: str, metadata: Dict[str, Any]) -> str:
+    def _build_source_type(source: str, metadata: JsonObject) -> str:
         source_type = str(metadata.get("source_type", "")).lower()
         if not source_type and source:
             source_type = Path(source).suffix.replace(".", "").lower()
@@ -255,7 +256,7 @@ class RAG_service:
         title_map = self._load_live_title_map(candidate_rows, live_title_map)
         return self._build_ranked_items(ranked_rows, title_map)
 
-    def rag_search(self, req: RAGSearchRequest | Dict[str, Any]) -> RAGSearchResponse:
+    def rag_search(self, req: RAGSearchRequest | JsonObject) -> RAGSearchResponse:
         started_at = time.time()
         trace_id = uuid4().hex
 
@@ -304,8 +305,8 @@ class RAG_service:
 
     def rag_search_from_raw(
         self,
-        req: RAGSearchRequest | Dict[str, Any],
-        raw: Dict[str, Any] | RAGRawSearchData,
+        req: RAGSearchRequest | JsonObject,
+        raw: JsonObject | RAGRawSearchData,
         live_title_map: Optional[Dict[int, str]] = None,
     ) -> RAGSearchResponse:
         """最小测试入口：跳过 embedding/DAO.search，直接使用原始召回结果构建响应。"""

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
 
+from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
+from tools.base_tool import BaseTool
 
 logger = logging.getLogger(__name__)
 _URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
@@ -110,9 +112,9 @@ async def emit_route_observation(
     *,
     logger: logging.Logger,
     scope: str,
-    session_id: Any,
+    session_id: JsonValue,
     emit=None,
-) -> dict[str, Any]:
+) -> JsonObject:
     payload = decision.to_event_payload()
     logger.info(
         "intent_route %s: session_id=%s, matched_by=%s, confidence=%.2f, categories=%s, fallback_reason=%s, source=%s",
@@ -145,7 +147,7 @@ class RouteDecision:
     def event_name(self) -> str:
         return INTENT_ROUTE_EVENT
 
-    def to_event_payload(self) -> dict[str, Any]:
+    def to_event_payload(self) -> JsonObject:
         categories = sorted(self.categories)
         return {
             "matched_by": self.matched_by,
@@ -170,7 +172,7 @@ class IntentRouter:
         self,
         category_rules: dict[str, dict[str, list[str]]] | None = None,
         *,
-        llm_classifier: Any = None,
+        llm_classifier: BaseLLMProvider | None = None,
         llm_confidence_threshold: float = 0.8,
         score_threshold: int = 3,
         allow_destructive_fallback: bool = False,
@@ -187,12 +189,12 @@ class IntentRouter:
         self._score_threshold = score_threshold
         self._allow_destructive_fallback = allow_destructive_fallback
         self._last_decision = RouteDecision(categories=set(), matched_by="none", confidence=0.0)
-        self._tools: list[Any] = []
+        self._tools: list[BaseTool] = []
         self._tool_patterns: list[tuple[str, re.Pattern[str]]] = []
         self._tool_semantic_keywords: dict[str, set[str]] = {}
         self._tool_categories: dict[str, str] = {}
 
-    def register_tools(self, tools: list[Any]) -> None:
+    def register_tools(self, tools: list[BaseTool]) -> None:
         """注册工具，提取查询模式用于意图匹配"""
         self._tools = tools
         self._tool_patterns = []
@@ -236,7 +238,12 @@ class IntentRouter:
         self._last_decision = fallback
         return fallback
 
-    async def route_decision(self, query: str, all_categories: set[str], provider: Any | None = None) -> RouteDecision:
+    async def route_decision(
+        self,
+        query: str,
+        all_categories: set[str],
+        provider: BaseLLMProvider | None = None,
+    ) -> RouteDecision:
         normalized_categories = self._normalize_categories(all_categories)
         if not query.strip():
             decision = self._build_fallback(normalized_categories, reason="empty_query")
@@ -263,7 +270,12 @@ class IntentRouter:
         self._last_decision = fallback
         return fallback
 
-    async def route_with_fallback(self, query: str, all_categories: set[str], provider: Any | None = None) -> set[str]:
+    async def route_with_fallback(
+        self,
+        query: str,
+        all_categories: set[str],
+        provider: BaseLLMProvider | None = None,
+    ) -> set[str]:
         decision = await self.route_decision(query, all_categories, provider)
         return decision.categories
 
@@ -474,7 +486,7 @@ class IntentRouter:
         self,
         query: str,
         all_categories: set[str],
-        provider: Any | None,
+        provider: BaseLLMProvider | None,
         rule_decision: RouteDecision | None = None,
     ) -> RouteDecision | None:
         classifier = self._llm_classifier or provider
@@ -553,7 +565,7 @@ class IntentRouter:
         return {category for category, score in eligible.items() if score == top_score}
 
     @staticmethod
-    def _coerce_categories(raw_categories: Any) -> list[str]:
+    def _coerce_categories(raw_categories: JsonValue) -> list[str]:
         if isinstance(raw_categories, list):
             return [str(item).strip() for item in raw_categories if str(item).strip()]
         if isinstance(raw_categories, str) and raw_categories.strip():
@@ -561,7 +573,7 @@ class IntentRouter:
         return []
 
     @staticmethod
-    def _coerce_confidence(raw_confidence: Any) -> float:
+    def _coerce_confidence(raw_confidence: JsonValue) -> float:
         try:
             confidence = float(raw_confidence)
         except (TypeError, ValueError):

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any
+
+from agent.types import JsonObject, JsonValue, SupportsModelDump
 
 
 @dataclass
@@ -10,14 +11,14 @@ class ToolResult:
     ok: bool
     status: str
     message: str
-    items: list[dict[str, Any]] = field(default_factory=list)
-    meta: dict[str, Any] = field(default_factory=dict)
+    items: list[JsonObject] = field(default_factory=list)
+    meta: JsonObject = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.items = [self._normalize_item(item) for item in (self.items or [])]
 
     @staticmethod
-    def _normalize_item(item: Any) -> dict[str, Any]:
+    def _normalize_item(item: JsonValue | SupportsModelDump) -> JsonObject:
         if isinstance(item, dict):
             return item
         if hasattr(item, "model_dump"):
@@ -55,8 +56,8 @@ class ToolResult:
     def error(cls, message: str) -> "ToolResult":
         return cls(ok=False, status="error", message=message, items=[])
 
-    def to_dict(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
+    def to_dict(self) -> JsonObject:
+        payload: JsonObject = {
             "ok": self.ok,
             "status": self.status,
             "message": self.message,

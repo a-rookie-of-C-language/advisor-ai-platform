@@ -6,7 +6,9 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
+
+from agent.types import JsonObject, JsonValue, SupportsDataclassFields
+from llm.base_provider import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ class EvalRunner:
         dataset_path: str | Path,
         kb_id: int | None = None,
         top_k: int = 5,
-        llm_provider: Any = None,
+        llm_provider: BaseLLMProvider | None = None,
     ) -> None:
         from .dataset import EvalDataset
 
@@ -50,7 +52,7 @@ class EvalRunner:
         self._rag_service = None
         self._annotation_pipeline = None
 
-    def _get_rag_service(self) -> Any:
+    def _get_rag_service(self):
         """延迟初始化 RAG_service。"""
         if self._rag_service is None:
             from RAG.RAG_service import RAG_service
@@ -66,7 +68,7 @@ class EvalRunner:
             )
         return self._rag_service
 
-    def _get_annotation_pipeline(self) -> Any:
+    def _get_annotation_pipeline(self):
         """延迟初始化 AnnotationPipeline。"""
         if self._annotation_pipeline is None:
             from RAG.annotator.annotation_pipeline import AnnotationPipeline
@@ -92,7 +94,7 @@ class EvalRunner:
             self._annotation_pipeline = AnnotationPipeline(annotators=annotators)
         return self._annotation_pipeline
 
-    def _get_chat_service(self) -> Any:
+    def _get_chat_service(self):
         """创建 ChatStreamService 实例。"""
         from chat.stream_service import ChatStreamService
         from llm.provider_factory import build_provider_from_env
@@ -100,7 +102,7 @@ class EvalRunner:
         provider = self._llm_provider or build_provider_from_env()
         return ChatStreamService(provider=provider)
 
-    async def run_all(self) -> dict[str, Any]:
+    async def run_all(self) -> JsonObject:
         """执行全部评估，返回完整报告。"""
         from .report import EvalReport
 
@@ -134,7 +136,7 @@ class EvalRunner:
         report.compute_summary()
         return asdict(report)
 
-    async def _eval_retrieval(self, query: str) -> dict[str, Any]:
+    async def _eval_retrieval(self, query: str) -> JsonObject:
         """评估 RAG 检索质量。"""
         from .metrics.retrieval import retrieval_mrr, retrieval_ndcg, retrieval_recall_at_k
 
@@ -155,7 +157,7 @@ class EvalRunner:
             "expected_count": len(expected_chunks),
         }
 
-    async def _eval_annotation(self, query: str) -> dict[str, Any]:
+    async def _eval_annotation(self, query: str) -> JsonObject:
         """评估元数据标注质量。"""
         from .metrics.annotation import annotation_accuracy
 
@@ -173,7 +175,7 @@ class EvalRunner:
 
         return annotation_accuracy(predicted_annotation, expected_annotation)
 
-    async def _eval_fusion(self, query: str) -> dict[str, Any]:
+    async def _eval_fusion(self, query: str) -> JsonObject:
         """评估融合策略效果。"""
         from .metrics.fusion import fusion_score_comparison
 
@@ -182,7 +184,7 @@ class EvalRunner:
 
         return fusion_score_comparison(candidates_before, candidates_after, top_k=self._top_k)
 
-    async def _eval_e2e(self, query: str, expected_answer: str) -> dict[str, Any]:
+    async def _eval_e2e(self, query: str, expected_answer: str) -> JsonObject:
         """评估端到端回答质量。"""
         from .metrics.e2e import e2e_judge_score
 
@@ -215,7 +217,7 @@ class EvalRunner:
             logger.warning("RAG 检索失败: %s", exc)
             return []
 
-    async def _annotate_chunks(self, query: str) -> dict[str, Any]:
+    async def _annotate_chunks(self, query: str) -> JsonObject:
         """对检索到的切片进行标注。"""
         try:
             # 先检索相关切片
@@ -257,7 +259,7 @@ class EvalRunner:
 
     async def _run_fusion_comparison(
         self, query: str
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[JsonObject], list[JsonObject]]:
         """运行融合前后对比。"""
         # TODO: 实际实现需要调用 fusion pipeline
         # 暂时返回模拟数据
@@ -296,7 +298,7 @@ class EvalRunner:
             return f"错误: {exc}"
 
 
-def asdict(obj: Any) -> Any:
+def asdict(obj: JsonValue | SupportsDataclassFields) -> JsonValue:
     """递归转换为字典（支持 dataclass 和普通对象）。"""
     if hasattr(obj, "__dataclass_fields__"):
         from dataclasses import asdict as dc_asdict

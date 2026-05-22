@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
+from agent.types import JsonObject, JsonValue
+from tools.base_tool import BaseTool
 from agents.search.schema import WebSearchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
 from llm.base_provider import BaseLLMProvider
@@ -19,8 +19,9 @@ _JUDGE_SYSTEM_PROMPT = (
 
 class WebSearchSubAgent(WebToolSubAgent):
     MODEL_ENV_PREFIX = "WEB_SEARCH"
+    DEFAULT_MODEL: str | None = None
 
-    def __init__(self, llm_provider: BaseLLMProvider, web_search_tool: Any) -> None:
+    def __init__(self, llm_provider: BaseLLMProvider, web_search_tool: BaseTool) -> None:
         super().__init__(
             name="web_search_subagent",
             llm_provider=llm_provider,
@@ -53,7 +54,7 @@ class WebSearchSubAgent(WebToolSubAgent):
             key_facts=judgment.get("key_facts", []),
         )
 
-    async def _judge_search(self, query: str, sources: list[dict[str, Any]]) -> dict[str, Any]:
+    async def _judge_search(self, query: str, sources: list[JsonObject]) -> JsonObject:
         sources_text = "\n".join(
             f"- [{item.get('title', '')}]({item.get('url', '')}): {item.get('snippet', '')}"
             for item in sources

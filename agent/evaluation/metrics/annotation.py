@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 
 def annotation_accuracy(
-    predicted: dict[str, Any],
-    expected: dict[str, Any],
+    predicted: JsonObject,
+    expected: JsonObject,
 ) -> dict[str, bool]:
     """计算标注字段级准确率。
 

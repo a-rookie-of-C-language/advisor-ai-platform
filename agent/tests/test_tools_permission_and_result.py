@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from agent.types import JsonObject, JsonValue
 from pydantic import BaseModel
 
 from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
@@ -27,7 +28,7 @@ class _DummyTool(BaseTool[_DummyInput, BaseModel]):
             required_permissions={ToolPermission.RAG_READ},
         )
 
-    async def execute(self, tool_input: _DummyInput, context: dict[str, object]) -> ToolResult:
+    async def execute(self, tool_input: _DummyInput, context: JsonObject) -> ToolResult:
         _ = tool_input
         _ = context
         return ToolResult(ok=True, status="ok", message="ok", items=[])

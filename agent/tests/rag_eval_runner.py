@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import argparse
 import json
 import os
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
 
 import psycopg2
 from dotenv import load_dotenv
@@ -40,7 +40,7 @@ def _read_embedding_model() -> str:
     return os.getenv("EMBEDDING_MODEL", "bge-m3").strip()
 
 
-def _query_kb_documents(db_dsn: str, kb_id: int) -> list[dict[str, Any]]:
+def _query_kb_documents(db_dsn: str, kb_id: int) -> list[JsonObject]:
     conn = psycopg2.connect(db_dsn)
     try:
         with conn.cursor() as cur:
@@ -78,7 +78,7 @@ def _query_kb_documents(db_dsn: str, kb_id: int) -> list[dict[str, Any]]:
     ]
 
 
-def _run_queries(kb_id: int, top_k: int, queries: list[str]) -> dict[str, Any]:
+def _run_queries(kb_id: int, top_k: int, queries: list[str]) -> JsonObject:
     import sys
 
     if str(ROOT) not in sys.path:
@@ -93,7 +93,7 @@ def _run_queries(kb_id: int, top_k: int, queries: list[str]) -> dict[str, Any]:
         embedding_model=_read_embedding_model(),
     )
     try:
-        results: list[dict[str, Any]] = []
+        results: list[JsonObject] = []
         hit_count = 0
         total_returned = 0
 

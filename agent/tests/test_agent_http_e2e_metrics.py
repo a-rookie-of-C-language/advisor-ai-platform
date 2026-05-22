@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import asyncio
 import json
 import math
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -17,21 +17,21 @@ REPORT_DIR = Path(__file__).parent / "reports"
 REPORT_PATH = REPORT_DIR / "agent_http_e2e_metrics.json"
 
 
-def _load_json(name: str) -> Any:
+def _load_json(name: str) -> JsonObject:
     return json.loads((FIXTURE_DIR / name).read_text(encoding="utf-8"))
 
 
-def _serialize_sse(event: str, data: dict[str, Any]) -> str:
+def _serialize_sse(event: str, data: JsonObject) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def _parse_sse(text: str) -> list[dict[str, Any]]:
+def _parse_sse(text: str) -> list[JsonObject]:
     events = []
     for block in text.replace("\r", "").split("\n\n"):
         if not block.strip():
             continue
         event_name = "message"
-        payload: dict[str, Any] = {}
+        payload: JsonObject = {}
         for line in block.split("\n"):
             if line.startswith("event:"):
                 event_name = line.split(":", 1)[1].strip()
@@ -60,7 +60,7 @@ def _quality_score(answer: str, keywords: list[str]) -> float:
     return hit_count / len(keywords)
 
 
-def _build_mock_chat_service(cases: list[dict[str, Any]], *, force_error: bool = False) -> SimpleNamespace:
+def _build_mock_chat_service(cases: list[JsonObject], *, force_error: bool = False) -> SimpleNamespace:
     case_by_message = {case["message"]: case for case in cases}
 
     async def stream_events(messages, user_id=None, session_id=None, kb_id=None, trace_id=None, turn_id=None):
@@ -93,7 +93,7 @@ def _build_mock_chat_service(cases: list[dict[str, Any]], *, force_error: bool =
         yield _serialize_sse("delta", {"text": case["mock_answer"]})
         yield _serialize_sse("done", {"message": "stream_finished"})
 
-    def get_graph_health() -> dict[str, Any]:
+    def get_graph_health() -> JsonObject:
         return {
             "use_langgraph": True,
             "graph": {"compiled": True},
@@ -104,7 +104,7 @@ def _build_mock_chat_service(cases: list[dict[str, Any]], *, force_error: bool =
     return SimpleNamespace(stream_events=stream_events, get_graph_health=get_graph_health)
 
 
-def _evaluate_case(client: TestClient, case: dict[str, Any], thresholds: dict[str, Any]) -> dict[str, Any]:
+def _evaluate_case(client: TestClient, case: JsonObject, thresholds: JsonObject) -> JsonObject:
     payload = {
         "messages": [{"role": "user", "content": case["message"]}],
         "userId": 1,
@@ -144,7 +144,7 @@ def _evaluate_case(client: TestClient, case: dict[str, Any], thresholds: dict[st
     }
 
 
-def _build_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_metrics(results: list[JsonObject]) -> JsonObject:
     total = len(results)
     latencies = [item["latency_ms"] for item in results]
     return {
@@ -161,7 +161,7 @@ def _build_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _assert_thresholds(metrics: dict[str, Any], thresholds: dict[str, Any]) -> dict[str, bool]:
+def _assert_thresholds(metrics: JsonObject, thresholds: JsonObject) -> dict[str, bool]:
     checks = {
         "accuracy": metrics["accuracy"] >= thresholds["accuracy_min"],
         "task_completion_rate": metrics["task_completion_rate"] >= thresholds["task_completion_rate_min"],

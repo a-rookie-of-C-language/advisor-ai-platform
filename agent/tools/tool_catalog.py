@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 
+from context.memory.api.memory_api_client import MemoryApiClient
+from RAG.RAG_service import RAG_service
 from tools.base_tool import BaseTool
 from tools.memory_read import MemoryReadTool
 from tools.memory_write import MemoryWriteTool
@@ -23,8 +24,8 @@ class ToolCatalog:
     def get_builtin_tools(
         cls,
         *,
-        rag_service: Any | None,
-        memory_client: Any | None,
+        rag_service: RAG_service | None,
+        memory_client: MemoryApiClient | None,
     ) -> list[BaseTool]:
         tools: list[BaseTool] = []
         if rag_service is not None:
@@ -42,8 +43,8 @@ class ToolCatalog:
     def get_custom_tools(
         cls,
         *,
-        rag_service: Any | None,
-        memory_client: Any | None,
+        rag_service: RAG_service | None,
+        memory_client: MemoryApiClient | None,
     ) -> list[BaseTool]:
         _ = rag_service
         _ = memory_client
@@ -53,8 +54,8 @@ class ToolCatalog:
     async def get_mcp_tools(
         cls,
         *,
-        rag_service: Any | None = None,
-        memory_client: Any | None = None,
+        rag_service: RAG_service | None = None,
+        memory_client: MemoryApiClient | None = None,
     ) -> list[BaseTool]:
         _ = rag_service
         _ = memory_client
@@ -71,8 +72,8 @@ class ToolCatalog:
     async def get_all_base_tools(
         cls,
         *,
-        rag_service: Any | None = None,
-        memory_client: Any | None = None,
+        rag_service: RAG_service | None = None,
+        memory_client: MemoryApiClient | None = None,
     ) -> list[BaseTool]:
         tools: list[BaseTool] = []
         tools.extend(cls.get_builtin_tools(rag_service=rag_service, memory_client=memory_client))

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
-from typing import Any
 
 from openai import AsyncOpenAI
 
@@ -60,7 +60,7 @@ class OpenAILLMExtractor:
         return candidates
 
     @staticmethod
-    def _parse_json_array(text: str) -> list[dict[str, Any]]:
+    def _parse_json_array(text: str) -> list[JsonObject]:
         """解析 LLM 返回的 JSON 数组，增强容错能力"""
         text = text.strip()
 
@@ -91,7 +91,7 @@ class OpenAILLMExtractor:
         return OpenAILLMExtractor._extract_objects(text)
 
     @staticmethod
-    def _extract_objects(text: str) -> list[dict[str, Any]]:
+    def _extract_objects(text: str) -> list[JsonObject]:
         """从任意文本中提取所有完整的 JSON 对象"""
         result = []
         depth = 0

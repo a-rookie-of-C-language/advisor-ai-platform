@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+
+from agent.types import JsonObject, JsonValue
+from llm.base_provider import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +36,8 @@ async def e2e_judge_score(
     query: str,
     expected_answer: str,
     actual_answer: str,
-    llm_provider: Any = None,
-) -> dict[str, Any]:
+    llm_provider: BaseLLMProvider | None = None,
+) -> JsonObject:
     """使用 LLM-as-Judge 对端到端回答质量打分。
 
     Args:
@@ -94,7 +96,7 @@ async def e2e_judge_score(
         return {"error": str(exc), "avg_score": 0.0}
 
 
-def _build_eval_provider_from_env() -> Any:
+def _build_eval_provider_from_env() -> BaseLLMProvider:
     """从 .env 构建评估专用 LLM provider，优先读取 EVAL_*，缺失时回退 OPENAI_*。"""
     try:
         from dotenv import load_dotenv

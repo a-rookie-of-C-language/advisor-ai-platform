@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class FailureMemoryItem:
     score: int
     avoid_strategy: str
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JsonObject:
         return {
             "ts": self.ts,
             "user_query": self.user_query,
@@ -39,9 +39,9 @@ class FailureMemoryStore:
         with path.open("a", encoding="utf-8") as fp:
             fp.write(json.dumps(item.to_dict(), ensure_ascii=False) + "\n")
 
-    def load_recent(self, limit: int = 200) -> list[dict[str, Any]]:
+    def load_recent(self, limit: int = 200) -> list[JsonObject]:
         files = sorted(self._base_dir.glob("*.jsonl"), reverse=True)
-        out: list[dict[str, Any]] = []
+        out: list[JsonObject] = []
         for file in files:
             with file.open("r", encoding="utf-8") as fp:
                 for line in fp:

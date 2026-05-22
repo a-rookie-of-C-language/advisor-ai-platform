@@ -115,7 +115,7 @@ class ChatStreamService:
         self._feature_failure_memory_inject = self._read_feature_failure_memory_inject()
         self._action_score_threshold = self._read_action_score_threshold()
         self._failure_memory_store = FailureMemoryStore(self._read_failure_memory_dir())
-        self._last_action_score: dict[str, object] = {}
+        self._last_action_score: JsonObject = {}
         self._last_compaction_stats: dict[str, int | bool | str] = {
             "snip_enabled": self._read_context_snip_enabled(),
             "micro_enabled": self._read_context_micro_enabled(),
@@ -209,6 +209,7 @@ class ChatStreamService:
         self,
         *,
         env_prefix: str,
+        default_model: str | None = None,
         temperature_default: float = 0.0,
         timeout_default: float = 30.0,
         max_retries_default: int = 0,
@@ -216,66 +217,81 @@ class ChatStreamService:
         tool_round_timeout_default: float = 20.0,
         stream_idle_timeout_default: float = 45.0,
     ) -> BaseLLMProvider:
-        model = os.getenv(f"{env_prefix}_MODEL", "").strip()
+        env_model = os.getenv(f"{env_prefix}_MODEL", "").strip()
+        model = env_model or default_model or ""
         if not model:
             return self._provider
-        api_key = os.getenv(f"{env_prefix}_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
-        base_url = os.getenv(f"{env_prefix}_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
-        if not api_key or not base_url:
-            logger.warning(
-                "%s_MODEL configured but api key/base url missing, fallback to main provider",
-                env_prefix,
-            )
-            return self._provider
-        try:
-            from llm.openai_provider import OpenAIProvider
-            from llm.provider_factory import _read_float_env, _read_int_env
-            from llm.thinking_config import ThinkingConfig
+        if env_model:
+            api_key = os.getenv(f"{env_prefix}_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+            base_url = os.getenv(f"{env_prefix}_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
+            if not api_key or not base_url:
+                logger.warning(
+                    "%s_MODEL configured but api key/base url missing, fallback to main provider",
+                    env_prefix,
+                )
+                return self._provider
+            try:
+                from llm.openai_provider import OpenAIProvider
+                from llm.provider_factory import _read_float_env, _read_int_env
+                from llm.thinking_config import ThinkingConfig
 
-            return OpenAIProvider(
-                api_key=api_key,
-                model=model,
-                base_url=base_url,
-                temperature=_read_float_env(f"{env_prefix}_TEMPERATURE", temperature_default),
-                timeout=_read_float_env(f"{env_prefix}_TIMEOUT_SEC", timeout_default),
-                max_retries=_read_int_env(f"{env_prefix}_MAX_RETRIES", max_retries_default),
-                stream_timeout_sec=_read_float_env(f"{env_prefix}_STREAM_TIMEOUT_SEC", stream_timeout_default),
-                tool_round_timeout_sec=_read_float_env(
-                    f"{env_prefix}_TOOL_ROUND_TIMEOUT_SEC",
-                    tool_round_timeout_default,
-                ),
-                stream_idle_timeout_sec=_read_float_env(
-                    f"{env_prefix}_STREAM_IDLE_TIMEOUT_SEC",
-                    stream_idle_timeout_default,
-                ),
-                thinking_config=ThinkingConfig.disabled(),
-            )
-        except Exception as exc:  # noqa: BLE001
+                return OpenAIProvider(
+                    api_key=api_key,
+                    model=model,
+                    base_url=base_url,
+                    temperature=_read_float_env(f"{env_prefix}_TEMPERATURE", temperature_default),
+                    timeout=_read_float_env(f"{env_prefix}_TIMEOUT_SEC", timeout_default),
+                    max_retries=_read_int_env(f"{env_prefix}_MAX_RETRIES", max_retries_default),
+                    stream_timeout_sec=_read_float_env(f"{env_prefix}_STREAM_TIMEOUT_SEC", stream_timeout_default),
+                    tool_round_timeout_sec=_read_float_env(
+                        f"{env_prefix}_TOOL_ROUND_TIMEOUT_SEC",
+                        tool_round_timeout_default,
+                    ),
+                    stream_idle_timeout_sec=_read_float_env(
+                        f"{env_prefix}_STREAM_IDLE_TIMEOUT_SEC",
+                        stream_idle_timeout_default,
+                    ),
+                    thinking_config=ThinkingConfig.disabled(),
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Failed to build %s provider, fallback to main provider: %s",
+                    env_prefix.lower(),
+                    exc,
+                )
+                return self._provider
+
+        try:
+            return self._provider.with_model(model)
+        except NotImplementedError:
             logger.warning(
-                "Failed to build %s provider, fallback to main provider: %s",
-                env_prefix.lower(),
-                exc,
+                "%s_DEFAULT_MODEL configured but provider does not support model override, fallback to main provider",
+                env_prefix,
             )
             return self._provider
 
     def _build_tool_explorer_provider(self) -> BaseLLMProvider:
         return self._build_subagent_provider(
             env_prefix=ToolExplorerSubAgent.MODEL_ENV_PREFIX,
+            default_model=ToolExplorerSubAgent.DEFAULT_MODEL,
         )
 
     def _build_context_compaction_provider(self) -> BaseLLMProvider:
         return self._build_subagent_provider(
             env_prefix=ContextCompactionSubAgent.MODEL_ENV_PREFIX,
+            default_model=ContextCompactionSubAgent.DEFAULT_MODEL,
         )
 
     def _build_web_search_provider(self) -> BaseLLMProvider:
         return self._build_subagent_provider(
             env_prefix=WebSearchSubAgent.MODEL_ENV_PREFIX,
+            default_model=WebSearchSubAgent.DEFAULT_MODEL,
         )
 
     def _build_web_fetch_provider(self) -> BaseLLMProvider:
         return self._build_subagent_provider(
             env_prefix=WebFetchSubAgent.MODEL_ENV_PREFIX,
+            default_model=WebFetchSubAgent.DEFAULT_MODEL,
         )
 
     @staticmethod
@@ -384,8 +400,8 @@ class ChatStreamService:
         *,
         source: str,
         trace_id: str | None,
-        payload: dict[str, object],
-    ) -> dict[str, object]:
+        payload: JsonObject,
+    ) -> JsonObject:
         return {
             "event_version": _EVENT_VERSION,
             "trace_id": trace_id or "",
@@ -400,7 +416,7 @@ class ChatStreamService:
         event: str,
         source: str,
         trace_id: str | None,
-        payload: dict[str, object],
+        payload: JsonObject,
     ) -> str:
         return self._serialize_event(
             event,
@@ -483,9 +499,9 @@ class ChatStreamService:
 
 
     @staticmethod
-    def _parse_serialized_event(raw: str) -> dict[str, object]:
+    def _parse_serialized_event(raw: str) -> JsonObject:
         event_name = "message"
-        data: dict[str, object] = {}
+        data: JsonObject = {}
         for line in raw.strip().split("\n"):
             if line.startswith("event:"):
                 event_name = line.split(":", 1)[1].strip()
@@ -574,7 +590,7 @@ class ChatStreamService:
                 return
             yield event
 
-    def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
+    def _build_failure_avoid_prompt(self, matched: JsonObject) -> str:
         return PromptBuilder.build_failure_avoid_prompt(matched)
 
     def _write_failure_memory(
@@ -826,7 +842,7 @@ class ChatStreamService:
                 compact_stats.get("transcript_path", ""),
             )
 
-        trace_events: list[dict[str, object]] = []
+        trace_events: list[JsonObject] = []
         context_messages = validated_messages if self._use_langgraph else compacted_messages
         context = EngineContext(
             messages=context_messages,

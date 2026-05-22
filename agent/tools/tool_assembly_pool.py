@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
+from RAG.RAG_service import RAG_service
+from context.memory.api.memory_api_client import MemoryApiClient
 from tools.base_tool import BaseTool
 from tools.tool_catalog import ToolCatalog
 
@@ -15,8 +17,8 @@ class ToolAssemblyPool:
     def build(
         cls,
         *,
-        rag_service: Any | None = None,
-        memory_client: Any | None = None,
+        rag_service: RAG_service | None = None,
+        memory_client: MemoryApiClient | None = None,
         conflict_policy: ConflictPolicy = "keep_first",
     ) -> list[BaseTool]:
         import asyncio
@@ -59,8 +61,8 @@ class ToolAssemblyPool:
     async def _build_async(
         cls,
         *,
-        rag_service: Any | None = None,
-        memory_client: Any | None = None,
+        rag_service: RAG_service | None = None,
+        memory_client: MemoryApiClient | None = None,
         conflict_policy: ConflictPolicy = "keep_first",
     ) -> list[BaseTool]:
         builtin_tools = sorted(
@@ -108,4 +110,3 @@ class ToolAssemblyPool:
                 continue
             raise ValueError(f"duplicate tool name: {tool.name}")
         return resolved
-

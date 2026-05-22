@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
-from typing import Any
 
 from query_engine.EngineEvent import EngineEvent
 
 
 def parse_sse_to_engine_event(raw: str) -> EngineEvent:
     event_name = "message"
-    data: dict[str, Any] = {}
+    data: JsonObject = {}
     for line in raw.strip().split("\n"):
         if line.startswith("event:"):
             event_name = line.split(":", 1)[1].strip()

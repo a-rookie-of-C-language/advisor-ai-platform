@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Iterable
+from agent.types import JsonObject, JsonValue
+from typing import AsyncIterator, Iterable
 
 import pytest
 
@@ -23,7 +24,7 @@ class TestBaseLLMProvider:
                 self,
                 messages: Iterable[ChatMessage],
                 *,
-                response_format: dict[str, Any] | None = None,
+                response_format: JsonObject | None = None,
             ) -> AsyncIterator[str]:
                 yield "Hello"
                 yield " World"

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Awaitable, Callable
+
+from agent.types import JsonObject, JsonValue
 
 from agents.base.agent import Agent, AgentContext
+from context.memory.api.memory_api_client import MemoryApiClient
+from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
@@ -14,10 +18,17 @@ class SubAgent(Agent):
         self,
         name: str,
         parent: Agent | None = None,
+        llm_provider: BaseLLMProvider | None = None,
+        memory_client: MemoryApiClient | None = None,
+        tools: dict[str, Callable[..., Awaitable[JsonValue]]] | None = None,
         permission_config: PermissionConfig | None = None,
-        **kwargs: Any,
     ) -> None:
-        super().__init__(name=name, **kwargs)
+        super().__init__(
+            name=name,
+            llm_provider=llm_provider,
+            memory_client=memory_client,
+            tools=tools,
+        )
         self._parent = parent
         self._permission = permission_config or PermissionConfig()
         self._ensure_stricter_than_parent()
@@ -62,7 +73,7 @@ class SubAgent(Agent):
                 f"SubAgent '{self._name}' permissions must be a subset of parent agent permissions"
             )
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         raise NotImplementedError
 
     async def run(self) -> None:

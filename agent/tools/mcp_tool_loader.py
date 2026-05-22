@@ -1,13 +1,32 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Protocol, cast
 
+from agent.types import JsonObject
 from tools.base_tool import BaseTool
 from tools.mcp_client_pool import McpClientPool, McpServerConfig
 from tools.mcp_tool_adapter import McpToolAdapter
 
 logger = logging.getLogger(__name__)
+
+
+class McpToolAnnotations(Protocol):
+    readOnlyHint: bool
+    destructiveHint: bool
+    openWorldHint: bool
+
+
+class McpToolDescriptor(Protocol):
+    name: str
+    description: str
+    inputSchema: JsonObject
+    annotations: McpToolAnnotations | None
+    _meta: JsonObject | None
+
+
+class McpToolsListResult(Protocol):
+    tools: list[McpToolDescriptor]
 
 # 全局 MCP 客户端池实例
 _mcp_client_pool: McpClientPool | None = None
@@ -95,7 +114,7 @@ class McpToolLoader:
 
         try:
             # 调用 MCP 的 tools/list 获取工具列表
-            result = await client.list_tools()
+            result = cast(McpToolsListResult, await client.list_tools())
 
             for mcp_tool in result.tools:
                 tool = self._adapt_tool(config, mcp_tool)
@@ -107,7 +126,7 @@ class McpToolLoader:
 
         return tools
 
-    def _adapt_tool(self, config: McpServerConfig, mcp_tool: Any) -> BaseTool | None:
+    def _adapt_tool(self, config: McpServerConfig, mcp_tool: McpToolDescriptor) -> BaseTool | None:
         """将 MCP 工具适配为内部 BaseTool 格式"""
         try:
             # 获取工具元数据

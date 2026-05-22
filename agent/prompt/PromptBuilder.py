@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from agent.types import JsonObject, JsonValue
 
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec
@@ -33,7 +33,7 @@ class PromptBuilder:
 
 
     @staticmethod
-    def build_failure_avoid_prompt(matched: dict[str, object]) -> str:
+    def build_failure_avoid_prompt(matched: JsonObject) -> str:
         """Build a prompt instructing the LLM to avoid past failures."""
         memory = matched.get("memory", {}) if isinstance(matched, dict) else {}
         if not isinstance(memory, dict):
@@ -52,7 +52,7 @@ class PromptBuilder:
 
 
     @staticmethod
-    def build_tool_payload(tools: list[ToolSpec], *, strict: bool = False) -> list[dict[str, Any]]:
+    def build_tool_payload(tools: list[ToolSpec], *, strict: bool = False) -> list[JsonObject]:
         """Convert ToolSpec list to OpenAI function-calling payload format.
 
         Args:
@@ -62,7 +62,7 @@ class PromptBuilder:
         """
         payload = []
         for tool in tools:
-            entry: dict[str, Any] = {
+            entry: JsonObject = {
                 "type": "function",
                 "function": {
                     "name": tool.name,
@@ -159,4 +159,3 @@ class PromptBuilder:
         if not system_msgs:
             return model_messages
         return system_msgs + model_messages
-

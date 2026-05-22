@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -14,7 +14,7 @@ class EvalCase:
     query: str
     expected_chunks: list[str] = field(default_factory=list)
     expected_answer: str = ""
-    expected_annotation: dict[str, Any] = field(default_factory=dict)
+    expected_annotation: JsonObject = field(default_factory=dict)
     tags: list[str] = field(default_factory=list)
 
 

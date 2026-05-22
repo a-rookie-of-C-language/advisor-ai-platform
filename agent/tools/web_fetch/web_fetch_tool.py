@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from agent.types import JsonObject
 import trafilatura
 from pydantic import BaseModel
 
@@ -35,7 +36,7 @@ class WebFetchTool(BaseTool[WebFetchInput, BaseModel]):
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 
-    async def execute(self, tool_input: WebFetchInput, context: dict[str, object]) -> ToolResult:
+    async def execute(self, tool_input: WebFetchInput, context: JsonObject) -> ToolResult:
         _ = context
         url = tool_input.url.strip()
         if not url:

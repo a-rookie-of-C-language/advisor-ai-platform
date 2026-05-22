@@ -1,25 +1,25 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
 class EvalReport:
     """评估报告。"""
 
-    meta: dict[str, Any] = field(default_factory=dict)
-    summary: dict[str, Any] = field(default_factory=dict)
-    cases: list[dict[str, Any]] = field(default_factory=list)
+    meta: JsonObject = field(default_factory=dict)
+    summary: JsonObject = field(default_factory=dict)
+    cases: list[JsonObject] = field(default_factory=list)
 
     @classmethod
     def create(
         cls,
         dataset_name: str,
-        config: dict[str, Any] | None = None,
+        config: JsonObject | None = None,
     ) -> EvalReport:
         """创建新的评估报告。"""
         return cls(
@@ -32,7 +32,7 @@ class EvalReport:
             cases=[],
         )
 
-    def add_case_result(self, case_result: dict[str, Any]) -> None:
+    def add_case_result(self, case_result: JsonObject) -> None:
         """添加单个 case 的评估结果。"""
         self.cases.append(case_result)
 

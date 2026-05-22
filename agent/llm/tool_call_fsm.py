@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class ToolCallState(Enum):
 class ToolCallContext:
     tool_name: str
     args_text: str = ""
-    tool_args: dict[str, Any] = field(default_factory=dict)
+    tool_args: JsonObject = field(default_factory=dict)
     tool_output: str = ""
     attempt: int = 0
     last_error: str = ""
@@ -66,7 +66,7 @@ class ToolCallFSM:
     def is_terminal(self) -> bool:
         return self._state in (ToolCallState.DONE, ToolCallState.FAILED)
 
-    def validate_args(self, parsed_args: dict[str, Any] | None) -> bool:
+    def validate_args(self, parsed_args: JsonObject | None) -> bool:
         """Validate parsed tool arguments. Returns True if valid."""
         if self._state not in (ToolCallState.INIT, ToolCallState.ARGS_RETRY):
             logger.warning("tool_call_fsm: validate_args called in state %s", self._state)

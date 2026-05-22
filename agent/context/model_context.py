@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass(slots=True)
 class ContextSegment:
     source: str
     content: str
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JsonObject = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -27,4 +27,3 @@ class ModelContext:
             if segment.content.strip():
                 lines.append(segment.content.strip())
         return "\n".join(lines).strip()
-
