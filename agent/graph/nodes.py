@@ -11,6 +11,7 @@ from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
 from .helpers import (
+    _extract_first_url,
     _inject_fusion_context,
     _parse_skill_names,
     _prefer_rag_only,
@@ -279,7 +280,11 @@ async def decide_tool_node(state: GraphState) -> GraphState:
             )
         else:
             route_categories = runtime.tools.all_categories()
-    if _prefer_rag_only(user_query) and runtime.tools.get("rag_search") is not None:
+    if (
+        _prefer_rag_only(user_query)
+        and not matched_tools
+        and runtime.tools.get("rag_search") is not None
+    ):
         route_categories = {"retrieval"}
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
@@ -389,6 +394,9 @@ async def generate_node(state: GraphState) -> GraphState:
     try:
         if state.get("use_tool"):
             user_query = _strip_surrogates(state.get("user_query", ""))
+            force_fetch_url = ""
+            if "web_fetch" in (state.get("matched_tools", []) or []):
+                force_fetch_url = _extract_first_url(user_query)
 
             fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
             if fusion_context:
@@ -422,6 +430,75 @@ async def generate_node(state: GraphState) -> GraphState:
                 matched_tools,
                 direct_generate,
             )
+
+            # URL is a hard signal: if route matched web_fetch and URL exists, force one fetch first.
+            if force_fetch_url and runtime.tools.get("web_fetch") is not None:
+                logger.info(
+                    "graph_node force_web_fetch: session_id=%s, user_id=%s, url=%s",
+                    state.get("session_id"),
+                    state.get("user_id"),
+                    force_fetch_url[:200],
+                )
+                await _emit(
+                    "tool_use",
+                    {
+                        "tool_name": "web_fetch",
+                        "tool_call_id": "web_fetch-1",
+                        "input": {"url": force_fetch_url, "max_content_length": 4000},
+                    },
+                )
+                forced_output = await _execute_tool(
+                    tool_name="web_fetch",
+                    tool_args={"url": force_fetch_url, "max_content_length": 4000},
+                    state=state,
+                )
+                try:
+                    forced_payload = json.loads(forced_output) if forced_output else {}
+                except Exception:
+                    forced_payload = {}
+                forced_status = str(forced_payload.get("status", "error") or "error")
+                forced_base_payload = {
+                    "tool_name": "web_fetch",
+                    "tool_call_id": "web_fetch-1",
+                    "attempt": 1,
+                    "status": forced_status,
+                    "message": forced_payload.get("message", "tool execute failed"),
+                }
+                if forced_payload.get("ok"):
+                    await _emit(
+                        "tool_result",
+                        {
+                            **forced_base_payload,
+                            "output": forced_payload,
+                            "items": forced_payload.get("items", []),
+                        },
+                    )
+                    forced_items = forced_payload.get("items")
+                    has_items = isinstance(forced_items, list) and bool(forced_items)
+                    if forced_status == "hit" and has_items:
+                        first_item = forced_items[0] if isinstance(forced_items[0], dict) else {}
+                        content = str(first_item.get("content", "") or first_item.get("snippet", "") or "")
+                        if content:
+                            fetch_context = ChatMessage(
+                                role="system",
+                                content=(
+                                    "已获取用户给定 URL 的页面内容，请优先基于该内容回答；"
+                                    "若内容不完整再明确说明缺失点。\n\n"
+                                    f"URL: {force_fetch_url}\n"
+                                    f"内容摘录:\n{content[:4000]}"
+                                ),
+                            )
+                            model_messages = [fetch_context] + model_messages
+                            direct_generate = True
+                else:
+                    await _emit(
+                        "tool_error",
+                        {
+                            **forced_base_payload,
+                            "code": forced_status,
+                            "retryable": False,
+                        },
+                    )
 
             if direct_generate:
                 async for delta in runtime.provider.stream_chat(model_messages):
@@ -806,7 +883,6 @@ async def flush_memory_node(state: GraphState) -> GraphState:
             assistant_text=answer,
             recent_messages=[{"role": item.role, "content": item.content} for item in messages]
             + [{"role": "assistant", "content": answer}],
-            llm_extractor=runtime.llm_extractor,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Memory flush failed, skip writeback: %s", exc)

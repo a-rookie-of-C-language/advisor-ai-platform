@@ -72,3 +72,23 @@ class WebFetchTool(BaseTool[WebFetchInput, BaseModel]):
             "content": text,
             "source": "web",
         }
+
+    def get_query_patterns(self) -> list[str]:
+        return [
+            r"https?://\\S+",
+            r"(?:summarize|analyze|extract|read).*(?:https?://\\S+)",
+            r"(?:总结|分析|提取|读取).*(?:https?://\\S+)",
+        ]
+
+    def get_semantic_keywords(self) -> list[str]:
+        return [
+            "http://",
+            "https://",
+            "url",
+            "link",
+            "网页",
+            "页面",
+            "文章",
+            "pdf",
+            "原文",
+        ]

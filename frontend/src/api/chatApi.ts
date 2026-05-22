@@ -226,7 +226,7 @@ export const chatApi = {
             } else if (parsed.event === 'sys_progress') {
               const elapsedSec = typeof data.elapsed_sec === 'number' ? data.elapsed_sec : undefined
               handlers.onProgress?.(data.message ?? '模型思考中，请稍候...', elapsedSec)
-            } else if (parsed.event === 'llm_delta' && data.text) {
+            } else if ((parsed.event === 'llm_delta' || parsed.event === 'llm_data') && data.text) {
               sawDelta = true
               handlers.onDelta?.(data.text)
             } else if (parsed.event === 'tool_use') {

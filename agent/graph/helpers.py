@@ -13,6 +13,8 @@ from .state import GraphState
 
 logger = logging.getLogger(__name__)
 
+_URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
+
 _RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
 _REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
 
@@ -31,6 +33,11 @@ def _prefer_rag_only(query: str) -> bool:
     has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
     return has_rag_hint and not has_realtime_hint
 
+
+
+def _extract_first_url(text: str) -> str:
+    match = _URL_PATTERN.search(text or "")
+    return match.group(0) if match else ""
 
 def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[str]:
     match = re.search(r"\[.*?\]", text, re.DOTALL)

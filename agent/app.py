@@ -432,13 +432,13 @@ async def _run_cli_loop(service: ChatStreamService) -> None:
                 event_name = str(parsed.get("event", ""))
                 data = parsed.get("data", {})
 
-                if event_name == "delta":
+                if event_name in {"llm_data", "delta"}:
                     text = str(data.get("text", ""))
                     answer_parts.append(text)
                     print(text, end="", flush=True)
-                elif event_name == "done":
+                elif event_name in {"sys_done", "done"}:
                     print()
-                elif event_name == "error":
+                elif event_name in {"sys_error", "error"}:
                     print(f"\n[error] {data.get('message', '')}")
                 elif event_name == "progress":
                     message = data.get("message", "")

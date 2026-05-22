@@ -186,7 +186,6 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     AtomicBoolean firstChunkReceived = new AtomicBoolean(false);
     AtomicBoolean firstChunkTimedOut = new AtomicBoolean(false);
     AtomicBoolean sawDoneEvent = new AtomicBoolean(false);
-    AtomicBoolean sawEndEvent = new AtomicBoolean(false);
     AtomicBoolean sawErrorEvent = new AtomicBoolean(false);
     List<ChatMessageDO.SourceReference> sources = new ArrayList<>();
 
@@ -223,13 +222,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
           int before = deltaCount;
           deltaCount +=
               collectDeltaAndAnswer(
-                  sseBuffer,
-                  deltaPreview,
-                  assistantText,
-                  sources,
-                  sawDoneEvent,
-                  sawEndEvent,
-                  sawErrorEvent);
+                  sseBuffer, deltaPreview, assistantText, sources, sawDoneEvent, sawErrorEvent);
           if (!firstDeltaLogged && deltaCount > before) {
             firstDeltaLogged = true;
             log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
@@ -262,36 +255,31 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     } finally {
       if (debugStream) {
         log.info(
-            "debug_stream java done: deltas={}, sawDone={}, sawEnd={}, sawError={}, answer_preview={}",
+            "debug_stream java done: deltas={}, sawDone={}, sawError={}, answer_preview={}",
             deltaCount,
             sawDoneEvent.get(),
-            sawEndEvent.get(),
             sawErrorEvent.get(),
             deltaPreview);
       }
     }
 
     String finishReason =
-        sawDoneEvent.get()
-            ? "done"
-            : (sawEndEvent.get() ? "end" : (sawErrorEvent.get() ? "error" : "stream_closed"));
+        sawDoneEvent.get() ? "sys_done" : (sawErrorEvent.get() ? "sys_error" : "stream_closed");
     if (deltaCount == 0) {
       log.warn(
-          "agent_proxy invalid_stream_no_delta, finishReason={}, sawDone={}, sawEnd={}, sawError={}, elapsedMs={}",
+          "agent_proxy invalid_stream_no_delta, finishReason={}, sawDone={}, sawError={}, elapsedMs={}",
           finishReason,
           sawDoneEvent.get(),
-          sawEndEvent.get(),
           sawErrorEvent.get(),
           elapsedSince(startAt));
       throw new BadRequestException("agent stream failed: no delta");
     }
     log.info(
-        "agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawEnd={}, sawError={}, elapsedMs={}",
+        "agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawError={}, elapsedMs={}",
         deltaCount,
         assistantText.length(),
         finishReason,
         sawDoneEvent.get(),
-        sawEndEvent.get(),
         sawErrorEvent.get(),
         elapsedSince(startAt));
 
@@ -304,7 +292,6 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       StringBuilder assistantText,
       List<ChatMessageDO.SourceReference> sources,
       AtomicBoolean sawDoneEvent,
-      AtomicBoolean sawEndEvent,
       AtomicBoolean sawErrorEvent) {
     int count = 0;
     int blockEnd;
@@ -312,11 +299,9 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       String block = sseBuffer.substring(0, blockEnd);
       sseBuffer.delete(0, blockEnd + 2);
       String eventName = extractEventName(block);
-      if ("done".equals(eventName)) {
+      if ("sys_done".equals(eventName)) {
         sawDoneEvent.set(true);
-      } else if ("end".equals(eventName)) {
-        sawEndEvent.set(true);
-      } else if ("error".equals(eventName)) {
+      } else if ("sys_error".equals(eventName)) {
         sawErrorEvent.set(true);
       } else if ("sources".equals(eventName)) {
         sources.clear();
@@ -369,15 +354,12 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
     try {
       JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      if ("delta".equals(event)) {
-        return node.path("text").asText("");
-      }
-      if ("raw".equals(event)) {
-        String content = node.path("choices").path(0).path("delta").path("content").asText("");
-        if (!content.isBlank()) {
-          return content;
+      if ("llm_data".equals(event)) {
+        String text = node.path("payload").path("text").asText("");
+        if (text.isBlank()) {
+          text = node.path("text").asText("");
         }
-        return node.path("choices").path(0).path("message").path("content").asText("");
+        return text;
       }
       return null;
     } catch (Exception e) {
@@ -405,7 +387,10 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
     try {
       JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      JsonNode items = node.path("items");
+      JsonNode items = node.path("payload").path("items");
+      if (items.isMissingNode()) {
+        items = node.path("items");
+      }
       if (!items.isArray()) {
         return List.of();
       }

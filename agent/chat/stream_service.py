@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
@@ -45,6 +46,7 @@ _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
 _EVENT_VERSION = "1.0"
+_URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
 
 def _u(*codes: int) -> str:
     return "".join(chr(code) for code in codes)
@@ -118,8 +120,6 @@ class ChatStreamService:
         self._compaction_subagent = ContextCompactionSubAgent(self._provider)
         self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
-        self._web_search_subagent = self._build_web_search_subagent()
-        self._web_fetch_subagent = self._build_web_fetch_subagent()
         self._tool_permission = PermissionConfig.from_allowed_tools(
             {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
              ToolPermission.MEMORY_WRITE},
@@ -154,6 +154,8 @@ class ChatStreamService:
             self._tools.register(tool)
         # 注册工具到意图路由器，用于查询模式匹配
         self._intent_router = IntentRouter()
+        self._web_search_subagent = self._build_web_search_subagent()
+        self._web_fetch_subagent = self._build_web_fetch_subagent()
         self._intent_router.register_tools(tools)
         self._skill_registry = build_default_registry()
         self._tools.register(ExpandSkillTool(self._skill_registry))
@@ -369,6 +371,11 @@ class ChatStreamService:
                 return message.content
         return ""
 
+    @staticmethod
+    def _extract_first_url(text: str) -> str:
+        found = _URL_PATTERN.search(text or "")
+        return found.group(0) if found else ""
+
 
     @staticmethod
     def _parse_serialized_event(raw: str) -> dict[str, object]:
@@ -415,7 +422,7 @@ class ChatStreamService:
                         event="sys_progress",
                         source="system",
                         trace_id=trace_id,
-                        payload={"message": "妯″瀷鎬濊€冧腑锛岃绋嶅€?..", "elapsed_sec": progress_seconds},
+                        payload={"message": "思考模式中考量中，请稍候...", "elapsed_sec": progress_seconds},
                     )
                 continue
             except StopAsyncIteration:
@@ -431,7 +438,7 @@ class ChatStreamService:
 
             parsed = self._parse_serialized_event(event)
             event_name = str(parsed.get("event", ""))
-            if event_name in {"llm_delta", "raw"}:
+            if event_name in {"llm_data", "llm_delta", "raw", "delta"}:
                 saw_delta = True
             if event_name == "error":
                 saw_error = True
@@ -492,10 +499,48 @@ class ChatStreamService:
         if idempotency_key:
             context["idempotency_key"] = idempotency_key
         try:
+            if tool_name == "web_fetch":
+                try:
+                    fetch_result = (
+                        await self._execute_web_fetch_via_subagent(tool_args)
+                        if self._web_fetch_subagent is not None
+                        else await self._tools.execute(tool_name, tool_args, context)
+                    )
+                except Exception:
+                    fetch_result = json.dumps(
+                        {
+                            "ok": False,
+                            "status": "error",
+                            "message": "web_fetch_exception",
+                            "items": [],
+                        }
+                    )
+                try:
+                    payload = json.loads(fetch_result)
+                except Exception:
+                    payload = {}
+                status = str(payload.get("status", "") or "")
+                ok = bool(payload.get("ok", False))
+                items = payload.get("items")
+                has_items = isinstance(items, list) and bool(items)
+                if ok and status == "hit" and has_items:
+                    return fetch_result
+                if self._web_search_subagent is None:
+                    return fetch_result
+                fallback_query = str(tool_args.get("url", "") or user_query).strip()
+                if not fallback_query:
+                    return fetch_result
+                logger.info(
+                    "tool_fallback web_fetch->web_search: session_id=%s, user_id=%s, query=%s",
+                    session_id,
+                    user_id,
+                    fallback_query[:120],
+                )
+                return await self._execute_web_search_via_subagent(
+                    {"query": fallback_query, "max_results": 5}
+                )
             if tool_name == "web_search" and self._web_search_subagent is not None:
                 return await self._execute_web_search_via_subagent(tool_args)
-            if tool_name == "web_fetch" and self._web_fetch_subagent is not None:
-                return await self._execute_web_fetch_via_subagent(tool_args)
             return await self._tools.execute(tool_name, tool_args, context)
         except Exception:
             logger.exception(
@@ -714,19 +759,26 @@ class ChatStreamService:
             ):
                 raw_event_name = str(event.get("event", ""))
                 event_name = {
-                    "delta": "llm_delta",
+                    "delta": "llm_data",
                     "sources": "tool_result",
                     "error": "sys_error",
                     "done": "sys_done",
                     "start": "sys_start",
                 }.get(raw_event_name, raw_event_name)
                 event_data = event.get("data", {})
-                if event_name in {"llm_delta", "raw"} and isinstance(event_data, dict):
+                if event_name in {"llm_data", "llm_delta", "raw"} and isinstance(event_data, dict):
                     text = str(event_data.get("text", "") or event_data.get("raw", ""))
                     if text:
                         saw_content = True
+                        yield self._serialize_protocol_event(
+                            event="llm_data",
+                            source="llm",
+                            trace_id=trace_id,
+                            payload={"text": text},
+                        )
+                        continue
                 event_source = (
-                    "llm" if event_name == "llm_delta"
+                    "llm" if event_name in {"llm_data", "llm_delta"}
                     else ("tool" if event_name.startswith("tool_") else "system")
                 )
                 yield self._serialize_protocol_event(
@@ -859,8 +911,12 @@ class ChatStreamService:
                     all_cats,
                     provider=self._provider,
                 )
-                tools = self._tools.specs_by_categories(route_decision.categories)
-                if self._prefer_rag_only(user_query):
+                matched_tools = list(route_decision.matched_tools) if route_decision.matched_tools else []
+                if matched_tools:
+                    tools = self._tools.specs_by_names(matched_tools)
+                else:
+                    tools = self._tools.specs_by_categories(route_decision.categories)
+                if self._prefer_rag_only(user_query) and not matched_tools:
                     rag_tool = self._tools.get("rag_search")
                     if rag_tool is not None:
                         tools = [rag_tool.to_tool_spec()]
@@ -888,6 +944,100 @@ class ChatStreamService:
                         turn_id=turn_id,
                         idempotency_key=kwargs.get("idempotency_key"),
                     )
+
+                force_fetch_url = ""
+                if matched_tools and "web_fetch" in matched_tools:
+                    force_fetch_url = self._extract_first_url(user_query)
+                if force_fetch_url:
+                    yield self._serialize_protocol_event(
+                        event="tool_use",
+                        source="tool",
+                        trace_id=trace_id,
+                        payload={
+                            "tool_name": "web_fetch",
+                            "tool_call_id": "web_fetch-1",
+                            "input": {"url": force_fetch_url, "max_content_length": 4000},
+                        },
+                    )
+                    raw_output = await tool_executor(
+                        "web_fetch",
+                        {"url": force_fetch_url, "max_content_length": 4000},
+                    )
+                    try:
+                        payload = json.loads(raw_output) if raw_output else {}
+                    except Exception:
+                        payload = {}
+                    status = payload.get("status", "error")
+                    base_payload = {
+                        "tool_name": "web_fetch",
+                        "tool_call_id": "web_fetch-1",
+                        "attempt": 1,
+                        "status": status,
+                        "message": payload.get("message", "tool execute failed"),
+                    }
+                    if payload.get("ok"):
+                        yield self._serialize_protocol_event(
+                            event="tool_result",
+                            source="tool",
+                            trace_id=trace_id,
+                            payload={
+                                **base_payload,
+                                "output": payload,
+                                "items": payload.get("items", []),
+                            },
+                        )
+                    else:
+                        yield self._serialize_protocol_event(
+                            event="tool_error",
+                            source="tool",
+                            trace_id=trace_id,
+                            payload={
+                                **base_payload,
+                                "code": status,
+                                "retryable": False,
+                            },
+                        )
+                    fetched_items = payload.get("items", [])
+                    if isinstance(fetched_items, list) and fetched_items:
+                        first = fetched_items[0] if isinstance(fetched_items[0], dict) else {}
+                        content = str(first.get("content", "") or "").strip()
+                        if content:
+                            model_messages = PromptBuilder.assemble_messages(
+                                model_messages,
+                                dynamic_prompts=[
+                                    "请严格基于以下网页原文回答，并明确标注不确定处：\n" + content[:4000]
+                                ],
+                            )
+                    async for delta in self._provider.stream_chat(model_messages):
+                        answer_parts.append(delta)
+                        if self._debug_stream and debug_chars < debug_limit:
+                            remain = debug_limit - debug_chars
+                            piece = delta[:remain]
+                            if piece:
+                                debug_preview.append(piece)
+                                debug_chars += len(piece)
+                        if self._debug_stream:
+                            debug_delta_count += 1
+                        yield self._serialize_protocol_event(
+                            event="llm_data",
+                            source="llm",
+                            trace_id=trace_id,
+                            payload={"text": delta},
+                        )
+                    answer = "".join(answer_parts).strip()
+                    if self._debug_stream:
+                        logger.info(
+                            "debug_stream python done: deltas=%s, answer_preview=%s",
+                            debug_delta_count,
+                            "".join(debug_preview),
+                        )
+                    yield self._serialize_protocol_event(
+                        event="sys_done",
+                        source="system",
+                        trace_id=trace_id,
+                        payload={"finish_reason": "stream_finished"},
+                    )
+                    return
 
                 async for event in self._provider.stream_chat_with_tools(
                     model_messages,
@@ -959,7 +1109,7 @@ class ChatStreamService:
                     if self._debug_stream:
                         debug_delta_count += 1
                     yield self._serialize_protocol_event(
-                        event="llm_delta",
+                        event="llm_data",
                         source="llm",
                         trace_id=trace_id,
                         payload={"text": delta},
@@ -996,7 +1146,7 @@ class ChatStreamService:
                     if self._debug_stream:
                         debug_delta_count += 1
                     yield self._serialize_protocol_event(
-                        event="llm_delta",
+                        event="llm_data",
                         source="llm",
                         trace_id=trace_id,
                         payload={"text": delta},
@@ -1101,5 +1251,3 @@ class ChatStreamService:
         except Exception as exc:  # noqa: BLE001
             logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
             return ""
-
-

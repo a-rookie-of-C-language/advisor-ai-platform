@@ -48,7 +48,8 @@ class WebFetchSubAgent(WebToolSubAgent):
                 filtered_reason="no content extracted",
             )
 
-        content = raw_result.items[0].get("content", "")
+        first_item = raw_result.items[0]
+        content = str(first_item.get("content", "") or "")
         judgment = await self._judge(content)
 
         return WebFetchResult(

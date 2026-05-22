@@ -36,7 +36,7 @@ async def test_query_engine_appends_done_when_missing() -> None:
     events = [event async for event in engine.query(context)]
 
     assert len(events) == 2
-    assert events[0].startswith("event: llm_delta")
+    assert events[0].startswith("event: llm_data")
     assert events[1].startswith("event: sys_done")
     assert '"finish_reason": "stream_finished"' in events[1]
 
