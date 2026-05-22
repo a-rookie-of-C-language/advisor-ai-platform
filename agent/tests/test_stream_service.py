@@ -7,6 +7,7 @@ import pytest
 
 from chat.stream_service import ChatStreamService
 from context.memory.core.schema import MemoryContext
+from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
 from llm.tool_spec import ToolSpec
@@ -164,6 +165,81 @@ class _ProviderRouteCapture:
         _ = kwargs
         self.last_tools = list(tools)
         yield LLMStreamEvent(type="delta", text="answer")
+
+
+class _ProviderRouteJsonThenAnswer:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+        if kwargs.get("response_format"):
+            yield json.dumps({"categories": [], "confidence": 0.0, "reason": "fallback"})
+            return
+        yield "这些学生包括张三、李四。"
+
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+        **kwargs: object,
+    ) -> AsyncIterator[LLMStreamEvent]:
+        _ = messages
+        _ = tools
+        _ = tool_executor
+        _ = max_tool_calls
+        _ = max_tool_retries
+        _ = kwargs
+        yield LLMStreamEvent(type="delta", text="should not use main tool loop")
+
+
+class _ExplorerUsed:
+    async def explore(self, **kwargs: object) -> ToolExplorerOutcome:
+        _ = kwargs
+        return ToolExplorerOutcome(
+            used=True,
+            sufficient=True,
+            summary="已查询学生名单。",
+            evidence=[{"tool_name": "mcp__student__list_students", "items": [{"text": "张三、李四"}]}],
+            tool_calls=[{"tool_name": "mcp__student__list_students", "arguments": {}}],
+            events=[
+                ToolExplorerEvent(
+                    event="sys_tool_plan",
+                    payload={
+                        "step": 1,
+                        "action": "call_tool",
+                        "tool_name": "mcp__student__list_students",
+                        "tool_call_id": "tool_explorer-1-mcp__student__list_students",
+                        "arguments": {},
+                        "reason": "追问学生名单",
+                    },
+                ),
+                ToolExplorerEvent(
+                    event="tool_use",
+                    payload={
+                        "tool_name": "mcp__student__list_students",
+                        "tool_call_id": "tool_explorer-1-mcp__student__list_students",
+                        "input": {},
+                    },
+                ),
+                ToolExplorerEvent(
+                    event="tool_result",
+                    payload={
+                        "tool_name": "mcp__student__list_students",
+                        "tool_call_id": "tool_explorer-1-mcp__student__list_students",
+                        "attempt": 1,
+                        "status": "success",
+                        "message": "共 2 条记录",
+                        "output": {
+                            "ok": True,
+                            "status": "success",
+                            "message": "共 2 条记录",
+                            "items": [{"type": "text", "text": "张三、李四"}],
+                        },
+                    },
+                ),
+            ],
+        )
 
 
 class _RagMiss:
@@ -348,6 +424,31 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
     assert parsed[1][1]["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
     assert parsed[2][1]["status"] == "error"
     assert parsed[2][1]["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_stream_follow_up_question_uses_tool_explorer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ENABLED_TOOLS", raising=False)
+    service = ChatStreamService(
+        provider=_ProviderRouteJsonThenAnswer(),
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    service._use_langgraph = False
+    service._tool_explorer_subagent = _ExplorerUsed()
+
+    messages = [
+        ChatMessage(role="user", content="那有多少学生?"),
+        ChatMessage(role="assistant", content="现在共有 20 名学生。"),
+        ChatMessage(role="user", content="具体是哪些?"),
+    ]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    event_names = [_parse_event_name(e) for e in events]
+
+    assert "sys_tool_plan" in event_names
+    assert "tool_use" in event_names
+    assert "tool_result" in event_names
+    assert "llm_data" in event_names
 
 
 @pytest.mark.asyncio
