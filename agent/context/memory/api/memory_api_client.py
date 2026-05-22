@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 
 import httpx
 

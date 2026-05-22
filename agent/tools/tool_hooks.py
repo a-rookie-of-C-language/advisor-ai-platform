@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Awaitable, Callable
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 
 from tools.tool_result import ToolResult
 

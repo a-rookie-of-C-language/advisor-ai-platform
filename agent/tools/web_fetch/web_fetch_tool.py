@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 import trafilatura
 from pydantic import BaseModel
 

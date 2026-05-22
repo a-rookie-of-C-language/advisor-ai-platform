@@ -9,7 +9,7 @@ import os
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field

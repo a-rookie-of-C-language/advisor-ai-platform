@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent

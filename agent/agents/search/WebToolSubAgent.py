@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent.types import JsonObject, JsonValue, SupportsModelDump
+from agent.json_types import JsonObject, JsonValue, SupportsModelDump
 import logging
 from typing import TYPE_CHECKING
 

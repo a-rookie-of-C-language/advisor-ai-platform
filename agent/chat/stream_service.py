@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent

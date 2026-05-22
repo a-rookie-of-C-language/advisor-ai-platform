@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from pydantic import BaseModel, Field
 
 from llm.tool_spec import ToolSpec

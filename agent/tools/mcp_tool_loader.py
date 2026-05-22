@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Protocol, cast
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.mcp_client_pool import McpClientPool, McpServerConfig
 from tools.mcp_tool_adapter import McpToolAdapter

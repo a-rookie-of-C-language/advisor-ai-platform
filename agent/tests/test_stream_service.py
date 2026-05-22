@@ -4,7 +4,7 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
-from agent.types import JsonValue
+from agent.json_types import JsonValue
 
 from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
 from chat.stream_service import ChatStreamService
@@ -480,9 +480,10 @@ async def test_stream_tool_route_prefers_search_for_latest_query(monkeypatch: py
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
     parsed = [_parse_event(event) for event in events]
     event_names = [_parse_event_name(e) for e in events]
-    route_payload = parsed[2][1]
 
     assert set(event_names) >= {"sys_start", "sys_intent_route", "llm_data", "sys_done"}
+    route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
+    assert route_payload is not None
     _assert_search_route_payload(route_payload)
     assert {tool.name for tool in provider.last_tools} == {"rag_search"}
 

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from typing import Optional
 

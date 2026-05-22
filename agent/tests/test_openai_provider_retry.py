@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 from types import SimpleNamespace
 
 import pytest

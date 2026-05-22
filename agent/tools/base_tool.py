@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Generic, Literal, TypeVar
 
-from agent.types import JsonObject
+from agent.json_types import JsonObject
 from pydantic import BaseModel, ValidationError
 
 from llm.tool_spec import ToolSpec

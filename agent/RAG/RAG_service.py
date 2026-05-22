@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent.types import JsonObject, JsonValue
+from agent.json_types import JsonObject, JsonValue
 import re
 import time
 import unicodedata

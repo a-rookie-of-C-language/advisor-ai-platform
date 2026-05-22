@@ -4,7 +4,7 @@ import json
 from typing import AsyncIterator, Iterable
 
 import pytest
-from agent.types import JsonValue
+from agent.json_types import JsonValue
 
 from agents.tool_explorer import ToolExplorerSubAgent
 from llm.chat_message import ChatMessage
