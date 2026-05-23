@@ -11,6 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -56,5 +57,15 @@ public class ChatMessageDO {
     private Long documentId;
     private String docName;
     private String snippet;
+  }
+
+  @Data
+  @NoArgsConstructor
+  public static class StreamEventRecord {
+    private String event;
+    private String source;
+    private String traceId;
+    private Long timestamp;
+    private Map<String, Object> payload;
   }
 }

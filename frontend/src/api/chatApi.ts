@@ -13,6 +13,8 @@ export interface ChatMessageDTO {
   id: number
   role: 'user' | 'assistant'
   content: string
+  sources?: StreamSourceItem[]
+  events?: StreamEventRecord[]
 }
 
 export interface ChatStreamMessageDTO {
@@ -26,6 +28,7 @@ export interface ChatSendResponseDTO {
   role: 'assistant'
   content: string
   sources?: Array<{ id: number; docName: string; snippet: string }>
+  events?: StreamEventRecord[]
 }
 
 interface ApiResponse<T> {
@@ -78,8 +81,17 @@ export interface StreamEventData extends Record<string, unknown> {
   }
 }
 
+export interface StreamEventRecord {
+  event: string
+  source?: string
+  traceId?: string
+  timestamp?: number
+  payload?: StreamEventData
+}
+
 interface StreamHandlers {
   onStart?: () => void
+  onEvent?: (data: { event: string; payload: StreamEventData }) => void
   onProgress?: (message: string, elapsedSec?: number) => void
   onReasoningDelta?: (text: string) => void
   onDelta?: (text: string) => void
@@ -239,6 +251,7 @@ export const chatApi = {
             resetIdleTimer()
 
             const data = parseStreamData(parsed.data)
+            handlers.onEvent?.({ event: parsed.event, payload: data })
 
             const eventHandlers: Partial<Record<string, (payload: StreamEventData) => void>> = {
               sys_start: () => {

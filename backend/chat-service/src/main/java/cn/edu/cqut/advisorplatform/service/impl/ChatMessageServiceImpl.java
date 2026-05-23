@@ -39,7 +39,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
       @Nullable String turnId,
       @Nullable String userContent,
       @Nullable String assistantContent,
-      @Nullable List<SourceReference> sources) {
+      @Nullable List<SourceReference> sources,
+      @Nullable List<ChatMessageDO.StreamEventRecord> events) {
     ChatSessionDO session = getOwnedSession(sessionId, userId);
 
     String safeTurnId = turnId == null ? "" : turnId.trim();
@@ -68,12 +69,18 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     if (!safeUserContent.isBlank()
         && !chatMessageDao.existsBySessionIdAndTurnIdAndRole(sessionId, safeTurnId, ROLE_USER)) {
-      insertMessage(session, safeTurnId, ROLE_USER, safeUserContent, null, now);
+      insertMessage(session, safeTurnId, ROLE_USER, safeUserContent, null, null, now);
     }
 
     if (!chatMessageDao.existsBySessionIdAndTurnIdAndRole(sessionId, safeTurnId, ROLE_ASSISTANT)) {
       insertMessage(
-          session, safeTurnId, ROLE_ASSISTANT, safeAssistantContent, sources, assistantCreatedAt);
+          session,
+          safeTurnId,
+          ROLE_ASSISTANT,
+          safeAssistantContent,
+          sources,
+          events,
+          assistantCreatedAt);
     }
 
     if (shouldInitTitle) {
@@ -124,6 +131,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
       String role,
       String content,
       @Nullable java.util.List<ChatMessageDO.SourceReference> sources,
+      @Nullable java.util.List<ChatMessageDO.StreamEventRecord> events,
       LocalDateTime createdAt) {
     ChatMessageDO message = new ChatMessageDO();
     message.setSession(session);
@@ -131,6 +139,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     message.setRole(role);
     message.setContent(content);
     message.setSources(sources);
+    message.setEvents(events);
     message.setCreatedAt(createdAt);
     try {
       chatMessageDao.save(message);
@@ -163,6 +172,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
       @Nullable String turnId,
       @Nullable String userContent,
       @Nullable String assistantContent) {
-    saveTurn(sessionId, userId, turnId, userContent, assistantContent, null);
+    saveTurn(sessionId, userId, turnId, userContent, assistantContent, null, null);
   }
 }
