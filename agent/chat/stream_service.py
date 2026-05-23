@@ -25,7 +25,7 @@ from fusion.conflict_detect import ConflictDetectStrategy
 from fusion.registry import SourcePriorityRegistry
 from fusion.source_weight import SourceWeightStrategy
 from fusion.time_decay import TimeDecayStrategy
-from graph.helpers import _build_rag_context_prompt, _should_force_education_rag
+from graph.helpers import _should_force_education_rag
 from graph.runner import GraphRunner
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
@@ -560,6 +560,19 @@ class ChatStreamService:
         recent_text = "\n".join((message.content or "") for message in list(messages)[-4:]).lower()
         follow_up_hints = ("他们", "这些", "那些", "这个", "那个", "都有哪些")
         return any(hint in normalized for hint in follow_up_hints) and bool(recent_text)
+
+    @staticmethod
+    def _has_planned_tool_steps(task_plan: JsonObject) -> bool:
+        if not task_plan or not isinstance(task_plan, dict):
+            return False
+        raw_steps = task_plan.get("steps", [])
+        if not isinstance(raw_steps, list):
+            return False
+        return any(
+            isinstance(step, dict)
+            and str(step.get("action", "")).strip().lower() == "call_tool"
+            for step in raw_steps
+        )
 
     @staticmethod
     def _build_explorer_context(outcome) -> str:
@@ -1155,6 +1168,7 @@ class ChatStreamService:
                     payload=route_payload,
                 )
                 task_plan: JsonObject = {}
+                education_domain = _should_force_education_rag(user_query) and self._tools.get("rag_search") is not None
                 if self._task_planner_subagent is not None:
                     try:
                         task_plan = await self._task_planner_subagent.plan(
@@ -1166,6 +1180,8 @@ class ChatStreamService:
                                 "matched_tools": matched_tools,
                                 "matched_by": route_decision.matched_by,
                                 "confidence": route_decision.confidence,
+                                "education_domain": education_domain,
+                                "preferred_tools": ["rag_search"] if education_domain else [],
                             },
                         )
                         yield self._serialize_protocol_event(
@@ -1193,7 +1209,7 @@ class ChatStreamService:
                 force_fetch_url = ""
                 if matched_tools and "web_fetch" in matched_tools:
                     force_fetch_url = self._extract_first_url(user_query)
-                if force_fetch_url and not force_rag:
+                if force_fetch_url:
                     yield self._serialize_protocol_event(
                         event="tool_use",
                         source="tool",

@@ -5,10 +5,10 @@ import logging
 from typing import Awaitable, Callable
 
 from agents.base.subagent import SubAgent
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
 from agents.tool_explorer.ToolExplorerOutcome import ToolExplorerOutcome
 from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
-from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
@@ -68,7 +68,8 @@ class ToolExplorerSubAgent(SubAgent):
         tool_calls: list[JsonObject] = []
         observations: list[JsonObject] = []
 
-        for step_index in range(1, self._max_steps + 1):
+        max_steps = self._resolve_max_steps(task_plan)
+        for step_index in range(1, max_steps + 1):
             step = self._planned_step(
                 task_plan=task_plan,
                 available_tools=read_only_tools,
@@ -348,6 +349,22 @@ class ToolExplorerSubAgent(SubAgent):
             )
 
         return None
+
+    def _resolve_max_steps(self, task_plan: JsonObject | None) -> int:
+        if not task_plan or not isinstance(task_plan, dict):
+            return self._max_steps
+        if str(task_plan.get("source", "")).strip().lower() != "planner":
+            return self._max_steps
+        raw_steps = task_plan.get("steps", [])
+        if not isinstance(raw_steps, list):
+            return self._max_steps
+        call_tool_count = sum(
+            1
+            for raw_step in raw_steps
+            if isinstance(raw_step, dict)
+            and str(raw_step.get("action", "")).strip().lower() == "call_tool"
+        )
+        return max(self._max_steps, call_tool_count + 1)
 
     @staticmethod
     def _coerce_step(payload: JsonObject) -> ToolExplorerStep:

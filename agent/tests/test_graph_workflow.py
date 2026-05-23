@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from unittest.mock import patch
@@ -119,7 +119,7 @@ async def _dummy_emit_route_observation(*args, **kwargs):
 
 @patch("graph.nodes.emit_route_observation", new=_dummy_emit_route_observation)
 @patch("graph.nodes._runtime", return_value=_DummyRuntime())
-def test_decide_tool_node_forces_education_rag(mock_runtime):
+def test_decide_tool_node_keeps_route_when_education_domain_matches(mock_runtime):
     _ = mock_runtime
     state: GraphState = {
         "user_query": "高校辅导员素质能力提升怎么做",
@@ -128,6 +128,6 @@ def test_decide_tool_node_forces_education_rag(mock_runtime):
     }
     result = asyncio.run(graph_nodes.decide_tool_node(state))
 
-    assert result["force_rag"] is True
+    assert result["force_rag"] is False
     assert result["route_categories"] == {"retrieval"}
     assert result["use_tool"] is True

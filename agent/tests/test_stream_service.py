@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from types import SimpleNamespace
@@ -526,7 +526,7 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stream_forces_rag_for_education_queries() -> None:
+async def test_stream_uses_planned_rag_for_education_queries() -> None:
     provider = _ProviderOk(["根据知识库内容回答。"])
     service = ChatStreamService(
         provider=provider,
@@ -541,7 +541,7 @@ async def test_stream_forces_rag_for_education_queries() -> None:
     assert set(event_names) >= {
         "sys_start",
         "sys_intent_route",
-        "sys_rag_force",
+        "sys_tool_plan",
         "tool_use",
         "tool_result",
         "llm_data",
@@ -550,7 +550,7 @@ async def test_stream_forces_rag_for_education_queries() -> None:
     rag_result_payload = next((p for e, p in parsed if e == "tool_result" and p.get("tool_name") == "rag_search"), None)
     assert rag_result_payload is not None
     assert rag_result_payload.get("status") == "hit"
-    assert any(msg.role == "system" and "知识库检索结果" in msg.content for msg in provider.last_messages)
+    assert any(msg.role == "system" and "tool explorer" in msg.content for msg in provider.last_messages)
 
 
 @pytest.mark.asyncio
