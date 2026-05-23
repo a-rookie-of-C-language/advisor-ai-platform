@@ -4,6 +4,7 @@ import json
 import logging
 
 from json_types import JsonObject
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
 from safety.regex_filter import StreamingRegexFilter
@@ -99,6 +100,16 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
             "permission_config": runtime.tool_permission,
         },
     )
+
+
+def _should_use_direct_plan(task_plan: JsonObject | None) -> bool:
+    return bool(task_plan) and isinstance(task_plan, dict) and str(task_plan.get("mode", "")).strip().lower() == "direct"
+
+
+def _select_tools_for_plan(tools: list, task_plan: JsonObject | None) -> list:
+    if not task_plan or not isinstance(task_plan, dict):
+        return tools
+    return TaskPlannerSubAgent.prioritize_tools(tools, task_plan)
 
 
 def _filter_tool_result(
@@ -330,6 +341,24 @@ async def decide_tool_node(state: GraphState) -> GraphState:
         route_categories = {"retrieval"}
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
+    task_plan: JsonObject = {}
+    if use_tool and runtime.task_planner_subagent is not None:
+        try:
+            task_plan = await runtime.task_planner_subagent.plan(
+                user_query=user_query,
+                recent_messages=list(state.get("messages", [])),
+                available_tools=runtime.tools.specs(),
+                route_context={
+                    "categories": sorted(route_categories),
+                    "matched_tools": matched_tools,
+                    "force_rag": force_rag,
+                    "web_search_enabled": web_search_enabled,
+                },
+            )
+            await _emit("sys_tool_plan", task_plan)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("graph_node task_plan failed: %s", exc)
+            task_plan = {}
     logger.info(
         "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, "
         "use_tool=%s, route_categories=%s",
@@ -347,6 +376,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
         "use_tool": use_tool,
         "route_categories": route_categories,
         "matched_tools": matched_tools,
+        "task_plan": task_plan,
     }
 
 
@@ -422,6 +452,12 @@ async def generate_node(state: GraphState) -> GraphState:
         state.get("use_tool"),
     )
     model_messages = list(state.get("model_messages", state.get("messages", [])))
+    task_plan = state.get("task_plan", {})
+    if task_plan and isinstance(task_plan, dict):
+        model_messages = PromptBuilder.assemble_messages(
+            model_messages,
+            dynamic_prompts=[TaskPlannerSubAgent.render_plan_prompt(task_plan)],
+        )
     answer_parts: list[str] = []
     debug_preview_parts: list[str] = []
     debug_chars = 0
@@ -435,7 +471,8 @@ async def generate_node(state: GraphState) -> GraphState:
         streaming_filter = runtime.safety_pipeline.create_streaming_filter()
 
     try:
-        if state.get("use_tool"):
+        use_tool = bool(state.get("use_tool")) and not _should_use_direct_plan(task_plan)
+        if use_tool:
             user_query = _strip_surrogates(state.get("user_query", ""))
             force_rag = bool(state.get("force_rag")) and runtime.tools.get("rag_search") is not None
             force_fetch_url = ""
@@ -515,6 +552,10 @@ async def generate_node(state: GraphState) -> GraphState:
                 tools = runtime.tools.specs_by_categories(route_categories)
             else:
                 tools = runtime.tools.specs()
+            if task_plan and isinstance(task_plan, dict):
+                tools = _select_tools_for_plan(runtime.tools.specs(), task_plan)
+            else:
+                tools = _select_tools_for_plan(tools, task_plan)
 
             # 只有在没有匹配特定工具时才考虑 RAG 优先
             # 避免 RAG 优先逻辑覆盖已经正确路由的 MCP 工具

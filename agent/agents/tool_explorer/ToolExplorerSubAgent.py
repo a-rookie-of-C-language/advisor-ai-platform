@@ -8,6 +8,7 @@ from agents.base.subagent import SubAgent
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
 from agents.tool_explorer.ToolExplorerOutcome import ToolExplorerOutcome
 from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
@@ -53,6 +54,7 @@ class ToolExplorerSubAgent(SubAgent):
         candidate_tools: list[ToolSpec],
         initial_route: JsonObject,
         tool_executor: ToolExecutor,
+        task_plan: JsonObject | None = None,
     ) -> ToolExplorerOutcome:
         read_only_tools = self._dedupe_tools(
             [tool for tool in available_tools if tool.is_read_only]
@@ -67,12 +69,18 @@ class ToolExplorerSubAgent(SubAgent):
         observations: list[JsonObject] = []
 
         for step_index in range(1, self._max_steps + 1):
-            step = self._contextual_followup_step(
-                user_query=user_query,
-                recent_messages=recent_messages,
+            step = self._planned_step(
+                task_plan=task_plan,
                 available_tools=read_only_tools,
                 observations=observations,
             )
+            if step is None:
+                step = self._contextual_followup_step(
+                    user_query=user_query,
+                    recent_messages=recent_messages,
+                    available_tools=read_only_tools,
+                    observations=observations,
+                )
             if step is None:
                 step = await self._plan_step(
                     user_query=user_query,
@@ -80,6 +88,7 @@ class ToolExplorerSubAgent(SubAgent):
                     available_tools=read_only_tools,
                     candidate_names=candidate_names,
                     initial_route=initial_route,
+                    task_plan=task_plan,
                     observations=observations,
                 )
 
@@ -213,6 +222,7 @@ class ToolExplorerSubAgent(SubAgent):
         available_tools: list[ToolSpec],
         candidate_names: set[str],
         initial_route: JsonObject,
+        task_plan: JsonObject | None,
         observations: list[JsonObject],
     ) -> ToolExplorerStep:
         prompt = self._build_plan_prompt(
@@ -221,6 +231,7 @@ class ToolExplorerSubAgent(SubAgent):
             available_tools=available_tools,
             candidate_names=candidate_names,
             initial_route=initial_route,
+            task_plan=task_plan,
             observations=observations,
         )
         try:
@@ -272,17 +283,71 @@ class ToolExplorerSubAgent(SubAgent):
         available_tools: list[ToolSpec],
         candidate_names: set[str],
         initial_route: JsonObject,
+        task_plan: JsonObject | None,
         observations: list[JsonObject],
     ) -> str:
         payload = {
             "user_query": user_query,
             "recent_messages": self._compact_messages(recent_messages),
             "initial_route": initial_route,
+            "task_plan": task_plan or {},
+            "task_plan_prompt": TaskPlannerSubAgent.render_plan_prompt(task_plan) if task_plan else "",
             "candidate_tool_names": sorted(candidate_names),
             "available_tools": [self._tool_to_prompt_item(tool) for tool in available_tools],
             "observations": observations,
         }
         return json.dumps(payload, ensure_ascii=False)
+
+    @staticmethod
+    def _planned_step(
+        *,
+        task_plan: JsonObject | None,
+        available_tools: list[ToolSpec],
+        observations: list[JsonObject],
+    ) -> ToolExplorerStep | None:
+        if not task_plan or not isinstance(task_plan, dict):
+            return None
+        if str(task_plan.get("source", "")).strip().lower() != "planner":
+            return None
+        raw_steps = task_plan.get("steps", [])
+        if not isinstance(raw_steps, list) or not raw_steps:
+            return None
+
+        allowed_names = {tool.name for tool in available_tools}
+        executed_names = {
+            str(item.get("tool_name", "")).strip()
+            for item in observations
+            if isinstance(item, dict) and str(item.get("tool_name", "")).strip()
+        }
+
+        for raw_step in raw_steps:
+            if not isinstance(raw_step, dict):
+                continue
+            action = str(raw_step.get("action", "")).strip().lower()
+            if action == "final":
+                return ToolExplorerStep(
+                    action="final",
+                    reason=str(raw_step.get("reason", "")).strip(),
+                    sufficient=bool(raw_step.get("sufficient", True)),
+                    summary=str(raw_step.get("summary", "")).strip(),
+                )
+            if action != "call_tool":
+                continue
+            tool_name = str(raw_step.get("tool_name", "")).strip()
+            if not tool_name or tool_name not in allowed_names or tool_name in executed_names:
+                continue
+            arguments = raw_step.get("arguments", {})
+            if not isinstance(arguments, dict):
+                arguments = {}
+            return ToolExplorerStep(
+                action="call_tool",
+                tool_name=tool_name,
+                arguments=arguments,
+                reason=str(raw_step.get("reason", "")).strip(),
+                sufficient=bool(raw_step.get("sufficient", False)),
+            )
+
+        return None
 
     @staticmethod
     def _coerce_step(payload: JsonObject) -> ToolExplorerStep:
