@@ -140,9 +140,10 @@ class ChatStreamService:
         self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
         self._tool_permission = PermissionConfig.from_allowed_tools(
             {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
-             ToolPermission.MEMORY_WRITE},
-            read_resources={"context", "memory"},
-            write_resources={"memory"},
+             ToolPermission.MEMORY_WRITE, ToolPermission.WORKSPACE_READ,
+             ToolPermission.WORKSPACE_WRITE},
+            read_resources={"context", "memory", "workspace"},
+            write_resources={"memory", "workspace"},
         )
         self._feature_action_scoring = self._read_feature_action_scoring()
         self._feature_failure_memory_inject = self._read_feature_failure_memory_inject()

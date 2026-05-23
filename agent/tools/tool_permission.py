@@ -15,6 +15,8 @@ class ToolPermission(Enum):
     SUMMARIZE = "summarize"
     FILE_READ = "file_read"
     FILE_WRITE = "file_write"
+    WORKSPACE_READ = "workspace_read"
+    WORKSPACE_WRITE = "workspace_write"
 
 
 ToolMode = Literal["allow", "ask", "deny"]

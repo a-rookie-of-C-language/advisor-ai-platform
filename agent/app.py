@@ -23,6 +23,7 @@ from llm.chat_message import ChatMessage
 from llm.provider_factory import build_provider_from_env
 from RAG.DocumentIndexer import DocumentIndexer
 from RAG.RAG_service import RAG_service
+from tools.workspace import WorkspaceManager
 
 load_dotenv(override=True)
 
@@ -161,6 +162,20 @@ def create_api_app() -> FastAPI:
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.post("/workspace/cleanup")
+    async def workspace_cleanup(userId: int | None = None, sessionId: int | None = None) -> dict:
+        """清理 workspace 缓存目录"""
+        manager = WorkspaceManager()
+        result = manager.cleanup_cache(user_id=userId, session_id=sessionId)
+        return {"status": "ok", "cleaned": result}
+
+    @app.get("/workspace/stats")
+    async def workspace_stats(userId: int | None = None, sessionId: int | None = None) -> dict:
+        """获取 workspace 统计信息"""
+        manager = WorkspaceManager()
+        stats = manager.get_stats(user_id=userId, session_id=sessionId)
+        return {"status": "ok", "stats": stats}
 
     @app.get("/graph/health")
     async def graph_health() -> dict:

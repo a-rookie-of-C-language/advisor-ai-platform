@@ -8,6 +8,12 @@ from tools.base_tool import BaseTool
 from tools.memory_read import MemoryReadTool
 from tools.memory_write import MemoryWriteTool
 from tools.rag_search import RAGSearchTool
+from tools.workspace import WorkspaceManager
+from tools.workspace.workspace_edit_tool import WorkspaceEditTool
+from tools.workspace.workspace_list_tool import WorkspaceListTool
+from tools.workspace.workspace_read_tool import WorkspaceReadTool
+from tools.workspace.workspace_write_tool import WorkspaceWriteTool
+from tools.workspace.workspace_create_dir_tool import WorkspaceCreateDirTool
 from tools.web_fetch import WebFetchTool
 from tools.web_search import WebSearchTool
 
@@ -48,7 +54,15 @@ class ToolCatalog:
     ) -> list[BaseTool]:
         _ = rag_service
         _ = memory_client
-        return []
+        tools: list[BaseTool] = []
+        if cls._feature_enabled("WORKSPACE_TOOLS", True):
+            workspace_manager = WorkspaceManager()
+            tools.append(WorkspaceReadTool(workspace_manager))
+            tools.append(WorkspaceWriteTool(workspace_manager))
+            tools.append(WorkspaceEditTool(workspace_manager))
+            tools.append(WorkspaceListTool(workspace_manager))
+            tools.append(WorkspaceCreateDirTool(workspace_manager))
+        return tools
 
     @classmethod
     async def get_mcp_tools(
