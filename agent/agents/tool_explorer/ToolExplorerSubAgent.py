@@ -308,8 +308,6 @@ class ToolExplorerSubAgent(SubAgent):
     ) -> ToolExplorerStep | None:
         if not task_plan or not isinstance(task_plan, dict):
             return None
-        if str(task_plan.get("source", "")).strip().lower() != "planner":
-            return None
         raw_steps = task_plan.get("steps", [])
         if not isinstance(raw_steps, list) or not raw_steps:
             return None
@@ -352,8 +350,6 @@ class ToolExplorerSubAgent(SubAgent):
 
     def _resolve_max_steps(self, task_plan: JsonObject | None) -> int:
         if not task_plan or not isinstance(task_plan, dict):
-            return self._max_steps
-        if str(task_plan.get("source", "")).strip().lower() != "planner":
             return self._max_steps
         raw_steps = task_plan.get("steps", [])
         if not isinstance(raw_steps, list):

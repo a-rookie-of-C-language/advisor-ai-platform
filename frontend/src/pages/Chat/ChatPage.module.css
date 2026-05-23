@@ -7,7 +7,7 @@
   border: 1px solid #E2E8F0;
 }
 
-/* 鈹€鈹€ 宸︿晶杈规爮 鈹€鈹€ */
+/* 左侧边栏 */
 .rightPanel {
   width: 300px;
   background: #0F172A;
@@ -90,7 +90,7 @@
   opacity: 1;
 }
 
-/* 鈹€鈹€ 鍙充晶涓诲尯鍩?鈹€鈹€ */
+/* 右侧主区域 */
 .main {
   flex: 1;
   display: flex;
@@ -124,7 +124,7 @@
   border-radius: 3px;
 }
 
-/* 鈹€鈹€ 娑堟伅姘旀场 鈹€鈹€ */
+/* 消息气泡 */
 .msgRow {
   display: flex;
   gap: 12px;
@@ -192,7 +192,7 @@
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
 }
 
-/* Markdown 鎺掔増 */
+/* Markdown 排版 */
 .markdownBody p {
   margin: 0 0 8px;
 }
@@ -229,7 +229,40 @@
   font-size: 13px;
 }
 
-/* 娴佸紡鍏夋爣 */
+/* 执行轨迹 */
+.reasoningTrace {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #C7D2FE;
+  border-radius: 8px;
+  background: #EEF2FF;
+}
+
+.reasoningTraceTitle {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.reasoningTraceItem {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+}
+
+.reasoningTraceMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.reasoningTraceText {
+  display: block;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
 .taskPlan {
   margin-top: 10px;
   padding: 10px 12px;
@@ -316,7 +349,7 @@
   50% { opacity: 0; }
 }
 
-/* 鈹€鈹€ 杈撳叆鍖?鈹€鈹€ */
+/* 输入区 */
 .inputArea {
   padding: 16px 24px;
   border-top: 1px solid #E2E8F0;
@@ -342,3 +375,4 @@
     max-height: 280px;
   }
 }
+
