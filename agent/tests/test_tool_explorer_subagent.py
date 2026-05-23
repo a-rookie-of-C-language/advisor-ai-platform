@@ -78,3 +78,54 @@ async def test_tool_explorer_calls_read_only_tool_and_summarizes() -> None:
     assert outcome.sufficient is True
     assert calls == [("mcp__student__list_students", {})]
     assert [event.event for event in outcome.events] == ["sys_tool_plan", "tool_use", "tool_result"]
+
+
+@pytest.mark.asyncio
+async def test_tool_explorer_executes_all_planned_tool_steps() -> None:
+    provider = _ProviderJsonSequence([])
+    subagent = ToolExplorerSubAgent(provider, max_steps=1)
+    tools = [
+        ToolSpec(
+            name="rag_search",
+            description="Search local knowledge base",
+            parameters={"type": "object", "properties": {}},
+            is_read_only=True,
+        ),
+        ToolSpec(
+            name="web_search",
+            description="Search the web",
+            parameters={"type": "object", "properties": {}},
+            is_read_only=True,
+        ),
+    ]
+    task_plan = {
+        "source": "planner",
+        "steps": [
+            {"action": "call_tool", "tool_name": "rag_search", "arguments": {"query": "q"}},
+            {"action": "call_tool", "tool_name": "web_search", "arguments": {"query": "q"}},
+            {"action": "final", "summary": "done", "sufficient": True},
+        ],
+    }
+    calls: list[tuple[str, dict]] = []
+
+    async def executor(tool_name: str, tool_args: dict) -> str:
+        calls.append((tool_name, tool_args))
+        return json.dumps(
+            {"ok": True, "status": "hit", "message": "ok", "items": [{"type": "text", "text": tool_name}]},
+            ensure_ascii=False,
+        )
+
+    outcome = await subagent.explore(
+        user_query="need course",
+        recent_messages=[],
+        available_tools=tools,
+        candidate_tools=tools,
+        initial_route={"matched_by": "llm"},
+        tool_executor=executor,
+        task_plan=task_plan,
+    )
+
+    assert outcome.used is True
+    assert outcome.sufficient is True
+    assert calls == [("rag_search", {"query": "q"}), ("web_search", {"query": "q"})]
+    assert [call["tool_name"] for call in outcome.tool_calls] == ["rag_search", "web_search"]

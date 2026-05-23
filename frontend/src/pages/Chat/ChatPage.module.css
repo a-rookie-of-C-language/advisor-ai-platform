@@ -230,6 +230,77 @@
 }
 
 /* 娴佸紡鍏夋爣 */
+.taskPlan {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #DBEAFE;
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.taskPlanHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.taskPlanGoal {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.taskPlanSummary {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.taskPlanTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.taskPlanSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskPlanStep {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+}
+
+.taskPlanStepDone {
+  background: #F8FAFC;
+}
+
+.taskPlanStepMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.taskPlanStatus {
+  flex-shrink: 0;
+  margin-right: 0;
+}
+
+.taskPlanStepDetail {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
 .cursor {
   display: inline-block;
   width: 2px;
@@ -271,4 +342,3 @@
     max-height: 280px;
   }
 }
-

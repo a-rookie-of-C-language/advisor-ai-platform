@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Collapse, Input, Skeleton, Space, Tag, Typography } from 'antd'
 import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
   FileTextOutlined,
   LoadingOutlined,
   RobotOutlined,
@@ -48,6 +51,16 @@ interface ChatEvent {
   timestamp?: number
 }
 
+interface PlanStep {
+  action?: string
+  tool_name?: string
+  arguments?: unknown
+  reason?: string
+  expected_outcome?: string
+  sufficient?: boolean
+  summary?: string
+}
+
 interface ChatMessage {
   id: number
   role: 'user' | 'assistant'
@@ -83,6 +96,72 @@ function renderToolPayload(value: unknown): string {
   } catch {
     return String(value)
   }
+}
+
+function taskPlanFromEvents(events?: ChatEvent[]): StreamEventData | null {
+  const plans = (events ?? []).filter((item) => item.event === 'sys_tool_plan')
+  return plans.length ? plans[plans.length - 1].payload : null
+}
+
+function planStepsFromPayload(payload?: StreamEventData | null): PlanStep[] {
+  return Array.isArray(payload?.steps) ? payload.steps : []
+}
+
+function planStepTitle(step: PlanStep, index: number): string {
+  const action = step.action ?? ''
+  const toolName = step.tool_name ?? ''
+  if (action === 'call_tool' && toolName) {
+    return `${index + 1}. 调用 ${toolName}`
+  }
+  if (action === 'final') {
+    return `${index + 1}. 生成最终回答`
+  }
+  return `${index + 1}. 执行计划步骤`
+}
+
+function planStepStatus(
+  step: PlanStep,
+  msg: ChatMessage,
+): 'pending' | 'running' | 'done' | 'error' {
+  if (step.action === 'final') {
+    if (!msg.streaming && msg.content.trim()) {
+      return 'done'
+    }
+    return msg.content.trim() ? 'running' : 'pending'
+  }
+  const toolName = step.tool_name ?? ''
+  if (!toolName) {
+    return 'pending'
+  }
+  const calls = msg.toolCalls ?? []
+  const matched = calls.find((item) => item.toolName === toolName)
+  if (!matched) {
+    return 'pending'
+  }
+  if (matched.status === 'error') {
+    return 'error'
+  }
+  if (matched.result || matched.status) {
+    return 'done'
+  }
+  return 'running'
+}
+
+function planStepStatusMeta(status: ReturnType<typeof planStepStatus>): {
+  label: string
+  color: string
+  icon: ReactNode
+} {
+  if (status === 'done') {
+    return { label: '已完成', color: 'green', icon: <CheckCircleOutlined /> }
+  }
+  if (status === 'running') {
+    return { label: '进行中', color: 'blue', icon: <LoadingOutlined /> }
+  }
+  if (status === 'error') {
+    return { label: '失败', color: 'red', icon: <ExclamationCircleOutlined /> }
+  }
+  return { label: '待执行', color: 'default', icon: <ClockCircleOutlined /> }
 }
 
 const PERSISTABLE_EVENTS = new Set([
@@ -182,6 +261,14 @@ function eventDisplayDetail(event: string, payload: StreamEventData): string {
       .filter(Boolean)
       .join('\n')
   }
+  if (event === 'sys_tool_plan') {
+    const steps = planStepsFromPayload(payload)
+    return [
+      payload.goal ? `目标: ${payload.goal}` : '',
+      payload.summary ? `说明: ${payload.summary}` : '',
+      steps.length ? `待办: ${steps.length} 步` : '',
+    ].filter(Boolean).join('\n')
+  }
   return payload.message || payload.reason || renderToolPayload(payload)
 }
 
@@ -249,6 +336,66 @@ function describeSystemState(event: string, payload: StreamEventData): string {
   return baseMessage || event.replace(/^sys_/, '正在').replace(/_/g, '')
 }
 
+function TaskPlanChecklist({ msg }: MsgBubbleProps) {
+  const plan = taskPlanFromEvents(msg.events)
+  const steps = planStepsFromPayload(plan)
+  if (!plan || steps.length === 0 || msg.role !== 'assistant') {
+    return null
+  }
+  const requiredTools = Array.isArray(plan.required_tools) ? plan.required_tools.filter(Boolean) : []
+
+  return (
+    <div className={styles.taskPlan}>
+      <div className={styles.taskPlanHeader}>
+        <div>
+          <Text strong>待办清单</Text>
+          {plan.goal && (
+            <Text type="secondary" className={styles.taskPlanGoal}>
+              {plan.goal}
+            </Text>
+          )}
+        </div>
+        {plan.mode && <Tag color="blue">{plan.mode}</Tag>}
+      </div>
+      {plan.summary && (
+        <Text type="secondary" className={styles.taskPlanSummary}>
+          {plan.summary}
+        </Text>
+      )}
+      {requiredTools.length > 0 && (
+        <div className={styles.taskPlanTools}>
+          {requiredTools.map((tool) => <Tag key={tool} color="geekblue">{tool}</Tag>)}
+        </div>
+      )}
+      <div className={styles.taskPlanSteps}>
+        {steps.map((step, index) => {
+          const status = planStepStatus(step, msg)
+          const meta = planStepStatusMeta(status)
+          return (
+            <div
+              key={`${step.action ?? 'step'}:${step.tool_name ?? index}:${index}`}
+              className={`${styles.taskPlanStep} ${status === 'done' ? styles.taskPlanStepDone : ''}`}
+            >
+              <div className={styles.taskPlanStepMain}>
+                <Tag color={meta.color} icon={meta.icon} className={styles.taskPlanStatus}>
+                  {meta.label}
+                </Tag>
+                <Text strong delete={status === 'done'}>{planStepTitle(step, index)}</Text>
+              </div>
+              {(step.reason || step.expected_outcome || step.summary) && (
+                <Text type="secondary" className={styles.taskPlanStepDetail}>
+                  {step.reason || step.summary}
+                  {step.expected_outcome ? `；预期：${step.expected_outcome}` : ''}
+                </Text>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function MsgBubble({ msg }: MsgBubbleProps) {
   const isUser = msg.role === 'user'
 
@@ -275,6 +422,8 @@ function MsgBubble({ msg }: MsgBubbleProps) {
                 {msg.streaming && <span className={styles.cursor} />}
               </div>
             )}
+
+        {!isUser && <TaskPlanChecklist msg={msg} />}
 
         {msg.sources?.length
           ? (

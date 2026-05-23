@@ -61,6 +61,9 @@ export interface StreamToolResult {
 export interface StreamEventData extends Record<string, unknown> {
   text?: string
   message?: string
+  goal?: string
+  summary?: string
+  stop_when?: string
   status?: string
   items?: StreamSourceItem[]
   elapsed_sec?: number
@@ -74,6 +77,19 @@ export interface StreamEventData extends Record<string, unknown> {
   matched_by?: string
   categories?: string[]
   reason?: string
+  source?: string
+  required_tools?: string[]
+  mode?: string
+  sufficient?: boolean
+  steps?: Array<{
+    action?: string
+    tool_name?: string
+    arguments?: unknown
+    reason?: string
+    expected_outcome?: string
+    sufficient?: boolean
+    summary?: string
+  }>
   derived?: {
     sources?: StreamSourceItem[]
   }

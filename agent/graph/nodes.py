@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import logging
 
-from json_types import JsonObject
 from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
+from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
 from safety.regex_filter import StreamingRegexFilter
@@ -12,7 +12,6 @@ from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
 from .helpers import (
-    _build_rag_context_prompt,
     _extract_first_url,
     _inject_fusion_context,
     _parse_skill_names,
@@ -32,7 +31,11 @@ _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
 
 
 def _should_use_direct_plan(task_plan: JsonObject | None) -> bool:
-    return bool(task_plan) and isinstance(task_plan, dict) and str(task_plan.get("mode", "")).strip().lower() == "direct"
+    return (
+        bool(task_plan)
+        and isinstance(task_plan, dict)
+        and str(task_plan.get("mode", "")).strip().lower() == "direct"
+    )
 
 
 def _select_tools_for_plan(tools: list, task_plan: JsonObject | None) -> list:
@@ -123,6 +126,127 @@ def _build_tool_result_payload(
     if derived:
         result_payload["derived"] = derived
     return result_payload
+
+
+def _planned_tool_steps(task_plan: JsonObject | None) -> list[JsonObject]:
+    if not task_plan or not isinstance(task_plan, dict):
+        return []
+    raw_steps = task_plan.get("steps", [])
+    if not isinstance(raw_steps, list):
+        return []
+    steps: list[JsonObject] = []
+    for raw_step in raw_steps:
+        if not isinstance(raw_step, dict):
+            continue
+        if str(raw_step.get("action", "")).strip().lower() != "call_tool":
+            continue
+        tool_name = str(raw_step.get("tool_name", "")).strip()
+        if not tool_name:
+            continue
+        arguments = raw_step.get("arguments", {})
+        if not isinstance(arguments, dict):
+            arguments = {}
+        steps.append(
+            {
+                "tool_name": tool_name,
+                "arguments": arguments,
+                "reason": str(raw_step.get("reason", "")).strip(),
+            }
+        )
+    return steps
+
+
+def _build_planned_tool_context(observations: list[JsonObject]) -> ChatMessage:
+    return ChatMessage(
+        role="system",
+        content=(
+            "以下是后端按任务计划顺序执行工具后得到的证据。"
+            "请基于这些证据和当前对话回答；如果证据不足，请说明缺口。\n"
+            f"{json.dumps(observations, ensure_ascii=False, default=str)[:6000]}"
+        ),
+    )
+
+
+async def _execute_planned_tool_steps(
+    *,
+    state: GraphState,
+    task_plan: JsonObject | None,
+    pipeline: SafetyPipeline | None,
+) -> list[JsonObject]:
+    runtime = _runtime()
+    observations: list[JsonObject] = []
+    for index, step in enumerate(_planned_tool_steps(task_plan), start=1):
+        tool_name = str(step.get("tool_name", "")).strip()
+        tool = runtime.tools.get(tool_name)
+        if tool is None:
+            observations.append(
+                {
+                    "tool_name": tool_name,
+                    "status": "error",
+                    "message": "planned tool is not available",
+                    "items": [],
+                }
+            )
+            break
+        arguments = step.get("arguments", {})
+        if not isinstance(arguments, dict):
+            arguments = {}
+        tool_call_id = f"plan-{index}-{tool_name}"
+        await _emit(
+            "tool_use",
+            {
+                "tool_name": tool_name,
+                "tool_call_id": tool_call_id,
+                "input": arguments,
+            },
+        )
+        raw_output = await _execute_tool(tool_name=tool_name, tool_args=arguments, state=state)
+        try:
+            payload = json.loads(raw_output) if raw_output else {}
+        except Exception:
+            logger.warning("planned tool output parse failed: tool=%s, output=%s", tool_name, raw_output[:200])
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        status = str(payload.get("status", "error") or "error")
+        base_payload = {
+            "tool_name": tool_name,
+            "tool_call_id": tool_call_id,
+            "attempt": index,
+            "status": status,
+            "message": payload.get("message", "tool execute failed"),
+        }
+        ok = bool(payload.get("ok"))
+        if ok:
+            filtered_payload, _ = _filter_tool_result(tool_name, payload, pipeline)
+            await _emit(
+                "tool_result",
+                _build_tool_result_payload(tool_name, base_payload, filtered_payload),
+            )
+            payload = filtered_payload
+        else:
+            await _emit(
+                "tool_error",
+                {
+                    **base_payload,
+                    "code": status,
+                    "retryable": False,
+                },
+            )
+        items = payload.get("items", [])
+        if not isinstance(items, list):
+            items = []
+        observations.append(
+            {
+                "tool_name": tool_name,
+                "status": status,
+                "message": str(payload.get("message", "") or ""),
+                "items": items,
+            }
+        )
+        if not ok:
+            break
+    return observations
 
 
 async def select_skill_node(state: GraphState) -> GraphState:
@@ -238,7 +362,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     user_query = _strip_surrogates(state.get("user_query", ""))
     has_query = bool(user_query)
     rag_enabled = has_query
-    force_rag = _should_force_education_rag(user_query) and runtime.tools.get("rag_search") is not None
+    education_domain = _should_force_education_rag(user_query) and runtime.tools.get("rag_search") is not None
     route_categories: set[str] = set()
     matched_tools: list[str] = []
     if runtime.enable_tool_use and has_query:
@@ -266,21 +390,21 @@ async def decide_tool_node(state: GraphState) -> GraphState:
         and runtime.tools.get("rag_search") is not None
     ):
         route_categories = {"retrieval"}
-    if force_rag:
-        route_categories = {"retrieval"}
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     task_plan: JsonObject = {}
-    if use_tool and runtime.task_planner_subagent is not None:
+    task_planner_subagent = getattr(runtime, "task_planner_subagent", None)
+    if use_tool and task_planner_subagent is not None:
         try:
-            task_plan = await runtime.task_planner_subagent.plan(
+            task_plan = await task_planner_subagent.plan(
                 user_query=user_query,
                 recent_messages=list(state.get("messages", [])),
                 available_tools=runtime.tools.specs(),
                 route_context={
                     "categories": sorted(route_categories),
                     "matched_tools": matched_tools,
-                    "force_rag": force_rag,
+                    "education_domain": education_domain,
+                    "preferred_tools": ["rag_search"] if education_domain else [],
                     "web_search_enabled": web_search_enabled,
                 },
             )
@@ -300,7 +424,8 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     )
     return {
         "rag_enabled": rag_enabled,
-        "force_rag": force_rag,
+        "force_rag": False,
+        "education_domain": education_domain,
         "web_search_enabled": web_search_enabled,
         "use_tool": use_tool,
         "route_categories": route_categories,
@@ -339,73 +464,15 @@ async def generate_node(state: GraphState) -> GraphState:
         use_tool = bool(state.get("use_tool")) and not _should_use_direct_plan(task_plan)
         if use_tool:
             user_query = _strip_surrogates(state.get("user_query", ""))
-            force_rag = bool(state.get("force_rag")) and runtime.tools.get("rag_search") is not None
             force_fetch_url = ""
             if "web_fetch" in (state.get("matched_tools", []) or []):
                 force_fetch_url = _extract_first_url(user_query)
 
             direct_generate = False
-            if force_rag:
-                await _emit(
-                    "sys_rag_force",
-                    {
-                        "reason": "education_domain",
-                        "query": user_query[:120],
-                        "forced": True,
-                    },
-                )
-                await _emit(
-                    "tool_use",
-                    {
-                        "tool_name": "rag_search",
-                        "tool_call_id": "rag_search-1",
-                        "input": {"query": user_query, "top_k": 5},
-                    },
-                )
-                forced_output = await _execute_tool(
-                    tool_name="rag_search",
-                    tool_args={"query": user_query, "top_k": 5},
-                    state=state,
-                )
-                try:
-                    forced_payload = json.loads(forced_output) if forced_output else {}
-                except Exception:
-                    forced_payload = {}
-                forced_status = str(forced_payload.get("status", "error") or "error")
-                forced_base_payload = {
-                    "tool_name": "rag_search",
-                    "tool_call_id": "rag_search-1",
-                    "attempt": 1,
-                    "status": forced_status,
-                    "message": forced_payload.get("message", "tool execute failed"),
-                }
-                if forced_payload.get("ok"):
-                    await _emit(
-                        "tool_result",
-                        _build_tool_result_payload("rag_search", forced_base_payload, forced_payload),
-                    )
-                    forced_items = forced_payload.get("items", [])
-                    if isinstance(forced_items, list) and forced_items:
-                        rag_context = _build_rag_context_prompt(forced_items)
-                        if rag_context:
-                            model_messages = [
-                                ChatMessage(role="system", content=rag_context[:4000]),
-                            ] + model_messages
-                            direct_generate = True
-                else:
-                    await _emit(
-                        "tool_error",
-                        {
-                            **forced_base_payload,
-                            "code": forced_status,
-                            "retryable": False,
-                        },
-                    )
-            else:
-                fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
-                if fusion_context:
-                    model_messages = _inject_fusion_context(model_messages, fusion_context)
-                direct_generate = bool(fusion_context and fusion_context.get("candidates"))
+            fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
+            if fusion_context:
+                model_messages = _inject_fusion_context(model_messages, fusion_context)
+            direct_generate = bool(fusion_context and fusion_context.get("candidates"))
 
             route_categories = set(state.get("route_categories", set()))
             matched_tools = state.get("matched_tools", [])
@@ -428,10 +495,15 @@ async def generate_node(state: GraphState) -> GraphState:
                 rag_tool = runtime.tools.get("rag_search")
                 if rag_tool is not None:
                     tools = [rag_tool.to_tool_spec()]
-            if force_rag:
-                rag_tool = runtime.tools.get("rag_search")
-                if rag_tool is not None:
-                    tools = [rag_tool.to_tool_spec()]
+
+            planned_observations = await _execute_planned_tool_steps(
+                state=state,
+                task_plan=task_plan,
+                pipeline=runtime.safety_pipeline,
+            )
+            if planned_observations:
+                model_messages = [_build_planned_tool_context(planned_observations)] + model_messages
+                direct_generate = True
 
             logger.info(
                 "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, "
@@ -444,7 +516,7 @@ async def generate_node(state: GraphState) -> GraphState:
             )
 
             # URL is a hard signal: if route matched web_fetch and URL exists, force one fetch first.
-            if force_fetch_url and runtime.tools.get("web_fetch") is not None and not force_rag:
+            if force_fetch_url and not planned_observations and runtime.tools.get("web_fetch") is not None:
                 logger.info(
                     "graph_node force_web_fetch: session_id=%s, user_id=%s, url=%s",
                     state.get("session_id"),
