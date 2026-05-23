@@ -1,0 +1,32 @@
+.container {
+  padding: 24px;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.searchArea {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.searchForm :global(.ant-form-item) {
+  margin-bottom: 12px;
+}
+
+.table :global(.ant-table) {
+  font-size: 14px;
+}

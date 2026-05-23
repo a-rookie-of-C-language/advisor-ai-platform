@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, AsyncIterator, Iterable
@@ -24,14 +25,20 @@ class OpenAIProvider(BaseLLMProvider):
         base_url: str | None = None,
         temperature: float = 0.2,
         timeout: float = 60.0,
+        max_retries: int = 0,
+        stream_timeout_sec: float = 45.0,
+        tool_round_timeout_sec: float = 30.0,
     ) -> None:
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
+            max_retries=max_retries,
         )
         self._model = model
         self._temperature = temperature
+        self._stream_timeout_sec = max(5.0, stream_timeout_sec)
+        self._tool_round_timeout_sec = max(5.0, tool_round_timeout_sec)
 
     def get_client(self) -> AsyncOpenAI:
         return self._client
@@ -69,7 +76,13 @@ class OpenAIProvider(BaseLLMProvider):
         if response_format is not None:
             kwargs["response_format"] = response_format
 
-        stream = await self._client.chat.completions.create(**kwargs)
+        try:
+            stream = await asyncio.wait_for(
+                self._client.chat.completions.create(**kwargs),
+                timeout=self._stream_timeout_sec,
+            )
+        except TimeoutError as exc:
+            raise RuntimeError("llm_stream_timeout") from exc
 
         async for chunk in stream:
             if not chunk.choices:
@@ -106,14 +119,31 @@ class OpenAIProvider(BaseLLMProvider):
         while True:
             tool_choice: dict[str, Any] | str = "auto"
 
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=conversation,
-                temperature=self._temperature,
-                stream=False,
-                tools=tool_payload,
-                tool_choice=tool_choice,
-            )
+            try:
+                response = await asyncio.wait_for(
+                    self._client.chat.completions.create(
+                        model=self._model,
+                        messages=conversation,
+                        temperature=self._temperature,
+                        stream=False,
+                        tools=tool_payload,
+                        tool_choice=tool_choice,
+                    ),
+                    timeout=self._tool_round_timeout_sec,
+                )
+            except TimeoutError:
+                logger.warning(
+                    "llm_tool_round_timeout: tool_call_count=%s, model=%s",
+                    tool_call_count,
+                    self._model,
+                )
+                fallback_text = (
+                    "抱歉，当前检索链路响应超时。"
+                    "请稍后重试，或补充更具体的问题以缩小检索范围。"
+                )
+                for piece in self._chunk_text(fallback_text):
+                    yield LLMStreamEvent(type="delta", text=piece)
+                return
 
             if not response.choices:
                 raise RuntimeError("LLM returned empty choices (possibly content filter)")

@@ -2,9 +2,13 @@ package cn.edu.cqut.advisorplatform.checkin.mapper;
 
 import cn.edu.cqut.advisorplatform.checkin.annotation.AutoFill;
 import cn.edu.cqut.advisorplatform.checkin.enums.OperationType;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
+import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInActivity;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord;
+import cn.edu.cqut.advisorplatform.checkin.record.vo.AvailableCheckInActivityVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -12,24 +16,44 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface StudentCheckInRecordMapper {
 
-  /** 统计学生的打卡记录，分页查询 */
   List<CheckInRecordVO> selectCheckInRecords(
       @Param("studentId") Long studentId,
+      @Param("checkInId") String checkInId,
+      @Param("teacherUserId") Long teacherUserId,
       @Param("beginDate") LocalDate begin,
       @Param("endDate") LocalDate end,
       @Param("pageSize") Integer pageSize,
       @Param("offset") int offset);
 
-  /** 统计总数 */
   Long countCheckInRecords(
       @Param("studentId") Long studentId,
+      @Param("checkInId") String checkInId,
+      @Param("teacherUserId") Long teacherUserId,
       @Param("beginDate") LocalDate begin,
       @Param("endDate") LocalDate end);
 
-  /** 查询某个学生今日是否打卡 */
+  List<StudentCheckInSummaryResponse> selectCheckInSummaries(
+      @Param("studentIds") List<Long> studentIds);
+
   Boolean ifStudentCheckIn(StudentCheckInRecord dto);
 
-  /** 进行学生打卡 */
+  Boolean existsCheckInRecord(
+      @Param("checkInId") String checkInId, @Param("studentId") Long studentId);
+
   @AutoFill(value = OperationType.INSERT)
   int studentCheckIn(StudentCheckInRecord dto);
+
+  int insertCheckInActivity(CheckInActivity activity);
+
+  int insertCheckInActivityClass(
+      @Param("checkInId") String checkInId, @Param("classCode") String classCode);
+
+  CheckInActivity selectActivityByCheckInId(@Param("checkInId") String checkInId);
+
+  List<String> selectActivityClassCodes(@Param("checkInId") String checkInId);
+
+  List<AvailableCheckInActivityVO> selectAvailableActivities(
+      @Param("classCode") String classCode,
+      @Param("studentId") Long studentId,
+      @Param("now") LocalDateTime now);
 }

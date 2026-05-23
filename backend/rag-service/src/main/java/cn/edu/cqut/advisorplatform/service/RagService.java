@@ -1,27 +1,27 @@
 package cn.edu.cqut.advisorplatform.service;
 
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
 import java.util.List;
 import org.springframework.lang.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface RagService {
 
-  List<KnowledgeBaseResponseDTO> listKnowledgeBases(@Nullable UserDO currentUser);
+  List<KnowledgeBaseResponseDTO> listKnowledgeBases(@Nullable UserPrincipal currentUser);
 
   KnowledgeBaseResponseDTO createKnowledgeBase(
-      String name, String description, @Nullable UserDO currentUser);
+      String name, String description, @Nullable UserPrincipal currentUser);
 
-  void deleteKnowledgeBase(Long id, @Nullable UserDO currentUser);
+  void deleteKnowledgeBase(Long id, @Nullable UserPrincipal currentUser);
 
-  List<RagDocumentResponseDTO> listDocuments(Long kbId, @Nullable UserDO currentUser);
+  List<RagDocumentResponseDTO> listDocuments(Long kbId, @Nullable UserPrincipal currentUser);
 
   RagDocumentResponseDTO uploadDocument(
-      Long kbId, MultipartFile file, @Nullable UserDO currentUser);
+      Long kbId, MultipartFile file, @Nullable UserPrincipal currentUser);
 
-  void deleteDocument(Long id, @Nullable UserDO currentUser);
+  void deleteDocument(Long id, @Nullable UserPrincipal currentUser);
 
   boolean existsKnowledgeBase(Long id);
 }

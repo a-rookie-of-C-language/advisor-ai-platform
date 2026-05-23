@@ -7,9 +7,9 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
@@ -40,8 +40,7 @@ class ChatControllerStreamPersistenceTest {
   @Test
   void streamChat_shouldPersistAssistantOnSuccess() throws Exception {
     ChatStreamRequestDTO request = buildRequest();
-    UserDO user = buildUser();
-    when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
+    UserPrincipal user = buildUser();
     when(agentProxyService.proxyChatStream(
             any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class)))
         .thenReturn(new ChatStreamProxyResult("\u4f60\u597d\uff0c\u6d4b\u8bd5\u56de\u590d", null));
@@ -58,7 +57,6 @@ class ChatControllerStreamPersistenceTest {
         ArgumentCaptor.forClass(ChatStreamRequestDTO.class);
     verify(agentProxyService)
         .proxyChatStream(reqCaptor.capture(), anyLong(), any(OutputStream.class));
-    assertThat(reqCaptor.getValue().getKbId()).isEqualTo(0L);
 
     ArgumentCaptor<String> assistantCaptor = ArgumentCaptor.forClass(String.class);
     verify(chatMessageService)
@@ -70,8 +68,7 @@ class ChatControllerStreamPersistenceTest {
   @Test
   void streamChat_shouldPersistErrorPlaceholderOnFailure() throws Exception {
     ChatStreamRequestDTO request = buildRequest();
-    UserDO user = buildUser();
-    when(chatService.getSessionKbId(1001L, user)).thenReturn(0L);
+    UserPrincipal user = buildUser();
     doThrow(new RuntimeException("agent boom"))
         .when(agentProxyService)
         .proxyChatStream(any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class));
@@ -99,14 +96,11 @@ class ChatControllerStreamPersistenceTest {
 
     ChatStreamRequestDTO request = new ChatStreamRequestDTO();
     request.setSessionId(1001L);
-    request.setKbId(999L);
     request.setMessages(List.of(user));
     return request;
   }
 
-  private UserDO buildUser() {
-    UserDO user = new UserDO();
-    user.setId(1L);
-    return user;
+  private UserPrincipal buildUser() {
+    return new UserPrincipal(1L, "tester", "STUDENT");
   }
 }

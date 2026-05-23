@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -29,7 +30,7 @@ from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
 from prompt.QueryEngine import QueryEngine
 from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
-from tools.intent_router import IntentRouter
+from tools.intent_router import IntentRouter, emit_route_observation
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_impl.expand_skill_tool import ExpandSkillTool
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -40,6 +41,8 @@ Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCa
 logger = logging.getLogger(__name__)
 
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
+_RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
+_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
 
 
 def _build_default_fusion_pipeline() -> SourcePriorityRegistry:
@@ -90,7 +93,7 @@ class ChatStreamService:
         self._web_search_subagent = self._build_web_search_subagent()
         self._tool_permission = PermissionConfig.from_allowed_tools(
             {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
-             ToolPermission.MEMORY_WRITE, ToolPermission.SEARCH},
+             ToolPermission.MEMORY_WRITE},
             read_resources={"context", "memory"},
             write_resources={"memory"},
         )
@@ -138,6 +141,21 @@ class ChatStreamService:
             web_search_subagent=self._web_search_subagent,
         )
 
+
+    @staticmethod
+    def _strip_surrogates(text: str) -> str:
+        if not text:
+            return text
+        return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
+
+    @classmethod
+    def _prefer_rag_only(cls, query: str) -> bool:
+        normalized = cls._strip_surrogates(query).strip().lower()
+        if not normalized:
+            return False
+        has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
+        has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
+        return has_rag_hint and not has_realtime_hint
 
     @staticmethod
     def _read_feature_action_scoring() -> bool:
@@ -263,11 +281,14 @@ class ChatStreamService:
         validated = []
         for message in messages:
             role = message.role.strip().lower()
-            content = message.content.strip()
+            raw_content = message.content.strip()
+            content = ChatStreamService._strip_surrogates(raw_content).strip()
             if role not in _ALLOWED_ROLES:
                 raise ValueError(f"Unsupported role: {message.role}")
             if not content:
                 raise ValueError("Message content cannot be empty")
+            if content != raw_content:
+                logger.warning("Invalid surrogate chars removed from message: role=%s", role)
             validated.append(ChatMessage(role=role, content=content))
 
         if not validated:
@@ -303,6 +324,53 @@ class ChatStreamService:
                     data = {}
         return {"event": event_name, "data": data}
 
+    async def _stream_with_progress(self, event_stream: AsyncIterator[str]) -> AsyncIterator[str]:
+        iterator = event_stream.__aiter__()
+        progress_seconds = 0
+        saw_delta = False
+        saw_done = False
+        pending_next: asyncio.Task[str] | None = None
+        while True:
+            if pending_next is None:
+                pending_next = asyncio.create_task(iterator.__anext__())
+            try:
+                event = await asyncio.wait_for(asyncio.shield(pending_next), timeout=1.0)
+                pending_next = None
+            except TimeoutError:
+                if not saw_delta:
+                    progress_seconds += 1
+                    yield self._serialize_event(
+                        "progress",
+                        {"message": "模型思考中，请稍候...", "elapsedSec": progress_seconds},
+                    )
+                continue
+            except StopAsyncIteration:
+                if not saw_delta and not saw_done:
+                    yield self._serialize_event(
+                        "error",
+                        {"message": "stream finished without content"},
+                    )
+                    yield self._serialize_event("done", {"message": "stream_finished_with_error"})
+                return
+            except Exception:
+                pending_next = None
+                raise
+
+            parsed = self._parse_serialized_event(event)
+            event_name = str(parsed.get("event", ""))
+            if event_name in {"delta", "raw"}:
+                saw_delta = True
+            if event_name == "done":
+                saw_done = True
+            if event_name == "done" and not saw_delta:
+                yield self._serialize_event(
+                    "error",
+                    {"message": "stream finished without content"},
+                )
+                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
+                return
+            yield event
+
     def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
         return QueryEngine.build_failure_avoid_prompt(matched)
 
@@ -311,7 +379,6 @@ class ChatStreamService:
         *,
         user_query: str,
         session_id: int | None,
-        kb_id: int | None,
         score: int,
         reasons: list[str],
     ) -> None:
@@ -322,7 +389,7 @@ class ChatStreamService:
             ts=str(int(time.time())),
             user_query=user_query,
             session_id=session_id,
-            kb_id=kb_id,
+            kb_id=None,
             reasons=reasons,
             score=score,
             avoid_strategy=avoid_strategy,
@@ -335,7 +402,6 @@ class ChatStreamService:
         tool_args: dict,
         user_id: int | None,
         session_id: int | None,
-        kb_id: int | None,
         user_query: str,
         trace_id: str | None = None,
         turn_id: str | None = None,
@@ -343,7 +409,6 @@ class ChatStreamService:
         context = {
             "user_id": user_id,
             "session_id": session_id,
-            "kb_id": kb_id,
             "user_query": user_query,
             "trace_id": trace_id,
             "turn_id": turn_id,
@@ -354,11 +419,10 @@ class ChatStreamService:
             return await self._tools.execute(tool_name, tool_args, context)
         except Exception:
             logger.exception(
-                "Tool execute failed: tool=%s, user_id=%s, session_id=%s, kb_id=%s",
+                "Tool execute failed: tool=%s, user_id=%s, session_id=%s",
                 tool_name,
                 user_id,
                 session_id,
-                kb_id,
             )
             return json.dumps(
                 {
@@ -414,6 +478,7 @@ class ChatStreamService:
         trace_id: str | None = None,
         turn_id: str | None = None,
     ) -> AsyncIterator[str]:
+        _ = kb_id
         validated_messages = self._validate_messages(messages)
         user_query = self._last_user_message(validated_messages)
         if self._feature_failure_memory_inject and user_query:
@@ -434,12 +499,11 @@ class ChatStreamService:
         compact_stats["latency_ms"] = int((time.monotonic() - compact_started) * 1000)
         self._last_compaction_stats = compact_stats
         logger.info(
-            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s",
             trace_id,
             turn_id,
             session_id,
             user_id,
-            kb_id,
         )
         if compact_stats["tokens_released"] > 0:
             logger.info(
@@ -458,30 +522,28 @@ class ChatStreamService:
 
         trace_events: list[dict[str, object]] = []
         if self._use_langgraph:
-            async for event in self._stream_events_graph(
+            async for event in self._stream_with_progress(self._stream_events_graph(
                 validated_messages,
                 user_id=user_id,
                 session_id=session_id,
-                kb_id=kb_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
-            ):
+            )):
                 trace_events.append(self._parse_serialized_event(event))
                 yield event
         else:
-            async for event in self._stream_events_legacy(
+            async for event in self._stream_with_progress(self._stream_events_legacy(
                 compacted_messages,
                 user_id=user_id,
                 session_id=session_id,
-                kb_id=kb_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
-            ):
+            )):
                 trace_events.append(self._parse_serialized_event(event))
                 yield event
 
         if self._feature_action_scoring:
-            action_score = score_action(user_query=user_query, kb_id=kb_id, trace_events=trace_events)
+            action_score = score_action(user_query=user_query, trace_events=trace_events)
             self._last_action_score = action_score.to_dict()
             logger.info(
                 "action_score session_id=%s user_id=%s score=%s detail=%s",
@@ -501,7 +563,6 @@ class ChatStreamService:
                 self._write_failure_memory(
                     user_query=user_query,
                     session_id=session_id,
-                    kb_id=kb_id,
                     score=action_score.total,
                     reasons=action_score.reasons,
                 )
@@ -512,30 +573,52 @@ class ChatStreamService:
         *,
         user_id: int | None,
         session_id: int | None,
-        kb_id: int | None,
         trace_id: str | None,
         turn_id: str | None,
     ) -> AsyncIterator[str]:
         user_query = self._last_user_message(validated_messages)
         yield self._serialize_event("start", {"message": "stream_started"})
+        saw_content = False
         try:
             async for event in self._graph_runner.run_stream(
                 messages=validated_messages,
                 user_query=user_query,
                 user_id=user_id,
                 session_id=session_id,
-                kb_id=kb_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
             ):
-                yield self._serialize_event(event["event"], event["data"])
+                event_name = str(event.get("event", ""))
+                event_data = event.get("data", {})
+                if event_name in {"delta", "raw"} and isinstance(event_data, dict):
+                    text = str(event_data.get("text", "") or event_data.get("raw", ""))
+                    if text:
+                        saw_content = True
+                yield self._serialize_event(event_name, event_data)
+            if not saw_content:
+                logger.warning(
+                    "Graph stream produced no content, fallback to legacy: user_id=%s, session_id=%s",
+                    user_id,
+                    session_id,
+                )
+                async for legacy_event in self._stream_events_legacy(
+                    validated_messages,
+                    user_id=user_id,
+                    session_id=session_id,
+                    trace_id=trace_id,
+                    turn_id=turn_id,
+                ):
+                    parsed = self._parse_serialized_event(legacy_event)
+                    if str(parsed.get("event", "")) == "start":
+                        continue
+                    yield legacy_event
+                return
             yield self._serialize_event("done", {"message": "stream_finished"})
         except Exception as exc:  # noqa: BLE001
             logger.exception(
-                "Graph stream failed: user_id=%s, session_id=%s, kb_id=%s",
+                "Graph stream failed: user_id=%s, session_id=%s",
                 user_id,
                 session_id,
-                kb_id,
             )
             if self._debug_stream:
                 logger.warning("debug_stream python error(graph): error=%s", exc)
@@ -556,7 +639,6 @@ class ChatStreamService:
         *,
         user_id: int | None,
         session_id: int | None,
-        kb_id: int | None,
         trace_id: str | None,
         turn_id: str | None,
     ) -> AsyncIterator[str]:
@@ -567,18 +649,17 @@ class ChatStreamService:
             self._long_term_memory is not None
             and user_id is not None
             and session_id is not None
-            and kb_id is not None
             and bool(user_query)
         )
 
-        rag_enabled = bool(self._tools.specs()) and kb_id is not None and kb_id > 0 and bool(user_query)
+        rag_enabled = bool(self._tools.specs()) and bool(user_query)
 
         if memory_enabled:
             try:
                 memory_context = await self._long_term_memory.load_memory_context(
                     user_id=user_id,
                     session_id=session_id,
-                    kb_id=kb_id,
+                    kb_id=0,
                     query=user_query,
                     recent_messages=self._to_memory_messages(validated_messages),
                 )
@@ -597,10 +678,9 @@ class ChatStreamService:
                     ] + model_messages
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, kb_id=%s, error=%s",
+                    "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, error=%s",
                     user_id,
                     session_id,
-                    kb_id,
                     exc,
                 )
 
@@ -613,7 +693,24 @@ class ChatStreamService:
         debug_delta_count = 0
         try:
             if rag_enabled and self._enable_tool_use:
-                tools = self._tools.specs()
+                all_cats = self._tools.all_categories()
+                route_decision = await self._intent_router.route_decision(
+                    user_query,
+                    all_cats,
+                    provider=self._provider,
+                )
+                tools = self._tools.specs_by_categories(route_decision.categories)
+                if self._prefer_rag_only(user_query):
+                    rag_tool = self._tools.get("rag_search")
+                    if rag_tool is not None:
+                        tools = [rag_tool.to_tool_spec()]
+                route_payload = await emit_route_observation(
+                    route_decision,
+                    logger=logger,
+                    scope="legacy",
+                    session_id=session_id,
+                )
+                yield self._serialize_event(route_decision.event_name, route_payload)
 
                 async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(
@@ -621,7 +718,6 @@ class ChatStreamService:
                         tool_args=tool_args,
                         user_id=user_id,
                         session_id=session_id,
-                        kb_id=kb_id,
                         user_query=user_query,
                         trace_id=trace_id,
                         turn_id=turn_id,
@@ -695,7 +791,7 @@ class ChatStreamService:
                     await self._memory_orchestrator.flush(
                         user_id=user_id,
                         session_id=session_id,
-                        kb_id=kb_id,
+                        kb_id=0,
                         user_text=user_query,
                         assistant_text=answer,
                         recent_messages=self._to_memory_messages(validated_messages)
@@ -707,10 +803,9 @@ class ChatStreamService:
             yield self._serialize_event("done", {"message": "stream_finished"})
         except Exception as exc:
             logger.exception(
-                "Legacy stream failed: user_id=%s, session_id=%s, kb_id=%s",
+                "Legacy stream failed: user_id=%s, session_id=%s",
                 user_id,
                 session_id,
-                kb_id,
             )
             if self._debug_stream:
                 logger.warning(

@@ -4,65 +4,194 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="cn.edu.cqut.advisorplatform.checkin.mapper.StudentCheckInRecordMapper">
-    <!--查询学生打卡记录-->
     <select id="selectCheckInRecords"
             resultType="cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO">
-        SELECT student_id AS studentId,
-               check_date AS checkDate,
-               checked_in AS checkedIn,
-               check_time AS checkTime
-        FROM student_check_in_record
-        WHERE check_date BETWEEN #{beginDate} AND #{endDate}
+        SELECT r.check_in_id AS checkInId,
+               a.title AS activityTitle,
+               r.student_id AS studentId,
+               COALESCE(r.class_code, s.class_code) AS classCode,
+               r.check_date AS checkDate,
+               r.checked_in AS checkedIn,
+               r.check_time AS checkTime
+        FROM student_check_in_record r
+                 LEFT JOIN check_in_activity a ON a.check_in_id = r.check_in_id
+                 LEFT JOIN student_profile s ON s.id = r.student_id
+        WHERE r.check_date BETWEEN #{beginDate} AND #{endDate}
         <if test="studentId != null">
-            AND student_id = #{studentId}
+            AND r.student_id = #{studentId}
         </if>
-        ORDER BY check_date DESC, student_id ASC
+        <if test="checkInId != null and checkInId != ''">
+            AND r.check_in_id = #{checkInId}
+        </if>
+        <if test="teacherUserId != null">
+            AND a.teacher_user_id = #{teacherUserId}
+        </if>
+        ORDER BY r.check_time DESC, r.student_id ASC
         LIMIT #{pageSize}
         OFFSET #{offset}
     </select>
-    <!--查询打卡记录总数-->
+
     <select id="countCheckInRecords" resultType="java.lang.Long">
         SELECT COUNT(*)
-        FROM student_check_in_record
-        WHERE check_date BETWEEN #{beginDate} AND #{endDate}
+        FROM student_check_in_record r
+                 LEFT JOIN check_in_activity a ON a.check_in_id = r.check_in_id
+        WHERE r.check_date BETWEEN #{beginDate} AND #{endDate}
         <if test="studentId != null">
-            AND student_id = #{studentId}
+            AND r.student_id = #{studentId}
+        </if>
+        <if test="checkInId != null and checkInId != ''">
+            AND r.check_in_id = #{checkInId}
+        </if>
+        <if test="teacherUserId != null">
+            AND a.teacher_user_id = #{teacherUserId}
         </if>
     </select>
-    <!--查询学生是否打卡-->
-    <select id="ifStudentCheckIn" resultType="java.lang.Boolean">
-        SELECT s.checked_in FROM student_check_in_record AS s
-        WHERE student_id = #{studentId}
-        AND check_date = #{checkDate}
+
+    <select id="selectCheckInSummaries"
+            resultType="cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse">
+        SELECT s.id AS studentId,
+               s.student_no AS studentNo,
+               s.name AS studentName,
+               COUNT(r.id) AS totalCount,
+               COALESCE(SUM(CASE WHEN r.checked_in = TRUE THEN 1 ELSE 0 END), 0) AS checkedInCount,
+               COALESCE(SUM(CASE WHEN r.checked_in = FALSE THEN 1 ELSE 0 END), 0) AS missedCount,
+               CASE WHEN COUNT(r.id) = 0 THEN 0
+                    ELSE ROUND(CAST(SUM(CASE WHEN r.checked_in = TRUE THEN 1 ELSE 0 END) AS NUMERIC) / COUNT(r.id) * 100, 2)
+               END AS checkInRate,
+               MAX(r.check_time) AS lastCheckInTime
+        FROM student_profile s
+                 LEFT JOIN student_check_in_record r ON r.student_id = s.id
+        WHERE s.deleted = 0
+        <if test="studentIds != null and studentIds.size() > 0">
+            AND s.id IN
+            <foreach collection="studentIds" item="studentId" open="(" separator="," close=")">
+                #{studentId}
+            </foreach>
+        </if>
+        GROUP BY s.id, s.student_no, s.name
+        ORDER BY s.id DESC
     </select>
-    <!--学生打卡-->
+
+    <select id="ifStudentCheckIn" resultType="java.lang.Boolean">
+        SELECT s.checked_in
+        FROM student_check_in_record AS s
+        WHERE s.student_id = #{studentId}
+          AND s.check_date = #{checkDate}
+          AND (#{checkInId} IS NULL OR s.check_in_id = #{checkInId})
+    </select>
+
+    <select id="existsCheckInRecord" resultType="java.lang.Boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM student_check_in_record
+            WHERE check_in_id = #{checkInId}
+              AND student_id = #{studentId}
+        )
+    </select>
+
     <insert id="studentCheckIn" parameterType="cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord">
         INSERT INTO student_check_in_record (
             student_id,
+            check_in_id,
+            class_code,
             check_date,
             checked_in,
             check_time,
             created_at,
             updated_at
-    ) VALUES (
+        ) VALUES (
             #{studentId},
+            #{checkInId},
+            #{classCode},
             #{checkDate},
             #{checkedIn},
             #{checkTime},
             #{createdAt},
             #{updatedAt}
-    )
-      ON CONFLICT (student_id, check_date) DO NOTHING
+        )
+        ON CONFLICT (check_in_id, student_id) WHERE check_in_id IS NOT NULL DO NOTHING
     </insert>
-    <!--查询学生今日打卡-->
-    <!--<select id="selectTodayRecords" resultType="cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInTodayRecords">
-        SELECT student_id,
-               check_date,
-               checked_in,
-               check_time
-        FROM student_check_in_record
-        WHERE student_id = #{studentId}
-        AND check_date = #{checkDate}
-    </select>-->
 
+    <insert id="insertCheckInActivity"
+            parameterType="cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInActivity">
+        INSERT INTO check_in_activity (
+            check_in_id,
+            course_id,
+            course_name,
+            title,
+            teacher_user_id,
+            teacher_no,
+            start_time,
+            end_time,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{checkInId},
+            #{courseId},
+            #{courseName},
+            #{title},
+            #{teacherUserId},
+            #{teacherNo},
+            #{startTime},
+            #{endTime},
+            #{status},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <insert id="insertCheckInActivityClass">
+        INSERT INTO check_in_activity_class (check_in_id, class_code)
+        VALUES (#{checkInId}, #{classCode})
+        ON CONFLICT (check_in_id, class_code) DO NOTHING
+    </insert>
+
+    <select id="selectActivityByCheckInId"
+            resultType="cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInActivity">
+        SELECT id,
+               check_in_id AS checkInId,
+               course_id AS courseId,
+               course_name AS courseName,
+               title,
+               teacher_user_id AS teacherUserId,
+               teacher_no AS teacherNo,
+               start_time AS startTime,
+               end_time AS endTime,
+               status,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM check_in_activity
+        WHERE check_in_id = #{checkInId}
+    </select>
+
+    <select id="selectActivityClassCodes" resultType="java.lang.String">
+        SELECT class_code
+        FROM check_in_activity_class
+        WHERE check_in_id = #{checkInId}
+        ORDER BY class_code ASC
+    </select>
+
+    <select id="selectAvailableActivities"
+            resultType="cn.edu.cqut.advisorplatform.checkin.record.vo.AvailableCheckInActivityVO">
+        SELECT a.check_in_id AS checkInId,
+               a.course_id AS courseId,
+               a.course_name AS courseName,
+               a.title,
+               a.start_time AS startTime,
+               a.end_time AS endTime,
+               EXISTS (
+                   SELECT 1
+                   FROM student_check_in_record r
+                   WHERE r.check_in_id = a.check_in_id
+                     AND r.student_id = #{studentId}
+               ) AS checkedIn
+        FROM check_in_activity a
+                 JOIN check_in_activity_class ac ON ac.check_in_id = a.check_in_id
+        WHERE ac.class_code = #{classCode}
+          AND a.status = 'ACTIVE'
+          AND a.start_time &lt;= #{now}
+          AND a.end_time &gt;= #{now}
+        ORDER BY a.end_time ASC
+    </select>
 </mapper>

@@ -19,6 +19,8 @@
         <module>memory-service</module>
         <module>audit-service</module>
         <module>risk-control-service</module>
+        <module>student-service</module>
+        <module>teacher-service</module>
         <module>check-in-service</module>
     </modules>
 
@@ -57,6 +59,14 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+        </repository>
+    </repositories>
 
     <build>
         <pluginManagement>

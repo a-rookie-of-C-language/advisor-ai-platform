@@ -12,6 +12,13 @@ from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
 
 logger = logging.getLogger(__name__)
+_RAG_TOOL_TIMEOUT_SEC = 12.0
+
+
+def _strip_surrogates(text: str) -> str:
+    if not text:
+        return text
+    return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
 
 
 class RAGSearchInput(BaseModel):
@@ -41,34 +48,27 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
     async def execute(self, tool_input: RAGSearchInput, context: dict[str, object]) -> ToolResult:
         user_id = context.get("user_id")
         session_id = context.get("session_id")
-        kb_id = context.get("kb_id")
         user_query = str(context.get("user_query") or "").strip()
 
         if user_id is None or session_id is None:
             return ToolResult.error("tool permission check failed: missing user/session")
 
-        if kb_id is None:
-            return ToolResult.error("tool permission check failed: invalid kb_id")
-        try:
-            kb_id_int = int(kb_id)
-        except (ValueError, TypeError):
-            return ToolResult.error("tool permission check failed: invalid kb_id")
-        if kb_id_int < 0:
-            return ToolResult.error("tool permission check failed: invalid kb_id")
-
-        query = str(tool_input.query or user_query).strip()
+        query = _strip_surrogates(str(tool_input.query or user_query)).strip()
         if not query:
             return ToolResult.error("empty query")
 
         try:
             req = RAGSearchRequest(
                 query=query,
-                kb_id=int(kb_id),
+                kb_id=0,
                 top_k=tool_input.top_k,
                 mode=SearchMode.dense,
                 use_rerank=True,
             )
-            result = await asyncio.to_thread(self._rag_service.rag_search, req)
+            result = await asyncio.wait_for(
+                asyncio.to_thread(self._rag_service.rag_search, req),
+                timeout=_RAG_TOOL_TIMEOUT_SEC,
+            )
             if result.ok and result.items:
                 items = [
                     {
@@ -85,11 +85,18 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
                 return ToolResult(ok=True, status="miss", message="miss", items=[])
 
             return ToolResult.error("rag_search_failed")
-        except Exception:
-            logger.exception(
-                "rag_search tool failed: user_id=%s, session_id=%s, kb_id=%s",
+        except TimeoutError:
+            logger.warning(
+                "rag_search tool timeout: user_id=%s, session_id=%s, query=%s",
                 user_id,
                 session_id,
-                kb_id,
+                query[:80],
+            )
+            return ToolResult.error("rag_search_timeout")
+        except Exception:
+            logger.exception(
+                "rag_search tool failed: user_id=%s, session_id=%s",
+                user_id,
+                session_id,
             )
             return ToolResult.error("rag_search_exception")

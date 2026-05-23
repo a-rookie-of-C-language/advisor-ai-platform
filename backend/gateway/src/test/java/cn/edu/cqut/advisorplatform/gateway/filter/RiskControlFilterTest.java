@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +41,7 @@ class RiskControlFilterTest {
   @BeforeEach
   void setUp() {
     when(webClientBuilder.build()).thenReturn(webClient);
-    riskControlFilter = new RiskControlFilter(webClientBuilder);
+    riskControlFilter = new RiskControlFilter(webClientBuilder, new SimpleMeterRegistry());
   }
 
   @Test

@@ -7,7 +7,13 @@ import lombok.Data;
 
 @Data
 public class CheckInRecordVO {
+  private String checkInId;
+
+  private String activityTitle;
+
   private Long studentId;
+
+  private String classCode;
 
   @JsonFormat(pattern = "yyyy-MM-dd")
   private LocalDate checkDate;

@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.aspect;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
@@ -116,7 +117,7 @@ public class AuditAspect {
       auditLog.setDurationMs(duration);
       auditLog.setDescription(truncate(description));
 
-      UserDO currentUser = getCurrentUser();
+      UserPrincipal currentUser = getCurrentUser();
       if (currentUser != null) {
         auditLog.setUserId(currentUser.getId());
         auditLog.setUsername(currentUser.getUsername());
@@ -153,11 +154,21 @@ public class AuditAspect {
     }
   }
 
-  private UserDO getCurrentUser() {
+  private UserPrincipal getCurrentUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication != null && authentication.getPrincipal() instanceof UserDO) {
-      return (UserDO) authentication.getPrincipal();
+    if (authentication == null) {
+      return null;
     }
+
+    Object principal = authentication.getPrincipal();
+    if (principal instanceof UserPrincipal userPrincipal) {
+      return userPrincipal;
+    }
+    if (principal instanceof UserDO userDo) {
+      String role = userDo.getRole() == null ? "ADVISOR" : userDo.getRole().name();
+      return new UserPrincipal(userDo.getId(), userDo.getUsername(), role);
+    }
+
     return null;
   }
 

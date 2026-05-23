@@ -17,6 +17,10 @@ public class StudentCheckInRecord {
 
   private Long studentId;
 
+  private String checkInId;
+
+  private String classCode;
+
   private LocalDate checkDate;
 
   private Boolean checkedIn;

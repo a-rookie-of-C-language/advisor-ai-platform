@@ -1,5 +1,6 @@
 package cn.edu.cqut.advisorplatform.config;
 
+import cn.edu.cqut.advisorplatform.common.security.InternalServiceTokenFilter;
 import cn.edu.cqut.advisorplatform.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,7 @@ public class SecurityConfig {
 
   private final UserDetailsService userDetailsService;
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final InternalServiceTokenFilter internalServiceTokenFilter;
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -40,11 +42,14 @@ public class SecurityConfig {
                         "/api/auth/refresh",
                         "/api/auth/logout")
                     .permitAll()
+                    .requestMatchers("/internal/**")
+                    .hasRole("INTERNAL")
                     .anyRequest()
                     .authenticated())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authenticationProvider(authenticationProvider())
+        .addFilterBefore(internalServiceTokenFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
     return http.build();
   }

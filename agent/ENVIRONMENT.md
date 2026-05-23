@@ -21,6 +21,11 @@ This file documents the key runtime variables for `agent`.
 - `OPENAI_MODEL`: model id
 - `OPENAI_TEMPERATURE`: generation temperature
 - `OPENAI_TIMEOUT_SEC`: request timeout
+- 统一规则：主聊天链路、记忆抽取、标注、评估都从环境变量读取模型与网关地址
+- 优先级规则：
+  - 标注：`ANNOTATION_LLM_*` 优先，缺失回退 `OPENAI_*`
+  - 评估：`EVAL_LLM_*` 优先，缺失回退 `OPENAI_*`
+- 失败策略：`API_KEY` / `BASE_URL` / `MODEL` 缺失时直接启动失败（fail fast）
 
 ## Tool Controls
 

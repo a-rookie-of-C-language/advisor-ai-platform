@@ -3,12 +3,12 @@ package cn.edu.cqut.advisorplatform.controller;
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
@@ -62,7 +62,7 @@ public class ChatController {
       logRequestParams = false,
       logResponseData = false)
   public ApiResponseDTO<List<Map<String, Object>>> listSessions(
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     return ApiResponseDTO.success(chatService.listSessions(currentUser));
   }
 
@@ -73,7 +73,7 @@ public class ChatController {
       logRequestParams = false,
       logResponseData = false)
   public ApiResponseDTO<Map<String, Object>> createSession(
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     return ApiResponseDTO.success(chatService.createSession(currentUser));
   }
 
@@ -84,7 +84,7 @@ public class ChatController {
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Void> deleteSession(
-      @PathVariable("id") Long id, @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @PathVariable("id") Long id, @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     attachAuditContext(null, id, null);
     chatService.deleteSession(id, currentUser);
     return ApiResponseDTO.success();
@@ -99,7 +99,7 @@ public class ChatController {
   public ApiResponseDTO<Map<String, Object>> updateSessionKb(
       @PathVariable("id") Long id,
       @RequestBody Map<String, Object> body,
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     attachAuditContext(null, id, null);
     Object kbIdValue = body == null ? null : body.get("kbId");
     if (!(kbIdValue instanceof Number kbIdNumber)) {
@@ -117,7 +117,7 @@ public class ChatController {
       logResponseData = false)
   public ApiResponseDTO<List<Map<String, Object>>> listMessages(
       @PathVariable("sessionId") Long sessionId,
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     attachAuditContext(null, sessionId, null);
     return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
   }
@@ -131,7 +131,7 @@ public class ChatController {
   public ApiResponseDTO<Map<String, Object>> sendMessage(
       @PathVariable("sessionId") Long sessionId,
       @RequestBody Map<String, String> body,
-      @AuthenticationPrincipal @Nullable UserDO currentUser)
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser)
       throws java.io.IOException {
     if (currentUser == null || currentUser.getId() == null) {
       throw new ForbiddenException("未登录或登录已失效");
@@ -143,12 +143,10 @@ public class ChatController {
     }
 
     long startAt = System.currentTimeMillis();
-    long kbId = chatService.getSessionKbId(sessionId, currentUser);
     List<ChatStreamMessageDTO> history = buildHistoryMessages(sessionId, currentUser, userContent);
 
     ChatStreamRequestDTO request = new ChatStreamRequestDTO();
     request.setSessionId(sessionId);
-    request.setKbId(kbId);
     request.setMessages(history);
 
     String turnId = buildTurnId(request, currentUser.getId());
@@ -158,8 +156,7 @@ public class ChatController {
     LogTraceUtil.put(traceId, sessionId, turnId, currentUser.getId());
     try {
       log.info(
-          "chat_send start, kbId={}, messageCount={}, userLen={}, userPreview={}",
-          kbId,
+          "chat_send start, messageCount={}, userLen={}, userPreview={}",
           history.size(),
           userContent.length(),
           LogTraceUtil.preview(userContent));
@@ -216,13 +213,10 @@ public class ChatController {
       logResponseData = false)
   public ResponseEntity<StreamingResponseBody> streamChat(
       @Valid @RequestBody ChatStreamRequestDTO request,
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     if (currentUser == null || currentUser.getId() == null) {
       throw new ForbiddenException("未登录或登录已失效");
     }
-
-    long sessionKbId = chatService.getSessionKbId(request.getSessionId(), currentUser);
-    request.setKbId(sessionKbId);
 
     String userText = extractLastUserMessage(request);
     String turnId = buildTurnId(request, currentUser.getId());
@@ -230,12 +224,11 @@ public class ChatController {
     attachAuditContext(traceId, request.getSessionId(), turnId);
 
     log.info(
-        "chat_stream accepted, traceId={}, sessionId={}, turnId={}, userId={}, kbId={}, userLen={}, userPreview={}",
+        "chat_stream accepted, traceId={}, sessionId={}, turnId={}, userId={}, userLen={}, userPreview={}",
         traceId,
         request.getSessionId(),
         turnId,
         currentUser.getId(),
-        sessionKbId,
         userText.length(),
         LogTraceUtil.preview(userText));
 
@@ -306,7 +299,7 @@ public class ChatController {
   }
 
   private List<ChatStreamMessageDTO> buildHistoryMessages(
-      Long sessionId, UserDO currentUser, String userContent) {
+      Long sessionId, UserPrincipal currentUser, String userContent) {
     List<Map<String, Object>> persisted = chatService.listMessages(sessionId, currentUser);
     List<ChatStreamMessageDTO> result = new ArrayList<>();
 
@@ -375,8 +368,6 @@ public class ChatController {
     StringBuilder normalized = new StringBuilder();
     normalized.append(userId == null ? 0 : userId).append('|');
     normalized.append(request.getSessionId() == null ? 0 : request.getSessionId()).append('|');
-    normalized.append(request.getKbId() == null ? 0 : request.getKbId()).append('|');
-
     if (request.getMessages() != null) {
       for (ChatStreamMessageDTO message : request.getMessages()) {
         if (message == null) {

@@ -6,11 +6,13 @@ import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(20)
 @RequiredArgsConstructor
 public class RateLimitFilter implements RiskFilter {
 
@@ -38,7 +40,7 @@ public class RateLimitFilter implements RiskFilter {
       log.warn("Rate limit exceeded: userId={}, count={}", request.getUserId(), count);
       return RiskCheckResponse.builder()
           .passed(false)
-          .action("reject")
+          .action("challenge")
           .reason("请求频率超限")
           .category("rate_limit")
           .statusCode(429)

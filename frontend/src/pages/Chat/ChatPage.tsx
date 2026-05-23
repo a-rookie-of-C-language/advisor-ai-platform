@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Collapse, Empty, Input, Select, Space, Tag, Typography } from 'antd'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button, Collapse, Input, Skeleton, Space, Tag, Typography } from 'antd'
 import {
   FileTextOutlined,
   LoadingOutlined,
@@ -10,8 +10,8 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
 import { chatApi, type ChatSessionDTO, type StreamSourceItem } from '../../api/chatApi'
-import { ragApi, type KnowledgeBaseDTO } from '../../api/ragApi'
 import { globalMessage } from '../../utils/globalMessage'
+import { emitChatSessionsRefresh, onChatSessionsRefresh } from './chatSessionEvents'
 import styles from './ChatPage.module.css'
 
 const { Text, Title } = Typography
@@ -29,6 +29,7 @@ interface ChatMessage {
   content: string
   sources?: Source[]
   streaming?: boolean
+  progressText?: string
 }
 
 interface ChatSession {
@@ -55,7 +56,12 @@ function MsgBubble({ msg }: MsgBubbleProps) {
       </div>
       <div className={`${styles.msgBubble} ${isUser ? styles.bubbleUser : styles.bubbleAI}`}>
         {msg.streaming && !msg.content
-          ? <LoadingOutlined style={{ color: '#2563EB' }} />
+          ? (
+            <Space size={8}>
+              <LoadingOutlined style={{ color: '#2563EB' }} />
+              <Text type="secondary">{msg.progressText || '模型思考中，请稍候...'}</Text>
+            </Space>
+            )
           : isUser
             ? <Text>{msg.content}</Text>
             : (
@@ -123,37 +129,110 @@ function toChatSession(data: ChatSessionDTO): ChatSession {
   }
 }
 
+function isSessionNotFoundError(error: unknown): boolean {
+  if (typeof error === 'string') {
+    return error.includes('会话不存在')
+  }
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+  const maybe = error as {
+    response?: { status?: number; data?: { message?: string } }
+    config?: { url?: string }
+  }
+  const message = maybe.response?.data?.message
+  if (typeof message === 'string' && message.includes('会话不存在')) {
+    return true
+  }
+  const status = maybe.response?.status
+  const url = maybe.config?.url ?? ''
+  if (status === 404 && typeof url === 'string' && /\/chat\/sessions\/\d+\/messages/.test(url)) {
+    return true
+  }
+  return false
+}
+
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseDTO[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
+  const [messagesLoading, setMessagesLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const msgListRef = useRef<HTMLDivElement>(null)
+  const messageLoadSeqRef = useRef(0)
+  const shouldAutoScrollRef = useRef(true)
+  const routeSyncRef = useRef(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeId) ?? null,
     [sessions, activeId],
   )
+  const applyRouteSessionId = (sessionId: number | null) => {
+    routeSyncRef.current = true
+    if (sessionId == null) {
+      setSearchParams({}, { replace: true })
+      return
+    }
+    setSearchParams({ sessionId: String(sessionId) }, { replace: true })
+  }
+
+  const reloadSessions = async (preferredSessionId?: number, syncRoute = false): Promise<ChatSession[]> => {
+    const response = await chatApi.listSessions()
+    const baseSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
+    let nextSessions: ChatSession[] = baseSessions
+    setSessions((prev) => {
+      const messageMap = new Map(prev.map((session) => [session.id, session.messages]))
+      nextSessions = baseSessions.map((session) => ({
+        ...session,
+        messages: messageMap.get(session.id) ?? [],
+      }))
+      return nextSessions
+    })
+    const targetId = preferredSessionId ?? Number(searchParams.get('sessionId') ?? '')
+    if (nextSessions.length === 0) {
+      setActiveId(null)
+      if (syncRoute) {
+        applyRouteSessionId(null)
+      }
+      return nextSessions
+    }
+    const matched = Number.isFinite(targetId) && targetId > 0
+      ? nextSessions.find((item) => item.id === targetId)
+      : null
+    const nextActiveId = matched ? matched.id : nextSessions[0].id
+    setActiveId(nextActiveId)
+    if (syncRoute) {
+      applyRouteSessionId(nextActiveId)
+    }
+    return nextSessions
+  }
+
+  const recoverInvalidSession = async (error: unknown): Promise<boolean> => {
+    if (!isSessionNotFoundError(error)) {
+      return false
+    }
+    await reloadSessions(undefined, true)
+    emitChatSessionsRefresh()
+    globalMessage.error('会话不存在，已自动刷新会话列表')
+    return true
+  }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeSession?.messages])
+    if (!activeSession) {
+      return
+    }
+    if (!shouldAutoScrollRef.current) {
+      return
+    }
+    bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+  }, [activeSession?.id, activeSession?.messages.length])
 
   useEffect(() => {
     void (async () => {
       try {
-        const response = await chatApi.listSessions()
-        const nextSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
-        setSessions(nextSessions)
-        const routeSessionId = Number(searchParams.get('sessionId') ?? '')
-        if (nextSessions.length > 0 && Number.isFinite(routeSessionId) && routeSessionId > 0) {
-          const matched = nextSessions.find((item) => item.id === routeSessionId)
-          setActiveId(matched ? matched.id : nextSessions[0].id)
-        } else if (nextSessions.length > 0) {
-          setActiveId(nextSessions[0].id)
-        }
+        await reloadSessions()
       } catch (error) {
         globalMessage.error(typeof error === 'string' ? error : '加载会话失败')
       }
@@ -161,38 +240,52 @@ export default function ChatPage() {
   }, [])
 
   useEffect(() => {
+    const unsubscribe = onChatSessionsRefresh(() => {
+      void reloadSessions(activeId ?? undefined)
+    })
+    return unsubscribe
+  }, [activeId])
+
+  useEffect(() => {
     const routeSessionId = Number(searchParams.get('sessionId') ?? '')
-    if (Number.isFinite(routeSessionId) && routeSessionId > 0 && routeSessionId !== activeId) {
+    if (routeSyncRef.current) {
+      routeSyncRef.current = false
+      return
+    }
+    if (!Number.isFinite(routeSessionId) || routeSessionId <= 0) {
+      if (sessions.length > 0 && activeId !== sessions[0].id) {
+        shouldAutoScrollRef.current = true
+        setActiveId(sessions[0].id)
+      }
+      return
+    }
+
+    const matched = sessions.find((session) => session.id === routeSessionId)
+    if (!matched) {
+      void reloadSessions(routeSessionId, true)
+      return
+    }
+
+    if (routeSessionId !== activeId) {
+      shouldAutoScrollRef.current = true
       setActiveId(routeSessionId)
     }
-  }, [searchParams, activeId])
+  }, [searchParams, activeId, sessions, setSearchParams])
 
   useEffect(() => {
     if (activeId == null) {
-      return
-    }
-    setSearchParams({ sessionId: String(activeId) }, { replace: true })
-  }, [activeId, setSearchParams])
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const response = await ragApi.listKnowledgeBases()
-        setKnowledgeBases(response.data ?? [])
-      } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载知识库失败')
-      }
-    })()
-  }, [])
-
-  useEffect(() => {
-    if (activeId == null) {
+      setMessagesLoading(false)
       return
     }
 
+    setMessagesLoading(true)
+    const currentSeq = ++messageLoadSeqRef.current
     void (async () => {
       try {
         const response = await chatApi.listMessages(activeId)
+        if (currentSeq !== messageLoadSeqRef.current) {
+          return
+        }
         const messages = (response.data ?? []).map(toChatMessage)
         setSessions((prev) => prev.map((session) => (
           session.id === activeId
@@ -200,28 +293,20 @@ export default function ChatPage() {
             : session
         )))
       } catch (error) {
+        if (currentSeq !== messageLoadSeqRef.current) {
+          return
+        }
+        if (await recoverInvalidSession(error)) {
+          return
+        }
         globalMessage.error(typeof error === 'string' ? error : '加载消息失败')
+      } finally {
+        if (currentSeq === messageLoadSeqRef.current) {
+          setMessagesLoading(false)
+        }
       }
     })()
   }, [activeId])
-
-  const handleSelectKb = async (kbId: number) => {
-    if (!activeSession) {
-      return
-    }
-    try {
-      const response = await chatApi.updateSessionKb(activeSession.id, kbId)
-      const updated = response.data
-      setSessions((prev) => prev.map((session) => (
-        session.id === activeSession.id
-          ? { ...session, kbId: updated.kbId ?? 0, updatedAt: updated.updatedAt }
-          : session
-      )))
-      globalMessage.success(kbId > 0 ? '知识库已绑定到当前会话' : '已取消当前会话的知识库绑定')
-    } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '更新会话知识库失败')
-    }
-  }
 
   const updateAssistantMessage = (sessionId: number, messageId: number, patch: Partial<ChatMessage>) => {
     setSessions((prev) => prev.map((session) => {
@@ -262,10 +347,18 @@ export default function ChatPage() {
       try {
         const response = await chatApi.createSession()
         const created = response.data
+        if (!created?.id) {
+          globalMessage.error('创建会话失败，无法发送消息')
+          return
+        }
         targetSession = toChatSession(created)
         setSessions((prev) => [targetSession!, ...prev])
         setActiveId(targetSession.id)
+        applyRouteSessionId(targetSession.id)
       } catch (error) {
+        if (await recoverInvalidSession(error)) {
+          return
+        }
         globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
         return
       }
@@ -280,7 +373,13 @@ export default function ChatPage() {
     const aiMsgId = userMsgId + 1
 
     const userMessage: ChatMessage = { id: userMsgId, role: 'user', content: text, streaming: false }
-    const assistantPlaceholder: ChatMessage = { id: aiMsgId, role: 'assistant', content: '', streaming: true }
+    const assistantPlaceholder: ChatMessage = {
+      id: aiMsgId,
+      role: 'assistant',
+      content: '',
+      streaming: true,
+      progressText: '模型思考中，请稍候... (0s)',
+    }
 
     const historyMessages = [
       ...targetSession.messages,
@@ -291,6 +390,7 @@ export default function ChatPage() {
 
     setInputText('')
     setSending(true)
+    shouldAutoScrollRef.current = true
     setSessions((prev) => {
       let matched = false
       const mapped = prev.map((session) => {
@@ -338,11 +438,16 @@ export default function ChatPage() {
                 ...session,
                 messages: session.messages.map((msg) => (
                   msg.id === aiMsgId
-                    ? { ...msg, content: `${msg.content}${chunk}`, streaming: true }
+                    ? { ...msg, content: `${msg.content}${chunk}`, streaming: true, progressText: undefined }
                     : msg
                 )),
               }
             }))
+          },
+          onProgress: (message, elapsedSec) => {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              progressText: `${message}${typeof elapsedSec === 'number' ? ` (${elapsedSec}s)` : ''}`,
+            })
           },
           onEnd: () => {
             updateAssistantMessage(sessionId, aiMsgId, { streaming: false })
@@ -367,7 +472,19 @@ export default function ChatPage() {
 
       if (streamFailed) {
         globalMessage.warning('流式失败，已自动降级为非流式请求')
-        const fallbackResp = await chatApi.sendMessage(sessionId, text)
+        let fallbackResp
+        try {
+          fallbackResp = await chatApi.sendMessage(sessionId, text)
+        } catch (fallbackError) {
+          if (await recoverInvalidSession(fallbackError)) {
+            updateAssistantMessage(sessionId, aiMsgId, {
+              streaming: false,
+              content: '会话不存在，已自动刷新，请重新发送消息。',
+            })
+            return
+          }
+          throw fallbackError
+        }
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
           content: fallbackResp.data?.content ?? (streamError || '请求失败，请稍后重试。'),
@@ -382,12 +499,20 @@ export default function ChatPage() {
           content: fallbackResp.data?.content ?? '请求失败，请稍后重试。',
         })
       } catch (fallbackError) {
+        if (await recoverInvalidSession(fallbackError)) {
+          updateAssistantMessage(sessionId, aiMsgId, {
+            streaming: false,
+            content: '会话不存在，已自动刷新，请重新发送消息。',
+          })
+          return
+        }
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
           content: typeof fallbackError === 'string' ? `请求失败：${fallbackError}` : '请求失败，请稍后重试。',
         })
       }
     } finally {
+      emitChatSessionsRefresh()
       setSending(false)
     }
   }
@@ -395,24 +520,15 @@ export default function ChatPage() {
   return (
     <div className={styles.container}>
       <main className={styles.main}>
-        {activeSession && (
-          <div style={{ padding: '16px 20px 0' }}>
-            <Space align="center" wrap>
-              <Text type="secondary">当前知识库</Text>
-              <Select
-                value={activeSession.kbId}
-                style={{ minWidth: 240 }}
-                disabled={sending}
-                onChange={(value) => void handleSelectKb(value)}
-                options={[
-                  { value: 0, label: '不使用知识库' },
-                  ...knowledgeBases.map((kb) => ({ value: kb.id, label: kb.name })),
-                ]}
-              />
-            </Space>
-          </div>
-        )}
-        {!activeSession || activeSession.messages.length === 0
+        {messagesLoading && (!activeSession || activeSession.messages.length === 0)
+          ? (
+            <div className={styles.emptyChat}>
+              <div style={{ width: 'min(780px, 100%)' }}>
+                <Skeleton active paragraph={{ rows: 4 }} title={false} />
+              </div>
+            </div>
+            )
+          : !activeSession || activeSession.messages.length === 0
           ? (
             <div className={styles.emptyChat}>
               <RobotOutlined style={{ fontSize: 52, color: '#CBD5E1', marginBottom: 16 }} />
@@ -421,7 +537,15 @@ export default function ChatPage() {
             </div>
             )
           : (
-            <div className={styles.msgList}>
+            <div
+              className={styles.msgList}
+              ref={msgListRef}
+              onScroll={(event) => {
+                const target = event.currentTarget
+                const delta = target.scrollHeight - target.scrollTop - target.clientHeight
+                shouldAutoScrollRef.current = delta < 80
+              }}
+            >
               {activeSession.messages.map((msg) => (
                 <MsgBubble key={msg.id} msg={msg} />
               ))}
@@ -430,10 +554,6 @@ export default function ChatPage() {
             )}
 
         <div className={styles.inputArea}>
-          {!activeSession && (
-            <Empty description={<span>请先创建会话后再发送消息</span>} style={{ marginBottom: 12 }} />
-          )}
-
           <div className={styles.inputRow}>
             <Input.TextArea
               value={inputText}
@@ -468,3 +588,4 @@ export default function ChatPage() {
     </div>
   )
 }
+
