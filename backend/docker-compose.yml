@@ -254,8 +254,8 @@ services:
       MCP_SERVERS: student:http:http://student-service:8085/mcp/message
       MCP_TOKEN_STUDENT: arookieofc
       OPENAI_TEMPERATURE: 0.2
-      EMBEDDING_PROVIDER: openai
-      EMBEDDING_MODEL: BAAI/bge-m3
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: bge-m3
       ENABLE_TOOL_USE: "true"
       ENABLED_TOOLS: web_fetch,web_search,rag_search,mcp__student__list_students,mcp__student__get_student,mcp__student__get_student_checkin_summary,mcp__student__get_student_checkin_detail
       MEMORY_API_BASE_URL: http://memory-service:8084

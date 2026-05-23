@@ -19,4 +19,9 @@ public class ChatStreamProxyResult {
   public ChatStreamProxyResult(@Nullable String assistantText) {
     this(assistantText, List.of(), List.of());
   }
+
+  public ChatStreamProxyResult(
+      @Nullable String assistantText, @Nullable List<ChatMessageDO.SourceReference> sources) {
+    this(assistantText, sources, List.of());
+  }
 }
