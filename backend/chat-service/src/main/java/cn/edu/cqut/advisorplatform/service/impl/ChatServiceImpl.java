@@ -128,7 +128,8 @@ public class ChatServiceImpl implements ChatService {
         "id", message.getId(),
         "role", message.getRole(),
         "content", message.getContent(),
-        "sources", message.getSources() == null ? List.of() : message.getSources());
+        "sources", message.getSources() == null ? List.of() : message.getSources(),
+        "events", message.getEvents() == null ? List.of() : message.getEvents());
   }
 
   private String formatTime(LocalDateTime value) {

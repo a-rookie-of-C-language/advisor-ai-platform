@@ -13,6 +13,7 @@ import {
   chatApi,
   type ChatSessionDTO,
   type StreamEventData,
+  type StreamEventRecord,
   type StreamSourceItem,
   type StreamToolResult,
 } from '../../api/chatApi'
@@ -38,12 +39,22 @@ interface ToolCall {
   result?: StreamToolResult
 }
 
+interface ChatEvent {
+  id: string
+  event: string
+  payload: StreamEventData
+  source?: string
+  traceId?: string
+  timestamp?: number
+}
+
 interface ChatMessage {
   id: number
   role: 'user' | 'assistant'
   content: string
   sources?: Source[]
   toolCalls?: ToolCall[]
+  events?: ChatEvent[]
   streaming?: boolean
   progressText?: string
 }
@@ -72,6 +83,151 @@ function renderToolPayload(value: unknown): string {
   } catch {
     return String(value)
   }
+}
+
+const PERSISTABLE_EVENTS = new Set([
+  'tool_use',
+  'tool_result',
+  'tool_error',
+  'sys_intent_route',
+  'sys_tool_plan',
+  'sys_rag_force',
+  'risk_alert',
+])
+
+function isPersistableEvent(event: string): boolean {
+  return PERSISTABLE_EVENTS.has(event)
+}
+
+function eventRecordId(event: string, payload: StreamEventData, fallback: string): string {
+  const toolCallId = typeof payload.tool_call_id === 'string' ? payload.tool_call_id : ''
+  if (toolCallId) {
+    return `${event}:${toolCallId}`
+  }
+  return `${event}:${fallback}`
+}
+
+function normalizeEventRecord(record: StreamEventRecord, index: number): ChatEvent | null {
+  if (!record?.event || !isPersistableEvent(record.event)) {
+    return null
+  }
+  const payload = record.payload ?? {}
+  return {
+    id: eventRecordId(record.event, payload, `${record.timestamp ?? index}:${index}`),
+    event: record.event,
+    payload,
+    source: record.source,
+    traceId: record.traceId,
+    timestamp: record.timestamp,
+  }
+}
+
+function normalizeEventRecords(records?: StreamEventRecord[]): ChatEvent[] {
+  return (records ?? [])
+    .map(normalizeEventRecord)
+    .filter((item): item is ChatEvent => item !== null)
+}
+
+function streamEventRecord(event: string, payload: StreamEventData): ChatEvent | null {
+  if (!isPersistableEvent(event)) {
+    return null
+  }
+  return {
+    id: eventRecordId(event, payload, `${Date.now()}:${Math.random().toString(16).slice(2)}`),
+    event,
+    payload,
+  }
+}
+
+function eventDisplayTitle(event: string, payload: StreamEventData): string {
+  const toolName = typeof payload.tool_name === 'string' ? payload.tool_name : ''
+  if (event === 'tool_use') {
+    return toolName ? `工具调用：${toolName}` : '工具调用'
+  }
+  if (event === 'tool_result') {
+    return toolName ? `工具返回：${toolName}` : '工具返回'
+  }
+  if (event === 'tool_error') {
+    return toolName ? `工具失败：${toolName}` : '工具失败'
+  }
+  if (event === 'sys_intent_route') {
+    return '意图路由'
+  }
+  if (event === 'sys_tool_plan') {
+    return '工具规划'
+  }
+  if (event === 'sys_rag_force') {
+    return '知识库检索'
+  }
+  if (event === 'risk_alert') {
+    return '风险提示'
+  }
+  return event
+}
+
+function eventDisplayDetail(event: string, payload: StreamEventData): string {
+  if (event === 'tool_use') {
+    return payload.input !== undefined ? `input: ${renderToolPayload(payload.input)}` : ''
+  }
+  if (event === 'tool_result') {
+    return payload.message || renderToolPayload(payload.derived?.sources ?? payload.items ?? payload.output)
+  }
+  if (event === 'tool_error') {
+    return payload.message || payload.code || 'tool error'
+  }
+  if (event === 'sys_intent_route') {
+    const categories = Array.isArray(payload.categories) ? payload.categories.filter(Boolean).join(', ') : ''
+    const matchedBy = typeof payload.matched_by === 'string' ? payload.matched_by : ''
+    return [categories ? `categories: ${categories}` : '', matchedBy ? `matched_by: ${matchedBy}` : '']
+      .filter(Boolean)
+      .join('\n')
+  }
+  return payload.message || payload.reason || renderToolPayload(payload)
+}
+
+function eventTagColor(event: string): string {
+  if (event === 'tool_error' || event === 'risk_alert') {
+    return 'red'
+  }
+  if (event.startsWith('sys_')) {
+    return 'blue'
+  }
+  return 'geekblue'
+}
+
+function toolCallsFromEvents(events: ChatEvent[]): ToolCall[] {
+  const calls: ToolCall[] = []
+  for (const item of events) {
+    const payload = item.payload
+    const toolName = typeof payload.tool_name === 'string' ? payload.tool_name : ''
+    if (!toolName || !item.event.startsWith('tool_')) {
+      continue
+    }
+    const id = typeof payload.tool_call_id === 'string' && payload.tool_call_id ? payload.tool_call_id : toolName
+    const index = calls.findIndex((call) => call.id === id)
+    const patch: ToolCall = {
+      id,
+      toolName,
+      input: item.event === 'tool_use' ? payload.input : undefined,
+      status: item.event === 'tool_error' ? 'error' : payload.status,
+      message: payload.message,
+      result: item.event === 'tool_result'
+        ? {
+            status: payload.status,
+            message: payload.message,
+            items: payload.items,
+            output: payload.output,
+            derived: payload.derived,
+          }
+        : undefined,
+    }
+    if (index >= 0) {
+      calls[index] = { ...calls[index], ...patch, input: patch.input ?? calls[index].input }
+    } else {
+      calls.push(patch)
+    }
+  }
+  return calls
 }
 
 function describeSystemState(event: string, payload: StreamEventData): string {
@@ -149,7 +305,45 @@ function MsgBubble({ msg }: MsgBubbleProps) {
             )
           : null}
 
-        {msg.toolCalls?.length
+        {msg.events?.length
+          ? (
+            <Collapse
+              ghost
+              size="small"
+              style={{ marginTop: 8 }}
+              items={[{
+                key: 'events',
+                label: (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    <FileTextOutlined style={{ marginRight: 4 }} />
+                    执行过程 {msg.events.length} 条
+                  </Text>
+                ),
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {msg.events.map((item) => {
+                      const detail = eventDisplayDetail(item.event, item.payload)
+                      return (
+                        <div key={item.id} style={{ background: '#F8FAFC', borderRadius: 6, padding: '8px 12px' }}>
+                          <Tag color={eventTagColor(item.event)} style={{ fontSize: 11, marginBottom: 4 }}>
+                            {eventDisplayTitle(item.event, item.payload)}
+                          </Tag>
+                          {detail && (
+                            <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
+                              {detail}
+                            </Text>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </Space>
+                ),
+              }]}
+            />
+            )
+          : null}
+
+        {!msg.events?.length && msg.toolCalls?.length
           ? (
             <Collapse
               ghost
@@ -193,7 +387,8 @@ function MsgBubble({ msg }: MsgBubbleProps) {
   )
 }
 
-function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string; sources?: StreamSourceItem[] }): ChatMessage {
+function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string; sources?: StreamSourceItem[]; events?: StreamEventRecord[] }): ChatMessage {
+  const events = normalizeEventRecords(data.events)
   return {
     id: data.id,
     role: data.role,
@@ -204,6 +399,8 @@ function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: 
       snippet: item.snippet || '',
       score: item.score,
     })),
+    events,
+    toolCalls: toolCallsFromEvents(events),
     streaming: false,
   }
 }
@@ -447,6 +644,27 @@ export default function ChatPage() {
     }))
   }
 
+  const appendMessageEvent = (sessionId: number, messageId: number, event: ChatEvent) => {
+    setSessions((prev) => prev.map((session) => {
+      if (session.id !== sessionId) {
+        return session
+      }
+      return {
+        ...session,
+        messages: session.messages.map((msg) => {
+          if (msg.id !== messageId) {
+            return msg
+          }
+          const events = msg.events ?? []
+          return {
+            ...msg,
+            events: events.some((item) => item.id === event.id) ? events : [...events, event],
+          }
+        }),
+      }
+    }))
+  }
+
   const handleSend = async () => {
     const text = inputText.trim()
     if (!text || sending) {
@@ -540,6 +758,12 @@ export default function ChatPage() {
           sessionId,
         },
         {
+          onEvent: ({ event, payload }) => {
+            const record = streamEventRecord(event, payload)
+            if (record) {
+              appendMessageEvent(sessionId, aiMsgId, record)
+            }
+          },
           onDelta: (chunk) => {
             setSessions((prev) => prev.map((session) => {
               if (session.id !== sessionId) {
@@ -639,18 +863,24 @@ export default function ChatPage() {
           }
           throw fallbackError
         }
+        const fallbackEvents = normalizeEventRecords(fallbackResp.data?.events)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
           content: fallbackResp.data?.content ?? (streamError || '请求失败，请稍后重试。'),
+          events: fallbackEvents,
+          toolCalls: toolCallsFromEvents(fallbackEvents),
         })
       }
     } catch {
       globalMessage.warning('流式失败，已自动降级为非流式请求')
       try {
         const fallbackResp = await chatApi.sendMessage(sessionId, text)
+        const fallbackEvents = normalizeEventRecords(fallbackResp.data?.events)
         updateAssistantMessage(sessionId, aiMsgId, {
           streaming: false,
           content: fallbackResp.data?.content ?? '请求失败，请稍后重试。',
+          events: fallbackEvents,
+          toolCalls: toolCallsFromEvents(fallbackEvents),
         })
       } catch (fallbackError) {
         if (await recoverInvalidSession(fallbackError)) {

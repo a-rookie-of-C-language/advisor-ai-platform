@@ -14,7 +14,9 @@ public class ChatStreamProxyResult {
 
   @Nullable private List<ChatMessageDO.SourceReference> sources;
 
+  @Nullable private List<ChatMessageDO.StreamEventRecord> events;
+
   public ChatStreamProxyResult(@Nullable String assistantText) {
-    this(assistantText, List.of());
+    this(assistantText, List.of(), List.of());
   }
 }

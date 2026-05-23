@@ -6,6 +6,7 @@ import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -36,8 +37,11 @@ import org.springframework.stereotype.Service;
 public class AgentProxyServiceImpl implements AgentProxyService {
 
   private static final int DEBUG_PREVIEW_LIMIT = 200;
+  private static final int MAX_PERSISTED_EVENTS = 80;
   private static final String TRACE_HEADER = "X-Trace-Id";
   private static final String TURN_HEADER = "X-Turn-Id";
+  private static final TypeReference<Map<String, Object>> STREAM_EVENT_PAYLOAD_TYPE =
+      new TypeReference<>() {};
   private static final ScheduledExecutorService FIRST_CHUNK_WATCHDOG =
       Executors.newScheduledThreadPool(
           1,
@@ -188,6 +192,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     AtomicBoolean sawDoneEvent = new AtomicBoolean(false);
     AtomicBoolean sawErrorEvent = new AtomicBoolean(false);
     List<ChatMessageDO.SourceReference> sources = new ArrayList<>();
+    List<ChatMessageDO.StreamEventRecord> events = new ArrayList<>();
 
     if (debugStream) {
       log.info("debug_stream java start: sessionId={}, userId={}", request.getSessionId(), userId);
@@ -222,7 +227,13 @@ public class AgentProxyServiceImpl implements AgentProxyService {
           int before = deltaCount;
           deltaCount +=
               collectDeltaAndAnswer(
-                  sseBuffer, deltaPreview, assistantText, sources, sawDoneEvent, sawErrorEvent);
+                  sseBuffer,
+                  deltaPreview,
+                  assistantText,
+                  sources,
+                  events,
+                  sawDoneEvent,
+                  sawErrorEvent);
           if (!firstDeltaLogged && deltaCount > before) {
             firstDeltaLogged = true;
             log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
@@ -237,7 +248,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                 log.warn(
                     "agent_proxy client_disconnected, reason={}",
                     LogTraceUtil.preview(io.getMessage()));
-                return new ChatStreamProxyResult(assistantText.toString(), List.copyOf(sources));
+                return new ChatStreamProxyResult(
+                    assistantText.toString(), List.copyOf(sources), List.copyOf(events));
               }
               throw io;
             }
@@ -283,7 +295,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         sawErrorEvent.get(),
         elapsedSince(startAt));
 
-    return new ChatStreamProxyResult(assistantText.toString(), sources);
+    return new ChatStreamProxyResult(assistantText.toString(), sources, events);
   }
 
   private int collectDeltaAndAnswer(
@@ -291,6 +303,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       StringBuilder deltaPreview,
       StringBuilder assistantText,
       List<ChatMessageDO.SourceReference> sources,
+      List<ChatMessageDO.StreamEventRecord> events,
       AtomicBoolean sawDoneEvent,
       AtomicBoolean sawErrorEvent) {
     int count = 0;
@@ -310,6 +323,12 @@ public class AgentProxyServiceImpl implements AgentProxyService {
           sources.addAll(extractedSources);
         }
       }
+      if (shouldPersistEvent(eventName) && events.size() < MAX_PERSISTED_EVENTS) {
+        ChatMessageDO.StreamEventRecord record = extractStreamEventRecord(eventName, block);
+        if (record != null) {
+          events.add(record);
+        }
+      }
       String delta = extractDelta(block);
       if (delta == null || delta.isBlank()) {
         continue;
@@ -324,6 +343,43 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     return count;
   }
 
+  private boolean shouldPersistEvent(String eventName) {
+    return switch (eventName) {
+      case "tool_use",
+              "tool_result",
+              "tool_error",
+              "sys_intent_route",
+              "sys_tool_plan",
+              "sys_rag_force",
+              "risk_alert" ->
+          true;
+      default -> false;
+    };
+  }
+
+  private ChatMessageDO.StreamEventRecord extractStreamEventRecord(
+      String eventName, String sseBlock) {
+    String dataJson = extractDataJson(sseBlock);
+    if (dataJson.isBlank()) {
+      return null;
+    }
+    try {
+      JsonNode node = objectMapper.readTree(dataJson);
+      JsonNode payloadNode = node.has("payload") ? node.path("payload") : node;
+      ChatMessageDO.StreamEventRecord record = new ChatMessageDO.StreamEventRecord();
+      record.setEvent(eventName);
+      record.setSource(node.path("source").asText(""));
+      record.setTraceId(node.path("trace_id").asText(""));
+      if (node.has("timestamp") && node.path("timestamp").canConvertToLong()) {
+        record.setTimestamp(node.path("timestamp").asLong());
+      }
+      record.setPayload(objectMapper.convertValue(payloadNode, STREAM_EVENT_PAYLOAD_TYPE));
+      return record;
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
   private String extractEventName(String sseBlock) {
     String[] lines = sseBlock.split("\n");
     String event = "message";
@@ -335,6 +391,18 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       }
     }
     return event;
+  }
+
+  private String extractDataJson(String sseBlock) {
+    String[] lines = sseBlock.split("\n");
+    StringBuilder dataBuilder = new StringBuilder();
+    for (String line : lines) {
+      String trimmed = line.trim();
+      if (trimmed.startsWith("data:")) {
+        dataBuilder.append(trimmed.substring(5).trim());
+      }
+    }
+    return dataBuilder.toString();
   }
 
   private String extractDelta(String sseBlock) {

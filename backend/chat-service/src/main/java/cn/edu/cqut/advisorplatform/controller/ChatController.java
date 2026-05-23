@@ -168,16 +168,18 @@ public class ChatController {
             "chat_send cache_hit, assistantLen={}, elapsedMs={}",
             cached.length(),
             elapsedSince(startAt));
-        return ApiResponseDTO.success(buildAssistantResponse(cached, List.of()));
+        return ApiResponseDTO.success(buildAssistantResponse(cached, List.of(), List.of()));
       }
 
       String assistantText;
       List<ChatMessageDO.SourceReference> sources = List.of();
+      List<ChatMessageDO.StreamEventRecord> events = List.of();
       try {
         ChatStreamProxyResult result =
             agentProxyService.proxyChatOnce(request, currentUser.getId());
         assistantText = result == null ? "" : result.getAssistantText();
         sources = result == null || result.getSources() == null ? List.of() : result.getSources();
+        events = result == null || result.getEvents() == null ? List.of() : result.getEvents();
       } catch (Exception e) {
         String errorMessage = safeMessage(e);
         assistantText = "请求失败：" + errorMessage;
@@ -188,18 +190,18 @@ public class ChatController {
         assistantText = ASSISTANT_ERROR_PLACEHOLDER;
       }
 
-      if (sources == null || sources.isEmpty()) {
+      if ((sources == null || sources.isEmpty()) && (events == null || events.isEmpty())) {
         chatMessageService.saveTurn(
             sessionId, currentUser.getId(), turnId, userContent, assistantText);
       } else {
         chatMessageService.saveTurn(
-            sessionId, currentUser.getId(), turnId, userContent, assistantText, sources);
+            sessionId, currentUser.getId(), turnId, userContent, assistantText, sources, events);
       }
       log.info(
           "chat_send done, assistantLen={}, elapsedMs={}",
           assistantText.length(),
           elapsedSince(startAt));
-      return ApiResponseDTO.success(buildAssistantResponse(assistantText, sources));
+      return ApiResponseDTO.success(buildAssistantResponse(assistantText, sources, events));
     } finally {
       LogTraceUtil.clear();
     }
@@ -238,6 +240,7 @@ public class ChatController {
           LogTraceUtil.put(traceId, request.getSessionId(), turnId, currentUser.getId());
           String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
           List<ChatMessageDO.SourceReference> sources = List.of();
+          List<ChatMessageDO.StreamEventRecord> events = List.of();
           String finishReason = "stop";
           try {
             log.info("chat_stream start");
@@ -250,6 +253,9 @@ public class ChatController {
             }
             if (proxyResult != null && proxyResult.getSources() != null) {
               sources = proxyResult.getSources();
+            }
+            if (proxyResult != null && proxyResult.getEvents() != null) {
+              events = proxyResult.getEvents();
             }
             log.info(
                 "chat_stream proxy_done, assistantLen={}, elapsedMs={}",
@@ -269,7 +275,8 @@ public class ChatController {
                 turnId,
                 userText,
                 assistantText,
-                sources);
+                sources,
+                events);
             log.info(
                 "chat_stream done, assistantLen={}, elapsedMs={}",
                 assistantText.length(),
@@ -286,7 +293,9 @@ public class ChatController {
   }
 
   private Map<String, Object> buildAssistantResponse(
-      String assistantText, List<ChatMessageDO.SourceReference> sources) {
+      String assistantText,
+      List<ChatMessageDO.SourceReference> sources,
+      List<ChatMessageDO.StreamEventRecord> events) {
     return Map.of(
         "id",
         System.currentTimeMillis(),
@@ -295,7 +304,9 @@ public class ChatController {
         "content",
         assistantText,
         "sources",
-        sources == null ? List.of() : sources);
+        sources == null ? List.of() : sources,
+        "events",
+        events == null ? List.of() : events);
   }
 
   private List<ChatStreamMessageDTO> buildHistoryMessages(
@@ -336,12 +347,14 @@ public class ChatController {
       String turnId,
       String userText,
       String assistantText,
-      List<ChatMessageDO.SourceReference> sources) {
+      List<ChatMessageDO.SourceReference> sources,
+      List<ChatMessageDO.StreamEventRecord> events) {
     try {
-      if (sources == null || sources.isEmpty()) {
+      if ((sources == null || sources.isEmpty()) && (events == null || events.isEmpty())) {
         chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
       } else {
-        chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText, sources);
+        chatMessageService.saveTurn(
+            sessionId, userId, turnId, userText, assistantText, sources, events);
       }
     } catch (Exception e) {
       log.warn("chat_stream save_turn_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
