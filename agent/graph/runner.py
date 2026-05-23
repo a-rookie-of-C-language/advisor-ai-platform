@@ -6,6 +6,7 @@ import time
 from typing import AsyncIterator
 
 from agents.search.web_search_subagent import WebSearchSubAgent
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from context.memory.pipeline.work_memory import WorkMemory
@@ -41,6 +42,7 @@ class GraphRunner:
         safety_pipeline: SafetyPipeline | None = None,
         fusion_pipeline: SourcePriorityRegistry | None = None,
         web_search_subagent: WebSearchSubAgent | None = None,
+        task_planner_subagent: TaskPlannerSubAgent | None = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -56,6 +58,7 @@ class GraphRunner:
         self._safety_pipeline = safety_pipeline
         self._fusion_pipeline = fusion_pipeline
         self._web_search_subagent = web_search_subagent
+        self._task_planner_subagent = task_planner_subagent
         self._compiled = build_chat_graph()
         self._node_order = [
             "select_skill",
@@ -104,6 +107,7 @@ class GraphRunner:
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
             web_search_subagent=self._web_search_subagent,
+            task_planner_subagent=self._task_planner_subagent,
         )
         state = {
             "messages": messages,

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable
 
 from agents.search.web_search_subagent import WebSearchSubAgent
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from fusion.registry import SourcePriorityRegistry
@@ -44,6 +45,7 @@ class GraphRuntime:
     safety_pipeline: SafetyPipeline | None = None
     fusion_pipeline: SourcePriorityRegistry | None = None
     web_search_subagent: WebSearchSubAgent | None = None
+    task_planner_subagent: TaskPlannerSubAgent | None = None
 
 
 def set_runtime(runtime: GraphRuntime):

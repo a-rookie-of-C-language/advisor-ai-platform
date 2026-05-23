@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Iterable
 
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor
@@ -101,6 +102,9 @@ class ChatStreamService:
         self._compaction_subagent = ContextCompactionSubAgent(
             self._build_context_compaction_provider()
         )
+        self._task_planner_subagent = TaskPlannerSubAgent(
+            self._build_task_planner_provider()
+        )
         self._tool_explorer_subagent = ToolExplorerSubAgent(
             self._build_tool_explorer_provider(),
             max_steps=self._read_tool_explorer_max_steps(),
@@ -163,6 +167,7 @@ class ChatStreamService:
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
             web_search_subagent=self._web_search_subagent,
+            task_planner_subagent=self._task_planner_subagent,
         )
 
 
@@ -282,6 +287,12 @@ class ChatStreamService:
         return self._build_subagent_provider(
             env_prefix=ContextCompactionSubAgent.MODEL_ENV_PREFIX,
             default_model=ContextCompactionSubAgent.DEFAULT_MODEL,
+        )
+
+    def _build_task_planner_provider(self) -> BaseLLMProvider:
+        return self._build_subagent_provider(
+            env_prefix=TaskPlannerSubAgent.MODEL_ENV_PREFIX,
+            default_model=TaskPlannerSubAgent.DEFAULT_MODEL,
         )
 
     def _build_web_search_provider(self) -> BaseLLMProvider:
@@ -1108,8 +1119,40 @@ class ChatStreamService:
                     trace_id=trace_id,
                     payload=route_payload,
                 )
+                task_plan: JsonObject = {}
+                if self._task_planner_subagent is not None:
+                    try:
+                        task_plan = await self._task_planner_subagent.plan(
+                            user_query=user_query,
+                            recent_messages=validated_messages,
+                            available_tools=self._tools.specs(),
+                            route_context={
+                                "categories": sorted(route_decision.categories),
+                                "matched_tools": matched_tools,
+                                "matched_by": route_decision.matched_by,
+                                "confidence": route_decision.confidence,
+                            },
+                        )
+                        yield self._serialize_protocol_event(
+                            event="sys_tool_plan",
+                            source="system",
+                            trace_id=trace_id,
+                            payload=task_plan,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("task_planner failed, fallback to legacy tool flow: %s", exc)
+                        task_plan = {}
 
                 # --- 延迟加载：工具数 > 阈值时拆分 always_load / deferred ---
+                if task_plan:
+                    tools = TaskPlannerSubAgent.prioritize_tools(self._tools.specs(), task_plan)
+                    model_messages = PromptBuilder.assemble_messages(
+                        model_messages,
+                        dynamic_prompts=[TaskPlannerSubAgent.render_plan_prompt(task_plan)],
+                    )
+                    if str(task_plan.get("mode", "")).strip().lower() == "direct":
+                        direct_generate = True
+
                 async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(
                         tool_name=tool_name,
@@ -1230,6 +1273,7 @@ class ChatStreamService:
                             available_tools=self._tools.specs(),
                             candidate_tools=tools,
                             initial_route=route_payload,
+                            task_plan=task_plan,
                             tool_executor=tool_executor,
                         )
                     except Exception as exc:  # noqa: BLE001
@@ -1264,7 +1308,15 @@ class ChatStreamService:
                                 content=self._build_explorer_context(explorer_outcome),
                             )
                         ] + model_messages
-                        async for delta in self._provider.stream_chat(model_messages):
+                        async for event in self._provider.stream_chat_with_tools(
+                            model_messages,
+                            [],
+                            tool_executor,
+                            max_tool_calls=0,
+                        ):
+                            if event.type != "delta" or not event.text:
+                                continue
+                            delta = event.text
                             answer_parts.append(delta)
                             if self._debug_stream and debug_chars < debug_limit:
                                 remain = debug_limit - debug_chars

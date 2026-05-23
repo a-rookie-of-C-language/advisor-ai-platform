@@ -20,6 +20,7 @@ class GraphState(TypedDict, total=False):
     use_tool: bool
     route_categories: set[str]
     matched_tools: list[str]
+    task_plan: dict
     assistant_answer: str
     stream_failed: bool
     debug_delta_count: int
