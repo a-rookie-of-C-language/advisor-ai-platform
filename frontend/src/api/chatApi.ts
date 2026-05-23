@@ -76,6 +76,7 @@ export interface StreamEventData extends Record<string, unknown> {
   output?: unknown
   code?: string
   stage?: string
+  agent_name?: string
   matched_by?: string
   categories?: string[]
   reason?: string

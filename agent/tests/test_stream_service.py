@@ -525,6 +525,40 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     assert intent_route_payload.get("matched_by") in {"fallback", "strong_rule", "score", "llm"}
 
 
+def test_build_tool_result_payload_derives_web_search_sources() -> None:
+    service = ChatStreamService(
+        provider=_ProviderOk(["ok"]),
+        memory_orchestrator=None,
+        rag_service=None,
+    )
+    payload = service._build_tool_result_payload(  # noqa: SLF001
+        "web_search",
+        {
+            "tool_name": "web_search",
+            "tool_call_id": "web_search-1",
+            "attempt": 1,
+            "status": "hit",
+            "message": "hit",
+        },
+        {
+            "ok": True,
+            "status": "hit",
+            "message": "hit",
+            "items": [
+                {
+                    "title": "辅导员课程",
+                    "snippet": "这是摘要",
+                    "url": "https://example.com/course",
+                    "source": "web",
+                }
+            ],
+        },
+    )
+
+    assert payload["derived"]["sources"][0]["docName"] == "辅导员课程"
+    assert payload["derived"]["sources"][0]["snippet"] == "这是摘要"
+
+
 @pytest.mark.asyncio
 async def test_stream_uses_planned_rag_for_education_queries() -> None:
     provider = _ProviderOk(["根据知识库内容回答。"])
@@ -541,6 +575,7 @@ async def test_stream_uses_planned_rag_for_education_queries() -> None:
     assert set(event_names) >= {
         "sys_start",
         "sys_intent_route",
+        "sys_reasoning",
         "sys_tool_plan",
         "tool_use",
         "tool_result",
@@ -590,6 +625,7 @@ async def test_stream_follow_up_question_uses_tool_explorer(monkeypatch: pytest.
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
     event_names = [_parse_event_name(e) for e in events]
 
+    assert "sys_reasoning" in event_names
     assert "sys_tool_plan" in event_names
     assert "tool_use" in event_names
     assert "tool_result" in event_names

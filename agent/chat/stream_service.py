@@ -25,7 +25,12 @@ from fusion.conflict_detect import ConflictDetectStrategy
 from fusion.registry import SourcePriorityRegistry
 from fusion.source_weight import SourceWeightStrategy
 from fusion.time_decay import TimeDecayStrategy
-from graph.helpers import _should_force_education_rag
+from graph.helpers import (
+    _build_delegate_reasoning,
+    _build_plan_reasoning,
+    _build_route_reasoning,
+    _should_force_education_rag,
+)
 from graph.runner import GraphRunner
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
@@ -839,7 +844,7 @@ class ChatStreamService:
 
     @staticmethod
     def _derive_tool_result(tool_name: str, payload: dict) -> dict:
-        if tool_name != "rag_search":
+        if tool_name not in {"rag_search", "web_search"}:
             return {}
         items = payload.get("items", [])
         if not isinstance(items, list) or not items:
@@ -848,11 +853,13 @@ class ChatStreamService:
         for index, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
+            doc_name = item.get("docName") or item.get("title") or ""
+            snippet = item.get("snippet") or item.get("content") or ""
             sources.append(
                 {
                     "id": item.get("id") or index + 1,
-                    "docName": item.get("docName") or "",
-                    "snippet": item.get("snippet") or "",
+                    "docName": doc_name,
+                    "snippet": snippet,
                     "score": item.get("score"),
                 }
             )
@@ -1167,10 +1174,35 @@ class ChatStreamService:
                     trace_id=trace_id,
                     payload=route_payload,
                 )
-                task_plan: JsonObject = {}
                 education_domain = _should_force_education_rag(user_query) and self._tools.get("rag_search") is not None
+                yield self._serialize_protocol_event(
+                    event="sys_reasoning",
+                    source="system",
+                    trace_id=trace_id,
+                    payload={
+                        "stage": "route",
+                        "message": _build_route_reasoning(
+                            route_categories=sorted(route_decision.categories),
+                            matched_tools=matched_tools,
+                            education_domain=education_domain,
+                        ),
+                        "categories": sorted(route_decision.categories),
+                        "matched_tools": matched_tools,
+                    },
+                )
+                task_plan: JsonObject = {}
                 if self._task_planner_subagent is not None:
                     try:
+                        yield self._serialize_protocol_event(
+                            event="sys_reasoning",
+                            source="system",
+                            trace_id=trace_id,
+                            payload={
+                                "stage": "delegate",
+                                "agent_name": "task_planner_subagent",
+                                "message": _build_delegate_reasoning("task_planner_subagent"),
+                            },
+                        )
                         task_plan = await self._task_planner_subagent.plan(
                             user_query=user_query,
                             recent_messages=validated_messages,
@@ -1189,6 +1221,17 @@ class ChatStreamService:
                             source="system",
                             trace_id=trace_id,
                             payload=task_plan,
+                        )
+                        yield self._serialize_protocol_event(
+                            event="sys_reasoning",
+                            source="system",
+                            trace_id=trace_id,
+                            payload={
+                                "stage": "plan",
+                                "message": _build_plan_reasoning(task_plan),
+                                "mode": task_plan.get("mode", ""),
+                                "summary": task_plan.get("summary", ""),
+                            },
                         )
                     except Exception as exc:  # noqa: BLE001
                         logger.warning("task_planner failed, fallback to legacy tool flow: %s", exc)

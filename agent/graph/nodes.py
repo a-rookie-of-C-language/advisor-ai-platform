@@ -12,6 +12,8 @@ from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import emit_route_observation
 
 from .helpers import (
+    _build_plan_reasoning,
+    _build_route_reasoning,
     _extract_first_url,
     _inject_fusion_context,
     _parse_skill_names,
@@ -163,7 +165,7 @@ def _filter_tool_result(
 
 
 def _derive_tool_result(tool_name: str, payload: JsonObject) -> JsonObject:
-    if tool_name != "rag_search":
+    if tool_name not in {"rag_search", "web_search"}:
         return {}
     items = payload.get("items", [])
     if not isinstance(items, list) or not items:
@@ -172,11 +174,13 @@ def _derive_tool_result(tool_name: str, payload: JsonObject) -> JsonObject:
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             continue
+        doc_name = item.get("docName") or item.get("title") or ""
+        snippet = item.get("snippet") or item.get("content") or ""
         sources.append(
             {
                 "id": item.get("id") or index + 1,
-                "docName": item.get("docName") or "",
-                "snippet": item.get("snippet") or "",
+                "docName": doc_name,
+                "snippet": snippet,
                 "score": item.get("score"),
             }
         )
@@ -453,6 +457,19 @@ async def decide_tool_node(state: GraphState) -> GraphState:
                 session_id=state.get("session_id"),
                 emit=_emit,
             )
+            await _emit(
+                "sys_reasoning",
+                {
+                    "stage": "route",
+                    "message": _build_route_reasoning(
+                        route_categories=sorted(route_categories),
+                        matched_tools=matched_tools,
+                        education_domain=education_domain,
+                    ),
+                    "categories": sorted(route_categories),
+                    "matched_tools": matched_tools,
+                },
+            )
         else:
             route_categories = runtime.tools.all_categories()
     if (
@@ -467,6 +484,14 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     task_planner_subagent = getattr(runtime, "task_planner_subagent", None)
     if use_tool and task_planner_subagent is not None:
         try:
+            await _emit(
+                "sys_reasoning",
+                {
+                    "stage": "delegate",
+                    "agent_name": "task_planner_subagent",
+                    "message": "委托任务规划器生成更清晰的执行计划。",
+                },
+            )
             task_plan = await task_planner_subagent.plan(
                 user_query=user_query,
                 recent_messages=list(state.get("messages", [])),
@@ -480,6 +505,15 @@ async def decide_tool_node(state: GraphState) -> GraphState:
                 },
             )
             await _emit("sys_tool_plan", task_plan)
+            await _emit(
+                "sys_reasoning",
+                {
+                    "stage": "plan",
+                    "message": _build_plan_reasoning(task_plan),
+                    "mode": task_plan.get("mode", ""),
+                    "summary": task_plan.get("summary", ""),
+                },
+            )
         except Exception as exc:  # noqa: BLE001
             logger.warning("graph_node task_plan failed: %s", exc)
             task_plan = {}

@@ -100,9 +100,42 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function renderToolResultSummary(toolName: string, result?: StreamToolResult): string {
+  if (!result) {
+    return ''
+  }
+  if (toolName === 'web_search') {
+    const output = result.output
+    if (output && typeof output === 'object') {
+      const summary = (output as { summary?: unknown }).summary
+      if (typeof summary === 'string' && summary.trim()) {
+        return summary
+      }
+    }
+  }
+  return result.message || renderToolPayload(result.derived?.sources ?? result.items ?? result.output)
+}
+
 function taskPlanFromEvents(events?: ChatEvent[]): StreamEventData | null {
   const plans = (events ?? []).filter((item) => item.event === 'sys_tool_plan')
   return plans.length ? plans[plans.length - 1].payload : null
+}
+
+function reasoningEventsFromMessage(events?: ChatEvent[]): ChatEvent[] {
+  return (events ?? []).filter((item) => item.event === 'sys_reasoning')
+}
+
+function reasoningStageLabel(stage?: string): string {
+  if (stage === 'route') {
+    return '路由'
+  }
+  if (stage === 'delegate') {
+    return '委托'
+  }
+  if (stage === 'plan') {
+    return '计划'
+  }
+  return stage || '思路'
 }
 
 function planStepsFromPayload(payload?: StreamEventData | null): PlanStep[] {
@@ -172,6 +205,7 @@ const PERSISTABLE_EVENTS = new Set([
   'tool_error',
   'sys_intent_route',
   'sys_tool_plan',
+  'sys_reasoning',
   'sys_rag_force',
   'risk_alert',
 ])
@@ -237,6 +271,9 @@ function eventDisplayTitle(event: string, payload: StreamEventData): string {
   if (event === 'sys_tool_plan') {
     return '工具规划'
   }
+  if (event === 'sys_reasoning') {
+    return '执行思路'
+  }
   if (event === 'sys_rag_force') {
     return '知识库检索'
   }
@@ -251,7 +288,13 @@ function eventDisplayDetail(event: string, payload: StreamEventData): string {
     return payload.input !== undefined ? `input: ${renderToolPayload(payload.input)}` : ''
   }
   if (event === 'tool_result') {
-    return payload.message || renderToolPayload(payload.derived?.sources ?? payload.items ?? payload.output)
+    return renderToolResultSummary(payload.tool_name ?? '', {
+      status: payload.status,
+      message: payload.message,
+      items: payload.items,
+      output: payload.output,
+      derived: payload.derived,
+    })
   }
   if (event === 'tool_error') {
     return payload.message || payload.code || 'tool error'
@@ -270,6 +313,9 @@ function eventDisplayDetail(event: string, payload: StreamEventData): string {
       payload.summary ? `说明: ${payload.summary}` : '',
       steps.length ? `待办: ${steps.length} 步` : '',
     ].filter(Boolean).join('\n')
+  }
+  if (event === 'sys_reasoning') {
+    return payload.message || payload.reason || renderToolPayload(payload)
   }
   return payload.message || payload.reason || renderToolPayload(payload)
 }
@@ -325,7 +371,7 @@ function describeSystemState(event: string, payload: StreamEventData): string {
     const categories = Array.isArray(payload.categories) ? payload.categories.filter(Boolean).join('、') : ''
     const matchedBy = typeof payload.matched_by === 'string' && payload.matched_by ? payload.matched_by : ''
     const categoryText = categories ? `：${categories}` : ''
-    const matchedText = matchedBy ? `（${matchedBy}）` : ''
+    const matchedText = matchedBy ? `（matched_by：${matchedBy}）` : ''
     return `正在路由工具${categoryText}${matchedText}` || baseMessage || '正在路由工具'
   }
   if (event === 'sys_tool_plan') {
@@ -336,6 +382,45 @@ function describeSystemState(event: string, payload: StreamEventData): string {
     return '模型正在整理思路'
   }
   return baseMessage || event.replace(/^sys_/, '正在').replace(/_/g, '')
+}
+
+function ReasoningTrace({ msg }: MsgBubbleProps) {
+  const reasoningEvents = reasoningEventsFromMessage(msg.events)
+  if (!reasoningEvents.length || msg.role !== 'assistant') {
+    return null
+  }
+
+  return (
+    <div className={styles.reasoningTrace}>
+      <Text type="secondary" className={styles.reasoningTraceTitle}>
+        执行思路
+      </Text>
+      <Space direction="vertical" style={{ width: '100%' }} size={8}>
+        {reasoningEvents.map((item) => {
+          const payload = item.payload
+          const stage = typeof payload.stage === 'string' ? payload.stage : ''
+          const agentName = typeof payload.agent_name === 'string' ? payload.agent_name : ''
+          return (
+            <div key={item.id} className={styles.reasoningTraceItem}>
+              <div className={styles.reasoningTraceMeta}>
+                <Tag color="blue" style={{ fontSize: 11, marginBottom: 0 }}>
+                  {reasoningStageLabel(stage)}
+                </Tag>
+                {agentName && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {agentName}
+                  </Text>
+                )}
+              </div>
+              <Text type="secondary" className={styles.reasoningTraceText}>
+                {eventDisplayDetail(item.event, payload)}
+              </Text>
+            </div>
+          )
+        })}
+      </Space>
+    </div>
+  )
 }
 
 function TaskPlanChecklist({ msg }: MsgBubbleProps) {
@@ -437,6 +522,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
               </div>
             )}
 
+        {!isUser && <ReasoningTrace msg={msg} />}
         {!isUser && <TaskPlanChecklist msg={msg} />}
 
         {msg.sources?.length
@@ -534,7 +620,7 @@ function MsgBubble({ msg }: MsgBubbleProps) {
                         )}
                         {(tool.message || tool.result) && (
                           <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
-                            tool_result: {tool.message || renderToolPayload(tool.result?.items ?? tool.result?.output)}
+                            tool_result: {renderToolResultSummary(tool.toolName, tool.result)}
                           </Text>
                         )}
                       </div>
@@ -1158,3 +1244,4 @@ export default function ChatPage() {
     </div>
   )
 }
+
