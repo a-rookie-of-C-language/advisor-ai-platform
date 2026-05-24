@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.RiskRuleDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.RiskRule;
 import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.RiskRuleRepository;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ContentSafetyFilterTest {
 
-  @Mock private RiskRuleRepository riskRuleRepository;
+  @Mock private RiskRuleDao riskRuleDao;
   @Mock private RiskActionDecider riskActionDecider;
 
   @InjectMocks private ContentSafetyFilter contentSafetyFilter;
@@ -57,7 +57,7 @@ class ContentSafetyFilterTest {
             .enabled(true)
             .build();
 
-    when(riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+    when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(rule));
 
@@ -85,7 +85,7 @@ class ContentSafetyFilterTest {
             .enabled(true)
             .build();
 
-    when(riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+    when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(rule));
     when(riskActionDecider.decideAction(rule, "reject")).thenReturn("reject");
@@ -107,7 +107,7 @@ class ContentSafetyFilterTest {
 
   @Test
   void shouldPassWhenNoRulesExist() {
-    when(riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+    when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.OUTPUT)))
         .thenReturn(Collections.emptyList());
 
@@ -135,7 +135,7 @@ class ContentSafetyFilterTest {
             .enabled(true)
             .build();
 
-    when(riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
+    when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(badRule));
 

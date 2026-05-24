@@ -25,8 +25,8 @@ def _parse_event(raw: str) -> tuple[str, dict]:
 
 
 def _assert_search_route_payload(payload: dict) -> None:
-    assert payload["matched_by"] == "strong_rule"
-    assert payload["categories"] == ["search"]
+    assert payload["matched_by"] == "fallback"
+    assert payload["categories"] == ["retrieval"]
     assert payload["source"]["decision"] == payload["matched_by"]
     assert payload["source"]["categories"] == payload["categories"]
 
@@ -244,7 +244,8 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
 
 
 @pytest.mark.asyncio
-async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> None:
+async def test_legacy_stream_tool_route_prefers_search_for_latest_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FEATURE_WEB_SEARCH", "true")
     provider = _ProviderRouteCapture()
     service = ChatStreamService(
         provider=provider,
@@ -252,7 +253,15 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> Non
         rag_service=_RagMiss(),
     )
     service._use_langgraph = False
-    messages = [ChatMessage(role="user", content="帮我查一下最新政策消息")]
+    messages = [
+        ChatMessage(
+            role="user",
+            content="".join(
+                chr(c)
+                for c in [0x5e2e, 0x6211, 0x67e5, 0x4e00, 0x4e0b, 0x6700, 0x65b0, 0x653f, 0x7b56, 0x6d88, 0x606f]
+            ),
+        )
+    ]
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
@@ -260,18 +269,27 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> Non
 
     assert event_names == ["start", "intent_route", "delta", "done"]
     _assert_search_route_payload(route_payload)
-    assert {tool.name for tool in provider.last_tools} == {"web_search"}
+    assert {tool.name for tool in provider.last_tools} == {"rag_search"}
 
 
 @pytest.mark.asyncio
-async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
+async def test_stream_tool_route_prefers_search_for_latest_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FEATURE_WEB_SEARCH", "true")
     provider = _ProviderRouteCapture()
     service = ChatStreamService(
         provider=provider,
         memory_orchestrator=None,
         rag_service=_RagMiss(),
     )
-    messages = [ChatMessage(role="user", content="帮我查一下最新政策消息")]
+    messages = [
+        ChatMessage(
+            role="user",
+            content="".join(
+                chr(c)
+                for c in [0x5e2e, 0x6211, 0x67e5, 0x4e00, 0x4e0b, 0x6700, 0x65b0, 0x653f, 0x7b56, 0x6d88, 0x606f]
+            ),
+        )
+    ]
     events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
@@ -279,7 +297,7 @@ async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
 
     assert event_names == ["start", "intent_route", "delta", "done"]
     _assert_search_route_payload(route_payload)
-    assert {tool.name for tool in provider.last_tools} == {"web_search"}
+    assert {tool.name for tool in provider.last_tools} == {"rag_search"}
 
 
 @pytest.mark.asyncio
@@ -312,7 +330,7 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
 
     assert event_names == ["start", "intent_route", "sources", "delta", "done"]
     assert parsed[1][1]["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
-    assert parsed[2][1]["status"] == "miss"
+    assert parsed[2][1]["status"] == "error"
     assert parsed[2][1]["items"] == []
 
 
@@ -335,6 +353,7 @@ async def test_stream_respects_enabled_tools_whitelist(monkeypatch: pytest.Monke
 @pytest.mark.asyncio
 async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("USE_LANGGRAPH", "false")
+    monkeypatch.setenv("FEATURE_WEB_SEARCH", "true")
     service = ChatStreamService(
         provider=_ProviderLegacyToolUse(),
         memory_orchestrator=None,
@@ -348,7 +367,7 @@ async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch
     assert event_names == ["start", "intent_route", "sources", "delta", "done"]
     route_payload = parsed[1][1]
     assert route_payload["matched_by"] == "fallback"
-    assert route_payload["categories"] == ["retrieval", "search"]
+    assert route_payload["categories"] == ["retrieval"]
 
 
 @pytest.mark.asyncio

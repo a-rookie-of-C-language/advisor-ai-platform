@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 import json
@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 if __package__ and __package__.startswith("agent."):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app import _get_rag_service
 from chat.stream_service import ChatStreamService
 from llm.chat_message import ChatMessage
 from llm.provider_factory import build_provider_from_env
-from app import _get_rag_service
 
 logger = logging.getLogger(__name__)
 

@@ -40,13 +40,35 @@ _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
 
-_STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
-_RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
-_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
+def _u(*codes: int) -> str:
+    return "".join(chr(code) for code in codes)
 
+_STREAM_ERROR_MESSAGE = _u(
+    0x670d, 0x52a1, 0x5185, 0x90e8, 0x9519, 0x8bef, 0xff0c,
+    0x8bf7, 0x7a0d, 0x540e, 0x91cd, 0x8bd5,
+)
+_RAG_PRIORITY_HINTS = {
+    _u(0x77e5, 0x8bc6, 0x5e93),
+    _u(0x8d44, 0x6599),
+    _u(0x6587, 0x6863),
+    _u(0x6839, 0x636e),
+    _u(0x51fa, 0x5904),
+    _u(0x8f85, 0x5bfc, 0x5458),
+    _u(0x5b66, 0x751f),
+}
+_REALTIME_HINTS = {
+    _u(0x5929, 0x6c14),
+    _u(0x5b9e, 0x65f6),
+    _u(0x4eca, 0x5929),
+    _u(0x660e, 0x5929),
+    _u(0x65b0, 0x95fb),
+    _u(0x80a1, 0x4ef7),
+    _u(0x6c47, 0x7387),
+    _u(0x6bd4, 0x5206),
+}
 
 def _build_default_fusion_pipeline() -> SourcePriorityRegistry:
-    """构建默认的跨源优先级融合 pipeline。"""
+    """Build the default cross-source fusion pipeline."""
     registry = SourcePriorityRegistry()
     registry.register(AuthorityBoostStrategy())
     registry.register(TimeDecayStrategy())
@@ -329,6 +351,7 @@ class ChatStreamService:
         progress_seconds = 0
         saw_delta = False
         saw_done = False
+        saw_error = False
         pending_next: asyncio.Task[str] | None = None
         while True:
             if pending_next is None:
@@ -345,7 +368,7 @@ class ChatStreamService:
                     )
                 continue
             except StopAsyncIteration:
-                if not saw_delta and not saw_done:
+                if not saw_delta and not saw_done and not saw_error:
                     yield self._serialize_event(
                         "error",
                         {"message": "stream finished without content"},
@@ -360,9 +383,11 @@ class ChatStreamService:
             event_name = str(parsed.get("event", ""))
             if event_name in {"delta", "raw"}:
                 saw_delta = True
+            if event_name == "error":
+                saw_error = True
             if event_name == "done":
                 saw_done = True
-            if event_name == "done" and not saw_delta:
+            if event_name == "done" and not saw_delta and not saw_error:
                 yield self._serialize_event(
                     "error",
                     {"message": "stream finished without content"},

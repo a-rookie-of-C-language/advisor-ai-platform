@@ -120,7 +120,16 @@ def test_build_provider_from_env_falls_back_on_invalid_float(monkeypatch):
     captured: dict[str, float | str | None] = {}
 
     class _FakeProvider:
-        def __init__(self, api_key, model, base_url=None, temperature=0.2, timeout=60.0):
+        def __init__(
+            self,
+            api_key,
+            model,
+            base_url=None,
+            temperature=0.2,
+            timeout=60.0,
+            **kwargs,
+        ):
+            _ = kwargs
             captured["api_key"] = api_key
             captured["model"] = model
             captured["base_url"] = base_url

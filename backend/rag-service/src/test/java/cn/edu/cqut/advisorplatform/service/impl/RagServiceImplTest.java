@@ -11,6 +11,7 @@ import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,7 +64,9 @@ class RagServiceImplTest {
     RagDocumentDO doc = new RagDocumentDO();
     doc.setId(30L);
     doc.setKnowledgeBase(kb);
-    doc.setUploadedBy(null);
+    UserDO owner = new UserDO();
+    owner.setId(2L);
+    doc.setUploadedBy(owner);
     doc.setFilePath(null);
 
     when(documentDao.findById(30L)).thenReturn(Optional.of(doc));

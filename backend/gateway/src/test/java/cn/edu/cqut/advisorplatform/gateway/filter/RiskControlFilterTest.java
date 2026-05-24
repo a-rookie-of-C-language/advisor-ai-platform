@@ -94,6 +94,8 @@ class RiskControlFilterTest {
 
     when(webClient.post()).thenReturn(requestBodyUriSpec);
     when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
+    when(requestBodySpec.header(any(String.class), any(String[].class)))
+        .thenReturn(requestBodySpec);
     when(requestBodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
     when(headersSpec.retrieve()).thenReturn(responseSpec);
 

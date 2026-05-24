@@ -17,6 +17,7 @@ catch {
 $utf8StrictNoBom = New-Object System.Text.UTF8Encoding($false, $true)
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $gb18030 = [System.Text.Encoding]::GetEncoding("GB18030")
+$latin1 = [System.Text.Encoding]::GetEncoding(28591)
 
 $extensions = @(
   ".py", ".java", ".js", ".jsx", ".ts", ".tsx",
@@ -33,9 +34,7 @@ function Test-HasUtf8Bom {
 function Get-MojibakeScore {
   param([string]$Text)
   if ([string]::IsNullOrEmpty($Text)) { return 0 }
-  # Common mojibake markers found in UTF8<->GBK mishandling.
-  $matches = [regex]::Matches($Text, "[锛鏂銆鈥姹瀛涓�]")
-  return $matches.Count
+  return [regex]::Matches($Text, "[\u00C2-\u00FF]").Count
 }
 
 function Try-RepairMojibake {
@@ -54,7 +53,6 @@ function Try-RepairMojibake {
   catch { }
 
   try {
-    $latin1 = [System.Text.Encoding]::GetEncoding(28591)
     $bytes2 = $latin1.GetBytes($Text)
     $candidates += $utf8NoBom.GetString($bytes2)
   }
@@ -118,7 +116,6 @@ $mojibakeFixed = 0
 foreach ($file in $targetFiles) {
   $full = Join-Path $resolvedRoot $file
   $bytes = [System.IO.File]::ReadAllBytes($full)
-
   if ($bytes.Length -eq 0) { continue }
 
   $hadBom = Test-HasUtf8Bom -Bytes $bytes
@@ -165,4 +162,4 @@ Write-Host "- changed files: $changed"
 Write-Host "- removed UTF-8 BOM: $bomFixed"
 Write-Host "- fallback decoded by GB18030: $decodedByGb"
 Write-Host "- mojibake candidates repaired: $mojibakeFixed"
-Write-Host "- mode: $(if ($DryRun) { "DRY-RUN" } else { "APPLY" })"
+Write-Host "- mode: $(if ($DryRun) { 'DRY-RUN' } else { 'APPLY' })"

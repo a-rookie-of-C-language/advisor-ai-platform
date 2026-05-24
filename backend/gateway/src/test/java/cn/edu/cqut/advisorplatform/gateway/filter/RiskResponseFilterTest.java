@@ -53,7 +53,6 @@ class RiskResponseFilterTest {
   void shouldSkipGetRequests() {
     when(exchange.getRequest()).thenReturn(request);
     when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/stream"));
-    when(request.getMethod()).thenReturn(HttpMethod.GET);
     when(chain.filter(exchange)).thenReturn(Mono.empty());
 
     Mono<Void> result = riskResponseFilter.filter(exchange, chain);
@@ -65,7 +64,7 @@ class RiskResponseFilterTest {
   @Test
   void shouldDecorateResponseForPostOnRiskPaths() {
     when(exchange.getRequest()).thenReturn(request);
-    when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/stream"));
+    when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/message"));
     when(request.getMethod()).thenReturn(HttpMethod.POST);
     when(exchange.getResponse()).thenReturn(response);
 
@@ -78,7 +77,7 @@ class RiskResponseFilterTest {
     Mono<Void> result = riskResponseFilter.filter(exchange, chain);
 
     StepVerifier.create(result).verifyComplete();
-    verify(exchange.mutate()).response(any());
+    verify(exchangeBuilder).response(any());
   }
 
   @Test

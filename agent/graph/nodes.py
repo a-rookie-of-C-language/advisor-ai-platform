@@ -260,7 +260,8 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     logger.info(
-        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, use_tool=%s, route_categories=%s",
+        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, "
+        "use_tool=%s, route_categories=%s",
         state.get("session_id"),
         rag_enabled,
         web_search_enabled,

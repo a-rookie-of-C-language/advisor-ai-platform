@@ -210,7 +210,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
 
   private boolean shouldFailClosed(String path) {
     Set<String> paths =
-        List.of(failClosedPaths.split(",")).stream()
+        List.of((failClosedPaths == null ? "" : failClosedPaths).split(",")).stream()
             .map(String::trim)
             .filter(s -> !s.isBlank())
             .collect(Collectors.toSet());

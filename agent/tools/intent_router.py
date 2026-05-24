@@ -276,7 +276,11 @@ class IntentRouter:
         )
 
     def _should_accept_without_llm(self, decision: RouteDecision) -> bool:
-        return bool(decision.categories) and decision.confidence >= 0.85 and decision.matched_by in {"strong_rule", "score"}
+        return (
+            bool(decision.categories)
+            and decision.confidence >= 0.85
+            and decision.matched_by in {"strong_rule", "score"}
+        )
 
     async def _route_by_llm(self, query: str, all_categories: set[str], provider: Any | None) -> RouteDecision | None:
         classifier = self._llm_classifier or provider
