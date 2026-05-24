@@ -27,6 +27,10 @@ from .helpers import (
 )
 from .runtime import GraphRuntime, _runtime as _runtime_impl
 from .state import GraphState
+from .tool_result_mapper import (
+    build_tool_result_payload as _build_tool_result_payload,
+    filter_tool_result as _filter_tool_result,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -90,92 +94,6 @@ def _select_tools_for_plan(tools: list, task_plan: JsonObject | None) -> list:
     if not task_plan or not isinstance(task_plan, dict):
         return tools
     return TaskPlannerSubAgent.prioritize_tools(tools, task_plan)
-
-
-def _filter_tool_result(
-    tool_name: str, payload: JsonObject, pipeline: SafetyPipeline | None
-) -> tuple[JsonObject, int]:
-    """过滤工具结果中的敏感信息
-
-    Returns:
-        tuple: (过滤后的payload, 检测到的敏感信息数量)
-    """
-    if pipeline is None:
-        return payload, 0
-
-    sensitive_count = 0
-    result = dict(payload)
-
-    # 过滤 message 字段
-    if "message" in result and isinstance(result["message"], str):
-        safety_result = pipeline.filter_text(result["message"])
-        if safety_result.has_sensitive:
-            result["message"] = safety_result.redacted
-            sensitive_count += len(safety_result.regex_matches)
-            if safety_result.privacy_result:
-                sensitive_count += len(safety_result.privacy_result.spans)
-
-    # 过滤 items 中的文本内容
-    if "items" in result and isinstance(result["items"], list):
-        filtered_items = []
-        for item in result["items"]:
-            if isinstance(item, dict) and item.get("type") == "text":
-                text = item.get("text", "")
-                if isinstance(text, str):
-                    safety_result = pipeline.filter_text(text)
-                    if safety_result.has_sensitive:
-                        filtered_items.append({"type": "text", "text": safety_result.redacted})
-                        sensitive_count += len(safety_result.regex_matches)
-                        if safety_result.privacy_result:
-                            sensitive_count += len(safety_result.privacy_result.spans)
-                    else:
-                        filtered_items.append(item)
-                else:
-                    filtered_items.append(item)
-            else:
-                filtered_items.append(item)
-        result["items"] = filtered_items
-
-    return result, sensitive_count
-
-
-def _derive_tool_result(tool_name: str, payload: JsonObject) -> JsonObject:
-    if tool_name not in {"rag_search", "web_search"}:
-        return {}
-    items = payload.get("items", [])
-    if not isinstance(items, list) or not items:
-        return {}
-    sources = []
-    for index, item in enumerate(items):
-        if not isinstance(item, dict):
-            continue
-        doc_name = item.get("docName") or item.get("title") or ""
-        snippet = item.get("snippet") or item.get("content") or ""
-        sources.append(
-            {
-                "id": item.get("id") or index + 1,
-                "docName": doc_name,
-                "snippet": snippet,
-                "score": item.get("score"),
-            }
-        )
-    return {"sources": sources} if sources else {}
-
-
-def _build_tool_result_payload(
-    tool_name: str,
-    base_payload: JsonObject,
-    payload: JsonObject,
-) -> JsonObject:
-    result_payload = {
-        **base_payload,
-        "output": payload,
-        "items": payload.get("items", []),
-    }
-    derived = _derive_tool_result(tool_name, payload)
-    if derived:
-        result_payload["derived"] = derived
-    return result_payload
 
 
 def _planned_tool_steps(task_plan: JsonObject | None) -> list[JsonObject]:

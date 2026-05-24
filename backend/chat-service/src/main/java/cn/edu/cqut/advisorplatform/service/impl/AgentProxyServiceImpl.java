@@ -6,8 +6,6 @@ import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,9 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections.*;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -40,8 +36,6 @@ public class AgentProxyServiceImpl implements AgentProxyService {
   private static final int MAX_PERSISTED_EVENTS = 80;
   private static final String TRACE_HEADER = "X-Trace-Id";
   private static final String TURN_HEADER = "X-Turn-Id";
-  private static final TypeReference<Map<String, Object>> STREAM_EVENT_PAYLOAD_TYPE =
-      new TypeReference<>() {};
   private static final ScheduledExecutorService FIRST_CHUNK_WATCHDOG =
       Executors.newScheduledThreadPool(
           1,
@@ -51,7 +45,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             return thread;
           });
 
-  private final ObjectMapper objectMapper;
+  private final SseEventParser sseEventParser;
+  private final AgentPayloadBuilder payloadBuilder;
   private final HttpClient httpClient;
   private final String agentBaseUrl;
   private final String agentApiToken;
@@ -74,7 +69,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       @Value("${advisor.agent.timeout-ms:600000}") long timeoutMs,
       @Value("${advisor.agent.first-chunk-timeout-ms:120000}") long firstChunkTimeoutMs,
       @Value("${advisor.agent.debug-stream:${DEBUG_STREAM:false}}") boolean debugStream) {
-    this.objectMapper = objectMapper;
+    this.sseEventParser = new SseEventParser(objectMapper);
+    this.payloadBuilder = new AgentPayloadBuilder(objectMapper);
     this.agentBaseUrl = agentBaseUrl;
     this.agentApiToken = agentApiToken;
     this.aiGatewayEnabled = aiGatewayEnabled;
@@ -107,7 +103,9 @@ public class AgentProxyServiceImpl implements AgentProxyService {
       ChatStreamRequestDTO request, Long userId, OutputStream outputStream) throws IOException {
     long startAt = System.currentTimeMillis();
     String payload =
-        aiGatewayEnabled ? buildAiGatewayPayloadJson(request) : buildPayloadJson(request, userId);
+        aiGatewayEnabled
+            ? payloadBuilder.buildAiGatewayPayload(request, aiGatewayModel)
+            : payloadBuilder.buildAgentPayload(request, userId);
     byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
     log.info(
@@ -311,25 +309,26 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     while ((blockEnd = sseBuffer.indexOf("\n\n")) >= 0) {
       String block = sseBuffer.substring(0, blockEnd);
       sseBuffer.delete(0, blockEnd + 2);
-      String eventName = extractEventName(block);
+      String eventName = sseEventParser.extractEventName(block);
       if ("sys_done".equals(eventName)) {
         sawDoneEvent.set(true);
       } else if ("sys_error".equals(eventName)) {
         sawErrorEvent.set(true);
       } else if ("sources".equals(eventName) || "tool_result".equals(eventName)) {
-        List<ChatMessageDO.SourceReference> extractedSources = extractSources(block);
+        List<ChatMessageDO.SourceReference> extractedSources = sseEventParser.extractSources(block);
         if ("sources".equals(eventName) || !extractedSources.isEmpty()) {
           sources.clear();
           sources.addAll(extractedSources);
         }
       }
       if (shouldPersistEvent(eventName) && events.size() < MAX_PERSISTED_EVENTS) {
-        ChatMessageDO.StreamEventRecord record = extractStreamEventRecord(eventName, block);
+        ChatMessageDO.StreamEventRecord record =
+            sseEventParser.extractStreamEventRecord(eventName, block);
         if (record != null) {
           events.add(record);
         }
       }
-      String delta = extractDelta(block);
+      String delta = sseEventParser.extractDelta(block);
       if (delta == null || delta.isBlank()) {
         continue;
       }
@@ -357,136 +356,6 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     };
   }
 
-  private ChatMessageDO.StreamEventRecord extractStreamEventRecord(
-      String eventName, String sseBlock) {
-    String dataJson = extractDataJson(sseBlock);
-    if (dataJson.isBlank()) {
-      return null;
-    }
-    try {
-      JsonNode node = objectMapper.readTree(dataJson);
-      JsonNode payloadNode = node.has("payload") ? node.path("payload") : node;
-      ChatMessageDO.StreamEventRecord record = new ChatMessageDO.StreamEventRecord();
-      record.setEvent(eventName);
-      record.setSource(node.path("source").asText(""));
-      record.setTraceId(node.path("trace_id").asText(""));
-      if (node.has("timestamp") && node.path("timestamp").canConvertToLong()) {
-        record.setTimestamp(node.path("timestamp").asLong());
-      }
-      record.setPayload(objectMapper.convertValue(payloadNode, STREAM_EVENT_PAYLOAD_TYPE));
-      return record;
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  private String extractEventName(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    String event = "message";
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("event:")) {
-        event = trimmed.substring(6).trim();
-        break;
-      }
-    }
-    return event;
-  }
-
-  private String extractDataJson(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    StringBuilder dataBuilder = new StringBuilder();
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("data:")) {
-        dataBuilder.append(trimmed.substring(5).trim());
-      }
-    }
-    return dataBuilder.toString();
-  }
-
-  private String extractDelta(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    String event = "message";
-    StringBuilder dataBuilder = new StringBuilder();
-
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("event:")) {
-        event = trimmed.substring(6).trim();
-      } else if (trimmed.startsWith("data:")) {
-        dataBuilder.append(trimmed.substring(5).trim());
-      }
-    }
-
-    if (dataBuilder.isEmpty()) {
-      return null;
-    }
-
-    try {
-      JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      if ("llm_data".equals(event)) {
-        String text = node.path("payload").path("text").asText("");
-        if (text.isBlank()) {
-          text = node.path("text").asText("");
-        }
-        return text;
-      }
-      return null;
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  private List<ChatMessageDO.SourceReference> extractSources(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    String event = "message";
-    StringBuilder dataBuilder = new StringBuilder();
-
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("event:")) {
-        event = trimmed.substring(6).trim();
-      } else if (trimmed.startsWith("data:")) {
-        dataBuilder.append(trimmed.substring(5).trim());
-      }
-    }
-
-    if (!"sources".equals(event) && !"tool_result".equals(event)) {
-      return List.of();
-    }
-    if (dataBuilder.isEmpty()) {
-      return List.of();
-    }
-
-    try {
-      JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      JsonNode payload = node.path("payload");
-      JsonNode items =
-          "tool_result".equals(event)
-              ? payload.path("derived").path("sources")
-              : payload.path("items");
-      if (items.isMissingNode()) {
-        items =
-            "tool_result".equals(event) ? node.path("derived").path("sources") : node.path("items");
-      }
-      if (!items.isArray()) {
-        return List.of();
-      }
-      List<ChatMessageDO.SourceReference> results = new ArrayList<>();
-      for (JsonNode item : items) {
-        ChatMessageDO.SourceReference source = new ChatMessageDO.SourceReference();
-        source.setDocumentId(item.path("id").isMissingNode() ? null : item.path("id").asLong());
-        source.setDocName(item.path("docName").asText(""));
-        source.setSnippet(item.path("snippet").asText(""));
-        results.add(source);
-      }
-      return results;
-    } catch (Exception e) {
-      return List.of();
-    }
-  }
-
   private boolean isClientAbort(IOException io) {
     String msg = io.getMessage();
     if (msg == null) {
@@ -497,56 +366,6 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         || lower.contains("connection reset")
         || lower.contains("forcibly closed")
         || lower.contains("stream closed");
-  }
-
-  private String buildPayloadJson(ChatStreamRequestDTO request, Long userId) throws IOException {
-    List<Map<String, String>> messages =
-        request.getMessages().stream()
-            .filter(
-                message ->
-                    message != null && message.getRole() != null && message.getContent() != null)
-            .map(message -> toMap(message.getRole(), message.getContent()))
-            .filter(message -> !message.get("content").isBlank())
-            .toList();
-
-    if (messages.isEmpty()) {
-      throw new BadRequestException("agent stream failed: no valid messages");
-    }
-
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("messages", messages);
-    payload.put("userId", userId);
-    payload.put("sessionId", request.getSessionId());
-    payload.put("turnId", LogTraceUtil.get(LogTraceUtil.TURN_ID));
-    payload.put("traceId", LogTraceUtil.get(LogTraceUtil.TRACE_ID));
-    return objectMapper.writeValueAsString(payload);
-  }
-
-  private String buildAiGatewayPayloadJson(ChatStreamRequestDTO request) throws IOException {
-    List<Map<String, String>> messages =
-        request.getMessages().stream()
-            .filter(
-                message ->
-                    message != null && message.getRole() != null && message.getContent() != null)
-            .map(message -> toMap(message.getRole(), message.getContent()))
-            .filter(message -> !message.get("content").isBlank())
-            .toList();
-
-    if (messages.isEmpty()) {
-      throw new BadRequestException("ai gateway stream failed: no valid messages");
-    }
-
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("model", aiGatewayModel);
-    payload.put("messages", messages);
-    return objectMapper.writeValueAsString(payload);
-  }
-
-  private Map<String, String> toMap(String role, String content) {
-    Map<String, String> data = new HashMap<>();
-    data.put("role", role.trim());
-    data.put("content", content.trim());
-    return data;
   }
 
   private String preview(String text) {

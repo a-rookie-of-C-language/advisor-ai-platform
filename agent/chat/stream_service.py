@@ -12,6 +12,15 @@ from typing import AsyncIterator, Awaitable, Callable, Iterable
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
 from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
+from chat.stream_protocol import (
+    EVENT_VERSION,
+    build_stream_error_payload,
+    build_tool_error_payload,
+    event_envelope,
+    serialize_event,
+    serialize_protocol_event,
+)
+from chat.subagent_provider_factory import SubagentProviderFactory
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.compaction.ContextCompactor import ContextCompactor
 from context.compaction.TranscriptStore import TranscriptStore
@@ -54,7 +63,7 @@ from tools.tool_search import ToolSearchTool
 _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
-_EVENT_VERSION = "1.0"
+_EVENT_VERSION = EVENT_VERSION
 _DEFER_THRESHOLD = 8
 _URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
 
@@ -104,6 +113,7 @@ class ChatStreamService:
         rag_service=None,
     ) -> None:
         self._provider = provider
+        self._subagent_provider_factory = SubagentProviderFactory(provider)
         self._memory_orchestrator = memory_orchestrator
         self._memory_injector = MemoryInjector()
         self._long_term_memory = (
@@ -253,58 +263,16 @@ class ChatStreamService:
         tool_round_timeout_default: float = 20.0,
         stream_idle_timeout_default: float = 45.0,
     ) -> BaseLLMProvider:
-        env_model = os.getenv(f"{env_prefix}_MODEL", "").strip()
-        model = env_model or default_model or ""
-        if not model:
-            return self._provider
-        if env_model:
-            api_key = os.getenv(f"{env_prefix}_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
-            base_url = os.getenv(f"{env_prefix}_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
-            if not api_key or not base_url:
-                logger.warning(
-                    "%s_MODEL configured but api key/base url missing, fallback to main provider",
-                    env_prefix,
-                )
-                return self._provider
-            try:
-                from llm.openai_provider import OpenAIProvider
-                from llm.provider_factory import _read_float_env, _read_int_env
-                from llm.thinking_config import ThinkingConfig
-
-                return OpenAIProvider(
-                    api_key=api_key,
-                    model=model,
-                    base_url=base_url,
-                    temperature=_read_float_env(f"{env_prefix}_TEMPERATURE", temperature_default),
-                    timeout=_read_float_env(f"{env_prefix}_TIMEOUT_SEC", timeout_default),
-                    max_retries=_read_int_env(f"{env_prefix}_MAX_RETRIES", max_retries_default),
-                    stream_timeout_sec=_read_float_env(f"{env_prefix}_STREAM_TIMEOUT_SEC", stream_timeout_default),
-                    tool_round_timeout_sec=_read_float_env(
-                        f"{env_prefix}_TOOL_ROUND_TIMEOUT_SEC",
-                        tool_round_timeout_default,
-                    ),
-                    stream_idle_timeout_sec=_read_float_env(
-                        f"{env_prefix}_STREAM_IDLE_TIMEOUT_SEC",
-                        stream_idle_timeout_default,
-                    ),
-                    thinking_config=ThinkingConfig.disabled(),
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Failed to build %s provider, fallback to main provider: %s",
-                    env_prefix.lower(),
-                    exc,
-                )
-                return self._provider
-
-        try:
-            return self._provider.with_model(model)
-        except NotImplementedError:
-            logger.warning(
-                "%s_DEFAULT_MODEL configured but provider does not support model override, fallback to main provider",
-                env_prefix,
-            )
-            return self._provider
+        return self._subagent_provider_factory.build(
+            env_prefix=env_prefix,
+            default_model=default_model,
+            temperature_default=temperature_default,
+            timeout_default=timeout_default,
+            max_retries_default=max_retries_default,
+            stream_timeout_default=stream_timeout_default,
+            tool_round_timeout_default=tool_round_timeout_default,
+            stream_idle_timeout_default=stream_idle_timeout_default,
+        )
 
     def _build_tool_explorer_provider(self) -> BaseLLMProvider:
         return self._build_subagent_provider(
@@ -435,7 +403,7 @@ class ChatStreamService:
 
     @staticmethod
     def _serialize_event(event: str, data: dict) -> str:
-        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+        return serialize_event(event, data)
 
     @staticmethod
     def _event_envelope(
@@ -444,13 +412,7 @@ class ChatStreamService:
         trace_id: str | None,
         payload: JsonObject,
     ) -> JsonObject:
-        return {
-            "event_version": _EVENT_VERSION,
-            "trace_id": trace_id or "",
-            "timestamp": int(time.time() * 1000),
-            "source": source,
-            "payload": payload,
-        }
+        return event_envelope(source=source, trace_id=trace_id, payload=payload)
 
     def _serialize_protocol_event(
         self,
@@ -460,18 +422,11 @@ class ChatStreamService:
         trace_id: str | None,
         payload: JsonObject,
     ) -> str:
-        return self._serialize_event(
-            event,
-            self._event_envelope(source=source, trace_id=trace_id, payload=payload),
-        )
+        return serialize_protocol_event(event=event, source=source, trace_id=trace_id, payload=payload)
 
     @staticmethod
     def _build_stream_error_payload(code: str, message: str, retryable: bool) -> JsonObject:
-        return {
-            "code": code,
-            "message": message,
-            "retryable": retryable,
-        }
+        return build_stream_error_payload(code, message, retryable)
 
     @staticmethod
     def _build_tool_error_payload(
@@ -480,12 +435,7 @@ class ChatStreamService:
         message: str,
         retryable: bool,
     ) -> JsonObject:
-        return {
-            **base_payload,
-            "code": code,
-            "message": message,
-            "retryable": retryable,
-        }
+        return build_tool_error_payload(base_payload, code, message, retryable)
 
     async def _emit_terminal_error(
         self,

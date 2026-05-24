@@ -46,6 +46,10 @@ public class ChatMessageDO {
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(columnDefinition = "jsonb")
+  private List<StreamEventRecord> events;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
   private List<Long> attachments;
 
   @Column(updatable = false)
