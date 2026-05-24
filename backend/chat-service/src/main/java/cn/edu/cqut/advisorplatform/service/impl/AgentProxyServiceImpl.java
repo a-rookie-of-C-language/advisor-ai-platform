@@ -275,6 +275,16 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         sawDoneEvent.get()
             ? "done"
             : (sawEndEvent.get() ? "end" : (sawErrorEvent.get() ? "error" : "stream_closed"));
+    if (deltaCount == 0) {
+      log.warn(
+          "agent_proxy invalid_stream_no_delta, finishReason={}, sawDone={}, sawEnd={}, sawError={}, elapsedMs={}",
+          finishReason,
+          sawDoneEvent.get(),
+          sawEndEvent.get(),
+          sawErrorEvent.get(),
+          elapsedSince(startAt));
+      throw new BadRequestException("agent stream failed: no delta");
+    }
     log.info(
         "agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawEnd={}, sawError={}, elapsedMs={}",
         deltaCount,
@@ -443,7 +453,6 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     payload.put("messages", messages);
     payload.put("userId", userId);
     payload.put("sessionId", request.getSessionId());
-    payload.put("kbId", request.getKbId());
     payload.put("turnId", LogTraceUtil.get(LogTraceUtil.TURN_ID));
     payload.put("traceId", LogTraceUtil.get(LogTraceUtil.TRACE_ID));
     return objectMapper.writeValueAsString(payload);

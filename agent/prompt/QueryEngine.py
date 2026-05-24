@@ -99,6 +99,21 @@ class QueryEngine:
         )
 
     @staticmethod
+    def build_intent_routing_prompt(category_descriptions: list[str], user_query: str) -> str:
+        """Build the prompt sent to LLM for high-precision tool category routing."""
+        category_block = "\n".join(f"- {item}" for item in category_descriptions)
+        return (
+            "你是一个高精度工具路由器。请根据用户问题，从候选工具类别中选择最需要注入给模型的类别。\n"
+            "遵循宁缺毋滥原则：只有在高度相关时才选择该类别，不要为了覆盖面而多选。\n"
+            "如果问题不需要某个类别，不要返回它。\n"
+            "返回 JSON 对象，格式如下：\n"
+            '{"categories": ["category1"], "confidence": 0.0, "reason": "简短原因"}\n\n'
+            "候选类别说明：\n"
+            f"{category_block}\n\n"
+            f"用户问题: {user_query}"
+        )
+
+    @staticmethod
     def build_conflict_hint_prompt(conflict_hint: str) -> str:
         """Wrap conflict detection hint for system prompt injection."""
         return conflict_hint

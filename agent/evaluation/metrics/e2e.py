@@ -95,22 +95,26 @@ async def e2e_judge_score(
 
 
 def _build_eval_provider_from_env() -> Any:
-    """从 .env 构建评估专用 LLM provider。"""
+    """从 .env 构建评估专用 LLM provider，优先读取 EVAL_*，缺失时回退 OPENAI_*。"""
     try:
         from dotenv import load_dotenv
         load_dotenv()
     except ImportError:
         pass
 
-    api_key = os.getenv("EVAL_LLM_API_KEY", "").strip()
-    model = os.getenv("EVAL_LLM_MODEL", "").strip()
+    api_key = os.getenv("EVAL_LLM_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    model = os.getenv("EVAL_LLM_MODEL", "").strip() or os.getenv("OPENAI_MODEL", "").strip()
+    base_url = os.getenv("EVAL_LLM_BASE_URL", "").strip() or os.getenv("OPENAI_BASE_URL", "").strip()
 
-    if not api_key or not model:
-        return None
+    if not api_key:
+        raise RuntimeError("Missing EVAL_LLM_API_KEY and OPENAI_API_KEY")
+    if not model:
+        raise RuntimeError("Missing EVAL_LLM_MODEL and OPENAI_MODEL")
+    if not base_url:
+        raise RuntimeError("Missing EVAL_LLM_BASE_URL and OPENAI_BASE_URL")
 
     from llm.openai_provider import OpenAIProvider
 
-    base_url = os.getenv("EVAL_LLM_BASE_URL", "").strip() or None
     temperature = float(os.getenv("EVAL_LLM_TEMPERATURE", "0.1"))
 
     logger.info("已配置评估专用 LLM: model=%s", model)

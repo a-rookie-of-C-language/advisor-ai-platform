@@ -70,10 +70,11 @@ class GraphRunner:
         user_query: str,
         user_id: int | None,
         session_id: int | None,
-        kb_id: int | None,
+        kb_id: int | None = None,
         trace_id: str | None = None,
         turn_id: str | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
+        _ = kb_id
         started_at = time.perf_counter()
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         runtime = GraphRuntime(
@@ -94,13 +95,11 @@ class GraphRunner:
             fusion_pipeline=self._fusion_pipeline,
             web_search_subagent=self._web_search_subagent,
         )
-        token = set_runtime(runtime)
         state = {
             "messages": messages,
             "model_messages": messages,
             "user_id": user_id,
             "session_id": session_id,
-            "kb_id": kb_id,
             "user_query": user_query,
             "trace_id": trace_id,
             "turn_id": turn_id,
@@ -110,42 +109,40 @@ class GraphRunner:
         emitted_events = 0
 
         logger.info(
-            "graph_run start: session_id=%s, user_id=%s, kb_id=%s, message_count=%s",
+            "graph_run start: session_id=%s, user_id=%s, message_count=%s",
             session_id,
             user_id,
-            kb_id,
             len(messages),
         )
 
         async def _invoke() -> None:
+            token = set_runtime(runtime)
             try:
                 await self._compiled.ainvoke(state)
             except Exception as exc:  # noqa: BLE001
                 invoke_error.append(exc)
             finally:
+                reset_runtime(token)
                 done.set()
 
         task = asyncio.create_task(_invoke())
-        try:
-            while True:
-                if done.is_set() and queue.empty():
-                    break
-                try:
-                    event = await asyncio.wait_for(queue.get(), timeout=0.1)
-                    emitted_events += 1
-                    yield event
-                except asyncio.TimeoutError:
-                    continue
+        while True:
+            if done.is_set() and queue.empty():
+                break
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=0.1)
+                emitted_events += 1
+                yield event
+            except asyncio.TimeoutError:
+                continue
 
-            await task
-            if invoke_error:
-                raise invoke_error[0]
-            logger.info(
-                "graph_run done: session_id=%s, user_id=%s, events=%s, elapsed_ms=%s",
-                session_id,
-                user_id,
-                emitted_events,
-                int((time.perf_counter() - started_at) * 1000),
-            )
-        finally:
-            reset_runtime(token)
+        await task
+        if invoke_error:
+            raise invoke_error[0]
+        logger.info(
+            "graph_run done: session_id=%s, user_id=%s, events=%s, elapsed_ms=%s",
+            session_id,
+            user_id,
+            emitted_events,
+            int((time.perf_counter() - started_at) * 1000),
+        )

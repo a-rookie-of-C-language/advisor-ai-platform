@@ -86,6 +86,8 @@ public class UserDO implements UserDetails {
   public enum UserRole {
     ADMIN,
     ADVISOR,
-    EXPERT
+    EXPERT,
+    TEACHER,
+    STUDENT
   }
 }

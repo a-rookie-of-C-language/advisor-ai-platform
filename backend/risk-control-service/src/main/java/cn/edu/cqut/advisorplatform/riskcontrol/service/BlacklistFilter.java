@@ -1,19 +1,21 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserBanDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserBanRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(10)
 @RequiredArgsConstructor
 public class BlacklistFilter implements RiskFilter {
 
-  private final UserBanRepository userBanRepository;
+  private final UserBanDao userBanDao;
 
   @Override
   public String getName() {
@@ -26,7 +28,7 @@ public class BlacklistFilter implements RiskFilter {
       return passed();
     }
 
-    return userBanRepository
+    return userBanDao
         .findActiveBanByUserId(request.getUserId(), LocalDateTime.now())
         .map(
             ban -> {

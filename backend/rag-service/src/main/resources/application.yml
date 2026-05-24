@@ -24,6 +24,10 @@ spring:
     show-sql: false
   flyway:
     enabled: false
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 management:
   tracing:

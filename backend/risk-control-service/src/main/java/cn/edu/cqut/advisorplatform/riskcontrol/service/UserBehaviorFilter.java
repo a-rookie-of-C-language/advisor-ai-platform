@@ -1,25 +1,27 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserBehaviorStatDao;
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserViolationDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.UserBehaviorStat;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserBehaviorStatRepository;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.UserViolationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(60)
 @RequiredArgsConstructor
 public class UserBehaviorFilter implements RiskFilter {
 
-  private final UserBehaviorStatRepository userBehaviorStatRepository;
-  private final UserViolationRepository userViolationRepository;
+  private final UserBehaviorStatDao userBehaviorStatDao;
+  private final UserViolationDao userViolationDao;
 
   @Value("${advisor.risk.ban.permanent-threshold:20}")
   private int permanentThreshold;
@@ -35,10 +37,8 @@ public class UserBehaviorFilter implements RiskFilter {
       return passed();
     }
 
-    // 检查历史违规次数
     long violationCount =
-        userViolationRepository.countByUserIdSince(
-            request.getUserId(), LocalDateTime.now().minusDays(30));
+        userViolationDao.countByUserIdSince(request.getUserId(), LocalDateTime.now().minusDays(30));
 
     if (violationCount >= permanentThreshold) {
       log.warn(
@@ -47,7 +47,7 @@ public class UserBehaviorFilter implements RiskFilter {
           violationCount);
       return RiskCheckResponse.builder()
           .passed(false)
-          .action("ban_permanent")
+          .action("reject")
           .reason("用户行为异常，违规次数过多")
           .category("user_behavior")
           .statusCode(403)
@@ -55,9 +55,8 @@ public class UserBehaviorFilter implements RiskFilter {
           .build();
     }
 
-    // 检查今日行为统计
     Optional<UserBehaviorStat> statOpt =
-        userBehaviorStatRepository.findByUserIdAndDate(request.getUserId(), LocalDate.now());
+        userBehaviorStatDao.findByUserIdAndDate(request.getUserId(), LocalDate.now());
 
     if (statOpt.isPresent()) {
       UserBehaviorStat stat = statOpt.get();
@@ -68,10 +67,11 @@ public class UserBehaviorFilter implements RiskFilter {
             stat.getSuspiciousPattern());
         return RiskCheckResponse.builder()
             .passed(false)
-            .action("warn")
+            .action("review")
             .reason("检测到可疑行为模式")
             .category("user_behavior")
-            .statusCode(200)
+            .statusCode(202)
+            .message("当前请求已进入人工复核")
             .build();
       }
     }

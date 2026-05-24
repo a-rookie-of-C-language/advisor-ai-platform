@@ -31,11 +31,10 @@ class ActionScore:
 def score_action(
     *,
     user_query: str,
-    kb_id: int | None,
     trace_events: list[dict[str, Any]],
 ) -> ActionScore:
     lower_query = user_query.lower()
-    should_call = bool(user_query.strip()) and kb_id is not None and kb_id > 0 and any(
+    should_call = bool(user_query.strip()) and any(
         key in lower_query
         for key in ["根据", "资料", "知识库", "出处", "政策", "文档", "哪条", "来源", "where", "source"]
     )

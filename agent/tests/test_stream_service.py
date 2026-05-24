@@ -24,6 +24,13 @@ def _parse_event(raw: str) -> tuple[str, dict]:
     return event, payload
 
 
+def _assert_search_route_payload(payload: dict) -> None:
+    assert payload["matched_by"] == "strong_rule"
+    assert payload["categories"] == ["search"]
+    assert payload["source"]["decision"] == payload["matched_by"]
+    assert payload["source"]["categories"] == payload["categories"]
+
+
 class _ProviderOk:
     def __init__(self, chunks: list[str]) -> None:
         self._chunks = chunks
@@ -114,6 +121,34 @@ class _ProviderLegacyToolUse:
         _ = max_tool_retries
         payload = await tool_executor("rag_search", {"query": "q", "top_k": 3})
         yield LLMStreamEvent(type="tool_result", tool_name="rag_search", tool_output=payload, attempt=1, success=True)
+        yield LLMStreamEvent(type="delta", text="answer")
+
+
+class _ProviderRouteCapture:
+    def __init__(self) -> None:
+        self.last_tools: list[ToolSpec] = []
+
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: object) -> AsyncIterator[str]:
+        if False:
+            yield ""
+        return
+
+    async def stream_chat_with_tools(
+        self,
+        messages: Iterable[ChatMessage],
+        tools: list[ToolSpec],
+        tool_executor,
+        *,
+        max_tool_calls: int = 1,
+        max_tool_retries: int = 3,
+        **kwargs: object,
+    ) -> AsyncIterator[LLMStreamEvent]:
+        _ = messages
+        _ = tool_executor
+        _ = max_tool_calls
+        _ = max_tool_retries
+        _ = kwargs
+        self.last_tools = list(tools)
         yield LLMStreamEvent(type="delta", text="answer")
 
 
@@ -209,6 +244,45 @@ async def test_stream_provider_error_emits_error_then_done() -> None:
 
 
 @pytest.mark.asyncio
+async def test_legacy_stream_tool_route_prefers_search_for_latest_query() -> None:
+    provider = _ProviderRouteCapture()
+    service = ChatStreamService(
+        provider=provider,
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    service._use_langgraph = False
+    messages = [ChatMessage(role="user", content="帮我查一下最新政策消息")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+    route_payload = parsed[1][1]
+
+    assert event_names == ["start", "intent_route", "delta", "done"]
+    _assert_search_route_payload(route_payload)
+    assert {tool.name for tool in provider.last_tools} == {"web_search"}
+
+
+@pytest.mark.asyncio
+async def test_stream_tool_route_prefers_search_for_latest_query() -> None:
+    provider = _ProviderRouteCapture()
+    service = ChatStreamService(
+        provider=provider,
+        memory_orchestrator=None,
+        rag_service=_RagMiss(),
+    )
+    messages = [ChatMessage(role="user", content="帮我查一下最新政策消息")]
+    events = [event async for event in service.stream_events(messages, user_id=1, session_id=1001, kb_id=1)]
+    parsed = [_parse_event(event) for event in events]
+    event_names = [name for name, _ in parsed]
+    route_payload = parsed[1][1]
+
+    assert event_names == ["start", "intent_route", "delta", "done"]
+    _assert_search_route_payload(route_payload)
+    assert {tool.name for tool in provider.last_tools} == {"web_search"}
+
+
+@pytest.mark.asyncio
 async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     service = ChatStreamService(
         provider=_ProviderToolUse(),
@@ -220,9 +294,8 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "sources", "delta", "done"]
-    assert parsed[1][1]["status"] == "miss"
-    assert parsed[1][1]["items"] == []
+    assert event_names == ["start", "intent_route", "sources", "delta", "done"]
+    assert parsed[1][1]["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
 
 
 @pytest.mark.asyncio
@@ -237,9 +310,10 @@ async def test_stream_tool_use_without_scope_returns_permission_error_and_contin
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "sources", "delta", "done"]
-    assert parsed[1][1]["status"] == "error"
-    assert parsed[1][1]["items"] == []
+    assert event_names == ["start", "intent_route", "sources", "delta", "done"]
+    assert parsed[1][1]["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
+    assert parsed[2][1]["status"] == "miss"
+    assert parsed[2][1]["items"] == []
 
 
 @pytest.mark.asyncio
@@ -271,7 +345,10 @@ async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch
     parsed = [_parse_event(event) for event in events]
     event_names = [name for name, _ in parsed]
 
-    assert event_names == ["start", "sources", "delta", "done"]
+    assert event_names == ["start", "intent_route", "sources", "delta", "done"]
+    route_payload = parsed[1][1]
+    assert route_payload["matched_by"] == "fallback"
+    assert route_payload["categories"] == ["retrieval", "search"]
 
 
 @pytest.mark.asyncio

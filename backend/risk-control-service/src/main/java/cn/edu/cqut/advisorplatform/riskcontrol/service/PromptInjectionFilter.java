@@ -1,21 +1,24 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.RiskRuleDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.RiskRule;
-import cn.edu.cqut.advisorplatform.riskcontrol.repository.RiskRuleRepository;
 import java.util.List;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Order(40)
 @RequiredArgsConstructor
 public class PromptInjectionFilter implements RiskFilter {
 
-  private final RiskRuleRepository riskRuleRepository;
+  private final RiskRuleDao riskRuleDao;
+  private final RiskActionDecider riskActionDecider;
 
   @Override
   public String getName() {
@@ -30,8 +33,7 @@ public class PromptInjectionFilter implements RiskFilter {
     }
 
     List<RiskRule> rules =
-        riskRuleRepository.findByRuleTypeAndDirectionAndEnabledTrue(
-            "prompt_injection", request.getDirection());
+        riskRuleDao.findByRuleTypeAndDirectionEnabled("prompt_injection", request.getDirection());
     for (RiskRule rule : rules) {
       try {
         Pattern pattern = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE);
@@ -43,8 +45,8 @@ public class PromptInjectionFilter implements RiskFilter {
               rule.getPattern());
           return RiskCheckResponse.builder()
               .passed(false)
-              .action(rule.getAction())
-              .reason("Prompt注入检测")
+              .action(riskActionDecider.decideAction(rule, "reject"))
+              .reason("Prompt 注入风险")
               .category("prompt_injection")
               .matchedKeyword(rule.getName())
               .statusCode(400)

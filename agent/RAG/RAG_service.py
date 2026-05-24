@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from openai import OpenAI
+
 from RAG.embedding_engine.ollama_embedding_engine import OllamaEmbeddingEngine
+from RAG.embedding_engine.openai_embedding_engine import OpenAIEmbeddingEngine
 from RAG.rag_dao import PgVectorDAO
 from RAG.rerank_strategy import (
     ChunkDocTwoStageRerankStrategy,
@@ -36,9 +39,23 @@ class RAG_service:
         dao: Optional[PgVectorDAO] = None,
         ollama_base_url: str = "http://localhost:11434",
         embedding_model: str = "bge-m3",
+        embedding_provider: str = "ollama",
+        embedding_openai_base_url: str | None = None,
+        embedding_openai_api_key: str | None = None,
     ) -> None:
         self.dao = dao or PgVectorDAO(db_dsn=db_dsn)
-        self.embedding_engine = OllamaEmbeddingEngine(model=embedding_model, base_url=ollama_base_url)
+        provider = (embedding_provider or "ollama").strip().lower()
+        if provider == "openai":
+            openai_client = OpenAI(
+                api_key=embedding_openai_api_key,
+                base_url=embedding_openai_base_url,
+            )
+            self.embedding_engine = OpenAIEmbeddingEngine(
+                model=embedding_model,
+                client=openai_client,
+            )
+        else:
+            self.embedding_engine = OllamaEmbeddingEngine(model=embedding_model, base_url=ollama_base_url)
         self.rerank_registry = RerankStrategyRegistry()
         self.rerank_registry.register(ChunkScoreRerankStrategy())
         self.rerank_registry.register(TitleBoostRerankStrategy())

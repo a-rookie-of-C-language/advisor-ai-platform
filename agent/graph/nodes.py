@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -9,6 +9,7 @@ from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.QueryEngine import QueryEngine
+from tools.intent_router import emit_route_observation
 
 from .state import GraphState
 
@@ -16,7 +17,24 @@ logger = logging.getLogger(__name__)
 
 _DEBUG_PREVIEW_LIMIT = 200
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
+_RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
+_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
 _runtime_var: ContextVar["GraphRuntime"] = ContextVar("graph_runtime")
+
+
+def _strip_surrogates(text: str) -> str:
+    if not text:
+        return text
+    return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
+
+
+def _prefer_rag_only(query: str) -> bool:
+    normalized = _strip_surrogates(query).strip().lower()
+    if not normalized:
+        return False
+    has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
+    has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
+    return has_rag_hint and not has_realtime_hint
 
 
 @dataclass
@@ -63,7 +81,7 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
         {
             "user_id": state.get("user_id"),
             "session_id": state.get("session_id"),
-            "kb_id": state.get("kb_id"),
+            "kb_id": 0,
             "user_query": state.get("user_query", ""),
             "permission_config": runtime.tool_permission,
         },
@@ -162,10 +180,9 @@ async def provider_stream(
 async def load_memory_node(state: GraphState) -> GraphState:
     runtime = _runtime()
     logger.info(
-        "graph_node load_memory: session_id=%s, user_id=%s, kb_id=%s",
+        "graph_node load_memory: session_id=%s, user_id=%s",
         state.get("session_id"),
         state.get("user_id"),
-        state.get("kb_id"),
     )
     messages = list(state.get("messages", []))
     user_query = state.get("user_query", "")
@@ -173,7 +190,6 @@ async def load_memory_node(state: GraphState) -> GraphState:
         runtime.memory_orchestrator is not None
         and state.get("user_id") is not None
         and state.get("session_id") is not None
-        and state.get("kb_id") is not None
         and user_query
     )
 
@@ -188,7 +204,7 @@ async def load_memory_node(state: GraphState) -> GraphState:
             memory_context = await runtime.memory_orchestrator.load(
                 user_id=state.get("user_id"),
                 session_id=state.get("session_id"),
-                kb_id=state.get("kb_id"),
+                kb_id=0,
                 query=user_query,
                 recent_messages=[{"role": item.role, "content": item.content} for item in messages],
             )
@@ -198,10 +214,9 @@ async def load_memory_node(state: GraphState) -> GraphState:
                 dynamic_prompts.append(QueryEngine.build_memory_context_prompt(memory_prompt))
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, kb_id=%s, error=%s",
+                "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, error=%s",
                 state.get("user_id"),
                 state.get("session_id"),
-                state.get("kb_id"),
                 exc,
             )
 
@@ -218,20 +233,45 @@ async def load_memory_node(state: GraphState) -> GraphState:
 
 async def decide_tool_node(state: GraphState) -> GraphState:
     runtime = _runtime()
-    tools = runtime.tools.specs()
-    kb_id = state.get("kb_id")
-    user_query = state.get("user_query", "")
-    rag_enabled = bool(tools) and kb_id is not None and kb_id > 0 and bool(user_query)
-    use_tool = rag_enabled and runtime.enable_tool_use
+    user_query = _strip_surrogates(state.get("user_query", ""))
+    has_query = bool(user_query)
+    rag_enabled = has_query
+    route_categories: set[str] = set()
+    if runtime.enable_tool_use and has_query:
+        if runtime.intent_router is not None:
+            all_cats = runtime.tools.all_categories()
+            route_decision = await runtime.intent_router.route_decision(
+                user_query,
+                all_cats,
+                provider=runtime.provider,
+            )
+            route_categories = set(route_decision.categories)
+            await emit_route_observation(
+                route_decision,
+                logger=logger,
+                scope="graph",
+                session_id=state.get("session_id"),
+                emit=_emit,
+            )
+        else:
+            route_categories = runtime.tools.all_categories()
+    if _prefer_rag_only(user_query) and runtime.tools.get("rag_search") is not None:
+        route_categories = {"retrieval"}
+    web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
+    use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     logger.info(
-        "graph_node decide_tool: session_id=%s, rag_enabled=%s, use_tool=%s",
+        "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, use_tool=%s, route_categories=%s",
         state.get("session_id"),
         rag_enabled,
+        web_search_enabled,
         use_tool,
+        sorted(route_categories),
     )
     return {
         "rag_enabled": rag_enabled,
+        "web_search_enabled": web_search_enabled,
         "use_tool": use_tool,
+        "route_categories": route_categories,
     }
 
 
@@ -247,74 +287,101 @@ async def generate_node(state: GraphState) -> GraphState:
     debug_preview_parts: list[str] = []
     debug_chars = 0
     debug_count = 0
+    llm_chunk_count = 0
 
     try:
         if state.get("use_tool"):
-            user_query = state.get("user_query", "")
+            user_query = _strip_surrogates(state.get("user_query", ""))
 
             # 跨源融合：预执行只读工具 + 场景识别（三路并行）
             fusion_context = await _run_fusion_pipeline(state, user_query, model_messages)
             if fusion_context:
                 model_messages = _inject_fusion_context(model_messages, fusion_context)
+            direct_generate = bool(fusion_context and fusion_context.get("candidates"))
 
-            # 意图路由：按需注入 tool specs
-            if runtime.intent_router is not None:
-                all_cats = runtime.tools.all_categories()
-                matched_cats = runtime.intent_router.route_with_fallback(user_query, all_cats)
-                tools = runtime.tools.specs_by_categories(matched_cats)
-                logger.debug("intent_router: injecting %d tools for categories=%s", len(tools), matched_cats)
+            route_categories = set(state.get("route_categories", set()))
+            if route_categories:
+                tools = runtime.tools.specs_by_categories(route_categories)
             else:
                 tools = runtime.tools.specs()
+            if _prefer_rag_only(user_query):
+                rag_tool = runtime.tools.get("rag_search")
+                if rag_tool is not None:
+                    tools = [rag_tool.to_tool_spec()]
+            logger.info(
+                "graph_node generate tools: session_id=%s, tools=%s, route_categories=%s, direct_generate=%s",
+                state.get("session_id"),
+                [tool.name for tool in tools],
+                sorted(route_categories),
+                direct_generate,
+            )
 
-            async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
-                return await _execute_tool(tool_name=tool_name, tool_args=tool_args, state=state)
+            if direct_generate:
+                async for delta in runtime.provider.stream_chat(model_messages):
+                    llm_chunk_count += 1
+                    answer_parts.append(delta)
+                    await _emit("delta", {"text": delta})
 
-            async for event in runtime.provider.stream_chat_with_tools(
-                model_messages,
-                tools,
-                tool_executor,
-                max_tool_calls=1,
-                max_tool_retries=3,
-            ):
-                if event.type == "tool_result":
-                    try:
-                        payload = json.loads(event.tool_output) if event.tool_output else {}
-                    except Exception:
-                        logger.warning(
-                            "tool_output parse failed: tool=%s, output=%s",
-                            event.tool_name,
-                            (event.tool_output or "")[:200],
+                    if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
+                        remain = _DEBUG_PREVIEW_LIMIT - debug_chars
+                        piece = delta[:remain]
+                        if piece:
+                            debug_preview_parts.append(piece)
+                            debug_chars += len(piece)
+                    if runtime.debug_stream:
+                        debug_count += 1
+            else:
+                async def tool_executor(tool_name: str, tool_args: dict[str, Any]) -> str:
+                    return await _execute_tool(tool_name=tool_name, tool_args=tool_args, state=state)
+
+                async for event in runtime.provider.stream_chat_with_tools(
+                    model_messages,
+                    tools,
+                    tool_executor,
+                    max_tool_calls=1,
+                    max_tool_retries=3,
+                ):
+                    if event.type == "tool_result":
+                        try:
+                            payload = json.loads(event.tool_output) if event.tool_output else {}
+                        except Exception:
+                            logger.warning(
+                                "tool_output parse failed: tool=%s, output=%s",
+                                event.tool_name,
+                                (event.tool_output or "")[:200],
+                            )
+                            payload = {}
+                        await _emit(
+                            "sources",
+                            {
+                                "tool": event.tool_name,
+                                "success": event.success,
+                                "attempt": event.attempt,
+                                "status": payload.get("status", "error"),
+                                "message": payload.get("message", "tool execute failed"),
+                                "items": payload.get("items", []),
+                            },
                         )
-                        payload = {}
-                    await _emit(
-                        "sources",
-                        {
-                            "tool": event.tool_name,
-                            "success": event.success,
-                            "attempt": event.attempt,
-                            "status": payload.get("status", "error"),
-                            "message": payload.get("message", "tool execute failed"),
-                            "items": payload.get("items", []),
-                        },
-                    )
-                    continue
+                        continue
 
-                if event.type != "delta" or not event.text:
-                    continue
-                delta = event.text
-                answer_parts.append(delta)
-                await _emit("delta", {"text": delta})
+                    if event.type != "delta" or not event.text:
+                        continue
+                    delta = event.text
+                    llm_chunk_count += 1
+                    answer_parts.append(delta)
+                    await _emit("delta", {"text": delta})
 
-                if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
-                    remain = _DEBUG_PREVIEW_LIMIT - debug_chars
-                    piece = delta[:remain]
-                    if piece:
-                        debug_preview_parts.append(piece)
-                        debug_chars += len(piece)
-                if runtime.debug_stream:
-                    debug_count += 1
+                    if runtime.debug_stream and debug_chars < _DEBUG_PREVIEW_LIMIT:
+                        remain = _DEBUG_PREVIEW_LIMIT - debug_chars
+                        piece = delta[:remain]
+                        if piece:
+                            debug_preview_parts.append(piece)
+                            debug_chars += len(piece)
+                    if runtime.debug_stream:
+                        debug_count += 1
         else:
             async for delta in runtime.provider.stream_chat(model_messages):
+                llm_chunk_count += 1
                 answer_parts.append(delta)
                 await _emit("delta", {"text": delta})
 
@@ -338,12 +405,17 @@ async def generate_node(state: GraphState) -> GraphState:
                     "regex_matches": len(safety_result.regex_matches),
                     "privacy_spans": len(safety_result.privacy_result.spans) if safety_result.privacy_result else 0,
                 })
+        logger.info(
+            "graph_node generate done: session_id=%s, llm_chunks=%s, answer_len=%s",
+            state.get("session_id"),
+            llm_chunk_count,
+            len(final_answer),
+        )
     except Exception:  # noqa: BLE001
         logger.exception(
-            "graph_node generate failed: session_id=%s, user_id=%s, kb_id=%s",
+            "graph_node generate failed: session_id=%s, user_id=%s",
             state.get("session_id"),
             state.get("user_id"),
-            state.get("kb_id"),
         )
         await _emit("error", {"message": _STREAM_ERROR_MESSAGE})
         return {
@@ -351,6 +423,7 @@ async def generate_node(state: GraphState) -> GraphState:
             "stream_failed": True,
             "debug_delta_count": debug_count,
             "debug_preview": "".join(debug_preview_parts),
+            "llm_chunk_count": llm_chunk_count,
         }
 
     return {
@@ -358,6 +431,7 @@ async def generate_node(state: GraphState) -> GraphState:
         "stream_failed": False,
         "debug_delta_count": debug_count,
         "debug_preview": "".join(debug_preview_parts),
+        "llm_chunk_count": llm_chunk_count,
     }
 
 
@@ -372,14 +446,10 @@ async def _run_fusion_pipeline(
     runtime = _runtime()
     if runtime.fusion_pipeline is None:
         return None
-    kb_id = state.get("kb_id")
-    if not kb_id:
-        return None
-
     context = {
         "user_id": state.get("user_id"),
         "session_id": state.get("session_id"),
-        "kb_id": state.get("kb_id"),
+        "kb_id": 0,
         "user_query": user_query,
         "permission_config": runtime.tool_permission,
     }
@@ -555,7 +625,7 @@ async def flush_memory_node(state: GraphState) -> GraphState:
         await runtime.memory_orchestrator.flush(
             user_id=state.get("user_id"),
             session_id=state.get("session_id"),
-            kb_id=state.get("kb_id"),
+            kb_id=0,
             user_text=state.get("user_query", ""),
             assistant_text=answer,
             recent_messages=[{"role": item.role, "content": item.content} for item in messages]

@@ -1,7 +1,12 @@
 package cn.edu.cqut.advisorplatform.gateway.filter;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,10 +36,21 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
   @Value("${advisor.risk.control-service-url:http://risk-control-service:8086}")
   private String riskControlServiceUrl;
 
-  private final WebClient webClient;
+  @Value("${INTERNAL_SERVICE_TOKEN:${advisor.internal.token:}}")
+  private String internalServiceToken;
 
-  public RiskControlFilter(WebClient.Builder webClientBuilder) {
+  @Value("${advisor.risk.fail-open-default:true}")
+  private boolean failOpenDefault;
+
+  @Value("${advisor.risk.fail-closed-paths:/api/chat/,/api/rag/}")
+  private String failClosedPaths;
+
+  private final WebClient webClient;
+  private final MeterRegistry meterRegistry;
+
+  public RiskControlFilter(WebClient.Builder webClientBuilder, MeterRegistry meterRegistry) {
     this.webClient = webClientBuilder.build();
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -58,30 +74,39 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
             : "unknown";
 
     return DataBufferUtils.join(exchange.getRequest().getBody())
-        .flatMap(
+        .map(
             dataBuffer -> {
               byte[] bytes = new byte[dataBuffer.readableByteCount()];
               dataBuffer.read(bytes);
               DataBufferUtils.release(dataBuffer);
+              return bytes;
+            })
+        .defaultIfEmpty(new byte[0])
+        .flatMap(
+            bytes -> {
               String requestBody = new String(bytes, StandardCharsets.UTF_8);
 
               return callRiskControlService(userId, sessionId, ipAddress, path, requestBody)
                   .flatMap(
                       response -> {
                         if (response.isPassed()) {
-                          ServerHttpRequest decoratedRequest =
-                              new ServerHttpRequestDecorator(exchange.getRequest()) {
-                                @Override
-                                public Flux<DataBuffer> getBody() {
-                                  DataBuffer buffer =
-                                      exchange.getResponse().bufferFactory().wrap(bytes);
-                                  return Flux.just(buffer);
-                                }
-                              };
+                          Counter.builder("gateway.risk.input.pass")
+                              .tag("path", normalizePathTag(path))
+                              .register(meterRegistry)
+                              .increment();
+
+                          ServerHttpRequest decoratedRequest = decorateRequest(exchange, bytes);
                           ServerWebExchange mutatedExchange =
                               exchange.mutate().request(decoratedRequest).build();
                           return chain.filter(mutatedExchange);
                         }
+
+                        Counter.builder("gateway.risk.input.block")
+                            .tag("path", normalizePathTag(path))
+                            .tag("category", safeTag(response.getCategory()))
+                            .tag("action", safeTag(response.getAction()))
+                            .register(meterRegistry)
+                            .increment();
 
                         log.warn(
                             "Risk control blocked: userId={}, path={}, category={}, reason={}",
@@ -92,7 +117,8 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
 
                         exchange
                             .getResponse()
-                            .setStatusCode(HttpStatus.valueOf(response.getStatusCode()));
+                            .setStatusCode(
+                                HttpStatus.valueOf(Math.max(response.getStatusCode(), 400)));
                         exchange
                             .getResponse()
                             .getHeaders()
@@ -100,8 +126,13 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
 
                         String errorBody =
                             String.format(
-                                "{\"code\":%d,\"message\":\"%s\"}",
-                                response.getStatusCode(), response.getMessage());
+                                "{\"code\":%d,\"message\":\"%s\",\"action\":\"%s\"}",
+                                Math.max(response.getStatusCode(), 400),
+                                escapeJson(
+                                    response.getMessage() == null
+                                        ? "请求被风控拦截"
+                                        : response.getMessage()),
+                                safeTag(response.getAction()));
 
                         DataBuffer buffer =
                             exchange
@@ -113,16 +144,53 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
             })
         .onErrorResume(
             e -> {
-              log.error("Risk control service call failed, allowing request: path={}", path, e);
-              return chain.filter(exchange);
+              boolean failClosed = shouldFailClosed(path);
+              Counter.builder("gateway.risk.input.error")
+                  .tag("path", normalizePathTag(path))
+                  .tag("mode", failClosed ? "fail_closed" : "fail_open")
+                  .register(meterRegistry)
+                  .increment();
+
+              log.error(
+                  "Risk control service call failed: path={}, mode={}",
+                  path,
+                  failClosed ? "fail_closed" : "fail_open",
+                  e);
+
+              if (!failClosed) {
+                return chain.filter(exchange);
+              }
+
+              exchange.getResponse().setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
+              exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+              String body = "{\"code\":503,\"message\":\"风控服务暂不可用，请稍后重试\"}";
+              DataBuffer buffer =
+                  exchange
+                      .getResponse()
+                      .bufferFactory()
+                      .wrap(body.getBytes(StandardCharsets.UTF_8));
+              return exchange.getResponse().writeWith(Mono.just(buffer));
             });
+  }
+
+  private ServerHttpRequest decorateRequest(ServerWebExchange exchange, byte[] bytes) {
+    return new ServerHttpRequestDecorator(exchange.getRequest()) {
+      @Override
+      public Flux<DataBuffer> getBody() {
+        if (bytes.length == 0) {
+          return Flux.empty();
+        }
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+        return Flux.just(buffer);
+      }
+    };
   }
 
   private Mono<RiskCheckResponse> callRiskControlService(
       String userId, String sessionId, String ipAddress, String path, String requestBody) {
 
     RiskCheckRequest request = new RiskCheckRequest();
-    request.setUserId(userId != null ? Long.parseLong(userId) : null);
+    request.setUserId(parseUserId(userId));
     request.setSessionId(sessionId);
     request.setIpAddress(ipAddress);
     request.setRequestPath(path);
@@ -133,10 +201,52 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
     return webClient
         .post()
         .uri(riskControlServiceUrl + "/internal/risk/check")
+        .header("X-Internal-Token", internalServiceToken)
         .bodyValue(request)
         .retrieve()
         .bodyToMono(RiskCheckResponse.class)
         .defaultIfEmpty(RiskCheckResponse.passed());
+  }
+
+  private boolean shouldFailClosed(String path) {
+    Set<String> paths =
+        List.of(failClosedPaths.split(",")).stream()
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toSet());
+    boolean inFailClosedList = paths.stream().anyMatch(path::startsWith);
+    if (inFailClosedList) {
+      return true;
+    }
+    return !failOpenDefault;
+  }
+
+  private Long parseUserId(String userId) {
+    if (userId == null || userId.isBlank()) {
+      return null;
+    }
+    try {
+      return Long.parseLong(userId);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private String normalizePathTag(String path) {
+    for (String prefix : RISK_CHECK_PATHS) {
+      if (path.startsWith(prefix)) {
+        return prefix;
+      }
+    }
+    return "other";
+  }
+
+  private String safeTag(String value) {
+    return value == null || value.isBlank() ? "unknown" : value.toLowerCase(Locale.ROOT);
+  }
+
+  private String escapeJson(String value) {
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   @Override
@@ -224,8 +334,7 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
     private String action;
     private String reason;
     private String category;
-    private String matchedKeyword;
-    private int statusCode;
+    private Integer statusCode;
     private String message;
 
     public static RiskCheckResponse passed() {
@@ -267,19 +376,11 @@ public class RiskControlFilter implements GlobalFilter, Ordered {
       this.category = category;
     }
 
-    public String getMatchedKeyword() {
-      return matchedKeyword;
+    public Integer getStatusCode() {
+      return statusCode == null ? 200 : statusCode;
     }
 
-    public void setMatchedKeyword(String matchedKeyword) {
-      this.matchedKeyword = matchedKeyword;
-    }
-
-    public int getStatusCode() {
-      return statusCode;
-    }
-
-    public void setStatusCode(int statusCode) {
+    public void setStatusCode(Integer statusCode) {
       this.statusCode = statusCode;
     }
 

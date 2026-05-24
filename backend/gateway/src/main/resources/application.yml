@@ -35,6 +35,14 @@ spring:
           uri: lb://audit-service
           predicates:
             - Path=/api/audit/**
+        - id: student-service
+          uri: lb://student-service
+          predicates:
+            - Path=/api/student/**
+        - id: check-in-service
+          uri: lb://check-in-service
+          predicates:
+            - Path=/api/check-in/**
 
 management:
   tracing:
@@ -54,4 +62,5 @@ advisor:
     expiration: ${JWT_EXPIRE_MS:86400000}
   risk:
     control-service-url: ${RISK_CONTROL_SERVICE_URL:http://risk-control-service:8086}
-
+    fail-open-default: ${RISK_FAIL_OPEN_DEFAULT:true}
+    fail-closed-paths: ${RISK_FAIL_CLOSED_PATHS:/api/chat/,/api/rag/}

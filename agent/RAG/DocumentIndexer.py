@@ -1,12 +1,10 @@
 import asyncio
+import json
 import logging
-import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Awaitable, Callable, Optional
 
 import asyncpg
-import psycopg2
-from psycopg2.pool import SimpleConnectionPool
 
 from RAG.annotator.annotation_pipeline import AnnotationPipeline
 from RAG.chunk_engine.registry import ChunkEngineRegistry
@@ -40,7 +38,7 @@ class DocumentIndexer:
         self._max_retries = max_retries
         self._retry_backoff_sec = retry_backoff_sec
 
-        self._sync_pool: Optional[SimpleConnectionPool] = None
+        self._pool: Optional[asyncpg.Pool] = None
         self._listen_conn: Optional[asyncpg.Connection] = None
 
         self._processing_docs: set[int] = set()
@@ -48,7 +46,7 @@ class DocumentIndexer:
 
     async def listen(self) -> None:
         """持续监听通知。连接中断后自动重连。"""
-        self._init_sync_pool()
+        await self._init_pool()
 
         try:
             while True:
@@ -72,11 +70,11 @@ class DocumentIndexer:
                 finally:
                     await self._cleanup_listener_conn(conn)
         finally:
-            self._close_sync_pool()
+            await self._close_pool()
 
     async def close(self) -> None:
         await self._cleanup_listener_conn(self._listen_conn)
-        self._close_sync_pool()
+        await self._close_pool()
 
     def _on_notify(self, _connection, _pid, _channel, payload) -> None:
         try:
@@ -124,7 +122,6 @@ class DocumentIndexer:
                 await self._set_status(document_id, "FAILED")
                 return
 
-            # 三层元数据标注
             if self._annotation_pipeline is not None:
                 chunk_results = self._annotate_chunks(chunk_results, document_id)
 
@@ -139,24 +136,43 @@ class DocumentIndexer:
             await self._set_status(document_id, "FAILED")
 
     async def _get_document_info(self, document_id: int):
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: self._run_with_retry("get_document_info", self._sync_get_document_info, document_id),
+        row = await self._run_with_retry(
+            "get_document_info",
+            lambda conn: conn.fetchrow(
+                "SELECT file_path, file_type FROM rag_document WHERE id = $1",
+                document_id,
+            ),
         )
+        return (row["file_path"], row["file_type"]) if row else (None, None)
 
     async def _save_chunks(self, document_id: int, chunk_results: list, vectors: list):
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self._run_with_retry("save_chunks", self._sync_save_chunks, document_id, chunk_results, vectors),
-        )
+        async def op(conn: asyncpg.Connection) -> None:
+            async with conn.transaction():
+                await conn.execute("DELETE FROM rag_document_chunk WHERE document_id = $1", document_id)
+                for idx, (chunk, vector) in enumerate(zip(chunk_results, vectors, strict=False)):
+                    meta_json = json.dumps(chunk.metadata, ensure_ascii=False) if chunk.metadata else None
+                    await conn.execute(
+                        """
+                        INSERT INTO rag_document_chunk (document_id, chunk_index, content, embedding, metadata)
+                        VALUES ($1, $2, $3, $4, $5)
+                        """,
+                        document_id,
+                        idx,
+                        chunk.text,
+                        str(vector),
+                        meta_json,
+                    )
+
+        await self._run_with_retry("save_chunks", op)
 
     async def _set_status(self, document_id: int, status: str):
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self._run_with_retry("set_status", self._sync_set_status, document_id, status),
+        await self._run_with_retry(
+            "set_status",
+            lambda conn: conn.execute(
+                "UPDATE rag_document SET status = $1, updated_at = NOW() WHERE id = $2",
+                status,
+                document_id,
+            ),
         )
 
     def _annotate_chunks(self, chunk_results: list, document_id: int) -> list:
@@ -190,67 +206,25 @@ class DocumentIndexer:
         )
         return annotated
 
-    def _sync_get_document_info(self, document_id: int):
-        conn = self._acquire_conn()
-        try:
-            with conn.cursor() as cur:
-                self._set_statement_timeout(cur)
-                cur.execute(
-                    "SELECT file_path, file_type FROM rag_document WHERE id = %s",
-                    (document_id,),
-                )
-                row = cur.fetchone()
-                return (row[0], row[1]) if row else (None, None)
-        finally:
-            self._release_conn(conn)
-
-    def _sync_save_chunks(self, document_id: int, chunk_results: list, vectors: list):
-        import json
-
-        conn = self._acquire_conn()
-        try:
-            with conn.cursor() as cur:
-                self._set_statement_timeout(cur)
-                cur.execute("DELETE FROM rag_document_chunk WHERE document_id = %s", (document_id,))
-                for idx, (chunk, vector) in enumerate(zip(chunk_results, vectors, strict=False)):
-                    meta_json = json.dumps(chunk.metadata, ensure_ascii=False) if chunk.metadata else None
-                    cur.execute(
-                        """
-                        INSERT INTO rag_document_chunk (document_id, chunk_index, content, embedding, metadata)
-                        VALUES (%s, %s, %s, %s, %s)
-                        """,
-                        (document_id, idx, chunk.text, str(vector), meta_json),
-                    )
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            self._release_conn(conn)
-
-    def _sync_set_status(self, document_id: int, status: str):
-        conn = self._acquire_conn()
-        try:
-            with conn.cursor() as cur:
-                self._set_statement_timeout(cur)
-                cur.execute(
-                    "UPDATE rag_document SET status = %s, updated_at = NOW() WHERE id = %s",
-                    (status, document_id),
-                )
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            self._release_conn(conn)
-
-    def _run_with_retry(self, op_name: str, fn: Callable, *args):
+    async def _run_with_retry(self, op_name: str, fn: Callable[[asyncpg.Connection], Awaitable]):
         last_exc = None
-        transient_errors = (psycopg2.OperationalError, psycopg2.InterfaceError, psycopg2.errors.QueryCanceled)
+        transient_errors = (
+            asyncpg.PostgresConnectionError,
+            asyncpg.InterfaceError,
+            asyncpg.QueryCanceledError,
+            TimeoutError,
+            OSError,
+        )
 
         for attempt in range(self._max_retries + 1):
             try:
-                return fn(*args)
+                pool = await self._get_pool()
+                async with pool.acquire() as conn:
+                    await conn.execute(
+                        "SELECT set_config('statement_timeout', $1, false)",
+                        f"{self._db_statement_timeout_ms}ms",
+                    )
+                    return await fn(conn)
             except transient_errors as exc:
                 last_exc = exc
                 if attempt >= self._max_retries:
@@ -264,47 +238,38 @@ class DocumentIndexer:
                     wait_sec,
                     exc,
                 )
-                self._recreate_sync_pool()
-                time.sleep(wait_sec)
+                await self._recreate_pool()
+                await asyncio.sleep(wait_sec)
 
         if last_exc:
             raise last_exc
         raise RuntimeError(f"数据库操作失败: {op_name}")
 
-    def _init_sync_pool(self) -> None:
-        if self._sync_pool is not None:
+    async def _get_pool(self) -> asyncpg.Pool:
+        if self._pool is None:
+            await self._init_pool()
+        assert self._pool is not None
+        return self._pool
+
+    async def _init_pool(self) -> None:
+        if self._pool is not None:
             return
-        self._sync_pool = SimpleConnectionPool(
-            minconn=self._db_pool_minconn,
-            maxconn=self._db_pool_maxconn,
+        self._pool = await asyncpg.create_pool(
             dsn=self.db_dsn,
+            min_size=self._db_pool_minconn,
+            max_size=self._db_pool_maxconn,
         )
-        logger.info("已初始化同步连接池，min=%s, max=%s", self._db_pool_minconn, self._db_pool_maxconn)
+        logger.info("已初始化异步连接池，min=%s, max=%s", self._db_pool_minconn, self._db_pool_maxconn)
 
-    def _close_sync_pool(self) -> None:
-        if self._sync_pool is not None:
-            self._sync_pool.closeall()
-            self._sync_pool = None
-            logger.info("同步连接池已关闭")
+    async def _close_pool(self) -> None:
+        if self._pool is not None:
+            await self._pool.close()
+            self._pool = None
+            logger.info("异步连接池已关闭")
 
-    def _recreate_sync_pool(self) -> None:
-        self._close_sync_pool()
-        self._init_sync_pool()
-
-    def _acquire_conn(self):
-        if self._sync_pool is None:
-            self._init_sync_pool()
-        assert self._sync_pool is not None
-        return self._sync_pool.getconn()
-
-    def _release_conn(self, conn) -> None:
-        if self._sync_pool is not None:
-            self._sync_pool.putconn(conn)
-        else:
-            conn.close()
-
-    def _set_statement_timeout(self, cur) -> None:
-        cur.execute("SET LOCAL statement_timeout = %s", (self._db_statement_timeout_ms,))
+    async def _recreate_pool(self) -> None:
+        await self._close_pool()
+        await self._init_pool()
 
     async def _cleanup_listener_conn(self, conn: Optional[asyncpg.Connection]) -> None:
         if conn is None:

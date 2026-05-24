@@ -51,17 +51,24 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
         Optional.ofNullable(
                 exchange.getRequest().getHeaders().getFirst(TraceHeaderConstants.TRACE_ID_HEADER))
             .orElseGet(() -> UUID.randomUUID().toString());
+    String token = resolveBearerToken(exchange.getRequest().getHeaders());
+    String userId = token == null ? null : extractUserId(token);
     ServerWebExchange withTrace =
         exchange
             .mutate()
-            .request(builder -> builder.header(TraceHeaderConstants.TRACE_ID_HEADER, traceId))
+            .request(
+                builder -> {
+                  builder.header(TraceHeaderConstants.TRACE_ID_HEADER, traceId);
+                  if (userId != null) {
+                    builder.header("X-User-Id", userId);
+                  }
+                })
             .build();
 
     if (skip) {
       return chain.filter(withTrace);
     }
 
-    String token = resolveBearerToken(withTrace.getRequest().getHeaders());
     if (token == null) {
       log.warn("gateway jwt reject: missing bearer token, path={}, traceId={}", path, traceId);
       withTrace.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -104,6 +111,33 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
         false, "base64=" + base64Result.reason() + ", raw=" + rawResult.reason());
   }
 
+  private String extractUserId(String token) {
+    Claims claims = parseClaims(token);
+    if (claims == null) {
+      return null;
+    }
+    Object userId = claims.get("userId");
+    if (userId instanceof Number number) {
+      return String.valueOf(number.longValue());
+    }
+    if (userId instanceof String value) {
+      try {
+        return String.valueOf(Long.parseLong(value));
+      } catch (NumberFormatException ignored) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private Claims parseClaims(String token) {
+    Claims claims = parseClaimsWithBase64Key(token);
+    if (claims != null) {
+      return claims;
+    }
+    return parseClaimsWithRawKey(token);
+  }
+
   private ValidationResult validateWithBase64Key(String token) {
     try {
       byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
@@ -130,6 +164,29 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
       return new ValidationResult(true, "ok");
     } catch (Exception ex) {
       return new ValidationResult(false, ex.getClass().getSimpleName());
+    }
+  }
+
+  private Claims parseClaimsWithBase64Key(String token) {
+    try {
+      byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+      Key key = Keys.hmacShaKeyFor(keyBytes);
+      Claims claims =
+          Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      return isAccessToken(claims) ? claims : null;
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+  private Claims parseClaimsWithRawKey(String token) {
+    try {
+      Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+      Claims claims =
+          Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      return isAccessToken(claims) ? claims : null;
+    } catch (Exception ex) {
+      return null;
     }
   }
 

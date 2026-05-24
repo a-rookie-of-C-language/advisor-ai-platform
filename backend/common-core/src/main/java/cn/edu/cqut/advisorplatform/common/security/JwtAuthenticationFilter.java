@@ -62,7 +62,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
-      UserDetails principal = resolvePrincipal(claims);
+      UserDetails principal = buildPrincipal(claims);
+      if (principal == null) {
+        principal = resolvePrincipalFromUserDetailsService(claims);
+      }
       if (principal != null) {
         UsernamePasswordAuthenticationToken authToken =
             new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
@@ -73,16 +76,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
-  private UserDetails resolvePrincipal(Claims claims) {
+  private UserDetails resolvePrincipalFromUserDetailsService(Claims claims) {
     String username = claims.getSubject();
     if (username != null && !username.isBlank() && userDetailsService != null) {
       try {
         return userDetailsService.loadUserByUsername(username);
       } catch (UsernameNotFoundException ignored) {
-        // fall through to lightweight principal
+        // fall through to null
       }
     }
-    return buildPrincipal(claims);
+    return null;
   }
 
   private UserPrincipal buildPrincipal(Claims claims) {

@@ -56,10 +56,13 @@ class PgVectorDAO:
                 rdc.embedding <=> %s::vector AS distance
             FROM rag_document_chunk rdc
             JOIN rag_document rd ON rdc.document_id = rd.id
-            WHERE rd.knowledge_base_id = %s
-              AND rd.status = 'READY'
+            WHERE rd.status = 'READY'
         """
-        params: list = [vector_str, kb_id]
+        params: list = [vector_str]
+
+        if kb_id > 0:
+            sql += " AND rd.knowledge_base_id = %s"
+            params.append(kb_id)
 
         if doc_ids:
             placeholders = ",".join(["%s"] * len(doc_ids))

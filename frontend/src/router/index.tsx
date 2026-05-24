@@ -6,6 +6,9 @@ import RAGPage from '../pages/RAG/RAGPage'
 import ChatPage from '../pages/Chat/ChatPage'
 import AuditPage from '../pages/Audit/AuditPage'
 import MonitorPage from '../pages/Monitor/MonitorPage'
+import StudentListPage from '../pages/Student/StudentListPage'
+import StudentDetailPage from '../pages/Student/StudentDetailPage'
+import CheckInManagementPage from '../pages/Student/CheckInManagementPage'
 import NotFound from '../pages/NotFound'
 import { useAuthStore } from '../store/authStore'
 
@@ -51,6 +54,9 @@ export default function AppRouter() {
             </AdminRoute>
           }
         />
+        <Route path="student" element={<StudentListPage />} />
+        <Route path="student/:id" element={<StudentDetailPage />} />
+        <Route path="student/check-in" element={<CheckInManagementPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

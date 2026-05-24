@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd'
 import {
   DashboardOutlined,
@@ -8,11 +8,15 @@ import {
   LineChartOutlined,
   UserOutlined,
   LogoutOutlined,
+  TeamOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { chatApi, type ChatSessionDTO } from '../../api/chatApi'
+import { globalMessage } from '../../utils/globalMessage'
 import ChatSessionSidebar from './ChatSessionSidebar'
+import { onChatSessionsRefresh } from '../../pages/Chat/chatSessionEvents'
 import styles from './MainLayout.module.css'
 
 const { Sider, Header, Content } = Layout
@@ -22,6 +26,8 @@ export default function MainLayout() {
   const location = useLocation()
   const { realName, logout, role } = useAuthStore()
   const [chatSessions, setChatSessions] = useState<ChatSessionDTO[]>([])
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadSeqRef = useRef(0)
   const isChatPage = location.pathname === '/chat'
   const activeSessionId = useMemo(() => {
     const value = new URLSearchParams(location.search).get('sessionId')
@@ -36,27 +42,48 @@ export default function MainLayout() {
     if (!isChatPage) {
       return
     }
+    const currentSeq = ++loadSeqRef.current
     try {
       const response = await chatApi.listSessions()
+      if (currentSeq !== loadSeqRef.current) {
+        return
+      }
       setChatSessions(response.data ?? [])
     } catch {
+      if (currentSeq !== loadSeqRef.current) {
+        return
+      }
       setChatSessions([])
     }
   }
 
   useEffect(() => {
     void loadChatSessions()
-    if (!isChatPage) {
-      return
+  }, [location.pathname, location.search])
+
+  useEffect(() => {
+    const unsubscribe = onChatSessionsRefresh(() => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+      }
+      refreshTimerRef.current = setTimeout(() => {
+        refreshTimerRef.current = null
+        void loadChatSessions()
+      }, 80)
+    })
+    return () => {
+      unsubscribe()
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
     }
-    const timer = setInterval(() => {
-      void loadChatSessions()
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   const menuItems = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+    { key: '/student', icon: <TeamOutlined />, label: '学生管理' },
+    { key: '/student/check-in', icon: <CheckCircleOutlined />, label: '打卡管理' },
     { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
     { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
     ...(role === 'ADMIN'
@@ -101,9 +128,17 @@ export default function MainLayout() {
             activeSessionId={activeSessionId}
             onCreate={() => {
               void (async () => {
-                const created = (await chatApi.createSession()).data
-                navigate(`/chat?sessionId=${created.id}`)
-                await loadChatSessions()
+                try {
+                  const created = (await chatApi.createSession()).data
+                  if (!created?.id) {
+                    globalMessage.error('创建会话失败')
+                    return
+                  }
+                  navigate(`/chat?sessionId=${created.id}`)
+                  await loadChatSessions()
+                } catch (error) {
+                  globalMessage.error(typeof error === 'string' ? error : '创建会话失败')
+                }
               })()
             }}
             onSelect={(sessionId) => navigate(`/chat?sessionId=${sessionId}`)}
