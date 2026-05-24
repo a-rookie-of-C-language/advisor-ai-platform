@@ -55,6 +55,7 @@ _ALLOWED_ROLES = {"system", "user", "assistant"}
 Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
 _EVENT_VERSION = "1.0"
+_DEFER_THRESHOLD = 8
 _URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
 
 def _u(*codes: int) -> str:
@@ -942,6 +943,7 @@ class ChatStreamService:
                 validated_messages,
                 user_id=user_id,
                 session_id=session_id,
+                kb_id=kb_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
             ), trace_id=trace_id):
@@ -989,6 +991,7 @@ class ChatStreamService:
         *,
         user_id: int | None,
         session_id: int | None,
+        kb_id: int | None,
         trace_id: str | None,
         turn_id: str | None,
     ) -> AsyncIterator[str]:
@@ -1006,6 +1009,7 @@ class ChatStreamService:
                 user_query=user_query,
                 user_id=user_id,
                 session_id=session_id,
+                kb_id=kb_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
             ):
@@ -1016,14 +1020,22 @@ class ChatStreamService:
                     "error": "sys_error",
                     "done": "sys_done",
                     "start": "sys_start",
+                    "intent_route": "sys_intent_route",
                 }.get(raw_event_name, raw_event_name)
                 event_data = event.get("data", {})
+                if event_name not in {"sys_start", "sys_done", "sys_error"}:
+                    saw_content = True
                 if event_name in {"llm_data", "llm_delta", "raw"} and isinstance(event_data, dict):
                     text = str(event_data.get("text", "") or event_data.get("raw", ""))
                     if text:
                         saw_content = True
+                        output_event = (
+                            "llm_delta"
+                            if event_name == "llm_delta" and (user_id is None or session_id is None)
+                            else "llm_data"
+                        )
                         yield self._serialize_protocol_event(
-                            event="llm_data",
+                            event=output_event,
                             source="llm",
                             trace_id=trace_id,
                             payload={"text": text},
@@ -1049,6 +1061,7 @@ class ChatStreamService:
                     validated_messages,
                     user_id=user_id,
                     session_id=session_id,
+                    kb_id=kb_id,
                     trace_id=trace_id,
                     turn_id=turn_id,
                 ):
@@ -1148,13 +1161,18 @@ class ChatStreamService:
         debug_delta_count = 0
         try:
             if rag_enabled and self._enable_tool_use:
-                all_cats = self._tools.all_categories()
+                all_cats = self._tools.allowed_categories(self._tool_permission)
                 route_decision = await self._intent_router.route_decision(
                     user_query,
                     all_cats,
                     provider=self._provider,
                 )
-                matched_tools = list(route_decision.matched_tools) if route_decision.matched_tools else []
+                raw_matched_tools = list(route_decision.matched_tools) if route_decision.matched_tools else []
+                matched_tools = [
+                    name
+                    for name in raw_matched_tools
+                    if (tool := self._tools.get(name)) is not None and tool.category in all_cats
+                ]
                 if matched_tools:
                     tools = self._tools.specs_by_names(matched_tools)
                 else:
@@ -1163,12 +1181,35 @@ class ChatStreamService:
                     rag_tool = self._tools.get("rag_search")
                     if rag_tool is not None:
                         tools = [rag_tool.to_tool_spec()]
+                deferred_specs = [tool for tool in tools if getattr(tool, "defer_loading", False)]
                 route_payload = await emit_route_observation(
                     route_decision,
                     logger=logger,
                     scope="legacy",
                     session_id=session_id,
                 )
+                if matched_tools != raw_matched_tools:
+                    route_payload = {
+                        **route_payload,
+                        "matched_tools": matched_tools,
+                        "source": {
+                            **route_payload.get("source", {}),
+                            "matched_tools": matched_tools,
+                        },
+                    }
+                if (
+                    route_decision.matched_by in {"strong_rule", "score"}
+                    and route_decision.categories == {"search"}
+                    and not route_decision.matched_tools
+                ):
+                    route_payload = {
+                        **route_payload,
+                        "matched_by": "fallback",
+                        "source": {
+                            **route_payload.get("source", {}),
+                            "decision": "fallback",
+                        },
+                    }
                 yield self._serialize_protocol_event(
                     event=f"sys_{route_decision.event_name}",
                     source="system",
@@ -1176,23 +1217,26 @@ class ChatStreamService:
                     payload=route_payload,
                 )
                 education_domain = _should_force_education_rag(user_query) and self._tools.get("rag_search") is not None
-                yield self._serialize_protocol_event(
-                    event="sys_reasoning",
-                    source="system",
-                    trace_id=trace_id,
-                    payload={
-                        "stage": "route",
-                        "message": _build_route_reasoning(
-                            route_categories=sorted(route_decision.categories),
-                            matched_tools=matched_tools,
-                            education_domain=education_domain,
-                        ),
-                        "categories": sorted(route_decision.categories),
-                        "matched_tools": matched_tools,
-                    },
-                )
+                exploration_query = self._looks_like_exploration_query(user_query, validated_messages)
+                should_emit_planning = education_domain or exploration_query
+                if should_emit_planning:
+                    yield self._serialize_protocol_event(
+                        event="sys_reasoning",
+                        source="system",
+                        trace_id=trace_id,
+                        payload={
+                            "stage": "route",
+                            "message": _build_route_reasoning(
+                                route_categories=sorted(route_decision.categories),
+                                matched_tools=matched_tools,
+                                education_domain=education_domain,
+                            ),
+                            "categories": sorted(route_decision.categories),
+                            "matched_tools": matched_tools,
+                        },
+                    )
                 task_plan: JsonObject = {}
-                if self._task_planner_subagent is not None:
+                if should_emit_planning and self._task_planner_subagent is not None:
                     try:
                         yield self._serialize_protocol_event(
                             event="sys_reasoning",
@@ -1207,7 +1251,7 @@ class ChatStreamService:
                         task_plan = await self._task_planner_subagent.plan(
                             user_query=user_query,
                             recent_messages=validated_messages,
-                            available_tools=self._tools.specs(),
+                            available_tools=self._tools.allowed_specs(self._tool_permission),
                             route_context={
                                 "categories": sorted(route_decision.categories),
                                 "matched_tools": matched_tools,
@@ -1237,6 +1281,60 @@ class ChatStreamService:
                     except Exception as exc:  # noqa: BLE001
                         logger.warning("task_planner failed, fallback to legacy tool flow: %s", exc)
                         task_plan = {}
+
+                if exploration_query and self._tool_explorer_subagent is not None:
+                    try:
+                        yield self._serialize_protocol_event(
+                            event="sys_reasoning",
+                            source="system",
+                            trace_id=trace_id,
+                            payload={
+                                "stage": "delegate",
+                                "agent_name": "tool_explorer_subagent",
+                                "message": _build_delegate_reasoning("tool_explorer_subagent"),
+                            },
+                        )
+                        outcome = await self._tool_explorer_subagent.explore(
+                            user_query=user_query,
+                            recent_messages=validated_messages,
+                            available_tools=self._tools.allowed_specs(self._tool_permission),
+                            route_context={
+                                "categories": sorted(route_decision.categories),
+                                "matched_tools": matched_tools,
+                                "matched_by": route_decision.matched_by,
+                                "confidence": route_decision.confidence,
+                            },
+                        )
+                        if outcome.used:
+                            for explorer_event in outcome.events:
+                                yield self._serialize_protocol_event(
+                                    event=explorer_event.event,
+                                    source="tool" if explorer_event.event.startswith("tool_") else "system",
+                                    trace_id=trace_id,
+                                    payload=explorer_event.payload,
+                                )
+                            model_messages = PromptBuilder.assemble_messages(
+                                model_messages,
+                                dynamic_prompts=[self._build_explorer_context(outcome)],
+                            )
+                            async for delta in self._provider.stream_chat(model_messages):
+                                answer_parts.append(delta)
+                                yield self._serialize_protocol_event(
+                                    event="llm_data",
+                                    source="llm",
+                                    trace_id=trace_id,
+                                    payload={"text": delta},
+                                )
+                            answer = "".join(answer_parts).strip()
+                            yield self._serialize_protocol_event(
+                                event="sys_done",
+                                source="system",
+                                trace_id=trace_id,
+                                payload={"finish_reason": "stream_finished"},
+                            )
+                            return
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("tool_explorer failed, fallback to legacy tool flow: %s", exc)
 
                 async def tool_executor(tool_name: str, tool_args: dict, **kwargs) -> str:
                     return await self._execute_tool(
@@ -1341,9 +1439,10 @@ class ChatStreamService:
                     )
                     return
 
+                tool_result_seen = False
                 async for event in self._provider.stream_chat_with_tools(
                     model_messages,
-                    final_tools,
+                    tools,
                     tool_executor,
                     max_tool_calls=1,
                     max_tool_retries=3,
@@ -1362,6 +1461,7 @@ class ChatStreamService:
                         )
                         continue
                     if event.type == "tool_result":
+                        tool_result_seen = True
                         try:
                             payload = json.loads(event.tool_output) if event.tool_output else {}
                         except Exception:
@@ -1412,7 +1512,7 @@ class ChatStreamService:
                     if self._debug_stream:
                         debug_delta_count += 1
                     yield self._serialize_protocol_event(
-                        event="llm_data",
+                        event="llm_delta" if tool_result_seen else "llm_data",
                         source="llm",
                         trace_id=trace_id,
                         payload={"text": delta},

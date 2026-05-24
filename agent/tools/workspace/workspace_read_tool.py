@@ -11,7 +11,6 @@ from tools.tool_result import ToolResult
 from tools.workspace.workspace_input import WorkspaceReadInput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
-    FileNotFoundError,
     FileSizeLimitError,
     PathTraversalError,
     WorkspaceManager,

@@ -6,6 +6,7 @@ import inspect
 import json
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
@@ -25,7 +26,8 @@ from RAG.DocumentIndexer import DocumentIndexer
 from RAG.RAG_service import RAG_service
 from tools.workspace import WorkspaceManager
 
-load_dotenv(override=True)
+if "pytest" not in sys.modules:
+    load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -257,14 +259,6 @@ def create_api_app() -> FastAPI:
 
         return StreamingResponse(
             service.stream_events(messages, **stream_kwargs),
-            service.stream_events(
-                messages,
-                user_id=request.userId,
-                session_id=request.sessionId,
-                kb_id=request.kbId,
-                trace_id=trace_id or None,
-                turn_id=turn_id or None,
-            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

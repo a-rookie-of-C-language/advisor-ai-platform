@@ -87,7 +87,6 @@ class GraphRunner:
         trace_id: str | None = None,
         turn_id: str | None = None,
     ) -> AsyncIterator[JsonObject]:
-        _ = kb_id
         started_at = time.perf_counter()
         queue: asyncio.Queue[JsonObject] = asyncio.Queue()
         runtime = GraphRuntime(
@@ -114,6 +113,7 @@ class GraphRunner:
             "model_messages": messages,
             "user_id": user_id,
             "session_id": session_id,
+            "kb_id": kb_id,
             "user_query": user_query,
             "trace_id": trace_id,
             "turn_id": turn_id,

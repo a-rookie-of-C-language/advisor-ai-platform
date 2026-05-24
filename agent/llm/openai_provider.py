@@ -15,7 +15,8 @@ from llm.llm_stream_event import LLMStreamEvent
 from llm.thinking_config import ThinkingConfig
 from llm.tool_call_fsm import ToolCallFSM
 from llm.tool_spec import ToolSpec
-from prompt.QueryEngine import QueryEngine
+from llm.with_retry import StreamIdleError, call_with_retry, is_retryable_llm_error, retry_delay_seconds
+from prompt.PromptBuilder import PromptBuilder
 from workspace.file_handler import (
     extract_text,
     get_mime_type,
@@ -734,9 +735,16 @@ class OpenAIProvider(BaseLLMProvider):
                     for attempt in range(1, max_tool_retries + 1):
                         used_attempt = attempt
                         try:
-                            tool_output = await tool_executor(
-                                tool_name, fsm.context.tool_args, idempotency_key=fsm.idempotency_key
-                            )
+                            try:
+                                tool_output = await tool_executor(
+                                    tool_name,
+                                    fsm.context.tool_args,
+                                    idempotency_key=fsm.idempotency_key,
+                                )
+                            except TypeError as exc:
+                                if "idempotency_key" not in str(exc):
+                                    raise
+                                tool_output = await tool_executor(tool_name, fsm.context.tool_args)
                             success = True
                             fsm.record_execution(tool_output, success=True)
                             break

@@ -41,6 +41,24 @@ class ToolRegistry:
         """返回当前注册的所有 tool category。"""
         return {tool.category for tool in self._tools.values()}
 
+    def allowed_categories(self, permission: PermissionConfig | None) -> set[str]:
+        if permission is None:
+            return self.all_categories()
+        return {
+            tool.category
+            for tool in self._tools.values()
+            if permission.allows_all(tool.required_permissions)
+        }
+
+    def allowed_specs(self, permission: PermissionConfig | None) -> list[ToolSpec]:
+        if permission is None:
+            return self.specs()
+        return [
+            tool.to_tool_spec()
+            for tool in self._tools.values()
+            if permission.allows_all(tool.required_permissions)
+        ]
+
     def add_before_hook(self, hook: BeforeHook) -> None:
         """注册 before 钩子：在工具执行前调用，可修改输入或短路线。"""
         self._before_hooks.append(hook)

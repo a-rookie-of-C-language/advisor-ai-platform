@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+from typing import Any
 
 from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from json_types import JsonObject
@@ -23,7 +25,7 @@ from .helpers import (
     _strip_surrogates,
     provider_stream,
 )
-from .runtime import _emit, _execute_tool, _runtime
+from .runtime import GraphRuntime, _runtime as _runtime_impl
 from .state import GraphState
 
 logger = logging.getLogger(__name__)
@@ -32,9 +34,6 @@ _DEBUG_PREVIEW_LIMIT = 200
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
 _RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
 _REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
-_runtime_var: ContextVar["GraphRuntime"] = ContextVar("graph_runtime")
-
-
 def _strip_surrogates(text: str) -> str:
     if not text:
         return text
@@ -50,40 +49,16 @@ def _prefer_rag_only(query: str) -> bool:
     return has_rag_hint and not has_realtime_hint
 
 
-@dataclass
-class GraphRuntime:
-    queue: asyncio.Queue[dict[str, Any]]
-    provider: Any
-    memory_orchestrator: Any
-    memory_injector: Any
-    llm_extractor: Any
-    tools: Any
-    tool_permission: Any
-    enable_tool_use: bool
-    debug_stream: bool
-    trace_id: str = ""
-    turn_id: str = ""
-    skill_registry: Any = None
-    intent_router: Any = None
-    safety_pipeline: Any = None
-    fusion_pipeline: Any = None
-    web_search_subagent: Any = None
-
-
-def set_runtime(runtime: GraphRuntime):
-    return _runtime_var.set(runtime)
-
-
-def reset_runtime(token) -> None:
-    _runtime_var.reset(token)
-
-
 def _runtime() -> GraphRuntime:
-    return _runtime_var.get()
+    return _runtime_impl()
 
 
 async def _emit(event: str, data: dict[str, Any]) -> None:
-    await _runtime().queue.put({"event": event, "data": data})
+    runtime = _runtime()
+    queue = getattr(runtime, "queue", None)
+    if queue is None:
+        return
+    await queue.put({"event": event, "data": data})
 
 
 async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: GraphState) -> str:
@@ -94,7 +69,7 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
         {
             "user_id": state.get("user_id"),
             "session_id": state.get("session_id"),
-            "kb_id": 0,
+            "kb_id": state.get("kb_id"),
             "user_query": state.get("user_query", ""),
             "trace_id": state.get("trace_id"),
             "turn_id": state.get("turn_id"),
@@ -235,6 +210,7 @@ def _build_planned_tool_context(observations: list[JsonObject]) -> ChatMessage:
     return ChatMessage(
         role="system",
         content=(
+            "A read-only tool explorer has gathered evidence for the current user question. "
             "以下是后端按任务计划顺序执行工具后得到的证据。"
             "请基于这些证据和当前对话回答；如果证据不足，请说明缺口。\n"
             f"{json.dumps(observations, ensure_ascii=False, default=str)[:6000]}"
@@ -442,36 +418,61 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     matched_tools: list[str] = []
     if runtime.enable_tool_use and has_query:
         if runtime.intent_router is not None:
-            all_cats = runtime.tools.all_categories()
+            allowed_categories = getattr(runtime.tools, "allowed_categories", None)
+            all_cats = (
+                allowed_categories(runtime.tool_permission)
+                if callable(allowed_categories)
+                else runtime.tools.all_categories()
+            )
             route_decision = await runtime.intent_router.route_decision(
                 user_query,
                 all_cats,
                 provider=runtime.provider,
             )
             route_categories = set(route_decision.categories)
-            matched_tools = list(route_decision.matched_tools) if route_decision.matched_tools else []
-            await emit_route_observation(
+            raw_matched_tools = list(route_decision.matched_tools) if route_decision.matched_tools else []
+            matched_tools = [
+                name
+                for name in raw_matched_tools
+                if (tool := runtime.tools.get(name)) is not None and tool.category in all_cats
+            ]
+            route_payload = await emit_route_observation(
                 route_decision,
                 logger=logger,
                 scope="graph",
                 session_id=state.get("session_id"),
-                emit=_emit,
             )
-            await _emit(
-                "sys_reasoning",
-                {
-                    "stage": "route",
-                    "message": _build_route_reasoning(
-                        route_categories=sorted(route_categories),
-                        matched_tools=matched_tools,
-                        education_domain=education_domain,
-                    ),
-                    "categories": sorted(route_categories),
+            if matched_tools != raw_matched_tools:
+                route_payload = {
+                    **route_payload,
                     "matched_tools": matched_tools,
-                },
-            )
+                    "source": {
+                        **route_payload.get("source", {}),
+                        "matched_tools": matched_tools,
+                    },
+                }
+            await _emit("intent_route", route_payload)
+            if education_domain:
+                await _emit(
+                    "sys_reasoning",
+                    {
+                        "stage": "route",
+                        "message": _build_route_reasoning(
+                            route_categories=sorted(route_categories),
+                            matched_tools=matched_tools,
+                            education_domain=education_domain,
+                        ),
+                        "categories": sorted(route_categories),
+                        "matched_tools": matched_tools,
+                    },
+                )
         else:
-            route_categories = runtime.tools.all_categories()
+            allowed_categories = getattr(runtime.tools, "allowed_categories", None)
+            route_categories = (
+                allowed_categories(runtime.tool_permission)
+                if callable(allowed_categories)
+                else runtime.tools.all_categories()
+            )
     if (
         _prefer_rag_only(user_query)
         and not matched_tools
@@ -482,7 +483,7 @@ async def decide_tool_node(state: GraphState) -> GraphState:
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     task_plan: JsonObject = {}
     task_planner_subagent = getattr(runtime, "task_planner_subagent", None)
-    if use_tool and task_planner_subagent is not None:
+    if use_tool and education_domain and task_planner_subagent is not None:
         try:
             await _emit(
                 "sys_reasoning",
@@ -495,7 +496,11 @@ async def decide_tool_node(state: GraphState) -> GraphState:
             task_plan = await task_planner_subagent.plan(
                 user_query=user_query,
                 recent_messages=list(state.get("messages", [])),
-                available_tools=runtime.tools.specs(),
+                available_tools=(
+                    runtime.tools.allowed_specs(runtime.tool_permission)
+                    if hasattr(runtime.tools, "allowed_specs")
+                    else runtime.tools.specs()
+                ),
                 route_context={
                     "categories": sorted(route_categories),
                     "matched_tools": matched_tools,
@@ -889,6 +894,7 @@ async def generate_node(state: GraphState) -> GraphState:
             if flushed:
                 answer_parts.append(flushed)
                 safety_regex_matches += len(streaming_filter._filter.scan(flushed))
+                await _emit("llm_delta", {"text": flushed})
 
         raw_answer = "".join(answer_parts).strip()
         final_answer = raw_answer
@@ -951,7 +957,7 @@ async def _run_fusion_pipeline(
     context = {
         "user_id": state.get("user_id"),
         "session_id": state.get("session_id"),
-        "kb_id": 0,
+        "kb_id": state.get("kb_id"),
         "user_query": user_query,
         "permission_config": runtime.tool_permission,
     }
