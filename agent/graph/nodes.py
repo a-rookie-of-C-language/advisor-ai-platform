@@ -67,12 +67,7 @@ class GraphRuntime:
     intent_router: Any = None
     safety_pipeline: Any = None
     fusion_pipeline: Any = None
-<<<<<<< HEAD
     web_search_subagent: Any = None
-=======
-    trace_id: str = ""
-    turn_id: str = ""
->>>>>>> 1cfd0c3 (chore(flyway): 对齐V11/V12历史并新增V14审计描述迁移)
 
 
 def set_runtime(runtime: GraphRuntime):
