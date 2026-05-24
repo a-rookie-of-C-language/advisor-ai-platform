@@ -1,18 +1,10 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.client.RagServiceClient;
-import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
-import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
-import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.ChatService;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -24,40 +16,40 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
-  private static final String DEFAULT_SESSION_TITLE = "???";
-  private static final long DEFAULT_KB_ID = 0L;
-  private static final DateTimeFormatter TIME_FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
   private final ChatSessionDao chatSessionDao;
   private final ChatMessageDao chatMessageDao;
   private final RagServiceClient ragServiceClient;
+  private ChatSessionSupport chatSessionSupport;
 
   @Override
-  public List<Map<String, Object>> listSessions(@Nullable UserPrincipal currentUser) {
-    Long userId = requireUserId(currentUser);
+  public List<Map<String, Object>> listSessions(
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
+    Long userId = support().requireUserId(currentUser);
     return chatSessionDao.findByUserIdOrderByUpdatedAtDesc(userId).stream()
-        .map(this::toSessionMap)
+        .map(support()::toSessionMap)
         .toList();
   }
 
   @Override
   @Transactional
-  public Map<String, Object> createSession(@Nullable UserPrincipal currentUser) {
+  public Map<String, Object> createSession(
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = new ChatSessionDO();
-    session.setUser(toUserReference(requireUser(currentUser)));
-    session.setTitle(DEFAULT_SESSION_TITLE);
-    session.setKbId(DEFAULT_KB_ID);
-    LocalDateTime now = LocalDateTime.now();
+    session.setUser(support().toUserReference(support().requireUser(currentUser)));
+    session.setTitle("???");
+    session.setKbId(0L);
+    java.time.LocalDateTime now = java.time.LocalDateTime.now();
     session.setCreatedAt(now);
     session.setUpdatedAt(now);
     ChatSessionDO saved = chatSessionDao.save(session);
-    return toSessionMap(saved);
+    return support().toSessionMap(saved);
   }
 
   @Override
   @Transactional
-  public void deleteSession(Long sessionId, @Nullable UserPrincipal currentUser) {
+  public void deleteSession(
+      Long sessionId,
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = getOwnedSession(sessionId, currentUser);
     chatSessionDao.deleteById(session.getId());
   }
@@ -65,115 +57,66 @@ public class ChatServiceImpl implements ChatService {
   @Override
   @Transactional
   public Map<String, Object> updateSessionKb(
-      Long sessionId, Long kbId, @Nullable UserPrincipal currentUser) {
+      Long sessionId,
+      Long kbId,
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
     if (kbId == null || kbId <= 0) {
-      session.setKbId(DEFAULT_KB_ID);
+      session.setKbId(0L);
     } else {
-      if (!existsKnowledgeBase(kbId)) {
-        throw new NotFoundException("知识库不存在");
+      if (!support().existsKnowledgeBase(kbId)) {
+        throw new cn.edu.cqut.advisorplatform.common.exception.NotFoundException("知识库不存在");
       }
       session.setKbId(kbId);
     }
-    session.setUpdatedAt(LocalDateTime.now());
-    return toSessionMap(chatSessionDao.save(session));
+    session.setUpdatedAt(java.time.LocalDateTime.now());
+    return support().toSessionMap(chatSessionDao.save(session));
   }
 
   @Override
   public List<Map<String, Object>> listMessages(
-      Long sessionId, @Nullable UserPrincipal currentUser) {
+      Long sessionId,
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     getOwnedSession(sessionId, currentUser);
     return chatMessageDao.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId).stream()
-        .map(this::toMessageMap)
+        .map(support()::toMessageMap)
         .toList();
   }
 
   @Override
-  public long getSessionKbId(Long sessionId, @Nullable UserPrincipal currentUser) {
+  public long getSessionKbId(
+      Long sessionId,
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
     Long kbId = session.getKbId();
-    return kbId == null ? DEFAULT_KB_ID : kbId;
+    return kbId == null ? 0L : kbId;
   }
 
   private ChatSessionDO getSessionForLoggedInUser(
-      Long sessionId, @Nullable UserPrincipal currentUser) {
-    requireUserId(currentUser);
-    return chatSessionDao.findById(sessionId).orElseThrow(() -> new NotFoundException("?????"));
+      Long sessionId,
+      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
+    support().requireUserId(currentUser);
+    return chatSessionDao
+        .findById(sessionId)
+        .orElseThrow(
+            () -> new cn.edu.cqut.advisorplatform.common.exception.NotFoundException("会话不存在"));
   }
 
-  private ChatSessionDO getOwnedSession(Long sessionId, UserPrincipal currentUser) {
+  private ChatSessionDO getOwnedSession(
+      Long sessionId, cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    Long currentUserId = requireUserId(currentUser);
+    Long currentUserId = support().requireUserId(currentUser);
     Long ownerId = session.getUser() == null ? null : session.getUser().getId();
     if (ownerId == null || !ownerId.equals(currentUserId)) {
-      throw new ForbiddenException("无权访问该会话");
+      throw new cn.edu.cqut.advisorplatform.common.exception.ForbiddenException("无权访问该会话");
     }
     return session;
   }
 
-  private Map<String, Object> toSessionMap(ChatSessionDO session) {
-    LocalDateTime time =
-        session.getUpdatedAt() == null ? session.getCreatedAt() : session.getUpdatedAt();
-    String title =
-        session.getTitle() == null || session.getTitle().isBlank()
-            ? DEFAULT_SESSION_TITLE
-            : session.getTitle();
-    long kbId = session.getKbId() == null ? DEFAULT_KB_ID : session.getKbId();
-    return Map.of(
-        "id", session.getId(), "title", title, "kbId", kbId, "updatedAt", formatTime(time));
-  }
-
-  private Map<String, Object> toMessageMap(ChatMessageDO message) {
-    return Map.of(
-        "id", message.getId(),
-        "role", message.getRole(),
-        "content", message.getContent(),
-        "sources", message.getSources() == null ? List.of() : message.getSources(),
-        "events", message.getEvents() == null ? List.of() : message.getEvents());
-  }
-
-  private String formatTime(LocalDateTime value) {
-    if (value == null) {
-      return "";
+  private ChatSessionSupport support() {
+    if (chatSessionSupport == null) {
+      chatSessionSupport = new ChatSessionSupport(ragServiceClient);
     }
-    return TIME_FORMATTER.format(value);
-  }
-
-  private UserDO toUserReference(UserPrincipal currentUser) {
-    UserDO user = new UserDO();
-    user.setId(currentUser.getId());
-    user.setUsername(currentUser.getUsername());
-    user.setRealName(currentUser.getRealName());
-    user.setRole(UserDO.UserRole.valueOf(currentUser.getRole().name()));
-    user.setEnabled(currentUser.isEnabled());
-    return user;
-  }
-
-  private UserPrincipal requireUser(UserPrincipal currentUser) {
-    if (currentUser == null || currentUser.getId() == null) {
-      throw new ForbiddenException("未登录或登录已失效");
-    }
-    return currentUser;
-  }
-
-  private Long requireUserId(@Nullable UserPrincipal currentUser) {
-    UserPrincipal safeUser = requireUser(currentUser);
-    Long userId = safeUser.getId();
-    if (userId == null) {
-      throw new ForbiddenException("未登录或登录已失效");
-    }
-    return userId;
-  }
-
-  private boolean existsKnowledgeBase(Long kbId) {
-    try {
-      ApiResponseDTO<Map<String, Boolean>> response = ragServiceClient.existsKnowledgeBase(kbId);
-      if (response == null || response.getData() == null) {
-        return false;
-      }
-      return Boolean.TRUE.equals(response.getData().get("exists"));
-    } catch (Exception ignored) {
-      return false;
-    }
+    return chatSessionSupport;
   }
 }

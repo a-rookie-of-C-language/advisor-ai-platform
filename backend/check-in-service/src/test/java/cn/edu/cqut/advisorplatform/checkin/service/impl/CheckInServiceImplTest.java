@@ -20,9 +20,9 @@ import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -32,12 +32,19 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CheckInServiceImplTest {
 
-  @InjectMocks private CheckInServiceImpl checkInService;
+  private CheckInServiceImpl checkInService;
 
   @Mock private CheckInDao checkInDao;
   @Mock private AuthServiceClient authServiceClient;
   @Mock private StudentServiceClient studentServiceClient;
   @Mock private TeacherServiceClient teacherServiceClient;
+
+  @BeforeEach
+  void setUp() {
+    CheckInServiceSupport support =
+        new CheckInServiceSupport(authServiceClient, studentServiceClient);
+    checkInService = new CheckInServiceImpl(checkInDao, teacherServiceClient, support);
+  }
 
   @Test
   void createActivity_shouldCreateWhenTeacherOwnsClass() {

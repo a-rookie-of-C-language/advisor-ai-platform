@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -46,6 +45,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
 
   private final AgentPayloadBuilder payloadBuilder;
   private final AgentStreamEventCollector streamEventCollector;
+  private final AgentProxyTransportSupport transportSupport = new AgentProxyTransportSupport();
   private final HttpClient httpClient;
   private final String agentBaseUrl;
   private final String agentApiToken;
@@ -123,37 +123,21 @@ public class AgentProxyServiceImpl implements AgentProxyService {
           request.getSessionId(),
           userId,
           payloadBytes.length,
-          preview(payload));
-    }
-
-    HttpRequest.Builder requestBuilder =
-        HttpRequest.newBuilder()
-            .uri(
-                URI.create(
-                    aiGatewayEnabled
-                        ? aiGatewayBaseUrl + "/v1/chat/stream"
-                        : agentBaseUrl + "/chat/stream"))
-            .version(HttpClient.Version.HTTP_1_1)
-            .timeout(Duration.ofMinutes(10))
-            .header("Content-Type", "application/json")
-            .header("Accept", "text/event-stream")
-            .header("Cache-Control", "no-cache")
-            .header(
-                "Authorization", "Bearer " + (aiGatewayEnabled ? aiGatewayApiKey : agentApiToken))
-            .timeout(Duration.ofMillis(requestTimeoutMs))
-            .POST(HttpRequest.BodyPublishers.ofByteArray(payloadBytes));
-    if (!aiGatewayEnabled) {
-      requestBuilder.header("X-Memory-Token", agentApiToken);
+          transportSupport.preview(payload, DEBUG_PREVIEW_LIMIT));
     }
     String traceId = LogTraceUtil.get(LogTraceUtil.TRACE_ID);
-    if (!traceId.isBlank()) {
-      requestBuilder.header(TRACE_HEADER, traceId);
-    }
     String turnId = LogTraceUtil.get(LogTraceUtil.TURN_ID);
-    if (!turnId.isBlank()) {
-      requestBuilder.header(TURN_HEADER, turnId);
-    }
-    HttpRequest httpRequest = requestBuilder.build();
+    HttpRequest httpRequest =
+        transportSupport.buildRequest(
+            payload,
+            aiGatewayEnabled,
+            aiGatewayBaseUrl,
+            agentBaseUrl,
+            aiGatewayApiKey,
+            agentApiToken,
+            requestTimeoutMs,
+            traceId,
+            turnId);
 
     HttpResponse<InputStream> response;
     try {
@@ -164,19 +148,13 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     }
 
     if (response.statusCode() >= 400) {
-      String errorBody = "";
-      try (InputStream err = response.body()) {
-        errorBody = new String(err.readAllBytes(), StandardCharsets.UTF_8);
-      } catch (IOException e) {
-        log.warn(
-            "agent_proxy read_error_body_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
-      }
+      String errorBody = transportSupport.readErrorBody(response);
       log.warn(
           "agent_proxy failed, status={}, payloadBytes={}, bodyPreview={}, elapsedMs={}",
           response.statusCode(),
           payloadBytes.length,
-          LogTraceUtil.preview(errorBody),
-          elapsedSince(startAt));
+          transportSupport.preview(errorBody, DEBUG_PREVIEW_LIMIT),
+          transportSupport.elapsedSince(startAt));
       throw new BadRequestException("agent stream failed: http " + response.statusCode());
     }
 
@@ -217,7 +195,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         while ((read = bodyStream.read(buffer)) != -1) {
           if (firstChunkReceived.compareAndSet(false, true)) {
             firstChunkTimeoutFuture.cancel(false);
-            log.info("agent_proxy first_byte, elapsedMs={}", elapsedSince(startAt));
+            log.info(
+                "agent_proxy first_byte, elapsedMs={}", transportSupport.elapsedSince(startAt));
           }
           String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
           sseBuffer.append(chunk);
@@ -234,7 +213,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
                   sawErrorEvent);
           if (!firstDeltaLogged && deltaCount > before) {
             firstDeltaLogged = true;
-            log.info("agent_proxy first_chunk, elapsedMs={}", elapsedSince(startAt));
+            log.info(
+                "agent_proxy first_chunk, elapsedMs={}", transportSupport.elapsedSince(startAt));
           }
 
           if (outputStream != null) {
@@ -242,7 +222,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
               outputStream.write(buffer, 0, read);
               outputStream.flush();
             } catch (IOException io) {
-              if (isClientAbort(io)) {
+              if (transportSupport.isClientAbort(io)) {
                 log.warn(
                     "agent_proxy client_disconnected, reason={}",
                     LogTraceUtil.preview(io.getMessage()));
@@ -281,7 +261,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
           finishReason,
           sawDoneEvent.get(),
           sawErrorEvent.get(),
-          elapsedSince(startAt));
+          transportSupport.elapsedSince(startAt));
       throw new BadRequestException("agent stream failed: no delta");
     }
     log.info(
@@ -291,35 +271,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
         finishReason,
         sawDoneEvent.get(),
         sawErrorEvent.get(),
-        elapsedSince(startAt));
+        transportSupport.elapsedSince(startAt));
 
     return new ChatStreamProxyResult(assistantText.toString(), sources, events);
-  }
-
-  private boolean isClientAbort(IOException io) {
-    String msg = io.getMessage();
-    if (msg == null) {
-      return false;
-    }
-    String lower = msg.toLowerCase();
-    return lower.contains("broken pipe")
-        || lower.contains("connection reset")
-        || lower.contains("forcibly closed")
-        || lower.contains("stream closed");
-  }
-
-  private String preview(String text) {
-    if (text == null) {
-      return "";
-    }
-    String normalized = text.replace("\r", " ").replace("\n", " ");
-    if (normalized.length() <= DEBUG_PREVIEW_LIMIT) {
-      return normalized;
-    }
-    return normalized.substring(0, DEBUG_PREVIEW_LIMIT);
-  }
-
-  private long elapsedSince(long startAt) {
-    return Math.max(0L, System.currentTimeMillis() - startAt);
   }
 }

@@ -16,14 +16,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +33,7 @@ public class RagServiceImpl implements RagService {
 
   private final RagKnowledgeBaseDao knowledgeBaseDao;
   private final RagDocumentDao documentDao;
-
-  @Value("${advisor.rag.upload-dir}")
-  private String uploadDir;
+  private final RagFileSupport ragFileSupport;
 
   @Override
   public List<KnowledgeBaseResponseDTO> listKnowledgeBases(@Nullable UserDO currentUser) {
@@ -76,8 +71,8 @@ public class RagServiceImpl implements RagService {
     if (!isKnowledgeBaseOwner(kb, currentUser)) {
       throw new ForbiddenException("无权限访问该知识库");
     }
-    Path kbDir = resolveUploadBaseDir().resolve(id.toString()).normalize();
-    deleteDirectoryQuietly(kbDir);
+    Path kbDir = ragFileSupport.resolveKnowledgeBaseDir(id);
+    ragFileSupport.deleteDirectoryQuietly(kbDir);
     knowledgeBaseDao.deleteById(id);
   }
 
@@ -103,23 +98,17 @@ public class RagServiceImpl implements RagService {
     Assert.notBlank(originalFilename, () -> new BadRequestException("文件名不能为空"));
     String safeOriginalFilename = originalFilename == null ? "" : originalFilename;
 
-    String safeFilename = Paths.get(safeOriginalFilename).getFileName().toString();
+    String safeFilename = Path.of(safeOriginalFilename).getFileName().toString();
     Assert.notBlank(safeFilename, () -> new BadRequestException("非法文件名"));
 
-    String fileType = extractExtension(safeFilename);
+    String fileType = ragFileSupport.extractExtension(safeFilename);
 
-    Path baseDir = resolveUploadBaseDir();
-    Path dir = baseDir.resolve(kbId.toString()).normalize();
-    Path filePath = dir.resolve(safeFilename).normalize();
-
-    if (!filePath.startsWith(baseDir)) {
-      throw new BadRequestException("非法文件路径");
-    }
+    Path filePath = ragFileSupport.resolveDocumentPath(kbId, safeFilename);
 
     try {
-      Files.createDirectories(dir);
+      Files.createDirectories(filePath.getParent());
       try (InputStream in = file.getInputStream()) {
-        Files.copy(in, filePath, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(in, filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
       }
 
       RagDocumentDO doc = new RagDocumentDO();
@@ -140,7 +129,6 @@ public class RagServiceImpl implements RagService {
 
       log.info("文档上传成功，documentId={}, path={}", saved.getId(), filePath);
       return RagDocumentResponseDTO.from(saved);
-
     } catch (IOException e) {
       throw new BadRequestException("文件保存失败: " + e.getMessage());
     }
@@ -154,9 +142,9 @@ public class RagServiceImpl implements RagService {
       throw new ForbiddenException("无权限删除该文档");
     }
 
-    Path safeFilePath = resolveSafeStoredFilePath(doc.getFilePath());
+    Path safeFilePath = ragFileSupport.resolveSafeStoredFilePath(doc.getFilePath());
     if (safeFilePath != null) {
-      deleteFileQuietly(safeFilePath);
+      ragFileSupport.deleteFileQuietly(safeFilePath);
     }
 
     RagKnowledgeBaseDO kb = doc.getKnowledgeBase();
@@ -186,59 +174,5 @@ public class RagServiceImpl implements RagService {
     }
 
     return isKnowledgeBaseOwner(doc.getKnowledgeBase(), currentUser);
-  }
-
-  private Path resolveUploadBaseDir() {
-    return Paths.get(uploadDir).toAbsolutePath().normalize();
-  }
-
-  private Path resolveSafeStoredFilePath(String storedPath) {
-    if (storedPath == null || storedPath.trim().isEmpty()) {
-      return null;
-    }
-
-    Path baseDir = resolveUploadBaseDir();
-    Path resolvedPath = Paths.get(storedPath).toAbsolutePath().normalize();
-    if (!resolvedPath.startsWith(baseDir)) {
-      log.warn("跳过删除越界文件路径: {}", resolvedPath);
-      return null;
-    }
-
-    return resolvedPath;
-  }
-
-  private String extractExtension(String filename) {
-    if (filename == null || !filename.contains(".")) {
-      return "unknown";
-    }
-    return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-  }
-
-  private void deleteFileQuietly(Path path) {
-    try {
-      Files.deleteIfExists(path);
-    } catch (IOException e) {
-      log.warn("删除文件失败: {}", path, e);
-    }
-  }
-
-  private void deleteDirectoryQuietly(Path dir) {
-    if (!Files.exists(dir)) {
-      return;
-    }
-    try {
-      Files.walk(dir)
-          .sorted(java.util.Comparator.reverseOrder())
-          .forEach(
-              p -> {
-                try {
-                  Files.delete(p);
-                } catch (IOException e) {
-                  log.warn("删除失败: {}", p);
-                }
-              });
-    } catch (IOException e) {
-      log.warn("删除目录失败: {}", dir, e);
-    }
   }
 }

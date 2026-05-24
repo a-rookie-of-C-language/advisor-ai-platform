@@ -1,0 +1,86 @@
+package cn.edu.cqut.advisorplatform.service.impl;
+
+import cn.edu.cqut.advisorplatform.exception.BadRequestException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Comparator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+public class RagFileSupport {
+
+  @Value("${advisor.rag.upload-dir}")
+  private String uploadDir;
+
+  public Path resolveUploadBaseDir() {
+    return Paths.get(uploadDir).toAbsolutePath().normalize();
+  }
+
+  public Path resolveKnowledgeBaseDir(Long kbId) {
+    return resolveUploadBaseDir().resolve(kbId.toString()).normalize();
+  }
+
+  public Path resolveDocumentPath(Long kbId, String safeFilename) {
+    Path baseDir = resolveUploadBaseDir();
+    Path dir = resolveKnowledgeBaseDir(kbId);
+    Path filePath = dir.resolve(safeFilename).normalize();
+    if (!filePath.startsWith(baseDir)) {
+      throw new BadRequestException("非法文件路径");
+    }
+    return filePath;
+  }
+
+  public Path resolveSafeStoredFilePath(String storedPath) {
+    if (storedPath == null || storedPath.trim().isEmpty()) {
+      return null;
+    }
+
+    Path baseDir = resolveUploadBaseDir();
+    Path resolvedPath = Paths.get(storedPath).toAbsolutePath().normalize();
+    if (!resolvedPath.startsWith(baseDir)) {
+      log.warn("跳过删除越界文件路径: {}", resolvedPath);
+      return null;
+    }
+    return resolvedPath;
+  }
+
+  public String extractExtension(String filename) {
+    if (filename == null || !filename.contains(".")) {
+      return "unknown";
+    }
+    return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+  }
+
+  public void deleteFileQuietly(Path path) {
+    try {
+      Files.deleteIfExists(path);
+    } catch (IOException e) {
+      log.warn("删除文件失败: {}", path, e);
+    }
+  }
+
+  public void deleteDirectoryQuietly(Path dir) {
+    if (!Files.exists(dir)) {
+      return;
+    }
+    try (var paths = Files.walk(dir)) {
+      paths
+          .sorted(Comparator.reverseOrder())
+          .forEach(
+              path -> {
+                try {
+                  Files.deleteIfExists(path);
+                } catch (IOException e) {
+                  log.warn("删除失败: {}", path, e);
+                }
+              });
+    } catch (IOException e) {
+      log.warn("删除目录失败: {}", dir, e);
+    }
+  }
+}
