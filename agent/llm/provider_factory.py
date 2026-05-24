@@ -16,6 +16,13 @@ def _read_required_env(name: str) -> str:
     raise RuntimeError(f"Missing required env: {name}")
 
 
+def _read_optional_env(name: str) -> str | None:
+    value = os.getenv(name)
+    if value is not None and value.strip():
+        return value.strip()
+    return None
+
+
 def _read_float_env(name: str, default: float) -> float:
     value = os.getenv(name)
     if value is None:
@@ -41,7 +48,7 @@ def _read_int_env(name: str, default: int) -> int:
 def build_provider_from_env() -> BaseLLMProvider:
     api_key = _read_required_env("OPENAI_API_KEY")
     model = _read_required_env("OPENAI_MODEL")
-    base_url = _read_required_env("OPENAI_BASE_URL")
+    base_url = _read_optional_env("OPENAI_BASE_URL")
     temperature = _read_float_env("OPENAI_TEMPERATURE", 0.2)
     timeout = _read_float_env("OPENAI_TIMEOUT_SEC", 60.0)
     max_retries = _read_int_env("OPENAI_MAX_RETRIES", 0)

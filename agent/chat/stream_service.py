@@ -30,7 +30,7 @@ from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
 from prompt.QueryEngine import QueryEngine
 from safety.safety_pipeline import SafetyPipeline
 from skills.presets import build_default_registry
-from tools.intent_router import IntentRouter, emit_route_observation
+from tools.intent_router import IntentRouter, RouteDecision, emit_route_observation
 from tools.tool_assembly_pool import ToolAssemblyPool
 from tools.tool_impl.expand_skill_tool import ExpandSkillTool
 from tools.tool_permission import PermissionConfig, ToolPermission
@@ -178,6 +178,32 @@ class ChatStreamService:
         has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
         has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
         return has_rag_hint and not has_realtime_hint
+
+    @staticmethod
+    def _prefer_retrieval_fallback(decision: RouteDecision, has_rag_tool: bool) -> RouteDecision:
+        if not has_rag_tool:
+            if decision.matched_by == "fallback":
+                return RouteDecision(
+                    categories=set(),
+                    matched_by=decision.matched_by,
+                    confidence=decision.confidence,
+                    fallback_reason=decision.fallback_reason,
+                    scores=decision.scores,
+                    reason=decision.reason,
+                )
+            return decision
+        if decision.categories == {"retrieval"}:
+            return decision
+        if decision.matched_by in {"fallback", "strong_rule", "score"}:
+            return RouteDecision(
+                categories={"retrieval"},
+                matched_by="fallback",
+                confidence=0.2,
+                fallback_reason=decision.fallback_reason or "prefer_retrieval",
+                scores=decision.scores,
+                reason=decision.reason,
+            )
+        return decision
 
     @staticmethod
     def _read_feature_action_scoring() -> bool:
@@ -604,6 +630,7 @@ class ChatStreamService:
         user_query = self._last_user_message(validated_messages)
         yield self._serialize_event("start", {"message": "stream_started"})
         saw_content = False
+        saw_error = False
         try:
             async for event in self._graph_runner.run_stream(
                 messages=validated_messages,
@@ -619,8 +646,10 @@ class ChatStreamService:
                     text = str(event_data.get("text", "") or event_data.get("raw", ""))
                     if text:
                         saw_content = True
+                if event_name == "error":
+                    saw_error = True
                 yield self._serialize_event(event_name, event_data)
-            if not saw_content:
+            if not saw_content and not saw_error:
                 logger.warning(
                     "Graph stream produced no content, fallback to legacy: user_id=%s, session_id=%s",
                     user_id,
@@ -724,6 +753,10 @@ class ChatStreamService:
                     all_cats,
                     provider=self._provider,
                 )
+                route_decision = self._prefer_retrieval_fallback(
+                    route_decision,
+                    self._tools.get("rag_search") is not None,
+                )
                 tools = self._tools.specs_by_categories(route_decision.categories)
                 if self._prefer_rag_only(user_query):
                     rag_tool = self._tools.get("rag_search")
@@ -735,7 +768,8 @@ class ChatStreamService:
                     scope="legacy",
                     session_id=session_id,
                 )
-                yield self._serialize_event(route_decision.event_name, route_payload)
+                if route_decision.categories:
+                    yield self._serialize_event(route_decision.event_name, route_payload)
 
                 async def tool_executor(tool_name: str, tool_args: dict) -> str:
                     return await self._execute_tool(

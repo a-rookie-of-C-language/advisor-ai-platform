@@ -9,7 +9,7 @@ from typing import Any
 
 from llm.chat_message import ChatMessage
 from prompt.QueryEngine import QueryEngine
-from tools.intent_router import emit_route_observation
+from tools.intent_router import RouteDecision, emit_route_observation
 
 from .state import GraphState
 
@@ -35,6 +35,32 @@ def _prefer_rag_only(query: str) -> bool:
     has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
     has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
     return has_rag_hint and not has_realtime_hint
+
+
+def _prefer_retrieval_fallback(decision: RouteDecision, has_rag_tool: bool) -> RouteDecision:
+    if not has_rag_tool:
+        if decision.matched_by == "fallback":
+            return RouteDecision(
+                categories=set(),
+                matched_by=decision.matched_by,
+                confidence=decision.confidence,
+                fallback_reason=decision.fallback_reason,
+                scores=decision.scores,
+                reason=decision.reason,
+            )
+        return decision
+    if decision.categories == {"retrieval"}:
+        return decision
+    if decision.matched_by in {"fallback", "strong_rule", "score"}:
+        return RouteDecision(
+            categories={"retrieval"},
+            matched_by="fallback",
+            confidence=0.2,
+            fallback_reason=decision.fallback_reason or "prefer_retrieval",
+            scores=decision.scores,
+            reason=decision.reason,
+        )
+    return decision
 
 
 @dataclass
@@ -245,14 +271,19 @@ async def decide_tool_node(state: GraphState) -> GraphState:
                 all_cats,
                 provider=runtime.provider,
             )
-            route_categories = set(route_decision.categories)
-            await emit_route_observation(
+            route_decision = _prefer_retrieval_fallback(
                 route_decision,
-                logger=logger,
-                scope="graph",
-                session_id=state.get("session_id"),
-                emit=_emit,
+                runtime.tools.get("rag_search") is not None,
             )
+            route_categories = set(route_decision.categories)
+            if route_categories:
+                await emit_route_observation(
+                    route_decision,
+                    logger=logger,
+                    scope="graph",
+                    session_id=state.get("session_id"),
+                    emit=_emit,
+                )
         else:
             route_categories = runtime.tools.all_categories()
     if _prefer_rag_only(user_query) and runtime.tools.get("rag_search") is not None:
