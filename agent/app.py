@@ -163,20 +163,21 @@ def create_api_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+
     @app.post("/workspace/cleanup")
-    async def workspace_cleanup(userId: int | None = None, sessionId: int | None = None) -> dict:
-        """清理 workspace 缓存目录"""
+    async def workspace_cleanup(raw_request: Request, userId: int | None = None, sessionId: int | None = None) -> dict:
+        _require_agent_token(raw_request)
         manager = WorkspaceManager()
         result = manager.cleanup_cache(user_id=userId, session_id=sessionId)
         return {"status": "ok", "cleaned": result}
 
     @app.get("/workspace/stats")
-    async def workspace_stats(userId: int | None = None, sessionId: int | None = None) -> dict:
-        """获取 workspace 统计信息"""
+    async def workspace_stats(raw_request: Request, userId: int | None = None, sessionId: int | None = None) -> dict:
+        _require_agent_token(raw_request)
         manager = WorkspaceManager()
         stats = manager.get_stats(user_id=userId, session_id=sessionId)
         return {"status": "ok", "stats": stats}
-
+    
     @app.get("/graph/health")
     async def graph_health() -> dict:
         service = _get_chat_stream_service()
@@ -191,13 +192,16 @@ def create_api_app() -> FastAPI:
             return auth_header[7:].strip()
         return request.headers.get("X-Agent-Token", "").strip()
 
-    @app.post("/chat/stream")
-    async def chat_stream(request: ChatStreamRequestDTO, raw_request: Request) -> StreamingResponse:
+    def _require_agent_token(raw_request: Request) -> None:
         expected_agent_token = os.getenv("AGENT_API_TOKEN", "").strip()
         if expected_agent_token:
             got_token = _resolve_agent_token(raw_request)
             if got_token != expected_agent_token:
                 raise HTTPException(status_code=401, detail="invalid agent token")
+
+    @app.post("/chat/stream")
+    async def chat_stream(request: ChatStreamRequestDTO, raw_request: Request) -> StreamingResponse:
+        _require_agent_token(raw_request)
 
         service = _get_chat_stream_service()
 
@@ -419,7 +423,7 @@ def _parse_sse_event(raw: str) -> JsonObject:
 
 
 async def _run_cli_loop(service: ChatStreamService) -> None:
-    print("CLI 模式已启动。输入消息后按 Enter 发送。输入 'exit' 退出，输入 'new' 开始新会话。")
+    print("CLI mode started. 输入消息后按 Enter 发送，输入 'exit' 退出，输入 'new' 开始新会话。")
     messages: list[ChatMessage] = []
 
     while True:

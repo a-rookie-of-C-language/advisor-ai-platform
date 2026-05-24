@@ -89,10 +89,10 @@ class WorkspaceManager:
         session_path.mkdir(parents=True, exist_ok=True)
         return session_path
 
-    def _check_depth(self, path: Path) -> None:
+    def _check_depth(self, user_id: int | None, session_id: int | None, path: Path) -> None:
         """检查目录深度"""
         try:
-            session_path = self._get_session_path(None, None)
+            session_path = self._get_session_path(user_id, session_id)
             rel = path.relative_to(session_path)
             if len(rel.parts) > MAX_DEPTH:
                 raise DepthLimitError(f"目录深度超限（最大 {MAX_DEPTH} 层）: {rel}")
@@ -132,16 +132,16 @@ class WorkspaceManager:
         # 限制读取范围
         limit = min(limit, MAX_FILE_SIZE)
 
-        with open(path, "r", encoding="utf-8") as f:
-            f.seek(offset)
-            return f.read(limit)
+        data = path.read_bytes()
+        return data[offset : offset + limit].decode("utf-8", errors="replace")
 
     def write(self, user_id: int | None, session_id: int | None, relative_path: str, content: str, is_final: bool = False) -> dict:
         """写入文件内容"""
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
 
-        self._check_depth(path)
+        target_path = path if not is_final else session_path / FINAL_DIR / relative_path
+        self._check_depth(user_id, session_id, target_path)
 
         # 检查文件内容大小
         content_bytes = content.encode("utf-8")
@@ -240,7 +240,8 @@ class WorkspaceManager:
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
 
-        self._check_depth(path)
+        target_path = path if not is_final else session_path / FINAL_DIR / relative_path
+        self._check_depth(user_id, session_id, target_path)
 
         if is_final:
             final_path = session_path / FINAL_DIR / relative_path

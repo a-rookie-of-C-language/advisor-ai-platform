@@ -71,6 +71,46 @@ def test_chat_stream_no_token_required_when_not_configured(monkeypatch):
     assert response.status_code == 200
 
 
+def test_workspace_cleanup_requires_token_when_configured(monkeypatch):
+    monkeypatch.setenv("AGENT_API_TOKEN", "test-token")
+    client = TestClient(app_module.create_api_app())
+
+    response = client.post("/workspace/cleanup")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid agent token"
+
+
+def test_workspace_stats_accepts_bearer_token_when_configured(monkeypatch):
+    class _FakeWorkspaceManager:
+        def get_stats(self, user_id=None, session_id=None):
+            return {
+                "user_id": user_id,
+                "session_id": session_id,
+                "total_files": 0,
+                "total_size": 0,
+                "cache_files": 0,
+                "cache_size": 0,
+                "final_files": 0,
+                "final_size": 0,
+                "cache_dir": "cache",
+                "final_dir": "final",
+            }
+
+    monkeypatch.setenv("AGENT_API_TOKEN", "test-token")
+    monkeypatch.setattr(app_module, "WorkspaceManager", _FakeWorkspaceManager)
+    client = TestClient(app_module.create_api_app())
+
+    response = client.get(
+        "/workspace/stats?userId=1&sessionId=2",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["stats"]["user_id"] == 1
+    assert response.json()["stats"]["session_id"] == 2
+
+
 def test_graph_health_endpoint(monkeypatch):
     monkeypatch.setattr(app_module, "_get_chat_stream_service", lambda: _FakeChatService())
     client = TestClient(app_module.create_api_app())
