@@ -5,6 +5,8 @@
 - `backend`：Spring Boot 后端 API
 - `agent`：Python RAG 索引与检索服务
 
+架构职责边界说明见 [docs/architecture.md](docs/architecture.md)。
+
 ## 本地依赖
 - Node.js 20+
 - JDK 17+

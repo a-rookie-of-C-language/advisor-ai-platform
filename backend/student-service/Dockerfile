@@ -7,5 +7,5 @@ RUN mvn -f student-service/pom.xml package spring-boot:repackage -DskipTests
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /build/student-service/target/*-SNAPSHOT.jar /app/app.jar
-EXPOSE 8085
+EXPOSE 8091
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -24,3 +24,5 @@ jmeter/
 .claude/
 claude.md
 docs/
+!docs/
+!docs/architecture.md

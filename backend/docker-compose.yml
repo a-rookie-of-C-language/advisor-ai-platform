@@ -366,6 +366,7 @@ services:
       ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
       INTERNAL_SERVICE_TOKEN: arookieofc
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      SERVER_PORT: 8091
     depends_on:
       nacos:
         condition: service_healthy
@@ -374,7 +375,7 @@ services:
       check-in-service:
         condition: service_started
     ports:
-      - "8089:8085"
+      - "8091:8091"
 
   gateway:
     build:
