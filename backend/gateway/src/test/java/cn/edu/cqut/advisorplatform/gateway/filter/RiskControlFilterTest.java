@@ -42,11 +42,13 @@ class RiskControlFilterTest {
   @BeforeEach
   void setUp() throws Exception {
     when(webClientBuilder.build()).thenReturn(webClient);
-    riskControlFilter = new RiskControlFilter(webClientBuilder, new SimpleMeterRegistry());
-    // 通过反射设置 failClosedPaths，避免 @Value 注入在测试中不生效的问题
-    Field failClosedPathsField = RiskControlFilter.class.getDeclaredField("failClosedPaths");
+    RiskControlSupport riskControlSupport =
+        new RiskControlSupport(webClientBuilder, new SimpleMeterRegistry());
+    riskControlFilter = new RiskControlFilter(riskControlSupport);
+
+    Field failClosedPathsField = RiskControlSupport.class.getDeclaredField("failClosedPaths");
     failClosedPathsField.setAccessible(true);
-    failClosedPathsField.set(riskControlFilter, "/api/chat/,/api/rag/");
+    failClosedPathsField.set(riskControlSupport, "/api/chat/,/api/rag/");
   }
 
   @Test
@@ -104,10 +106,8 @@ class RiskControlFilterTest {
     when(requestBodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
     when(headersSpec.retrieve()).thenReturn(responseSpec);
 
-    RiskControlFilter.RiskCheckResponse passedResponse =
-        RiskControlFilter.RiskCheckResponse.passed();
-    when(responseSpec.bodyToMono(RiskControlFilter.RiskCheckResponse.class))
-        .thenReturn(Mono.just(passedResponse));
+    RiskCheckResponse passedResponse = RiskCheckResponse.passed();
+    when(responseSpec.bodyToMono(RiskCheckResponse.class)).thenReturn(Mono.just(passedResponse));
 
     ServerWebExchange.Builder exchangeBuilder = mock(ServerWebExchange.Builder.class);
     when(exchange.mutate()).thenReturn(exchangeBuilder);

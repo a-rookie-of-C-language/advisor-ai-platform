@@ -1,7 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.client.CheckInServiceClient;
-import cn.edu.cqut.advisorplatform.dao.StudentFieldChangeDao;
 import cn.edu.cqut.advisorplatform.dao.StudentProfileDao;
 import cn.edu.cqut.advisorplatform.dto.request.StudentCreateRequest;
 import cn.edu.cqut.advisorplatform.dto.request.StudentQueryRequest;
@@ -9,13 +8,11 @@ import cn.edu.cqut.advisorplatform.dto.request.StudentUpdateRequest;
 import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInDetailResponse;
 import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.dto.response.StudentDetailResponse;
-import cn.edu.cqut.advisorplatform.entity.StudentFieldChange;
 import cn.edu.cqut.advisorplatform.entity.StudentProfile;
 import cn.edu.cqut.advisorplatform.enums.InfoCompleteness;
 import cn.edu.cqut.advisorplatform.exception.BusinessException;
 import cn.edu.cqut.advisorplatform.service.StudentCheckInService;
 import cn.edu.cqut.advisorplatform.service.StudentService;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -28,16 +25,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class StudentServiceImpl implements StudentService, StudentCheckInService {
 
   private final StudentProfileDao studentProfileDao;
-  private final StudentFieldChangeDao fieldChangeDao;
   private final CheckInServiceClient checkInServiceClient;
+  private final StudentFieldChangeSupport fieldChangeSupport;
 
   public StudentServiceImpl(
       StudentProfileDao studentProfileDao,
-      StudentFieldChangeDao fieldChangeDao,
-      CheckInServiceClient checkInServiceClient) {
+      CheckInServiceClient checkInServiceClient,
+      StudentFieldChangeSupport fieldChangeSupport) {
     this.studentProfileDao = studentProfileDao;
-    this.fieldChangeDao = fieldChangeDao;
     this.checkInServiceClient = checkInServiceClient;
+    this.fieldChangeSupport = fieldChangeSupport;
   }
 
   @Override
@@ -86,9 +83,9 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
     profile.setDormitory(request.getDormitory());
     profile.setEmergencyContact(request.getEmergencyContact());
     profile.setCreatedBy(operator);
-    profile.setCreatedAt(LocalDateTime.now());
+    profile.setCreatedAt(java.time.LocalDateTime.now());
     profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(LocalDateTime.now());
+    profile.setUpdatedAt(java.time.LocalDateTime.now());
     profile.setDeleted(0);
 
     calculateAndUpdateInfoCompleteness(profile);
@@ -105,7 +102,7 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
             .findById(request.getId())
             .orElseThrow(() -> new BusinessException("学生不存在"));
 
-    recordFieldChanges(profile, request, operator);
+    fieldChangeSupport.recordFieldChanges(profile, request, operator);
 
     profile.setStudentNo(request.getStudentNo());
     profile.setName(request.getName());
@@ -119,7 +116,7 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
     profile.setDormitory(request.getDormitory());
     profile.setEmergencyContact(request.getEmergencyContact());
     profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(LocalDateTime.now());
+    profile.setUpdatedAt(java.time.LocalDateTime.now());
 
     calculateAndUpdateInfoCompleteness(profile);
 
@@ -134,7 +131,7 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
         studentProfileDao.findById(id).orElseThrow(() -> new BusinessException("学生不存在"));
     profile.setDeleted(1);
     profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(LocalDateTime.now());
+    profile.setUpdatedAt(java.time.LocalDateTime.now());
     studentProfileDao.save(profile);
   }
 
@@ -179,70 +176,6 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
       return List.of();
     }
     return checkInServiceClient.listStudentCheckInSummaries(studentIds);
-  }
-
-  private void recordFieldChanges(
-      StudentProfile profile, StudentUpdateRequest request, String operator) {
-    recordChange(
-        profile, "name", profile.getName(), request.getName(), request.getChangeReason(), operator);
-    recordChange(
-        profile,
-        "gender",
-        String.valueOf(profile.getGender()),
-        String.valueOf(request.getGender()),
-        request.getChangeReason(),
-        operator);
-    recordChange(
-        profile,
-        "classCode",
-        profile.getClassCode(),
-        request.getClassCode(),
-        request.getChangeReason(),
-        operator);
-    recordChange(
-        profile,
-        "counselorNo",
-        profile.getCounselorNo(),
-        request.getCounselorNo(),
-        request.getChangeReason(),
-        operator);
-    recordChange(
-        profile,
-        "phone",
-        profile.getPhone(),
-        request.getPhone(),
-        request.getChangeReason(),
-        operator);
-    recordChange(
-        profile,
-        "email",
-        profile.getEmail(),
-        request.getEmail(),
-        request.getChangeReason(),
-        operator);
-  }
-
-  private void recordChange(
-      StudentProfile profile,
-      String fieldName,
-      String oldValue,
-      String newValue,
-      String reason,
-      String operator) {
-    if ((oldValue == null && newValue == null) || (oldValue != null && oldValue.equals(newValue))) {
-      return;
-    }
-
-    StudentFieldChange change = new StudentFieldChange();
-    change.setStudent(profile);
-    change.setStudentNo(profile.getStudentNo());
-    change.setFieldName(fieldName);
-    change.setOldValue(oldValue);
-    change.setNewValue(newValue);
-    change.setChangeReason(reason);
-    change.setChangedBy(operator);
-    change.setChangedAt(LocalDateTime.now());
-    fieldChangeDao.save(change);
   }
 
   public Optional<StudentProfile> findByStudentNo(String studentNo) {

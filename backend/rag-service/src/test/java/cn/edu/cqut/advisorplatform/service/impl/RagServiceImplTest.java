@@ -12,11 +12,11 @@ import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.service.impl.rag.RagFileSupport;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -28,7 +28,12 @@ class RagServiceImplTest {
 
   @Mock private RagDocumentDao documentDao;
 
-  @InjectMocks private RagServiceImpl ragService;
+  private RagServiceImpl ragService;
+
+  @org.junit.jupiter.api.BeforeEach
+  void setUp() {
+    ragService = new RagServiceImpl(knowledgeBaseDao, documentDao, new RagFileSupport());
+  }
 
   @Test
   void createKnowledgeBase_shouldPersistReadyStatus() {
@@ -66,9 +71,9 @@ class RagServiceImplTest {
     RagDocumentDO doc = new RagDocumentDO();
     doc.setId(30L);
     doc.setKnowledgeBase(kb);
-    UserDO owner = new UserDO();
-    owner.setId(2L);
-    doc.setUploadedBy(owner);
+    UserDO uploader = new UserDO();
+    uploader.setId(2L);
+    doc.setUploadedBy(uploader);
     doc.setFilePath(null);
 
     when(documentDao.findById(30L)).thenReturn(Optional.of(doc));

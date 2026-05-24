@@ -16,11 +16,7 @@ import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +50,8 @@ public class ChatController {
   private final AgentProxyService agentProxyService;
   private final ChatService chatService;
   private final ChatMessageService chatMessageService;
+  private final ChatTurnIdGenerator turnIdGenerator = new ChatTurnIdGenerator();
+  private final SseResponseWriter sseResponseWriter = new SseResponseWriter();
 
   @GetMapping("/sessions")
   @Auditable(
@@ -378,34 +376,7 @@ public class ChatController {
   }
 
   private String buildTurnId(ChatStreamRequestDTO request, Long userId) {
-    StringBuilder normalized = new StringBuilder();
-    normalized.append(userId == null ? 0 : userId).append('|');
-    normalized.append(request.getSessionId() == null ? 0 : request.getSessionId()).append('|');
-    if (request.getMessages() != null) {
-      for (ChatStreamMessageDTO message : request.getMessages()) {
-        if (message == null) {
-          continue;
-        }
-        String role = message.getRole() == null ? "" : message.getRole().trim().toLowerCase();
-        String content = message.getContent() == null ? "" : message.getContent().trim();
-        normalized.append(role).append(':').append(content).append('|');
-      }
-    }
-
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] hash = digest.digest(normalized.toString().getBytes(StandardCharsets.UTF_8));
-      return HexFormat.of().formatHex(hash);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256 not available", e);
-    }
-  }
-
-  private String safeJson(@Nullable String raw) {
-    if (raw == null || raw.isBlank()) {
-      return "stream failed";
-    }
-    return raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", " ").replace("\n", " ");
+    return turnIdGenerator.build(request, userId);
   }
 
   private String safeMessage(Exception exception) {
@@ -414,35 +385,12 @@ public class ChatController {
   }
 
   private void writeErrorEvent(java.io.OutputStream outputStream, @Nullable String rawMessage) {
-    String message = safeJson(rawMessage);
-    String sseError = "event:error\ndata:{\"message\":\"" + message + "\"}\n\n";
-    try {
-      outputStream.write(sseError.getBytes(StandardCharsets.UTF_8));
-      outputStream.flush();
-    } catch (Exception ignored) {
-      // client might already disconnect
-    }
+    sseResponseWriter.writeErrorEvent(outputStream, rawMessage);
   }
 
   private void writeDoneEvent(
       java.io.OutputStream outputStream, String finishReason, String turnId, String traceId) {
-    String safeFinishReason = safeJson(finishReason);
-    String safeTurnId = safeJson(turnId);
-    String safeTraceId = safeJson(traceId);
-    String sseDone =
-        "event:done\ndata:{\"finish_reason\":\""
-            + safeFinishReason
-            + "\",\"turnId\":\""
-            + safeTurnId
-            + "\",\"traceId\":\""
-            + safeTraceId
-            + "\"}\n\n";
-    try {
-      outputStream.write(sseDone.getBytes(StandardCharsets.UTF_8));
-      outputStream.flush();
-    } catch (Exception ignored) {
-      // client might already disconnect
-    }
+    sseResponseWriter.writeDoneEvent(outputStream, finishReason, turnId, traceId);
   }
 
   private String resolveTraceIdFromRequest() {

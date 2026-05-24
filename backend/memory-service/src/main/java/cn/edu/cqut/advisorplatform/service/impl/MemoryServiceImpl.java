@@ -27,7 +27,6 @@ import cn.edu.cqut.advisorplatform.utils.Assert;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +49,7 @@ public class MemoryServiceImpl implements MemoryService {
   private final MemoryServiceFactory memoryServiceFactory;
   private final EmbeddingService embeddingService;
   private final PlatformTransactionManager transactionManager;
+  private final MemorySearchSupport memorySearchSupport;
 
   @Value("${advisor.memory.vector-store:pgvector}")
   private String vectorStore;
@@ -67,21 +67,11 @@ public class MemoryServiceImpl implements MemoryService {
     int topK = request.getTopK() == null ? 6 : Math.max(1, Math.min(request.getTopK(), 50));
     String query = Optional.ofNullable(request.getQuery()).orElse("").trim();
     String mode = Optional.ofNullable(request.getMode()).orElse("hybrid").toLowerCase();
-    List<UserMemoryDO> rows;
+    List<UserMemoryDO> rows =
+        memorySearchSupport.search(
+            request, topK, query, mode, vectorStore, hybridVectorWeight, hybridTextWeight);
 
-    boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
-
-    if ("vector".equals(mode) && hasVectorService) {
-      rows = searchByVector(request, topK);
-    } else if ("text".equals(mode)) {
-      rows = searchText(request, query, topK);
-    } else if (hasVectorService) {
-      rows = searchHybrid(request, query, topK);
-    } else {
-      rows = searchText(request, query, topK);
-    }
-
-    recordAccessHits(rows);
+    memorySearchSupport.recordAccessHits(rows);
 
     log.info(
         "memory_search_done userId={}, kbId={}, topK={}, mode={}, resultCount={}, elapsedMs={}",
@@ -93,115 +83,6 @@ public class MemoryServiceImpl implements MemoryService {
         System.currentTimeMillis() - startedAt);
 
     return rows.stream().map(MemoryItemResponseDTO::from).toList();
-  }
-
-  private void recordAccessHits(List<UserMemoryDO> rows) {
-    if (rows.isEmpty()) {
-      return;
-    }
-    List<Long> ids = rows.stream().map(UserMemoryDO::getId).toList();
-    for (Long id : ids) {
-      userMemoryDao.incrementAccessCount(id);
-    }
-  }
-
-  private List<UserMemoryDO> searchByVector(MemorySearchRequestDTO request, int topK) {
-    try {
-      MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
-      double[] queryEmbedding = embeddingService.embed(request.getQuery());
-      return vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, topK);
-    } catch (Exception exc) {
-      log.warn(
-          "memory_vector_search_failed userId={}, kbId={}, err={}",
-          request.getUserId(),
-          request.getKbId(),
-          exc.getMessage());
-      return searchText(request, request.getQuery(), topK);
-    }
-  }
-
-  private List<UserMemoryDO> searchText(MemorySearchRequestDTO request, String query, int topK) {
-    return userMemoryDao.searchByScope(
-        request.getUserId(),
-        request.getKbId(),
-        query,
-        LocalDateTime.now(),
-        PageRequest.of(0, topK));
-  }
-
-  private List<UserMemoryDO> searchHybrid(MemorySearchRequestDTO request, String query, int topK) {
-    int recallK = Math.min(topK * 3, 50);
-
-    List<UserMemoryDO> vectorResults;
-    try {
-      MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
-      double[] queryEmbedding = embeddingService.embed(query);
-      vectorResults =
-          vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, recallK);
-    } catch (Exception exc) {
-      log.warn(
-          "memory_hybrid_vector_fallback userId={}, kbId={}",
-          request.getUserId(),
-          request.getKbId());
-      return searchText(request, query, topK);
-    }
-
-    List<UserMemoryDO> textResults =
-        userMemoryDao.searchByScope(
-            request.getUserId(),
-            request.getKbId(),
-            query,
-            LocalDateTime.now(),
-            PageRequest.of(0, recallK));
-
-    return mergeHybridResults(vectorResults, textResults, topK);
-  }
-
-  private List<UserMemoryDO> mergeHybridResults(
-      List<UserMemoryDO> vectorResults, List<UserMemoryDO> textResults, int topK) {
-    Map<Long, Double> vectorScores = new LinkedHashMap<>();
-    for (int i = 0; i < vectorResults.size(); i++) {
-      UserMemoryDO item = vectorResults.get(i);
-      double rankScore = 1.0 - ((double) i / Math.max(vectorResults.size(), 1));
-      vectorScores.merge(item.getId(), rankScore, Math::max);
-    }
-
-    Map<Long, Double> textScores = new LinkedHashMap<>();
-    for (int i = 0; i < textResults.size(); i++) {
-      UserMemoryDO item = textResults.get(i);
-      double rankScore = 1.0 - ((double) i / Math.max(textResults.size(), 1));
-      textScores.merge(item.getId(), rankScore, Math::max);
-    }
-
-    Set<Long> allIds = new LinkedHashSet<>();
-    vectorResults.forEach(item -> allIds.add(item.getId()));
-    textResults.forEach(item -> allIds.add(item.getId()));
-
-    Map<Long, UserMemoryDO> allItemsMap = new LinkedHashMap<>();
-    for (UserMemoryDO item : vectorResults) {
-      allItemsMap.putIfAbsent(item.getId(), item);
-    }
-    for (UserMemoryDO item : textResults) {
-      allItemsMap.putIfAbsent(item.getId(), item);
-    }
-
-    List<Map.Entry<Long, Double>> fused =
-        allIds.stream()
-            .map(
-                id -> {
-                  double vScore = vectorScores.getOrDefault(id, 0.0);
-                  double tScore = textScores.getOrDefault(id, 0.0);
-                  double fusedScore = hybridVectorWeight * vScore + hybridTextWeight * tScore;
-                  return Map.entry(id, fusedScore);
-                })
-            .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
-            .limit(topK)
-            .toList();
-
-    return fused.stream()
-        .map(entry -> allItemsMap.get(entry.getKey()))
-        .filter(Objects::nonNull)
-        .collect(Collectors.toList());
   }
 
   @Override

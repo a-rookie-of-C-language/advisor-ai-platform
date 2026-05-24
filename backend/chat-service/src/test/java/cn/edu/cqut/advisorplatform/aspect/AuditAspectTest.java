@@ -12,10 +12,10 @@ import cn.edu.cqut.advisorplatform.service.AuditService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -33,7 +33,12 @@ class AuditAspectTest {
 
   @Mock private MethodSignature methodSignature;
 
-  @InjectMocks private AuditAspect auditAspect;
+  private AuditAspect auditAspect;
+
+  @BeforeEach
+  void setUp() {
+    auditAspect = new AuditAspect(new AuditLogSupport(auditService));
+  }
 
   @AfterEach
   void tearDown() {
