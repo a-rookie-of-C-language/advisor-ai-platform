@@ -395,6 +395,58 @@ class OpenAIProvider(BaseLLMProvider):
 
         return {"role": message.role, "content": parts}
 
+    @staticmethod
+    def _build_message_payload(message: ChatMessage) -> dict[str, Any]:
+        """构建单条消息的 payload，支持多模态（图片附件）。"""
+        if not message.attachments:
+            return {"role": message.role, "content": message.content}
+
+        image_parts = []
+        doc_texts = []
+
+        for att in message.attachments:
+            file_type = att.get("file_type", "")
+            file_path = att.get("file_path", "")
+            file_name = att.get("file_name", "unknown")
+
+            if not file_path:
+                continue
+
+            if is_image(file_type):
+                try:
+                    b64 = read_image_base64(file_path)
+                    mime = get_mime_type(file_type)
+                    image_parts.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{mime};base64,{b64}"},
+                        }
+                    )
+                except Exception as e:
+                    logger.warning("读取图片失败 %s: %s", file_name, e)
+                    doc_texts.append(f"[图片读取失败: {file_name}]")
+            else:
+                try:
+                    text = extract_text(file_path, file_type)
+                    doc_texts.append(f"--- {file_name} ---\n{text}")
+                except Exception as e:
+                    logger.warning("提取文档文本失败 %s: %s", file_name, e)
+                    doc_texts.append(f"[文档提取失败: {file_name}]")
+
+        parts: list[dict[str, Any]] = []
+        if doc_texts:
+            combined_text = message.content + "\n\n" + "\n\n".join(doc_texts)
+            parts.append({"type": "text", "text": combined_text})
+        else:
+            parts.append({"type": "text", "text": message.content})
+
+        parts.extend(image_parts)
+
+        if len(parts) == 1 and parts[0]["type"] == "text":
+            return {"role": message.role, "content": parts[0]["text"]}
+
+        return {"role": message.role, "content": parts}
+
     async def stream_chat(
         self,
         messages: Iterable[ChatMessage],
