@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from json_types import JsonObject
 from RAG.RAG_service import RAG_service
 from RAG.schema import RAGSearchRequest, SearchMode
 from tools.base_tool import BaseTool
+from tools.rag_search.RAGSearchInput import RAGSearchInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
 
@@ -20,11 +21,6 @@ def _strip_surrogates(text: str) -> str:
     if not text:
         return text
     return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
-
-
-class RAGSearchInput(BaseModel):
-    query: str | None = None
-    top_k: int = Field(default=5, ge=1, le=10)
 
 
 class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):

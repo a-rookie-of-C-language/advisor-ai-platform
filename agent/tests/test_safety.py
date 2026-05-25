@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from safety.regex_filter import RegexFilter, StreamingRegexFilter
-from safety.safety_pipeline import SafetyPipeline, SafetyResult
+from safety.privacy_filter import PrivacyFilterWrapper
+from safety.RegexFilter import RegexFilter
+from safety.StreamingRegexFilter import StreamingRegexFilter
+from safety.SafetyResult import SafetyResult
+from safety.safety_pipeline import SafetyPipeline
 
 
 class TestRegexFilter:
@@ -77,3 +80,15 @@ class TestSafetyPipeline:
         pipeline = SafetyPipeline()
         sf = pipeline.create_streaming_filter()
         assert isinstance(sf, StreamingRegexFilter)
+
+
+class TestPrivacyFilterWrapper:
+    def test_disabled_filter_returns_original_text(self):
+        wrapper = PrivacyFilterWrapper(enabled=False)
+
+        result = wrapper.redact("Call me at 13812345678")
+
+        assert result.original == "Call me at 13812345678"
+        assert result.redacted == "Call me at 13812345678"
+        assert result.spans == []
+        assert not result.has_sensitive

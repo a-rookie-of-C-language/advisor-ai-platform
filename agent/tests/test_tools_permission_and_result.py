@@ -5,7 +5,9 @@ import json
 import pytest
 from pydantic import BaseModel
 
-from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryItem import MemoryItem
+from context.memory.core.WritebackResult import WritebackResult
 from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.memory_read import MemoryReadTool

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from pydantic import BaseModel
-
 from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.workspace_input import WorkspaceCreateDirInput
+from tools.workspace.WorkspaceCreateDirInput import WorkspaceCreateDirInput
+from tools.workspace.WorkspaceCreateDirOutput import WorkspaceCreateDirOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
     PathTraversalError,
@@ -18,12 +17,6 @@ from tools.workspace.workspace_manager import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class WorkspaceCreateDirOutput(BaseModel):
-    """workspace_create_dir 输出模型"""
-    path: str
-    created: bool
 
 
 class WorkspaceCreateDirTool(BaseTool[WorkspaceCreateDirInput, WorkspaceCreateDirOutput]):

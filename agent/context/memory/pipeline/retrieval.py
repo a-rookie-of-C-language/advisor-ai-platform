@@ -4,7 +4,7 @@ import logging
 import time
 
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryItem
+from context.memory.core.MemoryItem import MemoryItem
 from context.memory.pipeline.query_processor import QueryProcessor
 from context.memory.pipeline.rerank import ConfidenceDecayRerank, DiversityRerank, MemoryRerankRegistry
 

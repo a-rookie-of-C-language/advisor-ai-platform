@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from pydantic import BaseModel
-
 from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.workspace_input import WorkspaceEditInput
+from tools.workspace.WorkspaceEditInput import WorkspaceEditInput
+from tools.workspace.WorkspaceEditOutput import WorkspaceEditOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
     PathTraversalError,
@@ -18,12 +17,6 @@ from tools.workspace.workspace_manager import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class WorkspaceEditOutput(BaseModel):
-    """workspace_edit 输出模型"""
-    path: str
-    replaced: bool
 
 
 class WorkspaceEditTool(BaseTool[WorkspaceEditInput, WorkspaceEditOutput]):

@@ -1,698 +1,44 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Collapse, Input, Skeleton, Space, Tag, Typography } from 'antd'
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { Button, Input, Skeleton, Space, Tag, Typography } from 'antd'
 import {
-  CloseCircleOutlined,
-  FileImageOutlined,
-  FilePdfOutlined,
-  FileTextOutlined,
-  FileWordOutlined,
   LoadingOutlined,
   PaperClipOutlined,
   RobotOutlined,
   SendOutlined,
-  UserOutlined,
 } from '@ant-design/icons'
-import ReactMarkdown from 'react-markdown'
 import { useSearchParams } from 'react-router-dom'
-import {
-  chatApi,
-  type ChatSessionDTO,
-  type StreamEventData,
-  type StreamEventRecord,
-  type StreamSourceItem,
-  type StreamToolResult,
-} from '../../api/chatApi'
+import { chatApi, type StreamSourceItem } from '../../api/chatApi'
+import { workspaceApi, type WorkspaceFileDTO } from '../../api/workspaceApi'
 import { globalMessage } from '../../utils/globalMessage'
+import {
+  type ChatEvent,
+  type ChatMessage,
+  type ChatSession,
+  type Source,
+  type ToolCall,
+  describeSystemState,
+  isSessionNotFoundError,
+  normalizeEventRecords,
+  streamEventRecord,
+  toChatMessage,
+  toChatSession,
+  toolCallsFromEvents,
+} from './chatMessageModel'
+import { formatFileSize, getFileIcon, MsgBubble } from './ChatMessageBubble'
 import { emitChatSessionsRefresh, onChatSessionsRefresh } from './chatSessionEvents'
 import styles from './ChatPage.module.css'
 
 const { Text, Title } = Typography
 
-interface Source {
-  id: number
-  docName: string
-  snippet: string
-  score?: number
-}
-
-interface ToolCall {
-  id: string
-  toolName: string
-  input?: unknown
-  status?: string
-  message?: string
-  result?: StreamToolResult
-}
-
-interface ChatEvent {
-  id: string
-  event: string
-  payload: StreamEventData
-  source?: string
-  traceId?: string
-  timestamp?: number
-}
-
-interface PlanStep {
-  action?: string
-  tool_name?: string
-  arguments?: unknown
-  reason?: string
-  expected_outcome?: string
-  sufficient?: boolean
-  summary?: string
-}
-
-interface ChatMessage {
-  id: number
-  role: 'user' | 'assistant'
-  content: string
-  sources?: Source[]
-  toolCalls?: ToolCall[]
-  events?: ChatEvent[]
-  streaming?: boolean
-  progressText?: string
-}
-
-interface ChatSession {
-  id: number
-  title: string
-  updatedAt: string
-  kbId: number
-  messages: ChatMessage[]
-}
-
-interface MsgBubbleProps {
-  msg: ChatMessage
-}
-
-function getFileIcon(fileType: string) {
-  const t = fileType.toLowerCase()
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(t)) return <FileImageOutlined />
-  if (t === 'pdf') return <FilePdfOutlined />
-  if (['doc', 'docx'].includes(t)) return <FileWordOutlined />
-  return <FileTextOutlined />
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function renderToolResultSummary(toolName: string, result?: StreamToolResult): string {
-  if (!result) {
-    return ''
-  }
-  if (toolName === 'web_search') {
-    const output = result.output
-    if (output && typeof output === 'object') {
-      const summary = (output as { summary?: unknown }).summary
-      if (typeof summary === 'string' && summary.trim()) {
-        return summary
-      }
-    }
-  }
-  return result.message || renderToolPayload(result.derived?.sources ?? result.items ?? result.output)
-}
-
-function taskPlanFromEvents(events?: ChatEvent[]): StreamEventData | null {
-  const plans = (events ?? []).filter((item) => item.event === 'sys_tool_plan')
-  return plans.length ? plans[plans.length - 1].payload : null
-}
-
-function reasoningEventsFromMessage(events?: ChatEvent[]): ChatEvent[] {
-  return (events ?? []).filter((item) => item.event === 'sys_reasoning')
-}
-
-function reasoningStageLabel(stage?: string): string {
-  if (stage === 'route') {
-    return '路由'
-  }
-  if (stage === 'delegate') {
-    return '委托'
-  }
-  if (stage === 'plan') {
-    return '计划'
-  }
-  return stage || '思路'
-}
-
-function planStepsFromPayload(payload?: StreamEventData | null): PlanStep[] {
-  return Array.isArray(payload?.steps) ? payload.steps : []
-}
-
-function planStepTitle(step: PlanStep, index: number): string {
-  const action = step.action ?? ''
-  const toolName = step.tool_name ?? ''
-  if (action === 'call_tool' && toolName) {
-    return `${index + 1}. 调用 ${toolName}`
-  }
-  if (action === 'final') {
-    return `${index + 1}. 生成最终回答`
-  }
-  return `${index + 1}. 执行计划步骤`
-}
-
-function planStepStatus(
-  step: PlanStep,
-  msg: ChatMessage,
-): 'pending' | 'running' | 'done' | 'error' {
-  if (step.action === 'final') {
-    if (!msg.streaming && msg.content.trim()) {
-      return 'done'
-    }
-    return msg.content.trim() ? 'running' : 'pending'
-  }
-  const toolName = step.tool_name ?? ''
-  if (!toolName) {
-    return 'pending'
-  }
-  const calls = msg.toolCalls ?? []
-  const matched = calls.find((item) => item.toolName === toolName)
-  if (!matched) {
-    return 'pending'
-  }
-  if (matched.status === 'error') {
-    return 'error'
-  }
-  if (matched.result || matched.status) {
-    return 'done'
-  }
-  return 'running'
-}
-
-function planStepStatusMeta(status: ReturnType<typeof planStepStatus>): {
-  label: string
-  color: string
-  icon: ReactNode
-} {
-  if (status === 'done') {
-    return { label: '已完成', color: 'green', icon: <CheckCircleOutlined /> }
-  }
-  if (status === 'running') {
-    return { label: '进行中', color: 'blue', icon: <LoadingOutlined /> }
-  }
-  if (status === 'error') {
-    return { label: '失败', color: 'red', icon: <ExclamationCircleOutlined /> }
-  }
-  return { label: '待执行', color: 'default', icon: <ClockCircleOutlined /> }
-}
-
-const PERSISTABLE_EVENTS = new Set([
-  'tool_use',
-  'tool_result',
-  'tool_error',
-  'sys_intent_route',
-  'sys_tool_plan',
-  'sys_reasoning',
-  'sys_rag_force',
-  'risk_alert',
-])
-
-function isPersistableEvent(event: string): boolean {
-  return PERSISTABLE_EVENTS.has(event)
-}
-
-function eventRecordId(event: string, payload: StreamEventData, fallback: string): string {
-  const toolCallId = typeof payload.tool_call_id === 'string' ? payload.tool_call_id : ''
-  if (toolCallId) {
-    return `${event}:${toolCallId}`
-  }
-  return `${event}:${fallback}`
-}
-
-function normalizeEventRecord(record: StreamEventRecord, index: number): ChatEvent | null {
-  if (!record?.event || !isPersistableEvent(record.event)) {
-    return null
-  }
-  const payload = record.payload ?? {}
-  return {
-    id: eventRecordId(record.event, payload, `${record.timestamp ?? index}:${index}`),
-    event: record.event,
-    payload,
-    source: record.source,
-    traceId: record.traceId,
-    timestamp: record.timestamp,
-  }
-}
-
-function normalizeEventRecords(records?: StreamEventRecord[]): ChatEvent[] {
-  return (records ?? [])
-    .map(normalizeEventRecord)
-    .filter((item): item is ChatEvent => item !== null)
-}
-
-function streamEventRecord(event: string, payload: StreamEventData): ChatEvent | null {
-  if (!isPersistableEvent(event)) {
-    return null
-  }
-  return {
-    id: eventRecordId(event, payload, `${Date.now()}:${Math.random().toString(16).slice(2)}`),
-    event,
-    payload,
-  }
-}
-
-function eventDisplayTitle(event: string, payload: StreamEventData): string {
-  const toolName = typeof payload.tool_name === 'string' ? payload.tool_name : ''
-  if (event === 'tool_use') {
-    return toolName ? `工具调用：${toolName}` : '工具调用'
-  }
-  if (event === 'tool_result') {
-    return toolName ? `工具返回：${toolName}` : '工具返回'
-  }
-  if (event === 'tool_error') {
-    return toolName ? `工具失败：${toolName}` : '工具失败'
-  }
-  if (event === 'sys_intent_route') {
-    return '意图路由'
-  }
-  if (event === 'sys_tool_plan') {
-    return '工具规划'
-  }
-  if (event === 'sys_reasoning') {
-    return '执行思路'
-  }
-  if (event === 'sys_rag_force') {
-    return '知识库检索'
-  }
-  if (event === 'risk_alert') {
-    return '风险提示'
-  }
-  return event
-}
-
-function eventDisplayDetail(event: string, payload: StreamEventData): string {
-  if (event === 'tool_use') {
-    return payload.input !== undefined ? `input: ${renderToolPayload(payload.input)}` : ''
-  }
-  if (event === 'tool_result') {
-    return renderToolResultSummary(payload.tool_name ?? '', {
-      status: payload.status,
-      message: payload.message,
-      items: payload.items,
-      output: payload.output,
-      derived: payload.derived,
-    })
-  }
-  if (event === 'tool_error') {
-    return payload.message || payload.code || 'tool error'
-  }
-  if (event === 'sys_intent_route') {
-    const categories = Array.isArray(payload.categories) ? payload.categories.filter(Boolean).join(', ') : ''
-    const matchedBy = typeof payload.matched_by === 'string' ? payload.matched_by : ''
-    return [categories ? `categories: ${categories}` : '', matchedBy ? `matched_by: ${matchedBy}` : '']
-      .filter(Boolean)
-      .join('\n')
-  }
-  if (event === 'sys_tool_plan') {
-    const steps = planStepsFromPayload(payload)
-    return [
-      payload.goal ? `目标: ${payload.goal}` : '',
-      payload.summary ? `说明: ${payload.summary}` : '',
-      steps.length ? `待办: ${steps.length} 步` : '',
-    ].filter(Boolean).join('\n')
-  }
-  if (event === 'sys_reasoning') {
-    return payload.message || payload.reason || renderToolPayload(payload)
-  }
-  return payload.message || payload.reason || renderToolPayload(payload)
-}
-
-function eventTagColor(event: string): string {
-  if (event === 'tool_error' || event === 'risk_alert') {
-    return 'red'
-  }
-  if (event.startsWith('sys_')) {
-    return 'blue'
-  }
-  return 'geekblue'
-}
-
-function toolCallsFromEvents(events: ChatEvent[]): ToolCall[] {
-  const calls: ToolCall[] = []
-  for (const item of events) {
-    const payload = item.payload
-    const toolName = typeof payload.tool_name === 'string' ? payload.tool_name : ''
-    if (!toolName || !item.event.startsWith('tool_')) {
-      continue
-    }
-    const id = typeof payload.tool_call_id === 'string' && payload.tool_call_id ? payload.tool_call_id : toolName
-    const index = calls.findIndex((call) => call.id === id)
-    const patch: ToolCall = {
-      id,
-      toolName,
-      input: item.event === 'tool_use' ? payload.input : undefined,
-      status: item.event === 'tool_error' ? 'error' : payload.status,
-      message: payload.message,
-      result: item.event === 'tool_result'
-        ? {
-            status: payload.status,
-            message: payload.message,
-            items: payload.items,
-            output: payload.output,
-            derived: payload.derived,
-          }
-        : undefined,
-    }
-    if (index >= 0) {
-      calls[index] = { ...calls[index], ...patch, input: patch.input ?? calls[index].input }
-    } else {
-      calls.push(patch)
-    }
-  }
-  return calls
-}
-
-function describeSystemState(event: string, payload: StreamEventData): string {
-  const baseMessage = typeof payload.message === 'string' ? payload.message.trim() : ''
-  if (event === 'sys_intent_route') {
-    const categories = Array.isArray(payload.categories) ? payload.categories.filter(Boolean).join('、') : ''
-    const matchedBy = typeof payload.matched_by === 'string' && payload.matched_by ? payload.matched_by : ''
-    const categoryText = categories ? `：${categories}` : ''
-    const matchedText = matchedBy ? `（matched_by：${matchedBy}）` : ''
-    return `正在路由工具${categoryText}${matchedText}` || baseMessage || '正在路由工具'
-  }
-  if (event === 'sys_tool_plan') {
-    const toolName = typeof payload.tool_name === 'string' && payload.tool_name ? payload.tool_name : ''
-    return toolName ? `正在规划工具步骤：${toolName}` : (baseMessage || '正在规划工具步骤')
-  }
-  if (event === 'reasoning_delta') {
-    return '模型正在整理思路'
-  }
-  return baseMessage || event.replace(/^sys_/, '正在').replace(/_/g, '')
-}
-
-function ReasoningTrace({ msg }: MsgBubbleProps) {
-  const reasoningEvents = reasoningEventsFromMessage(msg.events)
-  if (!reasoningEvents.length || msg.role !== 'assistant') {
-    return null
-  }
-
-  return (
-    <div className={styles.reasoningTrace}>
-      <Text type="secondary" className={styles.reasoningTraceTitle}>
-        执行思路
-      </Text>
-      <Space direction="vertical" style={{ width: '100%' }} size={8}>
-        {reasoningEvents.map((item) => {
-          const payload = item.payload
-          const stage = typeof payload.stage === 'string' ? payload.stage : ''
-          const agentName = typeof payload.agent_name === 'string' ? payload.agent_name : ''
-          return (
-            <div key={item.id} className={styles.reasoningTraceItem}>
-              <div className={styles.reasoningTraceMeta}>
-                <Tag color="blue" style={{ fontSize: 11, marginBottom: 0 }}>
-                  {reasoningStageLabel(stage)}
-                </Tag>
-                {agentName && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {agentName}
-                  </Text>
-                )}
-              </div>
-              <Text type="secondary" className={styles.reasoningTraceText}>
-                {eventDisplayDetail(item.event, payload)}
-              </Text>
-            </div>
-          )
-        })}
-      </Space>
-    </div>
-  )
-}
-
-function TaskPlanChecklist({ msg }: MsgBubbleProps) {
-  const plan = taskPlanFromEvents(msg.events)
-  const steps = planStepsFromPayload(plan)
-  if (!plan || steps.length === 0 || msg.role !== 'assistant') {
-    return null
-  }
-  const requiredTools = Array.isArray(plan.required_tools) ? plan.required_tools.filter(Boolean) : []
-
-  return (
-    <div className={styles.taskPlan}>
-      <div className={styles.taskPlanHeader}>
-        <div>
-          <Text strong>待办清单</Text>
-          {plan.goal && (
-            <Text type="secondary" className={styles.taskPlanGoal}>
-              {plan.goal}
-            </Text>
-          )}
-        </div>
-        {plan.mode && <Tag color="blue">{plan.mode}</Tag>}
-      </div>
-      {plan.summary && (
-        <Text type="secondary" className={styles.taskPlanSummary}>
-          {plan.summary}
-        </Text>
-      )}
-      {requiredTools.length > 0 && (
-        <div className={styles.taskPlanTools}>
-          {requiredTools.map((tool) => <Tag key={tool} color="geekblue">{tool}</Tag>)}
-        </div>
-      )}
-      <div className={styles.taskPlanSteps}>
-        {steps.map((step, index) => {
-          const status = planStepStatus(step, msg)
-          const meta = planStepStatusMeta(status)
-          return (
-            <div
-              key={`${step.action ?? 'step'}:${step.tool_name ?? index}:${index}`}
-              className={`${styles.taskPlanStep} ${status === 'done' ? styles.taskPlanStepDone : ''}`}
-            >
-              <div className={styles.taskPlanStepMain}>
-                <Tag color={meta.color} icon={meta.icon} className={styles.taskPlanStatus}>
-                  {meta.label}
-                </Tag>
-                <Text strong delete={status === 'done'}>{planStepTitle(step, index)}</Text>
-              </div>
-              {(step.reason || step.expected_outcome || step.summary) && (
-                <Text type="secondary" className={styles.taskPlanStepDetail}>
-                  {step.reason || step.summary}
-                  {step.expected_outcome ? `；预期：${step.expected_outcome}` : ''}
-                </Text>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function MsgBubble({ msg }: MsgBubbleProps) {
-  const isUser = msg.role === 'user'
-
-  return (
-    <div className={`${styles.msgRow} ${isUser ? styles.msgRowUser : styles.msgRowAI}`}>
-      <div className={styles.msgAvatar}>
-        {isUser
-          ? <div className={styles.avatarUser}><UserOutlined /></div>
-          : <div className={styles.avatarAI}><RobotOutlined /></div>}
-      </div>
-      <div className={`${styles.msgBubble} ${isUser ? styles.bubbleUser : styles.bubbleAI}`}>
-        {msg.attachments?.length ? (
-          <div style={{ marginBottom: 8 }}>
-            <Space wrap size={[4, 4]}>
-              {msg.attachments.map((file) => (
-                <Tag key={file.id} icon={getFileIcon(file.fileType)} color="default" style={{ fontSize: 11 }}>
-                  {file.fileName}
-                </Tag>
-              ))}
-            </Space>
-          </div>
-        ) : null}
-
-        {msg.streaming && !msg.content
-          ? (
-            <Space size={8}>
-              <LoadingOutlined style={{ color: '#2563EB' }} />
-              <Text type="secondary">{msg.progressText || '模型思考中，请稍候...'}</Text>
-            </Space>
-            )
-          : isUser
-            ? <Text>{msg.content}</Text>
-            : (
-              <div className={styles.markdownBody}>
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-                {msg.streaming && <span className={styles.cursor} />}
-              </div>
-            )}
-
-        {!isUser && <ReasoningTrace msg={msg} />}
-        {!isUser && <TaskPlanChecklist msg={msg} />}
-
-        {msg.sources?.length
-          ? (
-            <Collapse
-              ghost
-              size="small"
-              style={{ marginTop: 8 }}
-              items={[{
-                key: '1',
-                label: (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    <FileTextOutlined style={{ marginRight: 4 }} />
-                    引用来源 {msg.sources.length} 条
-                  </Text>
-                ),
-                children: (
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    {msg.sources.map((source) => (
-                      <div key={source.id} style={{ background: '#F1F5F9', borderRadius: 6, padding: '8px 12px' }}>
-                        <Tag color="blue" style={{ fontSize: 11, marginBottom: 4 }}>{source.docName}</Tag>
-                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{source.snippet}</Text>
-                      </div>
-                    ))}
-                  </Space>
-                ),
-              }]}
-            />
-            )
-          : null}
-
-        {msg.events?.length
-          ? (
-            <Collapse
-              ghost
-              size="small"
-              style={{ marginTop: 8 }}
-              items={[{
-                key: 'events',
-                label: (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    <FileTextOutlined style={{ marginRight: 4 }} />
-                    执行过程 {msg.events.length} 条
-                  </Text>
-                ),
-                children: (
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    {msg.events.map((item) => {
-                      const detail = eventDisplayDetail(item.event, item.payload)
-                      return (
-                        <div key={item.id} style={{ background: '#F8FAFC', borderRadius: 6, padding: '8px 12px' }}>
-                          <Tag color={eventTagColor(item.event)} style={{ fontSize: 11, marginBottom: 4 }}>
-                            {eventDisplayTitle(item.event, item.payload)}
-                          </Tag>
-                          {detail && (
-                            <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
-                              {detail}
-                            </Text>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </Space>
-                ),
-              }]}
-            />
-            )
-          : null}
-
-        {!msg.events?.length && msg.toolCalls?.length
-          ? (
-            <Collapse
-              ghost
-              size="small"
-              style={{ marginTop: 8 }}
-              items={[{
-                key: 'tools',
-                label: (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    <FileTextOutlined style={{ marginRight: 4 }} />
-                    工具调用 {msg.toolCalls.length} 次
-                  </Text>
-                ),
-                children: (
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    {msg.toolCalls.map((tool) => (
-                      <div key={tool.id} style={{ background: '#F8FAFC', borderRadius: 6, padding: '8px 12px' }}>
-                        <Tag color={tool.status === 'error' ? 'red' : 'geekblue'} style={{ fontSize: 11, marginBottom: 4 }}>
-                          tool_call: {tool.toolName}
-                        </Tag>
-                        {tool.input !== undefined && (
-                          <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
-                            input: {renderToolPayload(tool.input)}
-                          </Text>
-                        )}
-                        {(tool.message || tool.result) && (
-                          <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
-                            tool_result: {renderToolResultSummary(tool.toolName, tool.result)}
-                          </Text>
-                        )}
-                      </div>
-                    ))}
-                  </Space>
-                ),
-              }]}
-            />
-            )
-          : null}
-      </div>
-    </div>
-  )
-}
-
-function toChatMessage(data: { id: number; role: 'user' | 'assistant'; content: string; sources?: StreamSourceItem[]; events?: StreamEventRecord[] }): ChatMessage {
-  const events = normalizeEventRecords(data.events)
-  return {
-    id: data.id,
-    role: data.role,
-    content: data.content,
-    sources: data.sources?.map((item, index) => ({
-      id: item.id || index + 1,
-      docName: item.docName || '未命名文档',
-      snippet: item.snippet || '',
-      score: item.score,
-    })),
-    events,
-    toolCalls: toolCallsFromEvents(events),
-    streaming: false,
-  }
-}
-
-function toChatSession(data: ChatSessionDTO): ChatSession {
-  return {
-    id: data.id,
-    title: data.title,
-    updatedAt: data.updatedAt,
-    kbId: data.kbId ?? 0,
-    messages: [],
-  }
-}
-
-function isSessionNotFoundError(error: unknown): boolean {
-  if (typeof error === 'string') {
-    return error.includes('会话不存在')
-  }
-  if (typeof error !== 'object' || error === null) {
-    return false
-  }
-  const maybe = error as {
-    response?: { status?: number; data?: { message?: string } }
-    config?: { url?: string }
-  }
-  const message = maybe.response?.data?.message
-  if (typeof message === 'string' && message.includes('会话不存在')) {
-    return true
-  }
-  const status = maybe.response?.status
-  const url = maybe.config?.url ?? ''
-  if (status === 404 && typeof url === 'string' && /\/chat\/sessions\/\d+\/messages/.test(url)) {
-    return true
-  }
-  return false
-}
-
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<WorkspaceFileDTO[]>([])
+  const [uploading, setUploading] = useState(false)
   const [sending, setSending] = useState(false)
   const [messagesLoading, setMessagesLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const msgListRef = useRef<HTMLDivElement>(null)
   const messageLoadSeqRef = useRef(0)
@@ -914,6 +260,49 @@ export default function ChatPage() {
     }))
   }
 
+  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (files.length === 0) {
+      return
+    }
+    if (!activeSession) {
+      globalMessage.warning('请先创建或选择会话后再上传附件')
+      return
+    }
+    const availableSlots = Math.max(10 - pendingFiles.length, 0)
+    if (availableSlots <= 0) {
+      globalMessage.warning('最多只能同时附加 10 个文件')
+      return
+    }
+
+    const selectedFiles = files.slice(0, availableSlots)
+    const oversized = selectedFiles.find((file) => file.size > 20 * 1024 * 1024)
+    if (oversized) {
+      globalMessage.error(`文件 ${oversized.name} 超过 20MB`)
+      return
+    }
+
+    setUploading(true)
+    try {
+      const uploaded: WorkspaceFileDTO[] = []
+      for (const file of selectedFiles) {
+        const response = await workspaceApi.uploadFile(activeSession.id, file)
+        if (response.data) {
+          uploaded.push(response.data)
+        }
+      }
+      setPendingFiles((prev) => [...prev, ...uploaded].slice(0, 10))
+      if (uploaded.length > 0) {
+        globalMessage.success(`已上传 ${uploaded.length} 个附件`)
+      }
+    } catch (error) {
+      globalMessage.error(typeof error === 'string' ? error : '附件上传失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSend = async () => {
     const text = inputText.trim()
     if ((!text && pendingFiles.length === 0) || sending) {
@@ -951,7 +340,13 @@ export default function ChatPage() {
     const aiMsgId = userMsgId + 1
     const currentAttachments = [...pendingFiles]
 
-    const userMessage: ChatMessage = { id: userMsgId, role: 'user', content: text, streaming: false }
+    const userMessage: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: text,
+      attachments: currentAttachments,
+      streaming: false,
+    }
     const assistantPlaceholder: ChatMessage = {
       id: aiMsgId,
       role: 'assistant',
@@ -1236,6 +631,25 @@ export default function ChatPage() {
             </Button>
           </div>
 
+          {pendingFiles.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <Space wrap size={[6, 6]}>
+                {pendingFiles.map((file) => (
+                  <Tag
+                    key={file.id}
+                    closable={!sending}
+                    icon={getFileIcon(file.fileType)}
+                    onClose={() => {
+                      setPendingFiles((prev) => prev.filter((item) => item.id !== file.id))
+                    }}
+                  >
+                    {file.fileName} · {formatFileSize(file.fileSize)}
+                  </Tag>
+                ))}
+              </Space>
+            </div>
+          )}
+
           <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block', textAlign: 'center' }}>
             AI 回答仅供参考，请结合实际情况进行判断。支持上传图片/PDF/Word/Markdown（单文件20MB，最多10个）
           </Text>
@@ -1244,4 +658,3 @@ export default function ChatPage() {
     </div>
   )
 }
-

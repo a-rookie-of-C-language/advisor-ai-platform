@@ -3,10 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from dataclasses import dataclass
-from typing import Protocol
 
-from json_types import JsonObject, JsonValue
+from json_types import JsonObject
+from tools.DirectHttpMcpClient import DirectHttpMcpClient
+from tools.McpCallToolResultProtocol import McpCallToolResultProtocol
+from tools.McpClientProtocol import McpClientProtocol
+from tools.McpConnection import McpConnection
+from tools.McpServerConfig import McpServerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -16,65 +19,6 @@ REMOTE_CONCURRENCY_LIMIT = 20
 
 # 连接空闲超时（秒）
 IDLE_TIMEOUT_SECONDS = 300  # 5分钟
-
-
-@dataclass
-class McpServerConfig:
-    """MCP 服务器配置"""
-
-    name: str
-    transport_type: str  # stdio | http
-    url_or_command: str
-    token: str | None = None
-
-
-@dataclass
-class McpConnection:
-    """MCP 连接状态"""
-
-    config: McpServerConfig
-    client: "McpClientProtocol" | None = None
-    last_used: float = 0.0
-    is_connecting: bool = False
-    error: str | None = None
-    _tool_list: list[JsonObject] | None = None
-
-
-class McpToolContentProtocol(Protocol):
-    type: str | None
-    text: str | None
-    data: JsonValue | None
-
-
-class McpCallToolResultProtocol(Protocol):
-    content: list[McpToolContentProtocol]
-    isError: bool
-
-
-class McpToolAnnotationsProtocol(Protocol):
-    readOnlyHint: bool
-    destructiveHint: bool
-    openWorldHint: bool
-
-
-class McpToolDescriptorProtocol(Protocol):
-    name: str
-    description: str
-    inputSchema: JsonObject
-    annotations: McpToolAnnotationsProtocol | None
-    _meta: JsonObject | None
-
-
-class McpToolListResultProtocol(Protocol):
-    tools: list[McpToolDescriptorProtocol]
-
-
-class McpClientProtocol(Protocol):
-    async def list_tools(self) -> McpToolListResultProtocol: ...
-
-    async def call_tool(self, name: str, arguments: JsonObject) -> McpCallToolResultProtocol: ...
-
-    async def close(self) -> None: ...
 
 
 class McpClientPool:
@@ -358,74 +302,3 @@ class McpClientPool:
     def get_server_names(self) -> list[str]:
         """获取所有已配置的服务名称"""
         return list(self._connections.keys())
-
-
-class DirectHttpMcpClient:
-    """直接 HTTP JSON-RPC MCP 客户端
-
-    用于连接到简单的 HTTP POST MCP 服务器（如 Spring Boot 实现）。
-    不依赖复杂的 SSE/Streamable HTTP 协议。
-    """
-
-    def __init__(self, config: McpServerConfig) -> None:
-        import httpx
-
-        self._config = config
-        self._url = config.url_or_command
-        self._headers = {"Content-Type": "application/json"}
-        if config.token:
-            self._headers["Authorization"] = f"Bearer {config.token}"
-        self._http_client = httpx.AsyncClient(timeout=30.0)
-
-    async def initialize(self) -> None:
-        """发送 initialize 请求"""
-        response = await self._post({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
-        # Response is ignored, just ensure connection works
-        return response
-
-    async def list_tools(self) -> McpToolListResultProtocol:
-        """列出所有工具"""
-        response = await self._post({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
-        result = response.get("result", {})
-        tools = result.get("tools", [])
-
-        # 返回带 name 属性的对象列表
-        class Tool:
-            def __init__(self, data: dict) -> None:
-                self.name = data.get("name", "")
-                self.description = data.get("description", "")
-                self.inputSchema = data.get("inputSchema", {})
-
-        return type("ToolsResult", (), {"tools": [Tool(t) for t in tools]})()
-
-    async def call_tool(self, name: str, arguments: JsonObject) -> McpCallToolResultProtocol:
-        """调用工具"""
-        response = await self._post({
-            "jsonrpc": "2.0",
-            "id": 3,
-            "method": "tools/call",
-            "params": {"name": name, "arguments": arguments}
-        })
-        result = response.get("result", {})
-        content = result.get("content", [])
-        return type("CallToolResult", (), {
-            "content": [
-                type("TextContent", (), {"type": "text", "text": item.get("text", ""), "data": None})()
-                for item in content
-            ],
-            "isError": False
-        })()
-
-    async def _post(self, payload: JsonObject) -> JsonObject:
-        """发送 JSON-RPC POST 请求"""
-        response = await self._http_client.post(
-            self._url,
-            json=payload,
-            headers=self._headers,
-        )
-        response.raise_for_status()
-        return response.json()
-
-    async def close(self) -> None:
-        """关闭连接"""
-        await self._http_client.aclose()

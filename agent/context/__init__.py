@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from context.model_context import ContextSegment, ModelContext
+from context.ContextSegment import ContextSegment
+from context.ModelContext import ModelContext
 
 __all__ = [
     "ContextSegment",
     "ModelContext",
 ]
-

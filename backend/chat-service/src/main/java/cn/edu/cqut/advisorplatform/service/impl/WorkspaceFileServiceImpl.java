@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
+import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dao.WorkspaceFileDao;
@@ -40,6 +41,7 @@ public class WorkspaceFileServiceImpl implements WorkspaceFileService {
       Long sessionId, MultipartFile file, @Nullable UserDO currentUser) {
     ChatSessionDO session =
         chatSessionDao.findById(sessionId).orElseThrow(() -> new NotFoundException("会话不存在"));
+    requireSessionOwner(session, currentUser);
 
     Assert.notNull(file, () -> new BadRequestException("上传文件不能为空"));
     Assert.isTrue(!file.isEmpty(), () -> new BadRequestException("上传文件不能为空"));
@@ -87,7 +89,11 @@ public class WorkspaceFileServiceImpl implements WorkspaceFileService {
   }
 
   @Override
-  public List<WorkspaceFileResponseDTO> listFiles(Long sessionId) {
+  @Transactional(readOnly = true)
+  public List<WorkspaceFileResponseDTO> listFiles(Long sessionId, @Nullable UserDO currentUser) {
+    ChatSessionDO session =
+        chatSessionDao.findById(sessionId).orElseThrow(() -> new NotFoundException("会话不存在"));
+    requireSessionOwner(session, currentUser);
     return workspaceFileDao.findBySessionIdOrderByCreatedAtDesc(sessionId).stream()
         .map(this::toResponseDTO)
         .toList();
@@ -98,16 +104,30 @@ public class WorkspaceFileServiceImpl implements WorkspaceFileService {
   public void deleteFile(Long fileId, @Nullable UserDO currentUser) {
     WorkspaceFileDO file =
         workspaceFileDao.findById(fileId).orElseThrow(() -> new NotFoundException("文件不存在"));
+    workspaceFileSupport.requireFileAccess(file, currentUser);
     Path path = Path.of(file.getFilePath());
     workspaceFileSupport.deleteFileQuietly(path);
     workspaceFileDao.deleteById(fileId);
   }
 
   @Override
-  public String getFilePath(Long fileId) {
+  @Transactional(readOnly = true)
+  public String getFilePath(Long fileId, @Nullable UserDO currentUser) {
     WorkspaceFileDO file =
         workspaceFileDao.findById(fileId).orElseThrow(() -> new NotFoundException("文件不存在"));
+    workspaceFileSupport.requireFileAccess(file, currentUser);
     return file.getFilePath();
+  }
+
+  private void requireSessionOwner(ChatSessionDO session, @Nullable UserDO currentUser) {
+    if (currentUser == null || currentUser.getId() == null) {
+      throw new ForbiddenException("未登录或登录已失效");
+    }
+    if (session.getUser() == null
+        || session.getUser().getId() == null
+        || !session.getUser().getId().equals(currentUser.getId())) {
+      throw new ForbiddenException("无权访问该会话");
+    }
   }
 
   private WorkspaceFileResponseDTO toResponseDTO(WorkspaceFileDO entity) {

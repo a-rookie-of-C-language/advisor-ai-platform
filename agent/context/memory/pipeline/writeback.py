@@ -7,7 +7,8 @@ import time
 from typing import Awaitable, Callable
 
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryCandidate, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.WritebackResult import WritebackResult
 
 logger = logging.getLogger(__name__)
 

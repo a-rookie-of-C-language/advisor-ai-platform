@@ -11,9 +11,9 @@ public interface WorkspaceFileService {
   WorkspaceFileResponseDTO uploadFile(
       Long sessionId, MultipartFile file, @Nullable UserDO currentUser);
 
-  List<WorkspaceFileResponseDTO> listFiles(Long sessionId);
+  List<WorkspaceFileResponseDTO> listFiles(Long sessionId, @Nullable UserDO currentUser);
 
   void deleteFile(Long fileId, @Nullable UserDO currentUser);
 
-  String getFilePath(Long fileId);
+  String getFilePath(Long fileId, @Nullable UserDO currentUser);
 }

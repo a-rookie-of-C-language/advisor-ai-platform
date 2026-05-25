@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import Any
@@ -9,10 +8,15 @@ from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
-from safety.regex_filter import StreamingRegexFilter
-from safety.safety_pipeline import SafetyPipeline
+from safety.StreamingRegexFilter import StreamingRegexFilter
 from tools.intent_router import emit_route_observation
 
+from .planned_tools import (
+    build_planned_tool_context,
+    execute_planned_tool_steps,
+    select_tools_for_plan,
+    should_use_direct_plan,
+)
 from .helpers import (
     _build_plan_reasoning,
     _build_route_reasoning,
@@ -36,21 +40,6 @@ logger = logging.getLogger(__name__)
 
 _DEBUG_PREVIEW_LIMIT = 200
 _STREAM_ERROR_MESSAGE = "服务内部错误，请稍后重试"
-_RAG_PRIORITY_HINTS = {"知识库", "资料", "文档", "根据", "出处", "辅导员", "学生"}
-_REALTIME_HINTS = {"天气", "实时", "今天", "明天", "新闻", "股价", "汇率", "比分"}
-def _strip_surrogates(text: str) -> str:
-    if not text:
-        return text
-    return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
-
-
-def _prefer_rag_only(query: str) -> bool:
-    normalized = _strip_surrogates(query).strip().lower()
-    if not normalized:
-        return False
-    has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
-    has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
-    return has_rag_hint and not has_realtime_hint
 
 
 def _runtime() -> GraphRuntime:
@@ -80,142 +69,6 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
             "permission_config": runtime.tool_permission,
         },
     )
-
-
-def _should_use_direct_plan(task_plan: JsonObject | None) -> bool:
-    return (
-        bool(task_plan)
-        and isinstance(task_plan, dict)
-        and str(task_plan.get("mode", "")).strip().lower() == "direct"
-    )
-
-
-def _select_tools_for_plan(tools: list, task_plan: JsonObject | None) -> list:
-    if not task_plan or not isinstance(task_plan, dict):
-        return tools
-    return TaskPlannerSubAgent.prioritize_tools(tools, task_plan)
-
-
-def _planned_tool_steps(task_plan: JsonObject | None) -> list[JsonObject]:
-    if not task_plan or not isinstance(task_plan, dict):
-        return []
-    raw_steps = task_plan.get("steps", [])
-    if not isinstance(raw_steps, list):
-        return []
-    steps: list[JsonObject] = []
-    for raw_step in raw_steps:
-        if not isinstance(raw_step, dict):
-            continue
-        if str(raw_step.get("action", "")).strip().lower() != "call_tool":
-            continue
-        tool_name = str(raw_step.get("tool_name", "")).strip()
-        if not tool_name:
-            continue
-        arguments = raw_step.get("arguments", {})
-        if not isinstance(arguments, dict):
-            arguments = {}
-        steps.append(
-            {
-                "tool_name": tool_name,
-                "arguments": arguments,
-                "reason": str(raw_step.get("reason", "")).strip(),
-            }
-        )
-    return steps
-
-
-def _build_planned_tool_context(observations: list[JsonObject]) -> ChatMessage:
-    return ChatMessage(
-        role="system",
-        content=(
-            "A read-only tool explorer has gathered evidence for the current user question. "
-            "以下是后端按任务计划顺序执行工具后得到的证据。"
-            "请基于这些证据和当前对话回答；如果证据不足，请说明缺口。\n"
-            f"{json.dumps(observations, ensure_ascii=False, default=str)[:6000]}"
-        ),
-    )
-
-
-async def _execute_planned_tool_steps(
-    *,
-    state: GraphState,
-    task_plan: JsonObject | None,
-    pipeline: SafetyPipeline | None,
-) -> list[JsonObject]:
-    runtime = _runtime()
-    observations: list[JsonObject] = []
-    for index, step in enumerate(_planned_tool_steps(task_plan), start=1):
-        tool_name = str(step.get("tool_name", "")).strip()
-        tool = runtime.tools.get(tool_name)
-        if tool is None:
-            observations.append(
-                {
-                    "tool_name": tool_name,
-                    "status": "error",
-                    "message": "planned tool is not available",
-                    "items": [],
-                }
-            )
-            break
-        arguments = step.get("arguments", {})
-        if not isinstance(arguments, dict):
-            arguments = {}
-        tool_call_id = f"plan-{index}-{tool_name}"
-        await _emit(
-            "tool_use",
-            {
-                "tool_name": tool_name,
-                "tool_call_id": tool_call_id,
-                "input": arguments,
-            },
-        )
-        raw_output = await _execute_tool(tool_name=tool_name, tool_args=arguments, state=state)
-        try:
-            payload = json.loads(raw_output) if raw_output else {}
-        except Exception:
-            logger.warning("planned tool output parse failed: tool=%s, output=%s", tool_name, raw_output[:200])
-            payload = {}
-        if not isinstance(payload, dict):
-            payload = {}
-        status = str(payload.get("status", "error") or "error")
-        base_payload = {
-            "tool_name": tool_name,
-            "tool_call_id": tool_call_id,
-            "attempt": index,
-            "status": status,
-            "message": payload.get("message", "tool execute failed"),
-        }
-        ok = bool(payload.get("ok"))
-        if ok:
-            filtered_payload, _ = _filter_tool_result(tool_name, payload, pipeline)
-            await _emit(
-                "tool_result",
-                _build_tool_result_payload(tool_name, base_payload, filtered_payload),
-            )
-            payload = filtered_payload
-        else:
-            await _emit(
-                "tool_error",
-                {
-                    **base_payload,
-                    "code": status,
-                    "retryable": False,
-                },
-            )
-        items = payload.get("items", [])
-        if not isinstance(items, list):
-            items = []
-        observations.append(
-            {
-                "tool_name": tool_name,
-                "status": status,
-                "message": str(payload.get("message", "") or ""),
-                "items": items,
-            }
-        )
-        if not ok:
-            break
-    return observations
 
 
 async def select_skill_node(state: GraphState) -> GraphState:
@@ -553,7 +406,7 @@ async def generate_node(state: GraphState) -> GraphState:
         streaming_filter = runtime.safety_pipeline.create_streaming_filter()
 
     try:
-        use_tool = bool(state.get("use_tool")) and not _should_use_direct_plan(task_plan)
+        use_tool = bool(state.get("use_tool")) and not should_use_direct_plan(task_plan)
         if use_tool:
             user_query = _strip_surrogates(state.get("user_query", ""))
             force_fetch_url = ""
@@ -577,9 +430,9 @@ async def generate_node(state: GraphState) -> GraphState:
             else:
                 tools = runtime.tools.specs()
             if task_plan and isinstance(task_plan, dict):
-                tools = _select_tools_for_plan(runtime.tools.specs(), task_plan)
+                tools = select_tools_for_plan(runtime.tools.specs(), task_plan)
             else:
-                tools = _select_tools_for_plan(tools, task_plan)
+                tools = select_tools_for_plan(tools, task_plan)
 
             # 只有在没有匹配特定工具时才考虑 RAG 优先
             # 避免 RAG 优先逻辑覆盖已经正确路由的 MCP 工具
@@ -588,13 +441,13 @@ async def generate_node(state: GraphState) -> GraphState:
                 if rag_tool is not None:
                     tools = [rag_tool.to_tool_spec()]
 
-            planned_observations = await _execute_planned_tool_steps(
+            planned_observations = await execute_planned_tool_steps(
                 state=state,
                 task_plan=task_plan,
                 pipeline=runtime.safety_pipeline,
             )
             if planned_observations:
-                model_messages = [_build_planned_tool_context(planned_observations)] + model_messages
+                model_messages = [build_planned_tool_context(planned_observations)] + model_messages
                 direct_generate = True
 
             logger.info(
@@ -859,178 +712,6 @@ async def generate_node(state: GraphState) -> GraphState:
         "debug_preview": "".join(debug_preview_parts),
         "llm_chunk_count": llm_chunk_count,
     }
-
-
-async def _run_fusion_pipeline(
-    state: GraphState,
-    user_query: str,
-    model_messages: list,
-) -> dict[str, Any] | None:
-    """Pre-run read-only tools and scene detection in parallel, then run fusion pipeline."""
-    from fusion.source_candidate import SourceCandidate
-
-    runtime = _runtime()
-    if runtime.fusion_pipeline is None:
-        return None
-    context = {
-        "user_id": state.get("user_id"),
-        "session_id": state.get("session_id"),
-        "kb_id": state.get("kb_id"),
-        "user_query": user_query,
-        "permission_config": runtime.tool_permission,
-    }
-
-    # 涓夎矾骞惰锛歊AG 妫€绱?+ Web 鎼滅储 + 鍦烘櫙璇嗗埆
-    async def _exec_rag() -> list[SourceCandidate]:
-        try:
-            result = await runtime.tools.execute("rag_search", {"query": user_query, "top_k": 5}, context)
-            payload = json.loads(result) if isinstance(result, str) else {}
-            items = payload.get("items", []) if isinstance(payload, dict) else []
-            return [
-                SourceCandidate(
-                    content=item.get("text", item.get("snippet", "")),
-                    source="rag",
-                    score=item.get("score", 1.0),
-                    metadata={
-                        "source": item.get("source", "knowledge_base"),
-                        "type": item.get("type", "general"),
-                        "authority": item.get("authority", "secondary"),
-                        "effective_date": item.get("effective_date", ""),
-                    },
-                )
-                for item in items
-                if item.get("text") or item.get("snippet")
-            ]
-        except Exception:
-            logger.debug("fusion: rag_search pre-execution failed, skip", exc_info=True)
-            return []
-
-    async def _exec_web() -> list[SourceCandidate]:
-        try:
-            if runtime.web_search_subagent is not None:
-                search_result = await runtime.web_search_subagent.search(user_query, max_results=3)
-                if not search_result.safe:
-                    logger.warning("fusion: web_search result unsafe, filtered: %s", search_result.filtered_reason)
-                    return []
-                if not search_result.sources:
-                    return []
-                return [
-                    SourceCandidate(
-                        content=search_result.summary,
-                        source="web",
-                        metadata={
-                            "source": "web",
-                            "title": src.get("title", ""),
-                            "url": src.get("url", ""),
-                            "key_facts": search_result.key_facts,
-                        },
-                    )
-                    for src in search_result.sources
-                    if src.get("snippet")
-                ]
-            result = await runtime.tools.execute("web_search", {"query": user_query, "max_results": 3}, context)
-            payload = json.loads(result) if isinstance(result, str) else {}
-            items = payload.get("items", []) if isinstance(payload, dict) else []
-            return [
-                SourceCandidate(
-                    content=item.get("snippet", ""),
-                    source="web",
-                    metadata={"source": "web", "title": item.get("title", ""), "url": item.get("url", "")},
-                )
-                for item in items
-                if item.get("snippet")
-            ]
-        except Exception:
-            logger.debug("fusion: web_search pre-execution failed, skip", exc_info=True)
-            return []
-
-    async def _detect_scene() -> str:
-        try:
-            from prompt.PromptBuilder import PromptBuilder
-
-            scene_prompt = PromptBuilder.build_scene_detection_prompt(user_query)
-            scene_messages = [ChatMessage(role="user", content=scene_prompt)]
-            response_text = ""
-            async for chunk in provider_stream(
-                runtime.provider,
-                scene_messages,
-                response_format={"type": "json_object"},
-            ):
-                response_text += chunk
-            scene_data = json.loads(response_text)
-            scene = scene_data.get("scene", "general")
-            logger.info("fusion: scene detected=%s, confidence=%s", scene, scene_data.get("confidence"))
-            return scene
-        except Exception:
-            logger.debug("fusion: scene detection failed, downgrade to general", exc_info=True)
-            return "general"
-
-    rag_results, web_results, scene = await asyncio.gather(
-        _exec_rag(),
-        _exec_web(),
-        _detect_scene(),
-    )
-
-    if not rag_results and not web_results:
-        return None
-
-    candidates = rag_results + web_results
-    ranked = list(candidates)
-    for strategy in runtime.fusion_pipeline.get_enabled_ordered():
-        ranked = strategy.rank(ranked, user_query, scene)
-
-    # 妫€鏌ユ槸鍚︽湁鍐茬獊鎻愮ず
-    conflict_hint = ranked[0].metadata.get("_conflict_hint") if ranked else None
-
-    return {
-        "candidates": ranked,
-        "scene": scene,
-        "conflict_hint": conflict_hint,
-    }
-
-
-def _inject_fusion_context(model_messages: list, fusion_context: dict[str, Any]) -> list:
-    """Inject fused retrieval context into model_messages as a system prompt."""
-    from llm.chat_message import ChatMessage
-    from prompt.PromptBuilder import PromptBuilder
-
-    candidates = fusion_context.get("candidates", [])
-    if not candidates:
-        return model_messages
-
-    # 鏋勫缓铻嶅悎缁撴灉鎻愮ず
-    rag_parts = []
-    web_parts = []
-    for c in candidates:
-        entry = f"- {c.content}"
-        meta = c.metadata
-        if meta.get("authority") == "official":
-            entry += " [official]"
-        if meta.get("effective_date"):
-            entry += f" [鏃ユ湡: {meta['effective_date']}]"
-
-        if c.source == "rag":
-            rag_parts.append(entry)
-        elif c.source == "web":
-            web_parts.append(entry)
-
-    lines = ["浠ヤ笅鏄婧愭绱㈢粨鏋滐紝渚涗綘鍙傝€冿細"]
-    if rag_parts:
-        lines.append("\n【知识库检索结果】")
-        lines.extend(rag_parts)
-    if web_parts:
-        lines.append("\n【网络搜索结果】")
-        lines.extend(web_parts)
-
-    fusion_prompt = "\n".join(lines)
-
-    # 娉ㄥ叆鍐茬獊鎻愮ず
-    conflict_hint = fusion_context.get("conflict_hint")
-    if conflict_hint:
-        fusion_prompt += "\n\n" + PromptBuilder.build_conflict_hint_prompt(conflict_hint)
-
-    system_msg = ChatMessage(role="system", content=fusion_prompt)
-    return [system_msg] + model_messages
 
 
 async def flush_memory_node(state: GraphState) -> GraphState:

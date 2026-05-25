@@ -4,7 +4,7 @@ import logging
 
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryContext
+from context.memory.core.MemoryContext import MemoryContext
 from context.memory.pipeline.retrieval import MemoryRetrieval
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.work_memory import WorkMemory

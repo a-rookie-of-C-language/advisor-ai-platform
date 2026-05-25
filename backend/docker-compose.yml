@@ -100,7 +100,7 @@ services:
     environment:
       APP_NAME: aigateway
       HTTP_ADDR: 0.0.0.0:8080
-      MASTER_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
+      MASTER_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:?AI_GATEWAY_MASTER_API_KEY is required}
       REDIS_ADDR: redis://redis:6379
       RATE_LIMIT_PER_MIN: 120
       RATE_LIMIT_TENANT_PER_MIN: 240
@@ -129,11 +129,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -156,15 +156,15 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       AGENT_BASE_URL: http://agent:8001
       AI_GATEWAY_ENABLED: "false"
       AI_GATEWAY_BASE_URL: http://ai-gateway:8080
-      AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:?AI_GATEWAY_MASTER_API_KEY is required}
       AI_GATEWAY_MODEL: ${AI_PROVIDER_MODEL:-gpt-4.1-mini}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       PROMETHEUS_BASE_URL: http://prometheus:9090
@@ -194,11 +194,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -222,11 +222,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OLLAMA_BASE_URL: http://host.docker.internal:11434
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -248,18 +248,18 @@ services:
       AGENT_MODE: all
       AGENT_API_HOST: 0.0.0.0
       AGENT_API_PORT: 8001
-      AGENT_API_TOKEN: arookieofc
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       CLI_BACKEND_BASE_URL: http://gateway:8080
       LLM_THINKING_PROVIDER: none
       MCP_SERVERS: student:http:http://student-service:8085/mcp/message
-      MCP_TOKEN_STUDENT: arookieofc
+      MCP_TOKEN_STUDENT: ${MCP_TOKEN_STUDENT:?MCP_TOKEN_STUDENT is required}
       OPENAI_TEMPERATURE: 0.2
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: bge-m3
       ENABLE_TOOL_USE: "true"
       ENABLED_TOOLS: web_fetch,web_search,rag_search,mcp__student__list_students,mcp__student__get_student,mcp__student__get_student_checkin_summary,mcp__student__get_student_checkin_detail
       MEMORY_API_BASE_URL: http://memory-service:8084
-      MEMORY_API_TOKEN: arookieofc
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
       FEATURE_MCP_TOOLS: "true"
       DEBUG_STREAM: "false"
     depends_on:
@@ -286,11 +286,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -315,9 +315,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_SERVERS: kafka:29092
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -343,9 +343,9 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -367,11 +367,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       FEATURE_MCP_SERVER: "true"
-      MCP_SERVER_TOKEN: arookieofc
+      MCP_SERVER_TOKEN: ${MCP_SERVER_TOKEN:?MCP_SERVER_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       SERVER_PORT: 8091
     depends_on:
@@ -391,9 +391,9 @@ services:
     container_name: advisor-gateway
     environment:
       NACOS_SERVER_ADDR: nacos:8848
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       RISK_CONTROL_SERVICE_URL: http://risk-control-service:8086
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:

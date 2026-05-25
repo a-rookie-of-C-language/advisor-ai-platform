@@ -2,18 +2,14 @@ from __future__ import annotations
 
 from typing import Callable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
 from tools.base_tool import BaseTool
+from tools.tool_search.ToolSearchInput import ToolSearchInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-
-
-class ToolSearchInput(BaseModel):
-    keywords: str = Field(..., min_length=1, description="空格分隔的搜索关键词")
-    max_results: int = Field(default=3, ge=1, le=10)
 
 
 class ToolSearchTool(BaseTool[ToolSearchInput, BaseModel]):

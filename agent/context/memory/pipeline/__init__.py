@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
-from context.memory.pipeline.query_processor import ProcessedQuery, QueryProcessor
+from context.memory.pipeline.ProcessedQuery import ProcessedQuery
+from context.memory.pipeline.query_processor import QueryProcessor
 from context.memory.pipeline.retrieval import MemoryRetrieval
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.work_memory import WorkMemory

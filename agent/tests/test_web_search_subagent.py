@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents.search.schema import WebSearchResult
+from agents.search.WebSearchResult import WebSearchResult
 from agents.search.web_search_subagent import WebSearchSubAgent
 from tools.tool_result import ToolResult
 

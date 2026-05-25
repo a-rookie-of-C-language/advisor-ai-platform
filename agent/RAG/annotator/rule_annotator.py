@@ -4,7 +4,8 @@ import logging
 import re
 from typing import Optional
 
-from .base_annotator import BaseChunkAnnotator, ChunkAnnotation
+from .ChunkAnnotation import ChunkAnnotation
+from .base_annotator import BaseChunkAnnotator
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from functools import lru_cache
 
-from context.memory.core.schema import MemoryCandidate, MemoryItem
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryItem import MemoryItem
 
 
 @lru_cache(maxsize=1024)

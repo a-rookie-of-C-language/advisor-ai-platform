@@ -1,56 +1,23 @@
 from __future__ import annotations
 
 import os
-import shutil
 from pathlib import Path
-from typing import Literal
 
-# 二进制文件扩展名
-BINARY_EXTENSIONS = {
-    ".exe", ".dll", ".so", ".bin", ".a", ".o",
-    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".svg",
-    ".pdf", ".zip", ".tar", ".gz", ".rar", ".7z", ".bz2",
-    ".mp3", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv",
-    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-}
-
-# 常量配置
-MAX_FILE_SIZE = 1048576  # 1MB
-MAX_DEPTH = 5
-MAX_FILES_PER_SESSION = 50
-CACHE_DIR = ".cache"
-FINAL_DIR = "final"
-OPERATION_TIMEOUT = 10.0  # 秒
-
-
-class WorkspaceError(Exception):
-    """Workspace 操作错误基类"""
-    pass
-
-
-class PathTraversalError(WorkspaceError):
-    """路径穿越尝试"""
-    pass
-
-
-class BinaryFileError(WorkspaceError):
-    """尝试操作二进制文件"""
-    pass
-
-
-class FileSizeLimitError(WorkspaceError):
-    """文件大小超限"""
-    pass
-
-
-class DepthLimitError(WorkspaceError):
-    """目录深度超限"""
-    pass
-
-
-class FileCountLimitError(WorkspaceError):
-    """文件数量超限"""
-    pass
+from tools.workspace.BinaryFileError import BinaryFileError
+from tools.workspace.DepthLimitError import DepthLimitError
+from tools.workspace.FileCountLimitError import FileCountLimitError
+from tools.workspace.FileSizeLimitError import FileSizeLimitError
+from tools.workspace.PathTraversalError import PathTraversalError
+from tools.workspace.WorkspaceError import WorkspaceError
+from tools.workspace.workspace_limits import (
+    BINARY_EXTENSIONS,
+    CACHE_DIR,
+    FINAL_DIR,
+    MAX_DEPTH,
+    MAX_FILE_SIZE,
+    MAX_FILES_PER_SESSION,
+    OPERATION_TIMEOUT,
+)
 
 
 class WorkspaceManager:

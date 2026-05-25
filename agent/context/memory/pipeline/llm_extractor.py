@@ -4,7 +4,7 @@ import json
 
 from openai import AsyncOpenAI
 
-from context.memory.core.schema import MemoryCandidate
+from context.memory.core.MemoryCandidate import MemoryCandidate
 from json_types import JsonObject
 
 

@@ -85,6 +85,61 @@ def sample_tool() -> ToolSpec:
     )
 
 
+def test_build_message_payload_without_attachments():
+    payload = OpenAIProvider._build_message_payload(ChatMessage(role="user", content="hi"))
+
+    assert payload == {"role": "user", "content": "hi"}
+
+
+def test_build_message_payload_with_document_attachment(monkeypatch):
+    monkeypatch.setattr("llm.openai_provider.extract_text", lambda path, file_type: "文档内容")
+    message = ChatMessage(
+        role="user",
+        content="请总结",
+        attachments=[
+            {
+                "file_type": "text/plain",
+                "file_path": "D:/tmp/report.txt",
+                "file_name": "report.txt",
+            }
+        ],
+    )
+
+    payload = OpenAIProvider._build_message_payload(message)
+
+    assert payload["role"] == "user"
+    assert payload["content"] == "请总结\n\n--- report.txt ---\n文档内容"
+
+
+def test_build_message_payload_with_image_attachment(monkeypatch):
+    monkeypatch.setattr("llm.openai_provider.read_image_base64", lambda path: "base64-data")
+    monkeypatch.setattr("llm.openai_provider.get_mime_type", lambda file_type: "image/png")
+    message = ChatMessage(
+        role="user",
+        content="看图",
+        attachments=[
+            {
+                "file_type": "png",
+                "file_path": "D:/tmp/image.png",
+                "file_name": "image.png",
+            }
+        ],
+    )
+
+    payload = OpenAIProvider._build_message_payload(message)
+
+    assert payload == {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "看图"},
+            {
+                "type": "image_url",
+                "image_url": {"url": "data:image/png;base64,base64-data"},
+            },
+        ],
+    }
+
+
 @pytest.mark.asyncio
 async def test_stream_chat_yields_chunks():
     provider, completions = make_provider([stream_chunks("hello", " world")])

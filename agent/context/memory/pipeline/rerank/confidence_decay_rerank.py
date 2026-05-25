@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Set
 
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryItem
+from context.memory.core.MemoryItem import MemoryItem
 from context.memory.pipeline.rerank.base_strategy import BaseMemoryRerankStrategy
 
 # 预编译正则，避免每次调用都重新编译

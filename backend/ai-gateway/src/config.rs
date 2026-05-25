@@ -13,7 +13,7 @@ impl fmt::Display for ConfigError {
             ConfigError::MissingMasterApiKey { env } => {
                 write!(
                     f,
-                    "APP_ENV is '{}' but MASTER_API_KEY is still the default. \
+                    "APP_ENV is '{}' but MASTER_API_KEY is empty. \
                      Set a secure MASTER_API_KEY before starting in non-dev environments.",
                     env
                 )
@@ -54,7 +54,7 @@ pub struct Config {
     pub db_max_connections: u32,
 }
 
-const DEFAULT_MASTER_API_KEY: &str = "dev-key";
+const DEFAULT_MASTER_API_KEY: &str = "";
 
 impl Config {
     pub fn load() -> anyhow::Result<Self> {
@@ -65,12 +65,24 @@ impl Config {
             master_api_key: env_or("MASTER_API_KEY", DEFAULT_MASTER_API_KEY),
             redis_addr: env_or("REDIS_ADDR", "redis://127.0.0.1:6379"),
             rate_limit_per_min: env_or("RATE_LIMIT_PER_MIN", "120").parse().unwrap_or(120),
-            rate_limit_tenant_per_min: env_or("RATE_LIMIT_TENANT_PER_MIN", "240").parse().unwrap_or(240),
-            rate_limit_route_per_min: env_or("RATE_LIMIT_ROUTE_PER_MIN", "120").parse().unwrap_or(120),
-            rate_limit_model_per_min: env_or("RATE_LIMIT_MODEL_PER_MIN", "120").parse().unwrap_or(120),
-            rate_limit_window_ms: env_or("RATE_LIMIT_WINDOW_MS", "60000").parse().unwrap_or(60000),
-            rate_limit_fail_open: env_or("RATE_LIMIT_FAIL_OPEN", "true").parse().unwrap_or(true),
-            max_tokens_per_day: env_or("MAX_TOKENS_PER_DAY", "1000000").parse().unwrap_or(1_000_000),
+            rate_limit_tenant_per_min: env_or("RATE_LIMIT_TENANT_PER_MIN", "240")
+                .parse()
+                .unwrap_or(240),
+            rate_limit_route_per_min: env_or("RATE_LIMIT_ROUTE_PER_MIN", "120")
+                .parse()
+                .unwrap_or(120),
+            rate_limit_model_per_min: env_or("RATE_LIMIT_MODEL_PER_MIN", "120")
+                .parse()
+                .unwrap_or(120),
+            rate_limit_window_ms: env_or("RATE_LIMIT_WINDOW_MS", "60000")
+                .parse()
+                .unwrap_or(60000),
+            rate_limit_fail_open: env_or("RATE_LIMIT_FAIL_OPEN", "true")
+                .parse()
+                .unwrap_or(true),
+            max_tokens_per_day: env_or("MAX_TOKENS_PER_DAY", "1000000")
+                .parse()
+                .unwrap_or(1_000_000),
             provider_base_url: env_or("PROVIDER_BASE_URL", "https://api.openai.com/v1"),
             provider_api_key: env_or("PROVIDER_API_KEY", ""),
             provider_model: env_or("PROVIDER_MODEL", "gpt-4.1-mini"),
@@ -83,7 +95,7 @@ impl Config {
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.app_env != "dev" && self.master_api_key == DEFAULT_MASTER_API_KEY {
+        if self.app_env != "dev" && self.master_api_key.is_empty() {
             return Err(ConfigError::MissingMasterApiKey {
                 env: self.app_env.clone(),
             });
@@ -110,7 +122,7 @@ mod tests {
             app_name: "test".to_string(),
             app_env: "dev".to_string(),
             http_addr: "0.0.0.0:8080".to_string(),
-            master_api_key: "dev-key".to_string(),
+            master_api_key: "test-master-key".to_string(),
             redis_addr: "redis://127.0.0.1:6379".to_string(),
             rate_limit_per_min: 120,
             rate_limit_tenant_per_min: 240,
@@ -129,16 +141,17 @@ mod tests {
     }
 
     #[test]
-    fn test_dev_env_with_default_key() {
-        let cfg = default_config();
+    fn test_dev_env_with_empty_key() {
+        let mut cfg = default_config();
+        cfg.master_api_key = "".to_string();
         assert!(cfg.validate().is_ok());
     }
 
     #[test]
-    fn test_prod_env_with_default_key() {
+    fn test_prod_env_with_empty_key() {
         let mut cfg = default_config();
         cfg.app_env = "production".to_string();
-        cfg.master_api_key = "dev-key".to_string();
+        cfg.master_api_key = "".to_string();
         let result = cfg.validate();
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -180,20 +193,24 @@ mod tests {
     fn test_staging_env_requires_custom_key() {
         let mut cfg = default_config();
         cfg.app_env = "staging".to_string();
-        cfg.master_api_key = "dev-key".to_string();
+        cfg.master_api_key = "".to_string();
         assert!(cfg.validate().is_err());
     }
 
     #[test]
     fn test_config_error_display() {
-        let err = ConfigError::MissingMasterApiKey { env: "prod".to_string() };
+        let err = ConfigError::MissingMasterApiKey {
+            env: "prod".to_string(),
+        };
         assert!(format!("{}", err).contains("prod"));
         assert!(format!("{}", err).contains("MASTER_API_KEY"));
     }
 
     #[test]
     fn test_config_error_display_provider() {
-        let err = ConfigError::MissingProviderApiKey { env: "staging".to_string() };
+        let err = ConfigError::MissingProviderApiKey {
+            env: "staging".to_string(),
+        };
         assert!(format!("{}", err).contains("staging"));
         assert!(format!("{}", err).contains("PROVIDER_API_KEY"));
     }
@@ -210,7 +227,7 @@ mod tests {
     fn test_dev_skip_all_validation() {
         let mut cfg = default_config();
         cfg.app_env = "dev".to_string();
-        cfg.master_api_key = "dev-key".to_string();
+        cfg.master_api_key = "".to_string();
         cfg.provider_api_key = "".to_string();
         assert!(cfg.validate().is_ok());
     }

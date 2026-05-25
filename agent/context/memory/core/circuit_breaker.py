@@ -3,18 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from enum import Enum
 from typing import Awaitable, Callable, TypeVar
+
+from context.memory.core.CircuitState import CircuitState
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
-
-
-class CircuitState(Enum):
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
 
 
 class CircuitBreaker:

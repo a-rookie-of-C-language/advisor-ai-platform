@@ -7,11 +7,31 @@ param(
   [int]$DbPort = 5432,
   [string]$DbName = "postgres",
   [string]$DbUsername = "postgres",
-  [string]$DbPassword = "su201314",
+  [string]$DbPassword = $env:DB_PASSWORD,
+  [string]$JwtSecret = $env:JWT_SECRET,
+  [string]$InternalServiceToken = $env:INTERNAL_SERVICE_TOKEN,
+  [string]$MemoryApiToken = $env:MEMORY_API_TOKEN,
+  [string]$AgentApiToken = $env:AGENT_API_TOKEN,
   [string]$RuntimeDir = "runtime"
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($DbPassword)) {
+  throw "DB password is required. Pass -DbPassword or set DB_PASSWORD."
+}
+if ([string]::IsNullOrWhiteSpace($JwtSecret)) {
+  throw "JWT secret is required. Pass -JwtSecret or set JWT_SECRET."
+}
+if ([string]::IsNullOrWhiteSpace($InternalServiceToken)) {
+  throw "Internal service token is required. Pass -InternalServiceToken or set INTERNAL_SERVICE_TOKEN."
+}
+if ([string]::IsNullOrWhiteSpace($MemoryApiToken)) {
+  throw "Memory API token is required. Pass -MemoryApiToken or set MEMORY_API_TOKEN."
+}
+if ([string]::IsNullOrWhiteSpace($AgentApiToken)) {
+  throw "Agent API token is required. Pass -AgentApiToken or set AGENT_API_TOKEN."
+}
 
 function Test-PortListening {
   param([int]$Port)
@@ -50,11 +70,11 @@ function Start-JavaService {
     "`$env:DB_NAME='$DbName'"
     "`$env:DB_USERNAME='$DbUsername'"
     "`$env:DB_PASSWORD='$DbPassword'"
-    "`$env:JWT_SECRET='Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U='"
-    "`$env:ADVISOR_JWT_SECRET='Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U='"
-    "`$env:INTERNAL_SERVICE_TOKEN='arookieofc'"
-    "`$env:MEMORY_API_TOKEN='arookieofc'"
-    "`$env:AGENT_API_TOKEN='arookieofc'"
+    "`$env:JWT_SECRET='$JwtSecret'"
+    "`$env:ADVISOR_JWT_SECRET='$JwtSecret'"
+    "`$env:INTERNAL_SERVICE_TOKEN='$InternalServiceToken'"
+    "`$env:MEMORY_API_TOKEN='$MemoryApiToken'"
+    "`$env:AGENT_API_TOKEN='$AgentApiToken'"
   )
 
   foreach ($key in $ExtraEnv.Keys) {

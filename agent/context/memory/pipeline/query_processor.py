@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Dict, List, Set
+
+from context.memory.pipeline.ProcessedQuery import ProcessedQuery
 
 DEFAULT_STOP_WORDS: Set[str] = {
     "的", "了", "是", "在", "我", "有", "和", "就", "不", "人", "都", "一",
@@ -47,15 +48,6 @@ def _build_synonym_pattern(synonyms: Dict[str, List[str]]) -> re.Pattern | None:
 def _tokenize_cached(text: str) -> tuple[str, ...]:
     """缓存分词结果，同一文本只计算一次"""
     return tuple(_RE_TOKEN.findall(text.lower()))
-
-
-@dataclass(slots=True)
-class ProcessedQuery:
-    original: str
-    normalized: str
-    tokens: List[str] = field(default_factory=list)
-    stop_word_mask: List[bool] = field(default_factory=list)
-    expanded_tokens: Set[str] = field(default_factory=set)
 
 
 class QueryProcessor:

@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -39,7 +40,9 @@ public class StudentImportSupport {
   private final StudentService studentService;
   private final StudentTaskService taskService;
   private final ObjectMapper objectMapper;
-  private final List<String> duplicateStudentNos = new ArrayList<>();
+  private final StudentProfileImportMapper profileMapper = new StudentProfileImportMapper();
+  private final AtomicReference<List<String>> latestDuplicateStudentNos =
+      new AtomicReference<>(List.of());
 
   public StudentImportSupport(
       StudentProfileDao studentProfileDao,
@@ -59,7 +62,7 @@ public class StudentImportSupport {
   @Transactional
   public ImportResultResponse importStudents(
       MultipartFile file, String operator, boolean overwrite) {
-    duplicateStudentNos.clear();
+    List<String> duplicateStudentNos = new ArrayList<>();
 
     String batchNo = generateBatchNo();
     String fileName = file.getOriginalFilename();
@@ -92,7 +95,7 @@ public class StudentImportSupport {
 
     for (StudentImportData data : holder.dataList) {
       try {
-        processRow(data, operator, batchNo, overwrite);
+        processRow(data, operator, batchNo, overwrite, duplicateStudentNos);
         successCount++;
       } catch (Exception e) {
         failCount++;
@@ -114,6 +117,7 @@ public class StudentImportSupport {
     batch.setFailDetails(toJson(failDetails));
     batch.setUpdatedAt(LocalDateTime.now());
     importBatchDao.save(batch);
+    latestDuplicateStudentNos.set(List.copyOf(duplicateStudentNos));
 
     ImportResultResponse response = new ImportResultResponse();
     response.setBatchNo(batchNo);
@@ -128,7 +132,7 @@ public class StudentImportSupport {
   }
 
   public List<String> getDuplicateStudentNos() {
-    return new ArrayList<>(duplicateStudentNos);
+    return new ArrayList<>(latestDuplicateStudentNos.get());
   }
 
   public Page<ImportBatchResponse> listBatches(Pageable pageable) {
@@ -137,7 +141,11 @@ public class StudentImportSupport {
   }
 
   private void processRow(
-      StudentImportData data, String operator, String batchNo, boolean overwrite) {
+      StudentImportData data,
+      String operator,
+      String batchNo,
+      boolean overwrite,
+      List<String> duplicateStudentNos) {
     if (data.studentNo == null || data.studentNo.isBlank()) {
       throw new BusinessException("学号不能为空");
     }
@@ -157,23 +165,7 @@ public class StudentImportSupport {
   }
 
   private void createProfile(StudentImportData data, String operator, String batchNo) {
-    StudentProfile profile = new StudentProfile();
-    profile.setStudentNo(data.studentNo);
-    profile.setName(data.name);
-    profile.setGender(data.gender);
-    profile.setGrade(data.grade);
-    profile.setMajor(data.major);
-    profile.setClassCode(data.classCode);
-    profile.setCounselorNo(data.counselorNo);
-    profile.setPhone(data.phone);
-    profile.setEmail(data.email);
-    profile.setDormitory(data.dormitory);
-    profile.setEmergencyContact(data.emergencyContact);
-    profile.setCreatedBy(operator);
-    profile.setCreatedAt(LocalDateTime.now());
-    profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(LocalDateTime.now());
-    profile.setDeleted(0);
+    StudentProfile profile = profileMapper.create(data, operator, LocalDateTime.now());
 
     studentService.calculateAndUpdateInfoCompleteness(profile);
     StudentProfile saved = studentProfileDao.save(profile);
@@ -187,18 +179,7 @@ public class StudentImportSupport {
 
   private void updateProfile(
       StudentProfile profile, StudentImportData data, String operator, String batchNo) {
-    profile.setName(data.name);
-    profile.setGender(data.gender);
-    profile.setGrade(data.grade);
-    profile.setMajor(data.major);
-    profile.setClassCode(data.classCode);
-    profile.setCounselorNo(data.counselorNo);
-    profile.setPhone(data.phone);
-    profile.setEmail(data.email);
-    profile.setDormitory(data.dormitory);
-    profile.setEmergencyContact(data.emergencyContact);
-    profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(LocalDateTime.now());
+    profileMapper.update(profile, data, operator, LocalDateTime.now());
 
     studentService.calculateAndUpdateInfoCompleteness(profile);
     StudentProfile saved = studentProfileDao.save(profile);

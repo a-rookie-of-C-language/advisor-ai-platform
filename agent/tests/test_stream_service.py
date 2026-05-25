@@ -8,7 +8,8 @@ import pytest
 
 from agents.tool_explorer import ToolExplorerEvent, ToolExplorerOutcome
 from chat.stream_service import ChatStreamService
-from context.memory.core.schema import MemoryContext
+from context.memory.core.MemoryContext import MemoryContext
+from graph.tool_result_mapper import build_tool_result_payload
 from json_types import JsonValue
 from llm import openai_provider as openai_provider_module
 from llm.chat_message import ChatMessage
@@ -526,12 +527,7 @@ async def test_stream_tool_use_emits_sources_and_miss_status() -> None:
 
 
 def test_build_tool_result_payload_derives_web_search_sources() -> None:
-    service = ChatStreamService(
-        provider=_ProviderOk(["ok"]),
-        memory_orchestrator=None,
-        rag_service=None,
-    )
-    payload = service._build_tool_result_payload(  # noqa: SLF001
+    payload = build_tool_result_payload(
         "web_search",
         {
             "tool_name": "web_search",

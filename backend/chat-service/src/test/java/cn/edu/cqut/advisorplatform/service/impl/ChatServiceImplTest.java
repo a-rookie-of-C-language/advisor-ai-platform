@@ -16,7 +16,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -29,7 +28,14 @@ class ChatServiceImplTest {
 
   @Mock private RagServiceClient ragServiceClient;
 
-  @InjectMocks private ChatServiceImpl chatService;
+  private ChatServiceImpl chatService;
+
+  @org.junit.jupiter.api.BeforeEach
+  void setUp() {
+    chatService =
+        new ChatServiceImpl(
+            chatSessionDao, chatMessageDao, new ChatSessionSupport(ragServiceClient));
+  }
 
   @Test
   void createSession_shouldPersistDefaultKbIdAsZero() {

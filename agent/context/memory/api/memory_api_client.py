@@ -6,8 +6,12 @@ from datetime import datetime
 
 import httpx
 
+from context.memory.api.MemoryApiCircuitOpen import MemoryApiCircuitOpen
 from context.memory.core.circuit_breaker import CircuitBreaker
-from context.memory.core.schema import MemoryCandidate, MemoryItem, SessionSummary, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryItem import MemoryItem
+from context.memory.core.SessionSummary import SessionSummary
+from context.memory.core.WritebackResult import WritebackResult
 from json_types import JsonObject, JsonValue
 
 logger = logging.getLogger(__name__)
@@ -218,7 +222,3 @@ class MemoryApiClient:
             return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         except ValueError:
             return None
-
-
-class MemoryApiCircuitOpen(Exception):
-    pass

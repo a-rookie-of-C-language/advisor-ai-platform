@@ -5,8 +5,11 @@ import cn.edu.cqut.advisorplatform.service.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -107,6 +110,12 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
     }
   }
 
+  @PreDestroy
+  public void shutdown() {
+    stopBroadcast();
+    scheduler.shutdownNow();
+  }
+
   private void broadcast() {
     if (sessions.isEmpty()) {
       return;
@@ -137,7 +146,7 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
     for (String param : query.split("&")) {
       String[] kv = param.split("=", 2);
       if (kv.length == 2 && name.equals(kv[0])) {
-        return kv[1];
+        return URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
       }
     }
     return null;

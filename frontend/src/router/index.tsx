@@ -1,23 +1,29 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from '../components/Layout/MainLayout'
-import Login from '../pages/Login/Login'
-import Dashboard from '../pages/Dashboard/Dashboard'
-import RAGPage from '../pages/RAG/RAGPage'
-import ChatPage from '../pages/Chat/ChatPage'
-import AuditPage from '../pages/Audit/AuditPage'
-import MonitorPage from '../pages/Monitor/MonitorPage'
-import StudentListPage from '../pages/Student/StudentListPage'
-import StudentDetailPage from '../pages/Student/StudentDetailPage'
-import CheckInManagementPage from '../pages/Student/CheckInManagementPage'
-import NotFound from '../pages/NotFound'
 import { useAuthStore } from '../store/authStore'
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
+const Login = lazy(() => import('../pages/Login/Login'))
+const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'))
+const RAGPage = lazy(() => import('../pages/RAG/RAGPage'))
+const ChatPage = lazy(() => import('../pages/Chat/ChatPage'))
+const AuditPage = lazy(() => import('../pages/Audit/AuditPage'))
+const MonitorPage = lazy(() => import('../pages/Monitor/MonitorPage'))
+const StudentListPage = lazy(() => import('../pages/Student/StudentListPage'))
+const StudentDetailPage = lazy(() => import('../pages/Student/StudentDetailPage'))
+const CheckInManagementPage = lazy(() => import('../pages/Student/CheckInManagementPage'))
+const NotFound = lazy(() => import('../pages/NotFound'))
+
+function PageSuspense({ children }: { children: ReactNode }) {
+  return <Suspense fallback={null}>{children}</Suspense>
+}
+
+function PrivateRoute({ children }: { children: ReactNode }) {
   const token = useAuthStore((s) => s.token)
   return token ? <>{children}</> : <Navigate to="/login" replace />
 }
 
-function AdminRoute({ children }: { children: React.ReactNode }) {
+function AdminRoute({ children }: { children: ReactNode }) {
   const role = useAuthStore((s) => s.role)
   return role === 'ADMIN' ? <>{children}</> : <Navigate to="/dashboard" replace />
 }
@@ -25,7 +31,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
       <Route
         path="/"
         element={
@@ -35,14 +41,14 @@ export default function AppRouter() {
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="rag" element={<RAGPage />} />
-        <Route path="chat" element={<ChatPage />} />
+        <Route path="dashboard" element={<PageSuspense><Dashboard /></PageSuspense>} />
+        <Route path="rag" element={<PageSuspense><RAGPage /></PageSuspense>} />
+        <Route path="chat" element={<PageSuspense><ChatPage /></PageSuspense>} />
         <Route
           path="audit"
           element={
             <AdminRoute>
-              <AuditPage />
+              <PageSuspense><AuditPage /></PageSuspense>
             </AdminRoute>
           }
         />
@@ -50,15 +56,15 @@ export default function AppRouter() {
           path="monitor"
           element={
             <AdminRoute>
-              <MonitorPage />
+              <PageSuspense><MonitorPage /></PageSuspense>
             </AdminRoute>
           }
         />
-        <Route path="student" element={<StudentListPage />} />
-        <Route path="student/:id" element={<StudentDetailPage />} />
-        <Route path="student/check-in" element={<CheckInManagementPage />} />
+        <Route path="student" element={<PageSuspense><StudentListPage /></PageSuspense>} />
+        <Route path="student/:id" element={<PageSuspense><StudentDetailPage /></PageSuspense>} />
+        <Route path="student/check-in" element={<PageSuspense><CheckInManagementPage /></PageSuspense>} />
       </Route>
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
     </Routes>
   )
 }

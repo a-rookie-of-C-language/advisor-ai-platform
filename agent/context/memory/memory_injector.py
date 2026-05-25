@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from context.memory.core.schema import MemoryContext
+from context.memory.core.MemoryContext import MemoryContext
 from context.memory.pipeline.work_memory import WorkMemory
-from context.model_context import ContextSegment, ModelContext
+from context.ContextSegment import ContextSegment
+from context.ModelContext import ModelContext
 
 
 class MemoryInjector:

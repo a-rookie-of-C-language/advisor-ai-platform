@@ -3,108 +3,22 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass
 
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
+from tools.RouteDecision import INTENT_ROUTE_EVENT, RouteDecision
 from tools.base_tool import BaseTool
+from tools.intent_router_rules import (
+    CATEGORY_ALIASES,
+    CATEGORY_DESCRIPTIONS,
+    CATEGORY_RULES,
+    DEFAULT_READ_ONLY_CATEGORIES,
+    URL_PATTERN,
+)
 
 logger = logging.getLogger(__name__)
-_URL_PATTERN = re.compile(r"https?://[^\s)>\"]+")
-
-_CATEGORY_RULES: dict[str, dict[str, list[str]]] = {
-    "retrieval": {
-        "strong": [
-            r"(?:根据|按照|依据|参考).*(?:知识库|文档|资料)",
-            r"(?:知识库|文档|资料).*(?:回答|说明|解释|总结)",
-            r"(?:之前|以前).*(?:说过|提到|记录)",
-        ],
-        "weak": [
-            r"知识库|文档|资料|检索|查找|有没有关于",
-            r"参考.*(?:文档|资料|知识)",
-        ],
-    },
-    "search": {
-        "strong": [
-            r"(?:网上|互联网|线上).*(?:搜索|查询|查)",
-            r"(?:最新|新闻|今日|今天|最近).*(?:消息|动态|信息|政策|规定)?",
-            r"(?:天气|股价|汇率|比赛|赛事)",
-        ],
-        "weak": [
-            r"搜索|搜一下|查一下|搜一搜",
-            r"(?:什么是|是谁|在哪|怎么样).*(?:最新|现在|目前)",
-        ],
-    },
-    "memory_read": {
-        "strong": [
-            r"(?:回忆|查阅|查看|读取).*(?:记忆|备忘|笔记)",
-            r"(?:我|我们).*(?:之前|以前).*(?:记住|记录).*(?:什么|内容)",
-        ],
-        "weak": [
-            r"记忆|备忘|笔记",
-            r"之前记过|以前记过",
-        ],
-    },
-    "memory_write": {
-        "strong": [
-            r"(?:帮我|请|麻烦).*(?:记住|记下|保存)",
-            r"(?:以后|下次).*(?:记住|记得|提醒我)",
-            r"(?:写入|保存|记录|存储).*(?:记忆|备忘|笔记)",
-        ],
-        "weak": [
-            r"记住|记下|保存|记录",
-            r"记忆|备忘|笔记",
-        ],
-    },
-    "skill": {
-        "strong": [
-            r"(?:调用|使用|展开).*(?:技能|skill)",
-            r"(?:按照|根据).*(?:技能|skill).*(?:执行|处理)",
-        ],
-        "weak": [
-            r"技能|skill",
-            r"执行指南|完整指令",
-        ],
-    },
-    "student": {
-        "strong": [
-            r"(?:查询|获取|查看).*(?:学生|学号|姓名).*(?:详情|信息|资料|列表)",
-            r"(?:学生|学号|姓名).*(?:是什么|多少|查询|获取|查看)",
-            r"学生详情|学生列表|学生信息",
-            r"签到.*(?:汇总|统计|明细|详情)",
-            r"(?:考勤|签到).*(?:情况|状态|记录)",
-        ],
-        "weak": [
-            r"学生|学号|姓名|签到|考勤",
-            r"有哪些学生",
-            r"查一下.*学生",
-        ],
-    },
-}
-
-_CATEGORY_DESCRIPTIONS: dict[str, str] = {
-    "retrieval": "基于知识库、文档、资料做检索与问答。",
-    "search": "查询互联网最新时效信息。",
-    "memory_read": "读取长期记忆、历史备忘或已保存用户信息。",
-    "memory_write": "将用户偏好、约定或备忘写入长期记忆。",
-    "skill": "展开技能说明或执行指南。",
-    "meta": "元能力工具，通常仅在明确要求展开技能时使用。",
-    "student": "查询学生信息、学号、姓名、签到记录等学生相关数据。",
-}
-
-_DEFAULT_READ_ONLY_CATEGORIES = {"retrieval", "search", "memory_read"}
-_CATEGORY_ALIASES = {
-    "writing": "memory_write",
-    "memory": "memory_read",
-    "read_memory": "memory_read",
-    "write_memory": "memory_write",
-    "expand_skill": "skill",
-}
-
-
-INTENT_ROUTE_EVENT = "intent_route"
 
 
 async def emit_route_observation(
@@ -133,38 +47,6 @@ async def emit_route_observation(
     return payload
 
 
-@dataclass(frozen=True)
-class RouteDecision:
-    categories: set[str]
-    matched_by: str
-    confidence: float
-    fallback_reason: str = ""
-    scores: dict[str, int] | None = None
-    reason: str = ""
-    matched_tools: list[str] | None = None
-
-    @property
-    def event_name(self) -> str:
-        return INTENT_ROUTE_EVENT
-
-    def to_event_payload(self) -> JsonObject:
-        categories = sorted(self.categories)
-        return {
-            "matched_by": self.matched_by,
-            "confidence": self.confidence,
-            "fallback_reason": self.fallback_reason,
-            "categories": categories,
-            "scores": self.scores or {},
-            "reason": self.reason,
-            "matched_tools": self.matched_tools or [],
-            "source": {
-                "decision": self.matched_by,
-                "categories": categories,
-                "matched_tools": self.matched_tools or [],
-            },
-        }
-
-
 class IntentRouter:
     """Layered intent router: strong rules -> score -> lightweight LLM -> conservative fallback."""
 
@@ -177,7 +59,7 @@ class IntentRouter:
         score_threshold: int = 3,
         allow_destructive_fallback: bool = False,
     ) -> None:
-        self._rules = category_rules or _CATEGORY_RULES
+        self._rules = category_rules or CATEGORY_RULES
         self._compiled: dict[str, dict[str, list[re.Pattern[str]]]] = {}
         for category, layers in self._rules.items():
             self._compiled[category] = {
@@ -407,7 +289,7 @@ class IntentRouter:
 
     @staticmethod
     def _extract_first_url(query: str) -> str | None:
-        found = _URL_PATTERN.search(query or "")
+        found = URL_PATTERN.search(query or "")
         if not found:
             return None
         return found.group(0)
@@ -532,7 +414,7 @@ class IntentRouter:
         scores: dict[str, int] | None = None,
         matched_tools: list[str] | None = None,
     ) -> RouteDecision:
-        fallback_categories = set(all_categories & _DEFAULT_READ_ONLY_CATEGORIES)
+        fallback_categories = set(all_categories & DEFAULT_READ_ONLY_CATEGORIES)
         if self._allow_destructive_fallback:
             fallback_categories = set(all_categories)
         if not fallback_categories:
@@ -583,7 +465,7 @@ class IntentRouter:
     def _normalize_categories(self, categories: set[str]) -> set[str]:
         normalized: set[str] = set()
         for category in categories:
-            mapped = _CATEGORY_ALIASES.get(category, category)
+            mapped = CATEGORY_ALIASES.get(category, category)
             if mapped == "meta" and "skill" in self._compiled:
                 normalized.add("skill")
                 normalized.add("meta")
@@ -594,4 +476,4 @@ class IntentRouter:
         return normalized
 
     def _describe_category(self, category: str) -> str:
-        return _CATEGORY_DESCRIPTIONS.get(category, "宸ュ叿绫诲埆")
+        return CATEGORY_DESCRIPTIONS.get(category, "宸ュ叿绫诲埆")

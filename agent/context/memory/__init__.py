@@ -3,7 +3,11 @@ from __future__ import annotations
 from context.memory.adapter.interaction_layer import InteractionLayer
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryCandidate, MemoryContext, MemoryItem, SessionSummary, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryContext import MemoryContext
+from context.memory.core.MemoryItem import MemoryItem
+from context.memory.core.SessionSummary import SessionSummary
+from context.memory.core.WritebackResult import WritebackResult
 from context.memory.long_term_memory import LongTermMemory, OrchestratorLongTermMemoryAdapter
 from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.llm_extractor import OpenAILLMExtractor

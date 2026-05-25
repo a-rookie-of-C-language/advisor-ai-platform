@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import cn.edu.cqut.advisorplatform.config.McpServerConfig;
 import io.modelcontextprotocol.spec.McpSchema;
 import java.util.List;
 import java.util.Map;
@@ -185,5 +186,76 @@ class McpControllerTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> error = (Map<String, Object>) response.get("error");
     assertEquals(-32601, error.get("code")); // Method not found
+  }
+
+  @Test
+  void handleMessageRejectsWhenServerTokenBlank() {
+    McpServerHandler mcpHandler = mock(McpServerHandler.class);
+    McpServerConfig config = new McpServerConfig();
+    config.setToken("");
+    McpController controller = new McpController(mcpHandler, config);
+    Map<String, Object> request =
+        Map.of("jsonrpc", "2.0", "id", 8, "method", "ping", "params", Map.of());
+
+    Map<String, Object> response = controller.handleMessage(request, "Bearer any-token");
+
+    assertUnauthorized(response, "server token not configured");
+    verifyNoInteractions(mcpHandler);
+  }
+
+  @Test
+  void handleMessageRejectsMissingToken() {
+    McpServerHandler mcpHandler = mock(McpServerHandler.class);
+    McpServerConfig config = new McpServerConfig();
+    config.setToken("secure-token");
+    McpController controller = new McpController(mcpHandler, config);
+    Map<String, Object> request =
+        Map.of("jsonrpc", "2.0", "id", 9, "method", "ping", "params", Map.of());
+
+    Map<String, Object> response = controller.handleMessage(request, null);
+
+    assertUnauthorized(response, "missing token");
+    verifyNoInteractions(mcpHandler);
+  }
+
+  @Test
+  void handleMessageRejectsInvalidToken() {
+    McpServerHandler mcpHandler = mock(McpServerHandler.class);
+    McpServerConfig config = new McpServerConfig();
+    config.setToken("secure-token");
+    McpController controller = new McpController(mcpHandler, config);
+    Map<String, Object> request =
+        Map.of("jsonrpc", "2.0", "id", 10, "method", "ping", "params", Map.of());
+
+    Map<String, Object> response = controller.handleMessage(request, "Bearer wrong-token");
+
+    assertUnauthorized(response, "invalid token");
+    verifyNoInteractions(mcpHandler);
+  }
+
+  @Test
+  void handleMessageDelegatesWithValidToken() {
+    McpServerHandler mcpHandler = mock(McpServerHandler.class);
+    McpServerConfig config = new McpServerConfig();
+    config.setToken("secure-token");
+    McpController controller = new McpController(mcpHandler, config);
+    Map<String, Object> request =
+        Map.of("jsonrpc", "2.0", "id", 11, "method", "ping", "params", Map.of());
+    Map<String, Object> expected = Map.of("jsonrpc", "2.0", "id", 11, "result", Map.of());
+    when(mcpHandler.handleRequest(request)).thenReturn(expected);
+
+    Map<String, Object> response = controller.handleMessage(request, "Bearer secure-token");
+
+    assertSame(expected, response);
+    verify(mcpHandler).handleRequest(request);
+  }
+
+  private void assertUnauthorized(Map<String, Object> response, String expectedMessageFragment) {
+    assertEquals("2.0", response.get("jsonrpc"));
+    assertNotNull(response.get("error"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> error = (Map<String, Object>) response.get("error");
+    assertEquals(-32600, error.get("code"));
+    assertTrue(((String) error.get("message")).contains(expectedMessageFragment));
   }
 }

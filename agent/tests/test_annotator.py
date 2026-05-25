@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from RAG.annotator.annotation_pipeline import AnnotationPipeline
-from RAG.annotator.base_annotator import ChunkAnnotation
+from RAG.annotator.ChunkAnnotation import ChunkAnnotation
 from RAG.annotator.rule_annotator import RuleAnnotator
 
 

@@ -177,7 +177,7 @@ class DocumentIndexer:
 
     def _annotate_chunks(self, chunk_results: list, document_id: int) -> list:
         """对每个切片执行三层标注，将结果合并到 metadata。全部失败则抛出异常拒绝入库。"""
-        from RAG.annotator.base_annotator import ChunkAnnotation
+        from RAG.annotator.ChunkAnnotation import ChunkAnnotation
 
         annotated = []
         failed_count = 0

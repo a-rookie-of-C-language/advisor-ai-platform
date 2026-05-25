@@ -4,7 +4,7 @@ set -euo pipefail
 MODE="${MODE:-mock}"
 PROFILE="${PROFILE:-smoke}"
 BASE_URL="${BASE_URL:-}"
-TOKEN="${TOKEN:-arookieofc}"
+TOKEN="${TOKEN:-}"
 JMETER_BIN="${JMETER_BIN:-jmeter}"
 MOCK_PORT="${MOCK_PORT:-18001}"
 MOCK_LATENCY_MS="${MOCK_LATENCY_MS:-25}"
@@ -100,6 +100,11 @@ trap cleanup EXIT
 
 if [[ "$MODE" != "mock" && "$MODE" != "real" ]]; then
   usage
+  exit 2
+fi
+
+if [[ -z "$TOKEN" ]]; then
+  echo "TOKEN is required." >&2
   exit 2
 fi
 

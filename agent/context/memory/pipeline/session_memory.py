@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import SessionSummary
+from context.memory.core.SessionSummary import SessionSummary
 
 # 预编译正则，避免每次调用都重新编译
 _RE_ZH = re.compile(r"[一-鿿]")

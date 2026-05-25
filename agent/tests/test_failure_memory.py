@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from memory.failure_memory_matcher import FailureMemoryMatcher
-from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
+from memory.FailureMemoryItem import FailureMemoryItem
+from memory.failure_memory_store import FailureMemoryStore
 
 
 def test_failure_memory_store_and_load(tmp_path) -> None:

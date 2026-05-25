@@ -183,7 +183,7 @@ async def _run_fusion_pipeline(
     context = {
         "user_id": state.get("user_id"),
         "session_id": state.get("session_id"),
-        "kb_id": 0,
+        "kb_id": state.get("kb_id"),
         "user_query": user_query,
         "permission_config": runtime.tool_permission,
     }

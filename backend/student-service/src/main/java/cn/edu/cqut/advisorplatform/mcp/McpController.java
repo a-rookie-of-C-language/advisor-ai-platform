@@ -1,6 +1,8 @@
 package cn.edu.cqut.advisorplatform.mcp;
 
 import cn.edu.cqut.advisorplatform.config.McpServerConfig;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,17 +36,25 @@ public class McpController {
   public Map<String, Object> handleMessage(
       @RequestBody Map<String, Object> request,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    if (!mcpServerConfig.getToken().isEmpty()) {
-      if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-        return createErrorResponse(request, -32600, "Unauthorized: missing token");
-      }
-      String token = authHeader.substring(7);
-      if (!token.equals(mcpServerConfig.getToken())) {
-        return createErrorResponse(request, -32600, "Unauthorized: invalid token");
-      }
+    String expectedToken = mcpServerConfig.getToken();
+    if (expectedToken == null || expectedToken.isBlank()) {
+      return createErrorResponse(request, -32600, "Unauthorized: server token not configured");
+    }
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      return createErrorResponse(request, -32600, "Unauthorized: missing token");
+    }
+    String token = authHeader.substring(7).trim();
+    if (!tokenMatches(token, expectedToken.trim())) {
+      return createErrorResponse(request, -32600, "Unauthorized: invalid token");
     }
 
     return mcpHandler.handleRequest(request);
+  }
+
+  private boolean tokenMatches(String token, String expectedToken) {
+    byte[] actualBytes = token.getBytes(StandardCharsets.UTF_8);
+    byte[] expectedBytes = expectedToken.getBytes(StandardCharsets.UTF_8);
+    return MessageDigest.isEqual(actualBytes, expectedBytes);
   }
 
   private Map<String, Object> createErrorResponse(

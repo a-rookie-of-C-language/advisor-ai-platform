@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from context.memory.api.memory_api_client import MemoryApiClient
 from json_types import JsonObject
 from tools.base_tool import BaseTool
+from tools.memory_read.MemoryReadInput import MemoryReadInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-
-
-class MemoryReadInput(BaseModel):
-    query: str | None = None
-    top_k: int = Field(default=5, ge=1, le=10)
 
 
 class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):

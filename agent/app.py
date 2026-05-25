@@ -6,15 +6,16 @@ import inspect
 import json
 import logging
 import os
+import secrets
 import sys
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
+from ChatStreamRequestDTO import ChatStreamRequestDTO
 from chat.stream_service import ChatStreamService
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
@@ -34,28 +35,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-
-class AttachmentDTO(BaseModel):
-    id: int
-    fileName: str | None = None
-    fileType: str | None = None
-    filePath: str | None = None
-
-
-class ChatMessageDTO(BaseModel):
-    role: str = Field(..., min_length=1)
-    content: str = Field(..., min_length=1)
-    attachments: list[AttachmentDTO] | None = None
-
-
-class ChatStreamRequestDTO(BaseModel):
-    messages: list[ChatMessageDTO] = Field(..., min_length=1)
-    userId: int | None = None
-    sessionId: int | None = None
-    turnId: str | None = None
-    traceId: str | None = None
-    attachments: list[AttachmentDTO] | None = None
 
 
 @lru_cache(maxsize=1)
@@ -198,7 +177,7 @@ def create_api_app() -> FastAPI:
         expected_agent_token = os.getenv("AGENT_API_TOKEN", "").strip()
         if expected_agent_token:
             got_token = _resolve_agent_token(raw_request)
-            if got_token != expected_agent_token:
+            if not secrets.compare_digest(got_token, expected_agent_token):
                 raise HTTPException(status_code=401, detail="invalid agent token")
 
     @app.post("/chat/stream")

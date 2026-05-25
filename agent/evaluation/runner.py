@@ -40,7 +40,7 @@ class EvalRunner:
         top_k: int = 5,
         llm_provider: BaseLLMProvider | None = None,
     ) -> None:
-        from .dataset import EvalDataset
+        from .EvalDataset import EvalDataset
 
         _ensure_sys_path()
         _load_env()

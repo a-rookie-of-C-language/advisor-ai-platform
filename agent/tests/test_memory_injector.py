@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from context.memory.core.schema import MemoryContext, MemoryItem
+from context.memory.core.MemoryContext import MemoryContext
+from context.memory.core.MemoryItem import MemoryItem
 from context.memory.memory_injector import MemoryInjector
 
 
@@ -17,4 +18,3 @@ def test_memory_injector_only_outputs_memory_segment() -> None:
     rendered = model_context.render(source_filter={"memory"})
     assert "long_term_memory" in rendered
     assert "喜欢咖啡" in rendered
-

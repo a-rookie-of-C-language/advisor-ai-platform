@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.search.schema import WebSearchResult
+from agents.search.WebSearchResult import WebSearchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider

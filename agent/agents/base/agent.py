@@ -1,40 +1,20 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Awaitable, Callable
 
+from agents.base.AgentContext import AgentContext
+from agents.base.AgentState import AgentState
+from agents.base.ToolCallResult import ToolCallResult
 from context.memory.api.memory_api_client import MemoryApiClient
-from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryItem import MemoryItem
+from context.memory.core.WritebackResult import WritebackResult
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
-
-
-class AgentState(Enum):
-    CREATED = "created"
-    RUNNING = "running"
-    PAUSED = "paused"
-    STOPPED = "stopped"
-
-
-@dataclass
-class AgentContext:
-    user_id: int | None = None
-    session_id: int | None = None
-    kb_id: int | None = None
-    metadata: JsonObject = field(default_factory=dict)
-
-
-@dataclass
-class ToolCallResult:
-    tool_name: str
-    success: bool
-    result: str
-    error: str | None = None
 
 
 class Agent:

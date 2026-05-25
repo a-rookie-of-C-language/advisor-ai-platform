@@ -5,10 +5,17 @@ import ChatPage from './ChatPage'
 
 vi.mock('../../api/chatApi', () => ({
   chatApi: {
-    getSessions: vi.fn().mockResolvedValue([]),
+    listSessions: vi.fn().mockResolvedValue({ data: [] }),
     createSession: vi.fn(),
-    getMessages: vi.fn().mockResolvedValue([]),
+    listMessages: vi.fn().mockResolvedValue({ data: [] }),
     sendMessage: vi.fn(),
+    streamChat: vi.fn(),
+  },
+}))
+
+vi.mock('../../api/workspaceApi', () => ({
+  workspaceApi: {
+    uploadFile: vi.fn(),
   },
 }))
 
@@ -27,13 +34,13 @@ vi.mock('react-router-dom', async () => {
 })
 
 describe('ChatPage', () => {
-  it('should render chat page', () => {
+  it('should render chat page', async () => {
     render(
       <BrowserRouter>
         <ChatPage />
       </BrowserRouter>
     )
 
-    expect(screen.getByText(/会话列表|暂无会话/i)).toBeInTheDocument()
+    expect(await screen.findByText(/开始和 AI 助手对话/i)).toBeInTheDocument()
   })
 })

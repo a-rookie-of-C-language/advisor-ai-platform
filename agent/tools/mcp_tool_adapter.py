@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import re
 
-from pydantic import BaseModel
-
 from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.mcp_client_pool import McpClientPool, McpServerConfig
+from tools.McpToolInputModel import McpToolInputModel
 from tools.tool_result import ToolResult
 
 MAX_MCP_DESCRIPTION_LENGTH = 2048
@@ -27,11 +26,6 @@ def truncate_description(description: str) -> str:
     if len(description) > MAX_MCP_DESCRIPTION_LENGTH:
         return description[:MAX_MCP_DESCRIPTION_LENGTH] + "... [truncated]"
     return description
-
-
-class McpToolInputModel(BaseModel):
-    class Config:
-        extra = "allow"
 
 
 class McpToolAdapter(BaseTool):

@@ -1,24 +1,14 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from context.memory.api.memory_api_client import MemoryApiClient
-from context.memory.core.schema import MemoryCandidate
+from context.memory.core.MemoryCandidate import MemoryCandidate
 from json_types import JsonObject
 from tools.base_tool import BaseTool
+from tools.memory_write.MemoryWriteInput import MemoryWriteInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-
-
-class MemoryCandidateInput(BaseModel):
-    content: str = Field(min_length=1)
-    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
-    source_turn_id: str | None = None
-    tags: JsonObject = Field(default_factory=dict)
-
-
-class MemoryWriteInput(BaseModel):
-    candidates: list[MemoryCandidateInput] = Field(min_length=1)
 
 
 class MemoryWriteTool(BaseTool[MemoryWriteInput, BaseModel]):

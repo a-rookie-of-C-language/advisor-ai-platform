@@ -14,9 +14,7 @@ import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +32,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
@@ -44,7 +40,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @Slf4j
 public class ChatController {
 
-  private static final String TRACE_HEADER = "X-Trace-Id";
   private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
 
   private final AgentProxyService agentProxyService;
@@ -52,6 +47,10 @@ public class ChatController {
   private final ChatMessageService chatMessageService;
   private final ChatTurnIdGenerator turnIdGenerator = new ChatTurnIdGenerator();
   private final SseResponseWriter sseResponseWriter = new SseResponseWriter();
+  private final ChatControllerSupport support = new ChatControllerSupport();
+  private final ChatRequestAuditContext auditContext = new ChatRequestAuditContext();
+  private final ChatTurnPersistenceSupport turnPersistenceSupport =
+      new ChatTurnPersistenceSupport();
 
   @GetMapping("/sessions")
   @Auditable(
@@ -83,7 +82,7 @@ public class ChatController {
       logResponseData = false)
   public ApiResponseDTO<Void> deleteSession(
       @PathVariable("id") Long id, @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    attachAuditContext(null, id, null);
+    auditContext.attach(null, id, null);
     chatService.deleteSession(id, currentUser);
     return ApiResponseDTO.success();
   }
@@ -98,7 +97,7 @@ public class ChatController {
       @PathVariable("id") Long id,
       @RequestBody Map<String, Object> body,
       @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    attachAuditContext(null, id, null);
+    auditContext.attach(null, id, null);
     Object kbIdValue = body == null ? null : body.get("kbId");
     if (!(kbIdValue instanceof Number kbIdNumber)) {
       throw new BadRequestException("kbId is required");
@@ -116,7 +115,7 @@ public class ChatController {
   public ApiResponseDTO<List<Map<String, Object>>> listMessages(
       @PathVariable("sessionId") Long sessionId,
       @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    attachAuditContext(null, sessionId, null);
+    auditContext.attach(null, sessionId, null);
     return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
   }
 
@@ -148,8 +147,8 @@ public class ChatController {
     request.setMessages(history);
 
     String turnId = buildTurnId(request, currentUser.getId());
-    String traceId = resolveTraceIdFromRequest();
-    attachAuditContext(traceId, sessionId, turnId);
+    String traceId = auditContext.resolveTraceIdFromRequest();
+    auditContext.attach(traceId, sessionId, turnId);
 
     LogTraceUtil.put(traceId, sessionId, turnId, currentUser.getId());
     try {
@@ -166,7 +165,7 @@ public class ChatController {
             "chat_send cache_hit, assistantLen={}, elapsedMs={}",
             cached.length(),
             elapsedSince(startAt));
-        return ApiResponseDTO.success(buildAssistantResponse(cached, List.of(), List.of()));
+        return ApiResponseDTO.success(support.buildAssistantResponse(cached, List.of(), List.of()));
       }
 
       String assistantText;
@@ -188,18 +187,20 @@ public class ChatController {
         assistantText = ASSISTANT_ERROR_PLACEHOLDER;
       }
 
-      if ((sources == null || sources.isEmpty()) && (events == null || events.isEmpty())) {
-        chatMessageService.saveTurn(
-            sessionId, currentUser.getId(), turnId, userContent, assistantText);
-      } else {
-        chatMessageService.saveTurn(
-            sessionId, currentUser.getId(), turnId, userContent, assistantText, sources, events);
-      }
+      turnPersistenceSupport.saveTurn(
+          chatMessageService,
+          sessionId,
+          currentUser.getId(),
+          turnId,
+          userContent,
+          assistantText,
+          sources,
+          events);
       log.info(
           "chat_send done, assistantLen={}, elapsedMs={}",
           assistantText.length(),
           elapsedSince(startAt));
-      return ApiResponseDTO.success(buildAssistantResponse(assistantText, sources, events));
+      return ApiResponseDTO.success(support.buildAssistantResponse(assistantText, sources, events));
     } finally {
       LogTraceUtil.clear();
     }
@@ -220,8 +221,8 @@ public class ChatController {
 
     String userText = extractLastUserMessage(request);
     String turnId = buildTurnId(request, currentUser.getId());
-    String traceId = resolveTraceIdFromRequest();
-    attachAuditContext(traceId, request.getSessionId(), turnId);
+    String traceId = auditContext.resolveTraceIdFromRequest();
+    auditContext.attach(traceId, request.getSessionId(), turnId);
 
     log.info(
         "chat_stream accepted, traceId={}, sessionId={}, turnId={}, userId={}, userLen={}, userPreview={}",
@@ -262,12 +263,13 @@ public class ChatController {
           } catch (Exception ex) {
             String errorMessage = safeMessage(ex);
             finishReason = "error";
-            writeErrorEvent(outputStream, errorMessage);
+            sseResponseWriter.writeErrorEvent(outputStream, errorMessage);
             log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
             assistantText = "请求失败：" + errorMessage;
           } finally {
-            writeDoneEvent(outputStream, finishReason, turnId, traceId);
-            saveTurnQuietly(
+            sseResponseWriter.writeDoneEvent(outputStream, finishReason, turnId, traceId);
+            turnPersistenceSupport.saveTurnQuietly(
+                chatMessageService,
                 request.getSessionId(),
                 currentUser.getId(),
                 turnId,
@@ -290,89 +292,14 @@ public class ChatController {
         .body(body);
   }
 
-  private Map<String, Object> buildAssistantResponse(
-      String assistantText,
-      List<ChatMessageDO.SourceReference> sources,
-      List<ChatMessageDO.StreamEventRecord> events) {
-    return Map.of(
-        "id",
-        System.currentTimeMillis(),
-        "role",
-        "assistant",
-        "content",
-        assistantText,
-        "sources",
-        sources == null ? List.of() : sources,
-        "events",
-        events == null ? List.of() : events);
-  }
-
   private List<ChatStreamMessageDTO> buildHistoryMessages(
       Long sessionId, UserPrincipal currentUser, String userContent) {
     List<Map<String, Object>> persisted = chatService.listMessages(sessionId, currentUser);
-    List<ChatStreamMessageDTO> result = new ArrayList<>();
-
-    for (Map<String, Object> row : persisted) {
-      Object roleObj = row.get("role");
-      Object contentObj = row.get("content");
-      if (roleObj == null || contentObj == null) {
-        continue;
-      }
-      String role = String.valueOf(roleObj).trim();
-      String content = String.valueOf(contentObj).trim();
-      if (content.isBlank()) {
-        continue;
-      }
-      if (!"user".equals(role) && !"assistant".equals(role) && !"system".equals(role)) {
-        continue;
-      }
-      ChatStreamMessageDTO dto = new ChatStreamMessageDTO();
-      dto.setRole(role);
-      dto.setContent(content);
-      result.add(dto);
-    }
-
-    ChatStreamMessageDTO user = new ChatStreamMessageDTO();
-    user.setRole("user");
-    user.setContent(userContent);
-    result.add(user);
-    return result;
-  }
-
-  private void saveTurnQuietly(
-      Long sessionId,
-      Long userId,
-      String turnId,
-      String userText,
-      String assistantText,
-      List<ChatMessageDO.SourceReference> sources,
-      List<ChatMessageDO.StreamEventRecord> events) {
-    try {
-      if ((sources == null || sources.isEmpty()) && (events == null || events.isEmpty())) {
-        chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
-      } else {
-        chatMessageService.saveTurn(
-            sessionId, userId, turnId, userText, assistantText, sources, events);
-      }
-    } catch (Exception e) {
-      log.warn("chat_stream save_turn_failed, reason={}", LogTraceUtil.preview(e.getMessage()));
-    }
+    return support.buildHistoryMessages(persisted, userContent);
   }
 
   private String extractLastUserMessage(ChatStreamRequestDTO request) {
-    if (request == null || request.getMessages() == null || request.getMessages().isEmpty()) {
-      return "";
-    }
-    for (int i = request.getMessages().size() - 1; i >= 0; i--) {
-      ChatStreamMessageDTO message = request.getMessages().get(i);
-      if (message == null || message.getRole() == null || message.getContent() == null) {
-        continue;
-      }
-      if ("user".equalsIgnoreCase(message.getRole().trim())) {
-        return message.getContent().trim();
-      }
-    }
-    return "";
+    return support.extractLastUserMessage(request);
   }
 
   private String buildTurnId(ChatStreamRequestDTO request, Long userId) {
@@ -380,51 +307,10 @@ public class ChatController {
   }
 
   private String safeMessage(Exception exception) {
-    String message = exception.getMessage();
-    return message == null || message.isBlank() ? ASSISTANT_ERROR_PLACEHOLDER : message;
-  }
-
-  private void writeErrorEvent(java.io.OutputStream outputStream, @Nullable String rawMessage) {
-    sseResponseWriter.writeErrorEvent(outputStream, rawMessage);
-  }
-
-  private void writeDoneEvent(
-      java.io.OutputStream outputStream, String finishReason, String turnId, String traceId) {
-    sseResponseWriter.writeDoneEvent(outputStream, finishReason, turnId, traceId);
-  }
-
-  private String resolveTraceIdFromRequest() {
-    ServletRequestAttributes attributes =
-        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-    if (attributes == null) {
-      return LogTraceUtil.resolveTraceId(null);
-    }
-    HttpServletRequest request = attributes.getRequest();
-    return LogTraceUtil.resolveTraceId(request == null ? null : request.getHeader(TRACE_HEADER));
+    return support.safeMessage(exception, ASSISTANT_ERROR_PLACEHOLDER);
   }
 
   private long elapsedSince(long startAt) {
-    return Math.max(0L, System.currentTimeMillis() - startAt);
-  }
-
-  private void attachAuditContext(String traceId, Long sessionId, String turnId) {
-    ServletRequestAttributes attributes =
-        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-    if (attributes == null) {
-      return;
-    }
-    HttpServletRequest request = attributes.getRequest();
-    if (request == null) {
-      return;
-    }
-    if (traceId != null && !traceId.isBlank()) {
-      request.setAttribute("auditTraceId", traceId);
-    }
-    if (sessionId != null) {
-      request.setAttribute("auditSessionId", sessionId);
-    }
-    if (turnId != null && !turnId.isBlank()) {
-      request.setAttribute("auditTurnId", turnId);
-    }
+    return support.elapsedSince(startAt);
   }
 }

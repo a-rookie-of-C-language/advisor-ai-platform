@@ -1,6 +1,5 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.client.RagServiceClient;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
@@ -18,15 +17,15 @@ public class ChatServiceImpl implements ChatService {
 
   private final ChatSessionDao chatSessionDao;
   private final ChatMessageDao chatMessageDao;
-  private final RagServiceClient ragServiceClient;
-  private ChatSessionSupport chatSessionSupport;
+  private final ChatSessionSupport chatSessionSupport;
 
   @Override
+  @Transactional(readOnly = true)
   public List<Map<String, Object>> listSessions(
       @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    Long userId = support().requireUserId(currentUser);
+    Long userId = chatSessionSupport.requireUserId(currentUser);
     return chatSessionDao.findByUserIdOrderByUpdatedAtDesc(userId).stream()
-        .map(support()::toSessionMap)
+        .map(chatSessionSupport::toSessionMap)
         .toList();
   }
 
@@ -35,14 +34,15 @@ public class ChatServiceImpl implements ChatService {
   public Map<String, Object> createSession(
       @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = new ChatSessionDO();
-    session.setUser(support().toUserReference(support().requireUser(currentUser)));
+    session.setUser(
+        chatSessionSupport.toUserReference(chatSessionSupport.requireUser(currentUser)));
     session.setTitle("???");
     session.setKbId(0L);
     java.time.LocalDateTime now = java.time.LocalDateTime.now();
     session.setCreatedAt(now);
     session.setUpdatedAt(now);
     ChatSessionDO saved = chatSessionDao.save(session);
-    return support().toSessionMap(saved);
+    return chatSessionSupport.toSessionMap(saved);
   }
 
   @Override
@@ -64,26 +64,28 @@ public class ChatServiceImpl implements ChatService {
     if (kbId == null || kbId <= 0) {
       session.setKbId(0L);
     } else {
-      if (!support().existsKnowledgeBase(kbId)) {
+      if (!chatSessionSupport.existsKnowledgeBase(kbId)) {
         throw new cn.edu.cqut.advisorplatform.common.exception.NotFoundException("知识库不存在");
       }
       session.setKbId(kbId);
     }
     session.setUpdatedAt(java.time.LocalDateTime.now());
-    return support().toSessionMap(chatSessionDao.save(session));
+    return chatSessionSupport.toSessionMap(chatSessionDao.save(session));
   }
 
   @Override
+  @Transactional(readOnly = true)
   public List<Map<String, Object>> listMessages(
       Long sessionId,
       @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     getOwnedSession(sessionId, currentUser);
     return chatMessageDao.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId).stream()
-        .map(support()::toMessageMap)
+        .map(chatSessionSupport::toMessageMap)
         .toList();
   }
 
   @Override
+  @Transactional(readOnly = true)
   public long getSessionKbId(
       Long sessionId,
       @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
@@ -95,7 +97,7 @@ public class ChatServiceImpl implements ChatService {
   private ChatSessionDO getSessionForLoggedInUser(
       Long sessionId,
       @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    support().requireUserId(currentUser);
+    chatSessionSupport.requireUserId(currentUser);
     return chatSessionDao
         .findById(sessionId)
         .orElseThrow(
@@ -105,18 +107,11 @@ public class ChatServiceImpl implements ChatService {
   private ChatSessionDO getOwnedSession(
       Long sessionId, cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
     ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    Long currentUserId = support().requireUserId(currentUser);
+    Long currentUserId = chatSessionSupport.requireUserId(currentUser);
     Long ownerId = session.getUser() == null ? null : session.getUser().getId();
     if (ownerId == null || !ownerId.equals(currentUserId)) {
       throw new cn.edu.cqut.advisorplatform.common.exception.ForbiddenException("无权访问该会话");
     }
     return session;
-  }
-
-  private ChatSessionSupport support() {
-    if (chatSessionSupport == null) {
-      chatSessionSupport = new ChatSessionSupport(ragServiceClient);
-    }
-    return chatSessionSupport;
   }
 }

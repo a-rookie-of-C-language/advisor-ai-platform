@@ -36,7 +36,7 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
           "/actuator",
           "/internal/health");
 
-  @Value("${advisor.jwt.secret:ZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQtZGVmYXVsdC1zZWNyZXQ=}")
+  @Value("${advisor.jwt.secret:}")
   private String jwtSecret;
 
   @Override
@@ -210,6 +210,4 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
   public int getOrder() {
     return -100;
   }
-
-  private record ValidationResult(boolean valid, String reason) {}
 }

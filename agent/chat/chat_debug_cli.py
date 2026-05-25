@@ -102,7 +102,7 @@ class ChatDebugCli:
         if not isinstance(token, str) or not token.strip():
             logger.error("CLI login failed: token missing, response=%s", data)
             raise RuntimeError("登录成功但未获取到 access token")
-        logger.info("CLI login success: token=%s", token.strip())
+        logger.info("CLI login success")
         return token.strip()
 
     async def _create_session(self, access_token: str) -> int:

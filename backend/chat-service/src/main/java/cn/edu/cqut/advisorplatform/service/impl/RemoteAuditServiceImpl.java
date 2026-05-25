@@ -6,10 +6,12 @@ import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AuditService;
+import cn.edu.cqut.advisorplatform.service.storage.AuditLogStorage;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,9 @@ import org.springframework.stereotype.Service;
 public class RemoteAuditServiceImpl implements AuditService {
 
   private final AuditServiceClient auditServiceClient;
+
+  @Qualifier("jdbcAuditLogStorage")
+  private final AuditLogStorage fallbackStorage;
 
   @Override
   public void saveAuditLog(AuditLogDO auditLog) {
@@ -36,6 +41,7 @@ public class RemoteAuditServiceImpl implements AuditService {
           "Remote audit save failed: traceId={}, reason={}",
           auditLog.getTraceId(),
           ex.getMessage());
+      saveAuditLogFallback(auditLog);
     }
   }
 
@@ -49,6 +55,37 @@ public class RemoteAuditServiceImpl implements AuditService {
           "Remote audit batch save failed: count={}, reason={}",
           auditLogs == null ? 0 : auditLogs.size(),
           ex.getMessage());
+      saveAuditLogsFallback(auditLogs);
+    }
+  }
+
+  private void saveAuditLogFallback(AuditLogDO auditLog) {
+    if (auditLog == null) {
+      return;
+    }
+    try {
+      fallbackStorage.saveAsync(auditLog);
+    } catch (Exception fallbackError) {
+      log.error(
+          "Local audit fallback failed: traceId={}, reason={}",
+          auditLog.getTraceId(),
+          fallbackError.getMessage(),
+          fallbackError);
+    }
+  }
+
+  private void saveAuditLogsFallback(List<AuditLogDO> auditLogs) {
+    if (auditLogs == null || auditLogs.isEmpty()) {
+      return;
+    }
+    try {
+      fallbackStorage.saveBatch(auditLogs);
+    } catch (Exception fallbackError) {
+      log.error(
+          "Local audit batch fallback failed: count={}, reason={}",
+          auditLogs.size(),
+          fallbackError.getMessage(),
+          fallbackError);
     }
   }
 

@@ -1,26 +1,14 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 
 from safety.privacy_filter import PrivacyFilterWrapper, PrivacyResult
-from safety.regex_filter import RegexFilter, RegexMatch, StreamingRegexFilter
+from safety.RegexFilter import RegexFilter
+from safety.RegexMatch import RegexMatch
+from safety.SafetyResult import SafetyResult
+from safety.StreamingRegexFilter import StreamingRegexFilter
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SafetyResult:
-    original: str
-    redacted: str
-    regex_matches: list[RegexMatch] = field(default_factory=list)
-    privacy_result: PrivacyResult | None = None
-
-    @property
-    def has_sensitive(self) -> bool:
-        if self.regex_matches:
-            return True
-        return self.privacy_result is not None and self.privacy_result.has_sensitive
 
 
 class SafetyPipeline:

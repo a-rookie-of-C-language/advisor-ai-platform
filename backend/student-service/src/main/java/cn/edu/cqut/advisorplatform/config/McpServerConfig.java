@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class McpServerConfig {
 
   private boolean enabled = false;
-  private String token = "arookieofc";
+  private String token = "";
   private int port = 8090;
 
   public boolean isEnabled() {

@@ -2,11 +2,23 @@ package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponse;
 import cn.edu.cqut.advisorplatform.dto.response.ImportBatchResponse;
+import cn.edu.cqut.advisorplatform.dto.response.ImportResultResponse;
 import cn.edu.cqut.advisorplatform.service.StudentImportService;
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.write.metadata.style.WriteCellStyle;
+import com.alibaba.excel.write.metadata.style.WriteFont;
+import com.alibaba.excel.write.style.HorizontalCellStyleStrategy;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/student/import")
+@PreAuthorize("hasAnyRole('ADMIN', 'ADVISOR')")
 public class StudentImportController {
 
   private final StudentImportService importService;
@@ -25,39 +38,34 @@ public class StudentImportController {
   }
 
   @GetMapping("/template")
-  public void downloadTemplate(jakarta.servlet.http.HttpServletResponse response)
-      throws java.io.IOException {
+  public void downloadTemplate(HttpServletResponse response) throws IOException {
     response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     response.setCharacterEncoding("utf-8");
     String fileName =
-        java.net.URLEncoder.encode("学生信息导入模板", java.nio.charset.StandardCharsets.UTF_8)
-            .replaceAll("\\+", "%20");
+        URLEncoder.encode("学生信息导入模板", StandardCharsets.UTF_8).replaceAll("\\+", "%20");
     response.setHeader("Content-disposition", "attachment;filename=" + fileName + ".xlsx");
 
-    com.alibaba.excel.write.metadata.style.WriteCellStyle headStyle =
-        new com.alibaba.excel.write.metadata.style.WriteCellStyle();
-    com.alibaba.excel.write.metadata.style.WriteFont headFont =
-        new com.alibaba.excel.write.metadata.style.WriteFont();
+    WriteCellStyle headStyle = new WriteCellStyle();
+    WriteFont headFont = new WriteFont();
     headFont.setFontHeightInPoints((short) 12);
     headFont.setBold(true);
     headStyle.setWriteFont(headFont);
-    headStyle.setHorizontalAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
+    headStyle.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-    com.alibaba.excel.write.metadata.style.WriteCellStyle dataStyle =
-        new com.alibaba.excel.write.metadata.style.WriteCellStyle();
-    dataStyle.setHorizontalAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.LEFT);
+    WriteCellStyle dataStyle = new WriteCellStyle();
+    dataStyle.setHorizontalAlignment(HorizontalAlignment.LEFT);
 
-    com.alibaba.excel.write.style.HorizontalCellStyleStrategy styleStrategy =
-        new com.alibaba.excel.write.style.HorizontalCellStyleStrategy(headStyle, dataStyle);
+    HorizontalCellStyleStrategy styleStrategy =
+        new HorizontalCellStyleStrategy(headStyle, dataStyle);
 
-    com.alibaba.excel.EasyExcel.write(response.getOutputStream(), StudentImportTemplate.class)
+    EasyExcel.write(response.getOutputStream(), StudentImportTemplate.class)
         .registerWriteHandler(styleStrategy)
         .sheet("学生信息")
         .doWrite(getTemplateData());
   }
 
-  private java.util.List<StudentImportTemplate> getTemplateData() {
-    java.util.List<StudentImportTemplate> list = new java.util.ArrayList<>();
+  private List<StudentImportTemplate> getTemplateData() {
+    List<StudentImportTemplate> list = new ArrayList<>();
     StudentImportTemplate row = new StudentImportTemplate();
     row.setStudentNo("2023001");
     row.setName("张三");
@@ -89,135 +97,10 @@ public class StudentImportController {
   }
 
   @PostMapping("/upload")
-  public ApiResponse<cn.edu.cqut.advisorplatform.dto.response.ImportResultResponse> upload(
+  public ApiResponse<ImportResultResponse> upload(
       @RequestParam("file") MultipartFile file,
       @RequestParam(value = "overwrite", defaultValue = "true") boolean overwrite) {
-    cn.edu.cqut.advisorplatform.dto.response.ImportResultResponse response =
-        importService.importStudents(file, "system", overwrite);
+    ImportResultResponse response = importService.importStudents(file, "system", overwrite);
     return ApiResponse.success(response);
-  }
-
-  public static class StudentImportTemplate {
-
-    @com.alibaba.excel.annotation.ExcelProperty("学号")
-    private String studentNo;
-
-    @com.alibaba.excel.annotation.ExcelProperty("姓名")
-    private String name;
-
-    @com.alibaba.excel.annotation.ExcelProperty("性别(1男/2女)")
-    private Integer gender;
-
-    @com.alibaba.excel.annotation.ExcelProperty("年级")
-    private String grade;
-
-    @com.alibaba.excel.annotation.ExcelProperty("专业")
-    private String major;
-
-    @com.alibaba.excel.annotation.ExcelProperty("班级")
-    private String classCode;
-
-    @com.alibaba.excel.annotation.ExcelProperty("辅导员工号")
-    private String counselorNo;
-
-    @com.alibaba.excel.annotation.ExcelProperty("手机号")
-    private String phone;
-
-    @com.alibaba.excel.annotation.ExcelProperty("邮箱")
-    private String email;
-
-    @com.alibaba.excel.annotation.ExcelProperty("宿舍")
-    private String dormitory;
-
-    @com.alibaba.excel.annotation.ExcelProperty("紧急联系人")
-    private String emergencyContact;
-
-    public String getStudentNo() {
-      return studentNo;
-    }
-
-    public void setStudentNo(String studentNo) {
-      this.studentNo = studentNo;
-    }
-
-    public String getName() {
-      return name;
-    }
-
-    public void setName(String name) {
-      this.name = name;
-    }
-
-    public Integer getGender() {
-      return gender;
-    }
-
-    public void setGender(Integer gender) {
-      this.gender = gender;
-    }
-
-    public String getGrade() {
-      return grade;
-    }
-
-    public void setGrade(String grade) {
-      this.grade = grade;
-    }
-
-    public String getMajor() {
-      return major;
-    }
-
-    public void setMajor(String major) {
-      this.major = major;
-    }
-
-    public String getClassCode() {
-      return classCode;
-    }
-
-    public void setClassCode(String classCode) {
-      this.classCode = classCode;
-    }
-
-    public String getCounselorNo() {
-      return counselorNo;
-    }
-
-    public void setCounselorNo(String counselorNo) {
-      this.counselorNo = counselorNo;
-    }
-
-    public String getPhone() {
-      return phone;
-    }
-
-    public void setPhone(String phone) {
-      this.phone = phone;
-    }
-
-    public String getEmail() {
-      return email;
-    }
-
-    public void setEmail(String email) {
-      this.email = email;
-    }
-
-    public String getDormitory() {
-      return dormitory;
-    }
-
-    public void setDormitory(String dormitory) {
-      this.dormitory = dormitory;
-    }
-
-    public String getEmergencyContact() {
-      return emergencyContact;
-    }
-
-    public void setEmergencyContact(String emergencyContact) {
-      this.emergencyContact = emergencyContact;
-    }
   }
 }

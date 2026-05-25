@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.search.schema import WebFetchResult
+from agents.search.WebFetchResult import WebFetchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
 from llm.base_provider import BaseLLMProvider
 from tools.base_tool import BaseTool

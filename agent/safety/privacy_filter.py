@@ -1,38 +1,13 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Protocol
 
 from json_types import JsonObject
+from safety.PrivacyEngine import PrivacyEngine
+from safety.PrivacyResult import PrivacyResult
+from safety.PrivacySpan import PrivacySpan
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class PrivacySpan:
-    label: str
-    start: int
-    end: int
-    text: str
-    placeholder: str
-
-
-@dataclass
-class PrivacyResult:
-    original: str
-    redacted: str
-    spans: list[PrivacySpan]
-    has_sensitive: bool
-
-
-class PrivacyEngineResult(Protocol):
-    redacted_text: str
-    detected_spans: list[PrivacySpan]
-
-
-class PrivacyEngine(Protocol):
-    def redact(self, text: str) -> PrivacyEngineResult: ...
 
 
 class PrivacyFilterWrapper:
@@ -48,7 +23,7 @@ class PrivacyFilterWrapper:
         device: str = "cpu",
         model_path: str | None = None,
         enabled: bool = True,
-        ) -> None:
+    ) -> None:
         self._device = device
         self._model_path = model_path
         self._enabled = enabled

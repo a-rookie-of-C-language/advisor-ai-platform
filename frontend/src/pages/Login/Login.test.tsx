@@ -35,7 +35,7 @@ describe('Login', () => {
     )
 
     expect(screen.getByLabelText(/用户名/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/密码/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^密码$/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /登录/i })).toBeInTheDocument()
   })
 
@@ -79,7 +79,7 @@ describe('Login', () => {
       </BrowserRouter>
     )
 
-    const passwordInput = screen.getByLabelText(/密码/i)
+    const passwordInput = screen.getByLabelText(/^密码$/i)
     const toggleButton = screen.getByLabelText(/显示密码/i)
 
     expect(passwordInput).toHaveAttribute('type', 'password')

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from evaluation.dataset import EvalCase, EvalDataset
+from evaluation.EvalCase import EvalCase
+from evaluation.EvalDataset import EvalDataset
 from evaluation.metrics.annotation import annotation_accuracy, annotation_f1
 from evaluation.metrics.retrieval import retrieval_mrr, retrieval_ndcg, retrieval_recall_at_k
 from evaluation.report import EvalReport

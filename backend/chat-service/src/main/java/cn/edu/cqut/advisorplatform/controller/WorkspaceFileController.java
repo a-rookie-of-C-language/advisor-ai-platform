@@ -6,6 +6,10 @@ import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.WorkspaceFileService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,8 +39,9 @@ public class WorkspaceFileController {
 
   @GetMapping("/sessions/{sessionId}/files")
   public ApiResponseDTO<List<WorkspaceFileResponseDTO>> listFiles(
-      @PathVariable("sessionId") Long sessionId) {
-    return ApiResponseDTO.success(workspaceFileService.listFiles(sessionId));
+      @PathVariable("sessionId") Long sessionId,
+      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+    return ApiResponseDTO.success(workspaceFileService.listFiles(sessionId, currentUser));
   }
 
   @DeleteMapping("/files/{fileId}")
@@ -47,16 +52,32 @@ public class WorkspaceFileController {
   }
 
   @GetMapping("/files/{fileId}/content")
-  public ResponseEntity<byte[]> getFileContent(@PathVariable("fileId") Long fileId) {
-    String filePath = workspaceFileService.getFilePath(fileId);
-    try {
-      java.nio.file.Path path = java.nio.file.Paths.get(filePath);
-      byte[] data = java.nio.file.Files.readAllBytes(path);
-      return ResponseEntity.ok()
-          .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
-          .body(data);
-    } catch (java.io.IOException e) {
+  public ResponseEntity<Resource> getFileContent(
+      @PathVariable("fileId") Long fileId, @AuthenticationPrincipal @Nullable UserDO currentUser) {
+    String filePath = workspaceFileService.getFilePath(fileId, currentUser);
+    java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+    if (!java.nio.file.Files.isRegularFile(path)) {
       return ResponseEntity.notFound().build();
     }
+    FileSystemResource resource = new FileSystemResource(path);
+    MediaType mediaType = detectMediaType(path);
+    return ResponseEntity.ok()
+        .contentType(mediaType)
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            "inline; filename=\"" + path.getFileName().toString() + "\"")
+        .body(resource);
+  }
+
+  private MediaType detectMediaType(java.nio.file.Path path) {
+    try {
+      String type = java.nio.file.Files.probeContentType(path);
+      if (type != null && !type.isBlank()) {
+        return MediaType.parseMediaType(type);
+      }
+    } catch (java.io.IOException ignored) {
+      // fall back to octet-stream
+    }
+    return MediaType.APPLICATION_OCTET_STREAM;
   }
 }

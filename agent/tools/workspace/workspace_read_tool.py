@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from pydantic import BaseModel
-
 from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.workspace_input import WorkspaceReadInput
+from tools.workspace.WorkspaceReadInput import WorkspaceReadInput
+from tools.workspace.WorkspaceReadOutput import WorkspaceReadOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
     FileSizeLimitError,
@@ -19,12 +18,6 @@ from tools.workspace.workspace_manager import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class WorkspaceReadOutput(BaseModel):
-    """workspace_read 输出模型"""
-    content: str
-    path: str
 
 
 class WorkspaceReadTool(BaseTool[WorkspaceReadInput, WorkspaceReadOutput]):

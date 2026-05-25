@@ -1,5 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
+import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.WorkspaceFileDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +42,7 @@ public class WorkspaceFileSupport {
     Path sessionDir = baseDir.resolve(sessionId.toString()).normalize();
     Path filePath = sessionDir.resolve(safeFilename).normalize();
     if (!filePath.startsWith(baseDir)) {
-      throw new BadRequestException("非法文件路径");
+      throw new BadRequestException("闈炴硶鏂囦欢璺緞");
     }
     return filePath;
   }
@@ -62,6 +66,9 @@ public class WorkspaceFileSupport {
   public boolean validateImageMagic(InputStream in) throws IOException {
     byte[] header = in.readNBytes(8);
     for (byte[] magic : IMAGE_MAGIC) {
+      if (header.length < magic.length) {
+        continue;
+      }
       boolean match = true;
       for (int i = 0; i < magic.length; i++) {
         if (header[i] != magic[i]) {
@@ -84,7 +91,30 @@ public class WorkspaceFileSupport {
     try {
       Files.deleteIfExists(path);
     } catch (IOException e) {
-      log.warn("删除文件失败: {}", path, e);
+      log.warn("鍒犻櫎鏂囦欢澶辫触: {}", path, e);
+    }
+  }
+
+  public boolean canAccessFile(WorkspaceFileDO file, UserDO currentUser) {
+    if (file == null || currentUser == null || currentUser.getId() == null) {
+      return false;
+    }
+    UserDO uploader = file.getUploadedBy();
+    if (uploader != null
+        && uploader.getId() != null
+        && uploader.getId().equals(currentUser.getId())) {
+      return true;
+    }
+    ChatSessionDO session = file.getSession();
+    return session != null
+        && session.getUser() != null
+        && session.getUser().getId() != null
+        && session.getUser().getId().equals(currentUser.getId());
+  }
+
+  public void requireFileAccess(WorkspaceFileDO file, UserDO currentUser) {
+    if (!canAccessFile(file, currentUser)) {
+      throw new ForbiddenException("无权访问该文件");
     }
   }
 }

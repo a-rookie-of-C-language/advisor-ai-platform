@@ -122,7 +122,8 @@ node scripts/memory_e2e_drill.mjs http://localhost:8080 http://localhost:8081
 - 覆盖 `/api/memory/**` 完整接口（health、search、candidates、session-summary、task submit/pending/done/fail）
 ### Memory JMeter 压测（全链路）
 ```powershell
-pwsh ./scripts/run_memory_jmeter.ps1 -Profile load -BaseUrl http://127.0.0.1:8080 -MemoryToken arookieofc
+$env:MEMORY_API_TOKEN="<memory-token>"
+pwsh ./scripts/run_memory_jmeter.ps1 -Profile load -BaseUrl http://127.0.0.1:8080
 ```
 
 可选 Profile：`smoke|load|stress|spike`，结果输出到 `scripts/jmeter/results/`。

@@ -7,7 +7,8 @@ from typing import Awaitable, Callable
 from agents.base.subagent import SubAgent
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryCandidate, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.WritebackResult import WritebackResult
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
 from json_types import JsonObject, JsonValue

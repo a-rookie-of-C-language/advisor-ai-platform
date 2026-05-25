@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from tools.RouteDecision import RouteDecision
 from tools.intent_router import IntentRouter
 
 
@@ -25,6 +26,24 @@ class _ProviderError:
 
 
 class TestIntentRouter:
+    def test_route_decision_event_payload_is_stable(self) -> None:
+        decision = RouteDecision(
+            categories={"search", "retrieval"},
+            matched_by="score",
+            confidence=0.88,
+            scores={"search": 3},
+            matched_tools=["web_search"],
+        )
+
+        payload = decision.to_event_payload()
+
+        assert payload["categories"] == ["retrieval", "search"]
+        assert payload["source"] == {
+            "decision": "score",
+            "categories": ["retrieval", "search"],
+            "matched_tools": ["web_search"],
+        }
+
     @pytest.mark.asyncio
     async def test_strong_rule_hits_single_category(self) -> None:
         router = IntentRouter()

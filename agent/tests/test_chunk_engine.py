@@ -3,7 +3,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from RAG.chunk_engine.base_chunk_engine import BaseChunkEngine, ChunkResult
+from RAG.chunk_engine.ChunkResult import ChunkResult
+from RAG.chunk_engine.base_chunk_engine import BaseChunkEngine
 from RAG.chunk_engine.file_profile import FileProfile
 from RAG.chunk_engine.plain_text_chunk_engine import PlainTextChunkEngine
 

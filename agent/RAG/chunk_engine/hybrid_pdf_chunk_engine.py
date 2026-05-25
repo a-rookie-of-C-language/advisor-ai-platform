@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from .base_chunk_engine import BaseChunkEngine, ChunkResult
+from .ChunkResult import ChunkResult
+from .base_chunk_engine import BaseChunkEngine
 from .file_profile import FileProfile
 
 try:
@@ -95,4 +96,3 @@ class HybridPDFChunkEngine(BaseChunkEngine):
                     metadata={"page_number": idx + 1},
                 ))
         return out
-
