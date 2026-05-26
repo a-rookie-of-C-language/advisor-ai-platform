@@ -8,20 +8,7 @@ import {
 } from '@ant-design/icons'
 import type { NavigateFunction } from 'react-router-dom'
 import type { StudentDetailResponse } from '../../api/studentApi'
-import type { ImportResultResponse } from '../../api/studentImportApi'
-
-export const INFO_COMPLETENESS_OPTIONS = [
-  { value: 0, label: '完整', color: 'green' },
-  { value: 1, label: '部分缺失', color: 'orange' },
-  { value: 2, label: '严重缺失', color: 'red' },
-]
-
-export const RISK_LEVEL_OPTIONS = [
-  { value: 0, label: '正常', color: 'green' },
-  { value: 1, label: '关注', color: 'blue' },
-  { value: 2, label: '预警', color: 'orange' },
-  { value: 3, label: '严重', color: 'red' },
-]
+import { INFO_COMPLETENESS_OPTIONS, RISK_LEVEL_OPTIONS } from './studentListOptions'
 
 export function createStudentColumns(
   navigate: NavigateFunction,
@@ -126,23 +113,3 @@ export function createStudentColumns(
     },
   ]
 }
-
-export const importFailureColumns: ColumnsType<ImportResultResponse['failDetails'][number]> = [
-  {
-    title: '行号',
-    dataIndex: 'row',
-    key: 'row',
-    width: 80,
-  },
-  {
-    title: '学号',
-    dataIndex: 'studentNo',
-    key: 'studentNo',
-    width: 120,
-  },
-  {
-    title: '失败原因',
-    dataIndex: 'reason',
-    key: 'reason',
-  },
-]

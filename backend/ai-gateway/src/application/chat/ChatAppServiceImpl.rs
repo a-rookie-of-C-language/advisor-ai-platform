@@ -23,7 +23,10 @@ impl ChatAppService {
     }
 
     fn get_gateway(&self, model: &str) -> Option<&Arc<dyn ChatGateway>> {
-        let provider = self.router.route(model).or_else(|| Some(self.router.default_provider()));
+        let provider = self
+            .router
+            .route(model)
+            .or_else(|| Some(self.router.default_provider()));
         provider.and_then(|p| self.gateways.get(&p.provider_code))
     }
 
@@ -58,10 +61,7 @@ impl ChatService for ChatAppService {
         self.retry_complete(&req).await
     }
 
-    async fn stream_complete(
-        &self,
-        req: CompletionRequest,
-    ) -> anyhow::Result<StreamingCompletion> {
+    async fn stream_complete(&self, req: CompletionRequest) -> anyhow::Result<StreamingCompletion> {
         let model = req.model.as_deref().unwrap_or("");
         let gateway = match self.get_gateway(model) {
             Some(g) => g,

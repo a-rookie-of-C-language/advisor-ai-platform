@@ -5,6 +5,11 @@ import logging
 from collections.abc import Callable
 
 from agents.search import WebFetchSubAgent, WebSearchSubAgent
+from chat.stream_tool_payloads import (
+    dump_tool_error,
+    dump_web_fetch_result,
+    dump_web_search_result,
+)
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig
@@ -69,14 +74,7 @@ class ChatStreamToolSupport:
                 user_id,
                 session_id,
             )
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "tool_execute_failed",
-                    "items": [],
-                }
-            )
+            return dump_tool_error("tool_execute_failed")
 
     async def _execute_web_fetch_with_search_fallback(
         self,
@@ -94,14 +92,7 @@ class ChatStreamToolSupport:
                 else await self._tools.execute("web_fetch", tool_args, context)
             )
         except Exception:
-            fetch_result = json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "web_fetch_exception",
-                    "items": [],
-                }
-            )
+            fetch_result = dump_tool_error("web_fetch_exception")
         try:
             payload = json.loads(fetch_result)
         except Exception:
@@ -140,32 +131,7 @@ class ChatStreamToolSupport:
         query = tool_args.get("query", "")
         max_results = tool_args.get("max_results", 5)
         result = await self.web_search_subagent.search(query, max_results=max_results)
-        if not result.safe:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "denied",
-                    "message": result.filtered_reason or "搜索结果不合规，已过滤",
-                    "items": [],
-                }
-            )
-        items = [
-            {
-                "title": src.get("title", ""),
-                "snippet": result.summary,
-                "url": src.get("url", ""),
-                "source": "web",
-            }
-            for src in result.sources
-        ]
-        return json.dumps(
-            {
-                "ok": True,
-                "status": "hit" if items else "miss",
-                "message": "hit" if items else "no results",
-                "items": items,
-            }
-        )
+        return dump_web_search_result(result)
 
     def _build_web_fetch_subagent(self) -> WebFetchSubAgent | None:
         web_fetch_tool = self._tools.get("web_fetch")
@@ -183,26 +149,4 @@ class ChatStreamToolSupport:
             url,
             max_content_length=max_content_length,
         )
-        if not result.safe:
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "denied",
-                    "message": result.filtered_reason or "网页内容不合规，已过滤",
-                    "items": [],
-                }
-            )
-        return json.dumps(
-            {
-                "ok": True,
-                "status": "hit",
-                "message": "content extracted",
-                "items": [
-                    {
-                        "url": result.url,
-                        "content": result.content,
-                        "source": result.source,
-                    }
-                ],
-            }
-        )
+        return dump_web_fetch_result(result)

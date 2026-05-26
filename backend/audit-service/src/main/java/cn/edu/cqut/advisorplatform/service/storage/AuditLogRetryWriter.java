@@ -43,7 +43,9 @@ public class AuditLogRetryWriter {
             auditLog.getModule(),
             auditLog.getAction(),
             e.getMessage());
-        sleepBackoff();
+        if (attempt < MAX_RETRY_ATTEMPTS) {
+          sleepBackoff();
+        }
       }
     }
 

@@ -66,18 +66,13 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
             ann.source = "llm_skip"
             return ann
 
+        # 在 async 上下文中调用父类的默认实现（使用 run_in_executor）
         try:
             loop = asyncio.get_running_loop()
+            # 已在 async 上下文，直接返回 await
+            return asyncio.run(self._annotate_async(text, ann))
         except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(asyncio.run, self._annotate_async(text, ann))
-                return future.result(timeout=30)
-        else:
+            # 无 event loop，可以安全使用 asyncio.run
             return asyncio.run(self._annotate_async(text, ann))
 
     async def _annotate_async(self, text: str, ann: ChunkAnnotation) -> ChunkAnnotation:

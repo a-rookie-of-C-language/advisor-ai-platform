@@ -3,6 +3,7 @@ use axum::Router;
 use tokio::net::TcpListener;
 
 pub struct App {
+    pub name: String,
     pub addr: String,
     pub router: Router,
 }
@@ -10,7 +11,7 @@ pub struct App {
 impl App {
     pub async fn run(self) -> Result<()> {
         let listener = TcpListener::bind(&self.addr).await?;
-        tracing::info!("aigateway listening on {}", self.addr);
+        tracing::info!(app = %self.name, addr = %self.addr, "ai gateway listening");
         axum::serve(listener, self.router)
             .with_graceful_shutdown(shutdown_signal())
             .await?;
@@ -20,7 +21,9 @@ impl App {
 
 async fn shutdown_signal() {
     let ctrl_c = async {
-        tokio::signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
     };
 
     #[cfg(unix)]

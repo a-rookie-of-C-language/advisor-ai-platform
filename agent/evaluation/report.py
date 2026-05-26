@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from evaluation.serialization import to_jsonable
 from json_types import JsonObject
 
 
@@ -98,4 +99,4 @@ class EvalReport:
 def save_json(report: EvalReport, path: str | Path) -> None:
     """将评估报告保存为 JSON 文件。"""
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(asdict(report), f, ensure_ascii=False, indent=2)
+        json.dump(to_jsonable(report), f, ensure_ascii=False, indent=2)

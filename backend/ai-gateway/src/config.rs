@@ -1,36 +1,13 @@
-use std::env;
-use std::fmt;
+#[allow(non_snake_case)]
+#[path = "config/ConfigEnv.rs"]
+mod ConfigEnv;
+#[allow(non_snake_case)]
+#[path = "config/ConfigValidation.rs"]
+mod ConfigValidation;
 
-#[derive(Debug)]
-pub enum ConfigError {
-    MissingMasterApiKey { env: String },
-    MissingProviderApiKey { env: String },
-}
+pub use ConfigValidation::ConfigError;
 
-impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ConfigError::MissingMasterApiKey { env } => {
-                write!(
-                    f,
-                    "APP_ENV is '{}' but MASTER_API_KEY is empty. \
-                     Set a secure MASTER_API_KEY before starting in non-dev environments.",
-                    env
-                )
-            }
-            ConfigError::MissingProviderApiKey { env } => {
-                write!(
-                    f,
-                    "APP_ENV is '{}' but PROVIDER_API_KEY is empty. \
-                     Set a valid PROVIDER_API_KEY before starting in non-dev environments.",
-                    env
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ConfigError {}
+use ConfigEnv::{env_optional, env_or, env_parse_or};
 
 #[derive(Clone)]
 pub struct Config {
@@ -64,53 +41,27 @@ impl Config {
             http_addr: env_or("HTTP_ADDR", "0.0.0.0:8080"),
             master_api_key: env_or("MASTER_API_KEY", DEFAULT_MASTER_API_KEY),
             redis_addr: env_or("REDIS_ADDR", "redis://127.0.0.1:6379"),
-            rate_limit_per_min: env_or("RATE_LIMIT_PER_MIN", "120").parse().unwrap_or(120),
-            rate_limit_tenant_per_min: env_or("RATE_LIMIT_TENANT_PER_MIN", "240")
-                .parse()
-                .unwrap_or(240),
-            rate_limit_route_per_min: env_or("RATE_LIMIT_ROUTE_PER_MIN", "120")
-                .parse()
-                .unwrap_or(120),
-            rate_limit_model_per_min: env_or("RATE_LIMIT_MODEL_PER_MIN", "120")
-                .parse()
-                .unwrap_or(120),
-            rate_limit_window_ms: env_or("RATE_LIMIT_WINDOW_MS", "60000")
-                .parse()
-                .unwrap_or(60000),
-            rate_limit_fail_open: env_or("RATE_LIMIT_FAIL_OPEN", "true")
-                .parse()
-                .unwrap_or(true),
-            max_tokens_per_day: env_or("MAX_TOKENS_PER_DAY", "1000000")
-                .parse()
-                .unwrap_or(1_000_000),
+            rate_limit_per_min: env_parse_or("RATE_LIMIT_PER_MIN", 120),
+            rate_limit_tenant_per_min: env_parse_or("RATE_LIMIT_TENANT_PER_MIN", 240),
+            rate_limit_route_per_min: env_parse_or("RATE_LIMIT_ROUTE_PER_MIN", 120),
+            rate_limit_model_per_min: env_parse_or("RATE_LIMIT_MODEL_PER_MIN", 120),
+            rate_limit_window_ms: env_parse_or("RATE_LIMIT_WINDOW_MS", 60000),
+            rate_limit_fail_open: env_parse_or("RATE_LIMIT_FAIL_OPEN", true),
+            max_tokens_per_day: env_parse_or("MAX_TOKENS_PER_DAY", 1_000_000),
             provider_base_url: env_or("PROVIDER_BASE_URL", "https://api.openai.com/v1"),
             provider_api_key: env_or("PROVIDER_API_KEY", ""),
             provider_model: env_or("PROVIDER_MODEL", "gpt-4.1-mini"),
-            provider_timeout_sec: env_or("PROVIDER_TIMEOUT_SEC", "60").parse().unwrap_or(60),
-            database_url: env::var("DATABASE_URL").ok(),
-            db_max_connections: env_or("DB_MAX_CONNECTIONS", "5").parse().unwrap_or(5),
+            provider_timeout_sec: env_parse_or("PROVIDER_TIMEOUT_SEC", 60),
+            database_url: env_optional("DATABASE_URL"),
+            db_max_connections: env_parse_or("DB_MAX_CONNECTIONS", 5),
         };
         cfg.validate()?;
         Ok(cfg)
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.app_env != "dev" && self.master_api_key.is_empty() {
-            return Err(ConfigError::MissingMasterApiKey {
-                env: self.app_env.clone(),
-            });
-        }
-        if self.app_env != "dev" && self.provider_api_key.is_empty() {
-            return Err(ConfigError::MissingProviderApiKey {
-                env: self.app_env.clone(),
-            });
-        }
-        Ok(())
+        ConfigValidation::validate_config(self)
     }
-}
-
-fn env_or(key: &str, default: &str) -> String {
-    env::var(key).unwrap_or_else(|_| default.to_string())
 }
 
 #[cfg(test)]

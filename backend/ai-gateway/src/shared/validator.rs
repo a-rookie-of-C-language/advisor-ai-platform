@@ -1,7 +1,4 @@
-use axum::{
-    http::StatusCode,
-    Json,
-};
+use axum::{http::StatusCode, Json};
 
 use crate::domain::core::gateway_orchestration::CompletionRequest::CompletionRequest;
 use crate::shared::response;
@@ -10,9 +7,14 @@ const MAX_MESSAGES: usize = 128;
 const MAX_MESSAGE_CONTENT_LEN: usize = 128 * 1024;
 const VALID_ROLES: &[&str] = &["system", "user", "assistant", "tool"];
 
-pub fn validate_request(payload: &CompletionRequest) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
+pub fn validate_request(
+    payload: &CompletionRequest,
+) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
     if payload.messages.is_empty() {
-        return Err(response::err(StatusCode::BAD_REQUEST, "messages must not be empty"));
+        return Err(response::err(
+            StatusCode::BAD_REQUEST,
+            "messages must not be empty",
+        ));
     }
     if payload.messages.len() > MAX_MESSAGES {
         return Err(response::err(
@@ -30,7 +32,10 @@ pub fn validate_request(payload: &CompletionRequest) -> Result<(), (StatusCode, 
         if msg.content.len() > MAX_MESSAGE_CONTENT_LEN {
             return Err(response::err(
                 StatusCode::BAD_REQUEST,
-                &format!("message content exceeds {} bytes at index {}", MAX_MESSAGE_CONTENT_LEN, i),
+                &format!(
+                    "message content exceeds {} bytes at index {}",
+                    MAX_MESSAGE_CONTENT_LEN, i
+                ),
             ));
         }
     }
@@ -116,7 +121,11 @@ mod tests {
                 role: role.to_string(),
                 content: "hello".to_string(),
             }]);
-            assert!(validate_request(&req).is_ok(), "role {} should be valid", role);
+            assert!(
+                validate_request(&req).is_ok(),
+                "role {} should be valid",
+                role
+            );
         }
     }
 

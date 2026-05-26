@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime
 
 import httpx
 
-from context.memory.api.MemoryApiCircuitOpen import MemoryApiCircuitOpen
+from context.memory.api.memory_api_mappers import parse_datetime, to_memory_item, to_session_summary
+from context.memory.api.memory_api_transport import request_memory_api
 from context.memory.core.circuit_breaker import CircuitBreaker
 from context.memory.core.MemoryCandidate import MemoryCandidate
 from context.memory.core.MemoryItem import MemoryItem
@@ -54,7 +54,7 @@ class MemoryApiClient:
         }
         data = await self._request("POST", "/api/memory/long-term/search", json=payload)
         raw_items = data.get("data", [])
-        return [self._to_memory_item(item) for item in raw_items]
+        return [to_memory_item(item) for item in raw_items]
 
     async def upsert_candidates(
         self,
@@ -94,11 +94,7 @@ class MemoryApiClient:
         body = data.get("data")
         if not body:
             return None
-        return SessionSummary(
-            session_id=int(body.get("sessionId", session_id)),
-            summary=str(body.get("summary", "")),
-            updated_at=self._parse_datetime(body.get("updatedAt")),
-        )
+        return to_session_summary(body, session_id)
 
     async def save_session_summary(self, session_id: int, summary: str) -> None:
         payload = {"summary": summary}
@@ -150,75 +146,24 @@ class MemoryApiClient:
         await self._request("POST", f"/api/memory/task/{task_id}/fail", json=params if params else None)
 
     async def _request(self, method: str, path: str, json: JsonObject | None = None) -> JsonObject:
-        url = f"{self._base_url}{path}"
-        headers: dict[str, str] = {}
-        if self._bearer_token:
-            headers["Authorization"] = f"Bearer {self._bearer_token}"
-
-        async def _do_request() -> JsonObject:
-            async with httpx.AsyncClient(timeout=self._timeout_sec) as client:
-                response = await client.request(method=method, url=url, json=json, headers=headers)
-                response.raise_for_status()
-                if not response.content:
-                    return {"ok": True, "data": None}
-                return response.json()
-
-        if self._circuit_breaker.state.value == "open":
-            self._logger.warning("Memory API circuit open, skipping request: %s %s", method, path)
-            raise MemoryApiCircuitOpen(f"Circuit open: {method} {path}")
-
-        last_error: Exception | None = None
-        for attempt in range(self._max_retries + 1):
-            try:
-                result = await _do_request()
-                self._circuit_breaker.record_success()
-                return result
-            except httpx.HTTPStatusError as exc:
-                status_code = exc.response.status_code if exc.response is not None else None
-                if status_code is not None and 400 <= status_code < 500 and status_code != 429:
-                    self._circuit_breaker.record_failure()
-                    raise
-                last_error = exc
-                self._circuit_breaker.record_failure()
-            except (httpx.RequestError, ValueError) as exc:
-                last_error = exc
-                self._circuit_breaker.record_failure()
-
-            if attempt >= self._max_retries:
-                break
-            backoff = self._retry_backoff_sec * (2 ** attempt)
-            self._logger.warning(
-                "Memory API retry %d/%d after %.1fs: %s %s",
-                attempt + 1, self._max_retries + 1, backoff, method, path
-            )
-            await asyncio.sleep(backoff)
-
-        if last_error is not None:
-            raise last_error
-        raise RuntimeError("Memory API request failed")
-
-    @staticmethod
-    def _to_memory_item(data: JsonObject) -> MemoryItem:
-        return MemoryItem(
-            id=int(data.get("id", 0)),
-            user_id=int(data.get("userId", 0)),
-            kb_id=int(data.get("kbId", 0)),
-            content=str(data.get("content", "")),
-            confidence=float(data.get("confidence", 0.5)),
-            score=float(data.get("score", 0.0)),
-            created_at=MemoryApiClient._parse_datetime(data.get("createdAt")),
-            updated_at=MemoryApiClient._parse_datetime(data.get("updatedAt")),
-            expires_at=MemoryApiClient._parse_datetime(data.get("expiresAt")),
-            tags=data.get("tags") or {},
+        return await request_memory_api(
+            method=method,
+            path=path,
+            json=json,
+            base_url=self._base_url,
+            timeout_sec=self._timeout_sec,
+            max_retries=self._max_retries,
+            retry_backoff_sec=self._retry_backoff_sec,
+            bearer_token=self._bearer_token,
+            circuit_breaker=self._circuit_breaker,
+            logger=self._logger,
+            async_client_factory=httpx.AsyncClient,
         )
 
     @staticmethod
+    def _to_memory_item(data: JsonObject) -> MemoryItem:
+        return to_memory_item(data)
+
+    @staticmethod
     def _parse_datetime(value: JsonValue) -> datetime | None:
-        if not value:
-            return None
-        if isinstance(value, datetime):
-            return value
-        try:
-            return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        except ValueError:
-            return None
+        return parse_datetime(value)

@@ -1,6 +1,5 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
@@ -9,11 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,7 +24,7 @@ public class AgentProxyServiceImpl implements AgentProxyService {
   private final AgentPayloadBuilder payloadBuilder;
   private final AgentProxyTransportSupport transportSupport = new AgentProxyTransportSupport();
   private final AgentStreamResponseReader responseReader;
-  private final HttpClient httpClient;
+  private final AgentProxyHttpClientSupport httpClientSupport;
   private final String agentBaseUrl;
   private final String agentApiToken;
   private final boolean aiGatewayEnabled;
@@ -64,11 +61,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
     this.responseReader =
         new AgentStreamResponseReader(
             streamEventCollector, transportSupport, debugStream, normalizedFirstChunkTimeoutMs);
-    this.httpClient =
-        HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(Duration.ofMillis(this.requestTimeoutMs))
-            .build();
+    this.httpClientSupport =
+        new AgentProxyHttpClientSupport(transportSupport, this.requestTimeoutMs);
   }
 
   @Override
@@ -123,24 +117,8 @@ public class AgentProxyServiceImpl implements AgentProxyService {
             traceId,
             turnId);
 
-    HttpResponse<InputStream> response;
-    try {
-      response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Agent stream interrupted", e);
-    }
-
-    if (response.statusCode() >= 400) {
-      String errorBody = transportSupport.readErrorBody(response);
-      log.warn(
-          "agent_proxy failed, status={}, payloadBytes={}, bodyPreview={}, elapsedMs={}",
-          response.statusCode(),
-          payloadBytes.length,
-          transportSupport.preview(errorBody, DEBUG_PREVIEW_LIMIT),
-          transportSupport.elapsedSince(startAt));
-      throw new BadRequestException("agent stream failed: http " + response.statusCode());
-    }
+    HttpResponse<InputStream> response =
+        httpClientSupport.send(httpRequest, payloadBytes.length, startAt);
 
     return responseReader.read(
         response.body(), outputStream, request.getSessionId(), userId, startAt);

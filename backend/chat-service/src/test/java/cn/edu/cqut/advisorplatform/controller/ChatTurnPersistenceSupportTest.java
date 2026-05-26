@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -29,8 +29,8 @@ class ChatTurnPersistenceSupportTest {
 
   @Test
   void saveTurn_shouldUseMetadataSaveWhenSourcesPresent() {
-    ChatMessageDO.SourceReference source = new ChatMessageDO.SourceReference();
-    List<ChatMessageDO.SourceReference> sources = List.of(source);
+    SourceReference source = new SourceReference();
+    List<SourceReference> sources = List.of(source);
 
     support.saveTurn(chatMessageService, 1001L, 1L, "turn", "hello", "answer", sources, List.of());
 

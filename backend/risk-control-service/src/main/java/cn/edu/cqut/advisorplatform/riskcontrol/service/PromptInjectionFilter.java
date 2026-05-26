@@ -50,11 +50,11 @@ public class PromptInjectionFilter implements RiskFilter {
         return RiskCheckResponse.builder()
             .passed(false)
             .action(riskActionDecider.decideAction(rule, "reject"))
-            .reason("Prompt 娉ㄥ叆椋庨櫓")
+            .reason("Prompt 注入风险")
             .category("prompt_injection")
             .matchedKeyword(rule.getName())
             .statusCode(400)
-            .message("妫€娴嬪埌寮傚父璇锋眰锛岃閲嶆柊鎻忚堪鎮ㄧ殑闂")
+            .message("检测到异常请求，请重新描述您的问题")
             .build();
       }
     }

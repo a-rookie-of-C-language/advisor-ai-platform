@@ -20,7 +20,11 @@ impl RedisQuotaPolicyDao {
 
 #[async_trait]
 impl QuotaPolicyDao for RedisQuotaPolicyDao {
-    async fn get_policy(&self, tenant_id: &str, app_id: &str) -> anyhow::Result<Option<QuotaPolicy>> {
+    async fn get_policy(
+        &self,
+        tenant_id: &str,
+        app_id: &str,
+    ) -> anyhow::Result<Option<QuotaPolicy>> {
         let mut conn = self.redis_client.get_multiplexed_async_connection().await?;
         let key = Self::policy_key(tenant_id, app_id);
 
@@ -34,7 +38,12 @@ impl QuotaPolicyDao for RedisQuotaPolicyDao {
         }
     }
 
-    async fn set_policy(&self, tenant_id: &str, app_id: &str, policy: &QuotaPolicy) -> anyhow::Result<()> {
+    async fn set_policy(
+        &self,
+        tenant_id: &str,
+        app_id: &str,
+        policy: &QuotaPolicy,
+    ) -> anyhow::Result<()> {
         let mut conn = self.redis_client.get_multiplexed_async_connection().await?;
         let key = Self::policy_key(tenant_id, app_id);
 

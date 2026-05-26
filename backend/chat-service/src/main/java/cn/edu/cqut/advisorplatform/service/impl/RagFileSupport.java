@@ -1,5 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
+import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
+import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.Comparator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -19,6 +23,27 @@ public class RagFileSupport {
 
   public Path resolveUploadBaseDir() {
     return Paths.get(uploadDir).toAbsolutePath().normalize();
+  }
+
+  public boolean isKnowledgeBaseOwner(RagKnowledgeBaseDO kb, @Nullable UserDO currentUser) {
+    if (kb == null || currentUser == null || currentUser.getId() == null) {
+      return false;
+    }
+    UserDO owner = kb.getCreatedBy();
+    return owner != null && owner.getId() != null && owner.getId().equals(currentUser.getId());
+  }
+
+  public boolean canDeleteDocument(RagDocumentDO doc, @Nullable UserDO currentUser) {
+    if (doc == null || currentUser == null || currentUser.getId() == null) {
+      return false;
+    }
+
+    UserDO uploader = doc.getUploadedBy();
+    if (uploader != null && uploader.getId() != null) {
+      return uploader.getId().equals(currentUser.getId());
+    }
+
+    return isKnowledgeBaseOwner(doc.getKnowledgeBase(), currentUser);
   }
 
   public Path resolveKnowledgeBaseDir(Long kbId) {

@@ -3,13 +3,8 @@ package cn.edu.cqut.advisorplatform.config.websocket;
 import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.service.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -30,8 +25,8 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
   private static final int STEP_SECONDS = 10;
 
   private final MonitorService monitorService;
-  private final JwtUtil jwtUtil;
   private final ObjectMapper objectMapper;
+  private final MonitorWebSocketAuthenticator authenticator;
 
   private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
   private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -40,8 +35,8 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
   public MonitorWebSocketHandler(
       MonitorService monitorService, JwtUtil jwtUtil, ObjectMapper objectMapper) {
     this.monitorService = monitorService;
-    this.jwtUtil = jwtUtil;
     this.objectMapper = objectMapper;
+    this.authenticator = new MonitorWebSocketAuthenticator(jwtUtil);
   }
 
   @Override
@@ -70,29 +65,7 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
   }
 
   private boolean authenticate(WebSocketSession session) {
-    URI uri = session.getUri();
-    if (uri == null) {
-      closeSilently(session, CloseStatus.NOT_ACCEPTABLE);
-      return false;
-    }
-    String query = uri.getQuery();
-    String token = extractQueryParam(query, "token");
-    if (token == null || token.isBlank()) {
-      closeSilently(session, CloseStatus.NOT_ACCEPTABLE);
-      return false;
-    }
-    try {
-      Claims claims = jwtUtil.extractClaims(token);
-      if (!jwtUtil.isAccessToken(claims) || jwtUtil.isTokenExpired(claims)) {
-        closeSilently(session, CloseStatus.NOT_ACCEPTABLE);
-        return false;
-      }
-      return true;
-    } catch (JwtException | IllegalArgumentException e) {
-      log.warn("monitor ws auth failed: {}", e.getMessage());
-      closeSilently(session, CloseStatus.NOT_ACCEPTABLE);
-      return false;
-    }
+    return authenticator.authenticate(session);
   }
 
   private void ensureBroadcastRunning() {
@@ -136,27 +109,6 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
       }
     } catch (Exception e) {
       log.error("monitor ws broadcast error", e);
-    }
-  }
-
-  private static String extractQueryParam(String query, String name) {
-    if (query == null) {
-      return null;
-    }
-    for (String param : query.split("&")) {
-      String[] kv = param.split("=", 2);
-      if (kv.length == 2 && name.equals(kv[0])) {
-        return URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
-      }
-    }
-    return null;
-  }
-
-  private static void closeSilently(WebSocketSession session, CloseStatus status) {
-    try {
-      session.close(status);
-    } catch (IOException ignored) {
-      // best effort
     }
   }
 

@@ -1,12 +1,13 @@
 package cn.edu.cqut.advisorplatform.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AuditService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -37,8 +38,8 @@ class AuditControllerTest {
         .thenReturn(response);
 
     var result = auditController.getAuditLogs(null, null, null, null, null, 0, 20);
-    assert result.getCode() == 200;
-    assert result.getData().getRecords().size() == 1;
+    assertThat(result.getCode()).isEqualTo(200);
+    assertThat(result.getData().getRecords()).hasSize(1);
   }
 
   @Test
@@ -50,8 +51,8 @@ class AuditControllerTest {
     when(auditService.getAuditLogById(1L)).thenReturn(log);
 
     var result = auditController.getAuditLogById(1L);
-    assert result.getCode() == 200;
-    assert result.getData().getId() == 1L;
+    assertThat(result.getCode()).isEqualTo(200);
+    assertThat(result.getData().getId()).isEqualTo(1L);
   }
 
   @Test
@@ -59,8 +60,8 @@ class AuditControllerTest {
     when(auditService.countByUserAndModule(1L, AuditModule.CHAT)).thenReturn(5L);
 
     var result = auditController.countByUserAndModule(1L, AuditModule.CHAT, null);
-    assert result.getCode() == 200;
-    assert result.getData() == 5L;
+    assertThat(result.getCode()).isEqualTo(200);
+    assertThat(result.getData()).isEqualTo(5L);
   }
 
   @Test
@@ -70,7 +71,7 @@ class AuditControllerTest {
 
     var result =
         auditController.countByUserAndModuleAndAction(1L, AuditModule.CHAT, AuditAction.CHAT);
-    assert result.getCode() == 200;
-    assert result.getData() == 3L;
+    assertThat(result.getCode()).isEqualTo(200);
+    assertThat(result.getData()).isEqualTo(3L);
   }
 }

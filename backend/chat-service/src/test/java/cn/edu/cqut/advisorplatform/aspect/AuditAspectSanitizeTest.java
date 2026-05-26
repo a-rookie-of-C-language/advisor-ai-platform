@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AuditService;
@@ -67,7 +66,8 @@ class AuditAspectSanitizeTest {
     RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
     when(joinPoint.getSignature()).thenReturn(methodSignature);
-    when(methodSignature.getMethod()).thenReturn(TestController.class.getMethod("save", Map.class));
+    when(methodSignature.getMethod())
+        .thenReturn(AuditAspectSanitizeTestController.class.getMethod("save", Map.class));
     when(joinPoint.getArgs()).thenReturn(new Object[] {body});
     when(joinPoint.proceed()).thenReturn("ok");
 
@@ -87,16 +87,5 @@ class AuditAspectSanitizeTest {
         .doesNotContain("abc-token")
         .doesNotContain("my-api-key")
         .doesNotContain("my-refresh-token");
-  }
-
-  static class TestController {
-
-    @Auditable(
-        module = AuditLogDO.AuditModule.AUTH,
-        action = AuditLogDO.AuditAction.STORE,
-        logRequestParams = true)
-    public String save(Map<String, Object> body) {
-      return "ok";
-    }
   }
 }

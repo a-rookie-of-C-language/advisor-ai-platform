@@ -5,7 +5,8 @@ import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +24,8 @@ public class AuthController {
 
   @PostMapping("/login")
   @Auditable(
-      module = AuditLogDO.AuditModule.AUTH,
-      action = AuditLogDO.AuditAction.LOGIN,
+      module = AuditModule.AUTH,
+      action = AuditAction.LOGIN,
       logRequestParams = false,
       logResponseData = false)
   public ApiResponseDTO<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
@@ -33,8 +34,8 @@ public class AuthController {
 
   @PostMapping("/register")
   @Auditable(
-      module = AuditLogDO.AuditModule.AUTH,
-      action = AuditLogDO.AuditAction.STORE,
+      module = AuditModule.AUTH,
+      action = AuditAction.STORE,
       logRequestParams = false,
       logResponseData = false)
   public ApiResponseDTO<Void> register(@Valid @RequestBody RegisterRequestDTO request) {

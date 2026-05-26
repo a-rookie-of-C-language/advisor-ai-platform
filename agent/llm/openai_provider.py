@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from typing import AsyncIterator, Awaitable, Callable, Iterable
+from typing import Any, AsyncIterator, Awaitable, Callable, Iterable
 
 from openai import AsyncOpenAI
 
@@ -11,10 +10,12 @@ from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider, ToolExecutor
 from llm.chat_message import ChatMessage
 from llm.llm_stream_event import LLMStreamEvent
+from llm.message_payload_builder import build_message_payload
+from llm.openai_plain_stream import stream_plain_chat
+from llm.openai_request_kwargs import build_stream_chat_kwargs
+from llm.openai_tool_chat_streamer import OpenAIToolChatStreamer
 from llm.thinking_config import ThinkingConfig
-from llm.ToolCallFSM import ToolCallFSM
 from llm.tool_spec import ToolSpec
-from llm.with_retry import StreamIdleError, call_with_retry, is_retryable_llm_error, retry_delay_seconds
 from prompt.PromptBuilder import PromptBuilder
 from workspace.file_handler import (
     extract_text,
@@ -89,55 +90,14 @@ class OpenAIProvider(BaseLLMProvider):
 
     @staticmethod
     def _build_message_payload(message: ChatMessage) -> dict[str, Any]:
-        """构建单条消息的 payload，支持多模态（图片附件）。"""
-        if not message.attachments:
-            return {"role": message.role, "content": message.content}
-
-        image_parts = []
-        doc_texts = []
-
-        for att in message.attachments:
-            file_type = att.get("file_type", "")
-            file_path = att.get("file_path", "")
-            file_name = att.get("file_name", "unknown")
-
-            if not file_path:
-                continue
-
-            if is_image(file_type):
-                try:
-                    b64 = read_image_base64(file_path)
-                    mime = get_mime_type(file_type)
-                    image_parts.append(
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:{mime};base64,{b64}"},
-                        }
-                    )
-                except Exception as e:
-                    logger.warning("读取图片失败 %s: %s", file_name, e)
-                    doc_texts.append(f"[图片读取失败: {file_name}]")
-            else:
-                try:
-                    text = extract_text(file_path, file_type)
-                    doc_texts.append(f"--- {file_name} ---\n{text}")
-                except Exception as e:
-                    logger.warning("提取文档文本失败 %s: %s", file_name, e)
-                    doc_texts.append(f"[文档提取失败: {file_name}]")
-
-        parts: list[dict[str, Any]] = []
-        if doc_texts:
-            combined_text = message.content + "\n\n" + "\n\n".join(doc_texts)
-            parts.append({"type": "text", "text": combined_text})
-        else:
-            parts.append({"type": "text", "text": message.content})
-
-        parts.extend(image_parts)
-
-        if len(parts) == 1 and parts[0]["type"] == "text":
-            return {"role": message.role, "content": parts[0]["text"]}
-
-        return {"role": message.role, "content": parts}
+        return build_message_payload(
+            message,
+            extract_text=extract_text,
+            read_image_base64=read_image_base64,
+            get_mime_type=get_mime_type,
+            is_image=is_image,
+            logger=logger,
+        )
 
     async def stream_chat(
         self,
@@ -148,97 +108,26 @@ class OpenAIProvider(BaseLLMProvider):
     ) -> AsyncIterator[str]:
         payload = [self._build_message_payload(message) for message in messages]
 
-        kwargs: JsonObject = {
-            "model": self._model,
-            "messages": payload,
-            "temperature": self._temperature,
-            "stream": True,
-        }
-        if response_format is not None:
-            kwargs["response_format"] = response_format
-        kwargs.update(self._thinking_config.to_request_kwargs())
+        kwargs = build_stream_chat_kwargs(
+            model=self._model,
+            messages=payload,
+            temperature=self._temperature,
+            response_format=response_format,
+            thinking_config=self._thinking_config,
+        )
 
-        max_tokens_bumped = False
-        recovery_attempts = 0
-        _max_recovery_attempts = 3
-        _recovery_message = "你被截断了，不要道歉、不要回顾，直接从中断处继续。"
-
-        while True:  # 恢复循环：处理输出截断
-            attempt = 0
-            while True:  # 重试循环：处理网络/限流等瞬态错误
-                yielded = False
-                finish_reason: str | None = None
-                try:
-                    stream = await asyncio.wait_for(
-                        self._client.chat.completions.create(**kwargs),
-                        timeout=self._stream_timeout_sec,
-                    )
-                    stream_iter = stream.__aiter__()
-                    while True:
-                        try:
-                            chunk = await asyncio.wait_for(
-                                stream_iter.__anext__(),
-                                timeout=self._stream_idle_timeout_sec,
-                            )
-                        except StopAsyncIteration:
-                            break
-                        except asyncio.TimeoutError as timeout_exc:
-                            raise StreamIdleError(
-                                f"流空闲超过 {self._stream_idle_timeout_sec:.0f} 秒，自动重试"
-                            ) from timeout_exc
-                        if chunk.choices:
-                            choice = chunk.choices[0]
-                            if hasattr(choice, "finish_reason") and choice.finish_reason:
-                                finish_reason = choice.finish_reason
-                            # 思考模式：reasoning_content 通过回调流式输出
-                            # DeepSeek-R1 等模型使用 reasoning_content，需要检查属性存在性
-                            if hasattr(choice.delta, "reasoning_content"):
-                                reasoning = choice.delta.reasoning_content
-                                if reasoning and on_reasoning is not None:
-                                    await on_reasoning(reasoning)
-                            delta = choice.delta.content
-                            if delta:
-                                yielded = True
-                                yield delta
-
-                    # 流正常结束，检查是否因 max_tokens 被截断
-                    if finish_reason == "length":
-                        if not max_tokens_bumped:
-                            kwargs["max_tokens"] = 65536
-                            max_tokens_bumped = True
-                            logger.info(
-                                "llm_output_truncated: level=1 bump_max_tokens model=%s",
-                                self._model,
-                            )
-                            break  # 跳出重试循环 → 恢复循环用新参数重试
-                        if recovery_attempts < _max_recovery_attempts:
-                            recovery_attempts += 1
-                            payload.append({"role": "user", "content": _recovery_message})
-                            logger.info(
-                                "llm_output_truncated: level=2 recovery_attempt=%s/%s model=%s",
-                                recovery_attempts,
-                                _max_recovery_attempts,
-                                self._model,
-                            )
-                            break  # 跳出重试循环 → 恢复循环注入消息重试
-                        logger.warning(
-                            "llm_output_truncated: level=3 exhausted model=%s",
-                            self._model,
-                        )
-                    return
-                except Exception as exc:
-                    if yielded or attempt >= self._max_retries or not is_retryable_llm_error(exc):
-                        raise
-                    attempt += 1
-                    delay = retry_delay_seconds(attempt)
-                    logger.warning(
-                        "llm_stream_retry: model=%s attempt=%s max_retries=%s delay=%.1f",
-                        self._model,
-                        attempt,
-                        self._max_retries,
-                        delay,
-                    )
-                    await asyncio.sleep(delay)
+        async for chunk in stream_plain_chat(
+            self._client.chat.completions.create,
+            kwargs=kwargs,
+            payload=payload,
+            model=self._model,
+            max_retries=self._max_retries,
+            stream_timeout_sec=self._stream_timeout_sec,
+            stream_idle_timeout_sec=self._stream_idle_timeout_sec,
+            on_reasoning=on_reasoning,
+            logger=logger,
+        ):
+            yield chunk
 
     async def stream_chat_with_tools(
         self,
@@ -256,268 +145,26 @@ class OpenAIProvider(BaseLLMProvider):
                 yield LLMStreamEvent(type="delta", text=chunk)
             return
 
-        conversation: list[dict[str, Any]] = [
-            self._build_message_payload(message) for message in messages
-        ]
-        tool_payload = self._to_tool_payload(tools, strict=strict_tools)
-        tool_call_count = 0
-        max_tokens_bumped = False
-        recovery_attempts = 0
-        _max_recovery_attempts = 3
-        _recovery_message = "你被截断了，不要道歉、不要回顾，直接从中断处继续。"
-
-        while True:
-            tool_choice: JsonObject | str = "auto"
-
-            # 捕获当前恢复状态与工具定义用于闭包内 create_response
-            _bumped = max_tokens_bumped
-            _tool_payload = tool_payload
-
-            async def create_response(
-                current_tool_choice: JsonObject | str = tool_choice,
-                _bumped: bool = _bumped,  # noqa: B008
-                _tool_payload: list[JsonObject] = _tool_payload,  # noqa: B008
-            ):
-                kwargs: JsonObject = {
-                    "model": self._model,
-                    "messages": conversation,
-                    "temperature": self._temperature,
-                    "stream": False,
-                    "tools": _tool_payload,
-                    "tool_choice": current_tool_choice,
-                }
-                if _bumped:
-                    kwargs["max_tokens"] = 65536
-                return await asyncio.wait_for(
-                    self._client.chat.completions.create(**kwargs),
-                    timeout=self._tool_round_timeout_sec,
-                )
-
-            response = await call_with_retry(
-                create_response,
-                max_retries=self._max_retries,
-                operation_name="llm_tool_round",
-                logger=logger,
-            )
-
-            if not response.choices:
-                raise RuntimeError("LLM returned empty choices (possibly content filter)")
-            choice = response.choices[0]
-            assistant_message = choice.message
-            assistant_content = assistant_message.content or ""
-            raw_tool_calls = assistant_message.tool_calls or []
-
-            if raw_tool_calls and tool_call_count < max_tool_calls:
-                encoded_tool_calls = []
-                for raw_call in raw_tool_calls:
-                    encoded_tool_calls.append(
-                        {
-                            "id": raw_call.id,
-                            "type": "function",
-                            "function": {
-                                "name": raw_call.function.name,
-                                "arguments": raw_call.function.arguments or "{}",
-                            },
-                        }
-                    )
-                conversation.append(
-                    {
-                        "role": "assistant",
-                        "content": assistant_content or None,
-                        "tool_calls": encoded_tool_calls,
-                    }
-                )
-
-                for raw_call in raw_tool_calls:
-                    tool_name = raw_call.function.name
-                    args_text = raw_call.function.arguments or "{}"
-                    fsm = ToolCallFSM(
-                        tool_name,
-                        args_text,
-                        call_id=raw_call.id or "",
-                        max_args_retries=2,
-                        max_exec_retries=max_tool_retries,
-                    )
-
-                    # --- 闃舵涓€锛氬弬鏁拌В鏋愪笌楠岃瘉 ---
-                    try:
-                        tool_args = json.loads(args_text)
-                    except Exception:
-                        tool_args = None  # type: ignore[assignment]
-
-                    if not fsm.validate_args(tool_args):
-                        # FSM 进入 ARGS_RETRY 或 FAILED
-                        if fsm.state.value == "args_retry":
-                            # 参数格式错误，先回传错误结果，等待下一轮修正
-                            error_output = json.dumps(
-                                {
-                                    "ok": False,
-                                    "status": "error",
-                                    "message": f"Invalid JSON in tool arguments: {args_text[:200]}",
-                                    "items": [],
-                                },
-                                ensure_ascii=False,
-                            )
-                            yield LLMStreamEvent(
-                                type="tool_call",
-                                tool_name=tool_name,
-                                tool_args={},
-                            )
-                            yield LLMStreamEvent(
-                                type="tool_result",
-                                tool_name=tool_name,
-                                tool_args={},
-                                tool_output=error_output,
-                                attempt=0,
-                                success=False,
-                            )
-                            conversation.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": raw_call.id,
-                                    "content": error_output,
-                                }
-                            )
-                            continue
-
-                        # 参数解析彻底失败
-                        error_output = json.dumps(
-                            {
-                                "ok": False,
-                                "status": "error",
-                                "message": f"tool_args_parse_exhausted: {args_text[:200]}",
-                                "items": [],
-                            },
-                            ensure_ascii=False,
-                        )
-                        yield LLMStreamEvent(
-                            type="tool_call",
-                            tool_name=tool_name,
-                            tool_args={},
-                        )
-                        yield LLMStreamEvent(
-                            type="tool_result",
-                            tool_name=tool_name,
-                            tool_args={},
-                            tool_output=error_output,
-                            attempt=fsm.context.attempt,
-                            success=False,
-                        )
-                        conversation.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": raw_call.id,
-                                "content": error_output,
-                            }
-                        )
-                        continue
-
-                    # --- 闃舵浜岋細宸ュ叿鎵ц ---
-                    yield LLMStreamEvent(
-                        type="tool_call",
-                        tool_name=tool_name,
-                        tool_args=fsm.context.tool_args,
-                    )
-
-                    last_error = ""
-                    tool_output = ""
-                    success = False
-                    used_attempt = 0
-                    for attempt in range(1, max_tool_retries + 1):
-                        used_attempt = attempt
-                        try:
-                            try:
-                                tool_output = await tool_executor(
-                                    tool_name,
-                                    fsm.context.tool_args,
-                                    idempotency_key=fsm.idempotency_key,
-                                )
-                            except TypeError as exc:
-                                if "idempotency_key" not in str(exc):
-                                    raise
-                                tool_output = await tool_executor(tool_name, fsm.context.tool_args)
-                            success = True
-                            fsm.record_execution(tool_output, success=True)
-                            break
-                        except Exception as exc:  # noqa: BLE001
-                            last_error = str(exc)
-                            fsm.record_execution(str(exc), success=False)
-                            if fsm.state.value == "failed":
-                                break
-
-                    if not success:
-                        tool_output = json.dumps(
-                            {
-                                "ok": False,
-                                "status": "error",
-                                "message": f"tool_execute_failed: {last_error}",
-                                "items": [],
-                            },
-                            ensure_ascii=False,
-                        )
-
-                    yield LLMStreamEvent(
-                        type="tool_result",
-                        tool_name=tool_name,
-                        tool_args=fsm.context.tool_args,
-                        tool_output=tool_output,
-                        attempt=used_attempt,
-                        success=success,
-                    )
-
-                    conversation.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": raw_call.id,
-                            "content": tool_output,
-                        }
-                    )
-
-                    # 动态工具注入：tool_search 返回新工具时扩展工具列表
-                    if on_tool_result is not None:
-                        try:
-                            parsed_output = json.loads(tool_output) if tool_output else {}
-                        except (json.JSONDecodeError, TypeError):
-                            parsed_output = {}
-                        new_specs = await on_tool_result(tool_name, parsed_output)
-                        if new_specs:
-                            tools = tools + new_specs
-                            tool_payload = self._to_tool_payload(tools, strict=strict_tools)
-                            logger.info(
-                                "llm_tools_extended: added=%s total=%s",
-                                len(new_specs),
-                                len(tools),
-                            )
-
-                tool_call_count += 1
-                continue
-
-            # 无工具调用 — 检查输出是否被截断
-            choice_finish = getattr(choice, "finish_reason", None)
-            if choice_finish == "length":
-                if not max_tokens_bumped:
-                    max_tokens_bumped = True
-                    logger.info(
-                        "llm_tool_output_truncated: level=1 bump_max_tokens model=%s",
-                        self._model,
-                    )
-                    continue
-                if recovery_attempts < _max_recovery_attempts:
-                    recovery_attempts += 1
-                    conversation.append({"role": "user", "content": _recovery_message})
-                    logger.info(
-                        "llm_tool_output_truncated: level=2 recovery_attempt=%s/%s model=%s",
-                        recovery_attempts,
-                        _max_recovery_attempts,
-                        self._model,
-                    )
-                    continue
-                logger.warning(
-                    "llm_tool_output_truncated: level=3 exhausted model=%s",
-                    self._model,
-                )
-
-            final_text = assistant_content.strip()
-            for piece in self._chunk_text(final_text, 32):
-                yield LLMStreamEvent(type="delta", text=piece)
-            break
+        streamer = OpenAIToolChatStreamer(
+            client=self._client,
+            model=self._model,
+            temperature=self._temperature,
+            max_retries=self._max_retries,
+            tool_round_timeout_sec=self._tool_round_timeout_sec,
+            build_message_payload=self._build_message_payload,
+            to_tool_payload=lambda current_tools: self._to_tool_payload(
+                current_tools,
+                strict=strict_tools,
+            ),
+            chunk_text=self._chunk_text,
+            logger=logger,
+        )
+        async for event in streamer.stream(
+            messages,
+            tools,
+            tool_executor,
+            max_tool_calls=max_tool_calls,
+            max_tool_retries=max_tool_retries,
+            on_tool_result=on_tool_result,
+        ):
+            yield event

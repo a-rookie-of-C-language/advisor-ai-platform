@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import logging
-import re
-from collections import OrderedDict
 from typing import Awaitable, Callable
 
+from context.compaction.compaction_transforms import (
+    apply_autocompact,
+    apply_keep_last,
+    estimate_tokens,
+    to_transcript_text,
+)
+from context.compaction.micro_compactor import MicroCompactor
 from llm.chat_message import ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -50,8 +53,7 @@ class ContextCompactor:
         self._auto_trigger_tokens = max(auto_trigger_tokens, 1)
         self._auto_keep_last = max(auto_keep_last, 1)
 
-        # 🚀 优化1: 使用 LRU 有序字典替代普通 dict，避免内存泄漏
-        self._micro_cache: OrderedDict[str, str] = OrderedDict()
+        self._micro_compactor = MicroCompactor(self.MAX_MICRO_CACHE_SIZE)
 
     async def compact_for_model(
         self,
@@ -127,18 +129,11 @@ class ContextCompactor:
 
     @staticmethod
     def _estimate_tokens(messages: list[ChatMessage]) -> int:
-        total = 0
-        for message in messages:
-            # 经验估算：中文/英文混合场景下用 4 字符近似 1 token。
-            total += (len(message.content) // 4) + 1
-        return total
+        return estimate_tokens(messages)
 
     @staticmethod
     def _apply_keep_last(messages: list[ChatMessage], keep_last_non_system: int) -> list[ChatMessage]:
-        system_messages = [message for message in messages if message.role == "system"]
-        non_system = [message for message in messages if message.role != "system"]
-        tail = non_system[-keep_last_non_system:]
-        return system_messages + tail
+        return apply_keep_last(messages, keep_last_non_system)
 
     def _apply_microcompact(
         self,
@@ -146,77 +141,15 @@ class ContextCompactor:
         *,
         replace_before_rounds: int,
     ) -> tuple[list[ChatMessage], int]:
-        system_messages = [message for message in messages if message.role == "system"]
-        non_system = [message for message in messages if message.role != "system"]
-        if len(non_system) <= replace_before_rounds:
-            return messages, 0
-
-        unchanged_tail = non_system[-replace_before_rounds:]
-        candidates = non_system[:-replace_before_rounds]
-        replaced_count = 0
-        compacted_candidates: list[ChatMessage] = []
-        for message in candidates:
-            if not self._looks_like_tool_result(message):
-                compacted_candidates.append(message)
-                continue
-            replaced = self._replacement_for_tool_result(message.content)
-            compacted_candidates.append(ChatMessage(role=message.role, content=replaced))
-            replaced_count += 1
-        return system_messages + compacted_candidates + unchanged_tail, replaced_count
-
-    def _replacement_for_tool_result(self, content: str) -> str:
-        key = hashlib.sha1(content.encode("utf-8")).hexdigest()
-        cached = self._micro_cache.get(key)
-        if cached is not None:
-            # 🚀 优化2: LRU 更新，将访问的 key 移到末尾
-            self._micro_cache.move_to_end(key)
-            return cached
-
-        tool_name = self._extract_tool_name(content)
-        replaced = f"[Previous: used {tool_name}]"
-
-        # 🚀 优化3: LRU 淘汰，超过容量后移除最旧的
-        if len(self._micro_cache) >= self.MAX_MICRO_CACHE_SIZE:
-            self._micro_cache.popitem(last=False)
-
-        self._micro_cache[key] = replaced
-        return replaced
-
-    @staticmethod
-    def _extract_tool_name(content: str) -> str:
-        """从工具返回内容中提取工具名称"""
-        tool_name = "tool"
-        stripped = content.strip()
-        if stripped.startswith("{") and stripped.endswith("}"):
-            try:
-                payload = json.loads(stripped)
-                tool_name = str(payload.get("tool") or payload.get("tool_name") or tool_name)
-            except Exception:  # noqa: BLE001
-                pass
-        else:
-            matched = re.search(r'"tool"\s*:\s*"([^"]+)"', content)
-            if matched is not None:
-                tool_name = matched.group(1)
-        return tool_name
-
-    @staticmethod
-    def _looks_like_tool_result(message: ChatMessage) -> bool:
-        # 🚀 优化4: 仅依赖 role 判断，避免误判 JSON 代码示例
-        return message.role == "tool"
+        return self._micro_compactor.compact(
+            messages,
+            replace_before_rounds=replace_before_rounds,
+        )
 
     @staticmethod
     def _to_transcript_text(messages: list[ChatMessage]) -> str:
-        lines: list[str] = []
-        for message in messages:
-            lines.append(f"{message.role}: {message.content}")
-        return "\n".join(lines).strip()
+        return to_transcript_text(messages)
 
     @staticmethod
     def _apply_autocompact(messages: list[ChatMessage], summary: str, keep_last_non_system: int) -> list[ChatMessage]:
-        non_system = [message for message in messages if message.role != "system"]
-        tail = non_system[-keep_last_non_system:]
-        summary_message = ChatMessage(
-            role="system",
-            content="Context summary (autocompact):\n" + summary,
-        )
-        return [summary_message] + tail
+        return apply_autocompact(messages, summary, keep_last_non_system)

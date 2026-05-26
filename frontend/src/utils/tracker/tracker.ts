@@ -1,34 +1,39 @@
+import {
+  setupClickTracking,
+  setupErrorTracking,
+  setupPerformanceTracking,
+} from './autoTrackers';
+import type { TrackerDisposer } from './autoTrackers';
+import { normalizeTrackerConfig } from './trackerConfig';
+import { sendTrackingEvents } from './trackerTransport';
 import type { TrackingEvent, TrackerConfig } from './types';
 
 export class Tracker {
   private config: TrackerConfig;
   private queue: TrackingEvent[] = [];
   private flushTimer: ReturnType<typeof setInterval> | null = null;
+  private autoTrackDisposers: TrackerDisposer[] = [];
 
   constructor(config: TrackerConfig) {
-    this.config = {
-      batchSize: 10,
-      flushInterval: 5000,
-      autoTrack: {
-        pageView: true,
-        click: true,
-        error: true,
-        performance: true,
-      },
-      ...config,
-    };
+    this.config = normalizeTrackerConfig(config);
 
     if (this.config.autoTrack?.pageView) {
       this.trackPageView();
     }
     if (this.config.autoTrack?.click) {
-      this.setupClickTracking();
+      this.autoTrackDisposers.push(
+        setupClickTracking((elementId, extraData) => this.trackClick(elementId, extraData)),
+      );
     }
     if (this.config.autoTrack?.error) {
-      this.setupErrorTracking();
+      this.autoTrackDisposers.push(
+        setupErrorTracking((error, extraData) => this.trackError(error, extraData)),
+      );
     }
     if (this.config.autoTrack?.performance) {
-      this.setupPerformanceTracking();
+      this.autoTrackDisposers.push(
+        setupPerformanceTracking((metrics) => this.trackPerformance(metrics)),
+      );
     }
 
     this.startFlushTimer();
@@ -112,56 +117,10 @@ export class Tracker {
     this.queue = [];
 
     try {
-      await fetch(`${this.config.apiUrl}/api/tracking/event`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(events[0]),
-      });
+      await sendTrackingEvents(this.config.apiUrl, events);
     } catch (error) {
       console.error('Failed to send tracking events:', error);
       this.queue = [...events, ...this.queue];
-    }
-  }
-
-  private setupClickTracking(): void {
-    document.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement;
-      const elementId = target.id || target.getAttribute('data-track-id') || '';
-      if (elementId) {
-        this.trackClick(elementId);
-      }
-    });
-  }
-
-  private setupErrorTracking(): void {
-    window.addEventListener('error', (event) => {
-      this.trackError(event.error || new Error(event.message));
-    });
-
-    window.addEventListener('unhandledrejection', (event) => {
-      this.trackError(new Error(String(event.reason)));
-    });
-  }
-
-  private setupPerformanceTracking(): void {
-    if (typeof window !== 'undefined' && 'performance' in window) {
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          const perfEntries = performance.getEntriesByType('navigation');
-          if (perfEntries.length > 0) {
-            const nav = perfEntries[0] as PerformanceNavigationTiming;
-            this.trackPerformance({
-              dns: nav.domainLookupEnd - nav.domainLookupStart,
-              tcp: nav.connectEnd - nav.connectStart,
-              ttfb: nav.responseStart - nav.requestStart,
-              domReady: nav.domContentLoadedEventEnd - nav.fetchStart,
-              load: nav.loadEventEnd - nav.fetchStart,
-            });
-          }
-        }, 0);
-      });
     }
   }
 
@@ -176,7 +135,10 @@ export class Tracker {
   destroy(): void {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
+      this.flushTimer = null;
     }
-    this.flush();
+    this.autoTrackDisposers.forEach((dispose) => dispose());
+    this.autoTrackDisposers = [];
+    void this.flush();
   }
 }

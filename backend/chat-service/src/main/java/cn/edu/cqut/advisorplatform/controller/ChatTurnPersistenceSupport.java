@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.controller;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import java.util.List;
@@ -16,8 +17,8 @@ class ChatTurnPersistenceSupport {
       String turnId,
       String userText,
       String assistantText,
-      List<ChatMessageDO.SourceReference> sources,
-      List<ChatMessageDO.StreamEventRecord> events) {
+      List<SourceReference> sources,
+      List<StreamEventRecord> events) {
     if ((sources == null || sources.isEmpty()) && (events == null || events.isEmpty())) {
       chatMessageService.saveTurn(sessionId, userId, turnId, userText, assistantText);
       return;
@@ -33,8 +34,8 @@ class ChatTurnPersistenceSupport {
       String turnId,
       String userText,
       String assistantText,
-      List<ChatMessageDO.SourceReference> sources,
-      List<ChatMessageDO.StreamEventRecord> events) {
+      List<SourceReference> sources,
+      List<StreamEventRecord> events) {
     try {
       saveTurn(
           chatMessageService, sessionId, userId, turnId, userText, assistantText, sources, events);

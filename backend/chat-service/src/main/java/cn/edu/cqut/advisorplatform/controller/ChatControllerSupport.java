@@ -2,7 +2,8 @@ package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,9 +11,7 @@ import java.util.Map;
 class ChatControllerSupport {
 
   Map<String, Object> buildAssistantResponse(
-      String assistantText,
-      List<ChatMessageDO.SourceReference> sources,
-      List<ChatMessageDO.StreamEventRecord> events) {
+      String assistantText, List<SourceReference> sources, List<StreamEventRecord> events) {
     return Map.of(
         "id",
         System.currentTimeMillis(),

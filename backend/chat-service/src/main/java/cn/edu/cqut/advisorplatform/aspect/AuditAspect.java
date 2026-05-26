@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.aspect;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import java.lang.reflect.Method;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;

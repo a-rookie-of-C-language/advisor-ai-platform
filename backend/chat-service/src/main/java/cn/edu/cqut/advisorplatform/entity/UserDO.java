@@ -82,12 +82,4 @@ public class UserDO implements UserDetails {
   public boolean isEnabled() {
     return enabled;
   }
-
-  public enum UserRole {
-    ADMIN,
-    ADVISOR,
-    EXPERT,
-    TEACHER,
-    STUDENT
-  }
 }

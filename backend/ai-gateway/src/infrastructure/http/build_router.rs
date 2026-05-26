@@ -5,9 +5,7 @@ use axum::{
 
 use crate::infrastructure::http::AppState::AppState;
 use crate::interfaces::http::{
-    chat_completions::chat_completions,
-    chat_stream::chat_stream,
-    health::health,
+    chat_completions::chat_completions, chat_stream::chat_stream, health::health,
 };
 
 pub fn build_router(state: AppState) -> Router {

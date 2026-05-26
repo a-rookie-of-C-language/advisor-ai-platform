@@ -9,9 +9,9 @@ import static org.mockito.Mockito.when;
 
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.storage.AuditLogStorage;
 import cn.edu.cqut.advisorplatform.service.storage.AuditStorageFactory;
 import java.util.List;

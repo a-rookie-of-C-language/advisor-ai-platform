@@ -1,6 +1,5 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.client.CheckInServiceClient;
 import cn.edu.cqut.advisorplatform.dao.StudentProfileDao;
 import cn.edu.cqut.advisorplatform.dto.request.StudentCreateRequest;
 import cn.edu.cqut.advisorplatform.dto.request.StudentQueryRequest;
@@ -25,16 +24,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class StudentServiceImpl implements StudentService, StudentCheckInService {
 
   private final StudentProfileDao studentProfileDao;
-  private final CheckInServiceClient checkInServiceClient;
   private final StudentFieldChangeSupport fieldChangeSupport;
+  private final StudentCheckInQuerySupport checkInQuerySupport;
+  private final StudentProfileMutationSupport mutationSupport;
 
   public StudentServiceImpl(
       StudentProfileDao studentProfileDao,
-      CheckInServiceClient checkInServiceClient,
-      StudentFieldChangeSupport fieldChangeSupport) {
+      StudentFieldChangeSupport fieldChangeSupport,
+      StudentCheckInQuerySupport checkInQuerySupport,
+      StudentProfileMutationSupport mutationSupport) {
     this.studentProfileDao = studentProfileDao;
-    this.checkInServiceClient = checkInServiceClient;
     this.fieldChangeSupport = fieldChangeSupport;
+    this.checkInQuerySupport = checkInQuerySupport;
+    this.mutationSupport = mutationSupport;
   }
 
   @Override
@@ -70,23 +72,7 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
       throw new BusinessException("学号已存在");
     }
 
-    StudentProfile profile = new StudentProfile();
-    profile.setStudentNo(request.getStudentNo());
-    profile.setName(request.getName());
-    profile.setGender(request.getGender());
-    profile.setGrade(request.getGrade());
-    profile.setMajor(request.getMajor());
-    profile.setClassCode(request.getClassCode());
-    profile.setCounselorNo(request.getCounselorNo());
-    profile.setPhone(request.getPhone());
-    profile.setEmail(request.getEmail());
-    profile.setDormitory(request.getDormitory());
-    profile.setEmergencyContact(request.getEmergencyContact());
-    profile.setCreatedBy(operator);
-    profile.setCreatedAt(java.time.LocalDateTime.now());
-    profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(java.time.LocalDateTime.now());
-    profile.setDeleted(0);
+    StudentProfile profile = mutationSupport.create(request, operator);
 
     calculateAndUpdateInfoCompleteness(profile);
 
@@ -104,19 +90,7 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
 
     fieldChangeSupport.recordFieldChanges(profile, request, operator);
 
-    profile.setStudentNo(request.getStudentNo());
-    profile.setName(request.getName());
-    profile.setGender(request.getGender());
-    profile.setGrade(request.getGrade());
-    profile.setMajor(request.getMajor());
-    profile.setClassCode(request.getClassCode());
-    profile.setCounselorNo(request.getCounselorNo());
-    profile.setPhone(request.getPhone());
-    profile.setEmail(request.getEmail());
-    profile.setDormitory(request.getDormitory());
-    profile.setEmergencyContact(request.getEmergencyContact());
-    profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(java.time.LocalDateTime.now());
+    mutationSupport.update(profile, request, operator);
 
     calculateAndUpdateInfoCompleteness(profile);
 
@@ -129,9 +103,7 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
   public void deleteStudent(Long id, String operator) {
     StudentProfile profile =
         studentProfileDao.findById(id).orElseThrow(() -> new BusinessException("学生不存在"));
-    profile.setDeleted(1);
-    profile.setUpdatedBy(operator);
-    profile.setUpdatedAt(java.time.LocalDateTime.now());
+    mutationSupport.markDeleted(profile, operator);
     studentProfileDao.save(profile);
   }
 
@@ -155,27 +127,18 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
 
   @Override
   public StudentCheckInSummaryResponse getStudentCheckInSummary(Long studentId) {
-    return checkInServiceClient.listStudentCheckInSummaries(List.of(studentId)).stream()
-        .findFirst()
-        .orElseThrow(() -> new BusinessException("学生不存在"));
+    return checkInQuerySupport.getStudentCheckInSummary(studentId);
   }
 
   @Override
   public StudentCheckInDetailResponse getStudentCheckInDetail(Long studentId, int limit) {
-    return checkInServiceClient.getStudentCheckInDetail(studentId, limit);
+    return checkInQuerySupport.getStudentCheckInDetail(studentId, limit);
   }
 
   @Override
   public List<StudentCheckInSummaryResponse> listStudentCheckInSummaries(
       String keyword, int page, int size) {
-    Page<StudentProfile> profiles =
-        studentProfileDao.findByConditions(
-            null, null, null, null, null, keyword, PageRequest.of(page, size));
-    List<Long> studentIds = profiles.stream().map(StudentProfile::getId).toList();
-    if (studentIds.isEmpty()) {
-      return List.of();
-    }
-    return checkInServiceClient.listStudentCheckInSummaries(studentIds);
+    return checkInQuerySupport.listStudentCheckInSummaries(keyword, page, size);
   }
 
   public Optional<StudentProfile> findByStudentNo(String studentNo) {

@@ -10,7 +10,8 @@ import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO
 import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.MemoryService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -33,8 +34,8 @@ public class MemoryController {
 
   @PostMapping("/long-term/search")
   @Auditable(
-      module = AuditLogDO.AuditModule.MEMORY,
-      action = AuditLogDO.AuditAction.SEARCH,
+      module = AuditModule.MEMORY,
+      action = AuditAction.SEARCH,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<List<MemoryItemResponseDTO>> searchLongTerm(
@@ -44,8 +45,8 @@ public class MemoryController {
 
   @PostMapping("/long-term/candidates")
   @Auditable(
-      module = AuditLogDO.AuditModule.MEMORY,
-      action = AuditLogDO.AuditAction.STORE,
+      module = AuditModule.MEMORY,
+      action = AuditAction.STORE,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<MemoryCandidateUpsertResponseDTO> upsertCandidates(
@@ -55,8 +56,8 @@ public class MemoryController {
 
   @GetMapping("/session-summary/{sessionId}")
   @Auditable(
-      module = AuditLogDO.AuditModule.MEMORY,
-      action = AuditLogDO.AuditAction.RETRIEVE,
+      module = AuditModule.MEMORY,
+      action = AuditAction.RETRIEVE,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<SessionSummaryResponseDTO> getSessionSummary(@PathVariable Long sessionId) {
@@ -65,8 +66,8 @@ public class MemoryController {
 
   @PutMapping("/session-summary/{sessionId}")
   @Auditable(
-      module = AuditLogDO.AuditModule.MEMORY,
-      action = AuditLogDO.AuditAction.UPDATE,
+      module = AuditModule.MEMORY,
+      action = AuditAction.UPDATE,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Void> saveSessionSummary(

@@ -1,21 +1,17 @@
 package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
-import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.ChatMessageService;
 import cn.edu.cqut.advisorplatform.service.ChatService;
-import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +20,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,7 +33,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @Slf4j
 public class ChatController {
 
-  private static final String ASSISTANT_ERROR_PLACEHOLDER = "请求失败，请稍后重试。";
+  private static final String ASSISTANT_ERROR_PLACEHOLDER =
+      "\u8bf7\u6c42\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+  private static final String LOGIN_REQUIRED_MESSAGE =
+      "\u672a\u767b\u5f55\u6216\u767b\u5f55\u5df2\u5931\u6548";
 
   private final AgentProxyService agentProxyService;
   private final ChatService chatService;
@@ -49,175 +45,47 @@ public class ChatController {
   private final SseResponseWriter sseResponseWriter = new SseResponseWriter();
   private final ChatControllerSupport support = new ChatControllerSupport();
   private final ChatRequestAuditContext auditContext = new ChatRequestAuditContext();
+  private final ChatStreamBodyFactory streamBodyFactory = new ChatStreamBodyFactory();
+  private final ChatOnceResponseHandler onceResponseHandler = new ChatOnceResponseHandler();
   private final ChatTurnPersistenceSupport turnPersistenceSupport =
       new ChatTurnPersistenceSupport();
 
-  @GetMapping("/sessions")
-  @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.QUERY,
-      logRequestParams = false,
-      logResponseData = false)
-  public ApiResponseDTO<List<Map<String, Object>>> listSessions(
-      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    return ApiResponseDTO.success(chatService.listSessions(currentUser));
-  }
-
-  @PostMapping("/sessions")
-  @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.STORE,
-      logRequestParams = false,
-      logResponseData = false)
-  public ApiResponseDTO<Map<String, Object>> createSession(
-      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    return ApiResponseDTO.success(chatService.createSession(currentUser));
-  }
-
-  @DeleteMapping("/sessions/{id}")
-  @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.DELETE,
-      logRequestParams = true,
-      logResponseData = false)
-  public ApiResponseDTO<Void> deleteSession(
-      @PathVariable("id") Long id, @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    auditContext.attach(null, id, null);
-    chatService.deleteSession(id, currentUser);
-    return ApiResponseDTO.success();
-  }
-
-  @PatchMapping("/sessions/{id}/kb")
-  @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.UPDATE,
-      logRequestParams = true,
-      logResponseData = false)
-  public ApiResponseDTO<Map<String, Object>> updateSessionKb(
-      @PathVariable("id") Long id,
-      @RequestBody Map<String, Object> body,
-      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    auditContext.attach(null, id, null);
-    Object kbIdValue = body == null ? null : body.get("kbId");
-    if (!(kbIdValue instanceof Number kbIdNumber)) {
-      throw new BadRequestException("kbId is required");
-    }
-    return ApiResponseDTO.success(
-        chatService.updateSessionKb(id, kbIdNumber.longValue(), currentUser));
-  }
-
-  @GetMapping("/sessions/{sessionId}/messages")
-  @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.QUERY,
-      logRequestParams = true,
-      logResponseData = false)
-  public ApiResponseDTO<List<Map<String, Object>>> listMessages(
-      @PathVariable("sessionId") Long sessionId,
-      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    auditContext.attach(null, sessionId, null);
-    return ApiResponseDTO.success(chatService.listMessages(sessionId, currentUser));
-  }
-
   @PostMapping("/sessions/{sessionId}/messages")
   @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.CHAT,
+      module = AuditModule.CHAT,
+      action = AuditAction.CHAT,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Map<String, Object>> sendMessage(
       @PathVariable("sessionId") Long sessionId,
       @RequestBody Map<String, String> body,
-      @AuthenticationPrincipal @Nullable UserPrincipal currentUser)
-      throws java.io.IOException {
-    if (currentUser == null || currentUser.getId() == null) {
-      throw new ForbiddenException("未登录或登录已失效");
-    }
-
-    String userContent = body.getOrDefault("content", "").trim();
-    if (userContent.isBlank()) {
-      throw new BadRequestException("content is blank");
-    }
-
-    long startAt = System.currentTimeMillis();
-    List<ChatStreamMessageDTO> history = buildHistoryMessages(sessionId, currentUser, userContent);
-
-    ChatStreamRequestDTO request = new ChatStreamRequestDTO();
-    request.setSessionId(sessionId);
-    request.setMessages(history);
-
-    String turnId = buildTurnId(request, currentUser.getId());
-    String traceId = auditContext.resolveTraceIdFromRequest();
-    auditContext.attach(traceId, sessionId, turnId);
-
-    LogTraceUtil.put(traceId, sessionId, turnId, currentUser.getId());
-    try {
-      log.info(
-          "chat_send start, messageCount={}, userLen={}, userPreview={}",
-          history.size(),
-          userContent.length(),
-          LogTraceUtil.preview(userContent));
-
-      String cached =
-          chatMessageService.findAssistantContent(sessionId, currentUser.getId(), turnId);
-      if (cached != null && !cached.isBlank()) {
-        log.info(
-            "chat_send cache_hit, assistantLen={}, elapsedMs={}",
-            cached.length(),
-            elapsedSince(startAt));
-        return ApiResponseDTO.success(support.buildAssistantResponse(cached, List.of(), List.of()));
-      }
-
-      String assistantText;
-      List<ChatMessageDO.SourceReference> sources = List.of();
-      List<ChatMessageDO.StreamEventRecord> events = List.of();
-      try {
-        ChatStreamProxyResult result =
-            agentProxyService.proxyChatOnce(request, currentUser.getId());
-        assistantText = result == null ? "" : result.getAssistantText();
-        sources = result == null || result.getSources() == null ? List.of() : result.getSources();
-        events = result == null || result.getEvents() == null ? List.of() : result.getEvents();
-      } catch (Exception e) {
-        String errorMessage = safeMessage(e);
-        assistantText = "请求失败：" + errorMessage;
-        log.warn("chat_send proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
-      }
-
-      if (assistantText == null || assistantText.trim().isBlank()) {
-        assistantText = ASSISTANT_ERROR_PLACEHOLDER;
-      }
-
-      turnPersistenceSupport.saveTurn(
-          chatMessageService,
-          sessionId,
-          currentUser.getId(),
-          turnId,
-          userContent,
-          assistantText,
-          sources,
-          events);
-      log.info(
-          "chat_send done, assistantLen={}, elapsedMs={}",
-          assistantText.length(),
-          elapsedSince(startAt));
-      return ApiResponseDTO.success(support.buildAssistantResponse(assistantText, sources, events));
-    } finally {
-      LogTraceUtil.clear();
-    }
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
+    requireLogin(currentUser);
+    return ApiResponseDTO.success(
+        onceResponseHandler.handle(
+            sessionId,
+            body,
+            currentUser,
+            ASSISTANT_ERROR_PLACEHOLDER,
+            agentProxyService,
+            chatService,
+            chatMessageService,
+            turnIdGenerator,
+            auditContext,
+            turnPersistenceSupport,
+            support));
   }
 
   @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   @Auditable(
-      module = AuditLogDO.AuditModule.CHAT,
-      action = AuditLogDO.AuditAction.STREAM_CHAT,
+      module = AuditModule.CHAT,
+      action = AuditAction.STREAM_CHAT,
       logRequestParams = true,
       logResponseData = false)
   public ResponseEntity<StreamingResponseBody> streamChat(
       @Valid @RequestBody ChatStreamRequestDTO request,
       @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    if (currentUser == null || currentUser.getId() == null) {
-      throw new ForbiddenException("未登录或登录已失效");
-    }
+    requireLogin(currentUser);
 
     String userText = extractLastUserMessage(request);
     String turnId = buildTurnId(request, currentUser.getId());
@@ -234,56 +102,18 @@ public class ChatController {
         LogTraceUtil.preview(userText));
 
     StreamingResponseBody body =
-        outputStream -> {
-          long startAt = System.currentTimeMillis();
-          LogTraceUtil.put(traceId, request.getSessionId(), turnId, currentUser.getId());
-          String assistantText = ASSISTANT_ERROR_PLACEHOLDER;
-          List<ChatMessageDO.SourceReference> sources = List.of();
-          List<ChatMessageDO.StreamEventRecord> events = List.of();
-          String finishReason = "stop";
-          try {
-            log.info("chat_stream start");
-            ChatStreamProxyResult proxyResult =
-                agentProxyService.proxyChatStream(request, currentUser.getId(), outputStream);
-            if (proxyResult != null
-                && proxyResult.getAssistantText() != null
-                && !proxyResult.getAssistantText().isBlank()) {
-              assistantText = proxyResult.getAssistantText().trim();
-            }
-            if (proxyResult != null && proxyResult.getSources() != null) {
-              sources = proxyResult.getSources();
-            }
-            if (proxyResult != null && proxyResult.getEvents() != null) {
-              events = proxyResult.getEvents();
-            }
-            log.info(
-                "chat_stream proxy_done, assistantLen={}, elapsedMs={}",
-                assistantText.length(),
-                elapsedSince(startAt));
-          } catch (Exception ex) {
-            String errorMessage = safeMessage(ex);
-            finishReason = "error";
-            sseResponseWriter.writeErrorEvent(outputStream, errorMessage);
-            log.warn("chat_stream proxy_failed, reason={}", LogTraceUtil.preview(errorMessage));
-            assistantText = "请求失败：" + errorMessage;
-          } finally {
-            sseResponseWriter.writeDoneEvent(outputStream, finishReason, turnId, traceId);
-            turnPersistenceSupport.saveTurnQuietly(
-                chatMessageService,
-                request.getSessionId(),
-                currentUser.getId(),
-                turnId,
-                userText,
-                assistantText,
-                sources,
-                events);
-            log.info(
-                "chat_stream done, assistantLen={}, elapsedMs={}",
-                assistantText.length(),
-                elapsedSince(startAt));
-            LogTraceUtil.clear();
-          }
-        };
+        streamBodyFactory.create(
+            request,
+            currentUser.getId(),
+            traceId,
+            turnId,
+            userText,
+            ASSISTANT_ERROR_PLACEHOLDER,
+            agentProxyService,
+            chatMessageService,
+            sseResponseWriter,
+            turnPersistenceSupport,
+            support);
 
     return ResponseEntity.ok()
         .contentType(MediaType.TEXT_EVENT_STREAM)
@@ -292,10 +122,10 @@ public class ChatController {
         .body(body);
   }
 
-  private List<ChatStreamMessageDTO> buildHistoryMessages(
-      Long sessionId, UserPrincipal currentUser, String userContent) {
-    List<Map<String, Object>> persisted = chatService.listMessages(sessionId, currentUser);
-    return support.buildHistoryMessages(persisted, userContent);
+  private void requireLogin(@Nullable UserPrincipal currentUser) {
+    if (currentUser == null || currentUser.getId() == null) {
+      throw new ForbiddenException(LOGIN_REQUIRED_MESSAGE);
+    }
   }
 
   private String extractLastUserMessage(ChatStreamRequestDTO request) {
@@ -304,13 +134,5 @@ public class ChatController {
 
   private String buildTurnId(ChatStreamRequestDTO request, Long userId) {
     return turnIdGenerator.build(request, userId);
-  }
-
-  private String safeMessage(Exception exception) {
-    return support.safeMessage(exception, ASSISTANT_ERROR_PLACEHOLDER);
-  }
-
-  private long elapsedSince(long startAt) {
-    return support.elapsedSince(startAt);
   }
 }

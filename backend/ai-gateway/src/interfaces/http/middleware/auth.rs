@@ -99,7 +99,8 @@ pub async fn auth(
             .unwrap_or_else(|| "default-app".to_string());
     }
 
-    req.extensions_mut().insert(TenantIdentity { tenant_id, app_id });
+    req.extensions_mut()
+        .insert(TenantIdentity { tenant_id, app_id });
 
     Ok(next.run(req).await)
 }

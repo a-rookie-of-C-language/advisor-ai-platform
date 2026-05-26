@@ -32,9 +32,13 @@ class ChatServiceImplTest {
 
   @org.junit.jupiter.api.BeforeEach
   void setUp() {
+    ChatSessionSupport chatSessionSupport = new ChatSessionSupport(ragServiceClient);
     chatService =
         new ChatServiceImpl(
-            chatSessionDao, chatMessageDao, new ChatSessionSupport(ragServiceClient));
+            chatSessionDao,
+            chatMessageDao,
+            chatSessionSupport,
+            new ChatSessionMutationSupport(chatSessionDao, chatSessionSupport));
   }
 
   @Test

@@ -4,7 +4,8 @@ import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.RagService;
 import java.util.List;
@@ -32,8 +33,8 @@ public class RagController {
 
   @PostMapping("/knowledge-bases")
   @Auditable(
-      module = AuditLogDO.AuditModule.RAG,
-      action = AuditLogDO.AuditAction.STORE,
+      module = AuditModule.RAG,
+      action = AuditAction.STORE,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<KnowledgeBaseResponseDTO> createKnowledgeBase(
@@ -45,8 +46,8 @@ public class RagController {
 
   @DeleteMapping("/knowledge-bases/{id}")
   @Auditable(
-      module = AuditLogDO.AuditModule.RAG,
-      action = AuditLogDO.AuditAction.DELETE,
+      module = AuditModule.RAG,
+      action = AuditAction.DELETE,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Void> deleteKnowledgeBase(
@@ -59,8 +60,8 @@ public class RagController {
 
   @GetMapping("/knowledge-bases/{kbId}/documents")
   @Auditable(
-      module = AuditLogDO.AuditModule.RAG,
-      action = AuditLogDO.AuditAction.QUERY,
+      module = AuditModule.RAG,
+      action = AuditAction.QUERY,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<List<RagDocumentResponseDTO>> listDocuments(
@@ -70,8 +71,8 @@ public class RagController {
 
   @PostMapping("/knowledge-bases/{kbId}/documents")
   @Auditable(
-      module = AuditLogDO.AuditModule.RAG,
-      action = AuditLogDO.AuditAction.UPLOAD_DOCUMENT,
+      module = AuditModule.RAG,
+      action = AuditAction.UPLOAD_DOCUMENT,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<RagDocumentResponseDTO> uploadDocument(
@@ -83,8 +84,8 @@ public class RagController {
 
   @DeleteMapping("/documents/{id}")
   @Auditable(
-      module = AuditLogDO.AuditModule.RAG,
-      action = AuditLogDO.AuditAction.DELETE_DOCUMENT,
+      module = AuditModule.RAG,
+      action = AuditAction.DELETE_DOCUMENT,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<Void> deleteDocument(

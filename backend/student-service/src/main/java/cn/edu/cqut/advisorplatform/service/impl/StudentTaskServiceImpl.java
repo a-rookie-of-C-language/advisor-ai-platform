@@ -7,12 +7,10 @@ import cn.edu.cqut.advisorplatform.dto.request.TaskStatusUpdateRequest;
 import cn.edu.cqut.advisorplatform.dto.response.StudentTaskResponse;
 import cn.edu.cqut.advisorplatform.entity.StudentProfile;
 import cn.edu.cqut.advisorplatform.entity.StudentTask;
-import cn.edu.cqut.advisorplatform.enums.TaskStatus;
 import cn.edu.cqut.advisorplatform.enums.TaskType;
 import cn.edu.cqut.advisorplatform.exception.BusinessException;
 import cn.edu.cqut.advisorplatform.service.StudentService;
 import cn.edu.cqut.advisorplatform.service.StudentTaskService;
-import java.time.LocalDateTime;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -24,10 +22,15 @@ public class StudentTaskServiceImpl implements StudentTaskService {
 
   private final StudentTaskDao taskDao;
   private final StudentService studentService;
+  private final StudentTaskMutationSupport mutationSupport;
 
-  public StudentTaskServiceImpl(StudentTaskDao taskDao, StudentService studentService) {
+  public StudentTaskServiceImpl(
+      StudentTaskDao taskDao,
+      StudentService studentService,
+      StudentTaskMutationSupport mutationSupport) {
     this.taskDao = taskDao;
     this.studentService = studentService;
+    this.mutationSupport = mutationSupport;
   }
 
   @Override
@@ -58,19 +61,7 @@ public class StudentTaskServiceImpl implements StudentTaskService {
   public StudentTaskResponse createTask(TaskCreateRequest request, String operator) {
     StudentProfile student = studentService.getStudentEntityById(request.getStudentId());
 
-    StudentTask task = new StudentTask();
-    task.setStudent(student);
-    task.setTaskType(request.getTaskType());
-    task.setTaskStatus(TaskStatus.PENDING.getCode());
-    task.setAssigneeNo(request.getAssigneeNo());
-    task.setAssigneeName(request.getAssigneeName());
-    task.setDescription(request.getDescription());
-    task.setCreatedBy(operator);
-    task.setCreatedAt(LocalDateTime.now());
-    task.setUpdatedBy(operator);
-    task.setUpdatedAt(LocalDateTime.now());
-
-    StudentTask saved = taskDao.save(task);
+    StudentTask saved = taskDao.save(mutationSupport.createTask(student, request, operator));
     return StudentTaskResponse.fromEntity(saved);
   }
 
@@ -80,21 +71,7 @@ public class StudentTaskServiceImpl implements StudentTaskService {
       Long id, TaskStatusUpdateRequest request, String operator) {
     StudentTask task = taskDao.findById(id).orElseThrow(() -> new BusinessException("任务不存在"));
 
-    task.setTaskStatus(request.getTaskStatus());
-    if (request.getAssigneeNo() != null) {
-      task.setAssigneeNo(request.getAssigneeNo());
-    }
-    if (request.getAssigneeName() != null) {
-      task.setAssigneeName(request.getAssigneeName());
-    }
-    task.setHandleNote(request.getHandleNote());
-    task.setUpdatedBy(operator);
-    task.setUpdatedAt(LocalDateTime.now());
-
-    if (request.getTaskStatus() == TaskStatus.COMPLETED.getCode()
-        || request.getTaskStatus() == TaskStatus.CLOSED.getCode()) {
-      task.setHandleTime(LocalDateTime.now());
-    }
+    mutationSupport.updateStatus(task, request, operator);
 
     StudentTask saved = taskDao.save(task);
     return StudentTaskResponse.fromEntity(saved);
@@ -113,20 +90,7 @@ public class StudentTaskServiceImpl implements StudentTaskService {
         .findOpenTaskByStudentAndType(studentId, TaskType.INFO_MISSING.getCode())
         .ifPresentOrElse(
             existingTask -> {},
-            () -> {
-              StudentTask task = new StudentTask();
-              task.setStudent(student);
-              task.setTaskType(TaskType.INFO_MISSING.getCode());
-              task.setTaskStatus(TaskStatus.PENDING.getCode());
-              task.setAssigneeNo(student.getCounselorNo());
-              task.setDescription(
-                  "学生 " + student.getName() + " (" + student.getStudentNo() + ") 信息缺失，请补充联系方式");
-              task.setCreatedBy(operator);
-              task.setCreatedAt(LocalDateTime.now());
-              task.setUpdatedBy(operator);
-              task.setUpdatedAt(LocalDateTime.now());
-              taskDao.save(task);
-            });
+            () -> taskDao.save(mutationSupport.createInfoMissingTask(student, operator)));
   }
 
   @Override

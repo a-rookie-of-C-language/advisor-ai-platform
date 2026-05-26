@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -10,10 +11,19 @@ class AgentStreamEventCollector {
   private static final int MAX_PERSISTED_EVENTS = 80;
 
   private final SseEventParser sseEventParser;
+  private final StreamEventPersistencePolicy persistencePolicy;
   private final boolean debugStream;
 
   AgentStreamEventCollector(SseEventParser sseEventParser, boolean debugStream) {
+    this(sseEventParser, new StreamEventPersistencePolicy(), debugStream);
+  }
+
+  AgentStreamEventCollector(
+      SseEventParser sseEventParser,
+      StreamEventPersistencePolicy persistencePolicy,
+      boolean debugStream) {
     this.sseEventParser = sseEventParser;
+    this.persistencePolicy = persistencePolicy;
     this.debugStream = debugStream;
   }
 
@@ -21,8 +31,8 @@ class AgentStreamEventCollector {
       StringBuilder sseBuffer,
       StringBuilder deltaPreview,
       StringBuilder assistantText,
-      List<ChatMessageDO.SourceReference> sources,
-      List<ChatMessageDO.StreamEventRecord> events,
+      List<SourceReference> sources,
+      List<StreamEventRecord> events,
       AtomicBoolean sawDoneEvent,
       AtomicBoolean sawErrorEvent) {
     int count = 0;
@@ -55,12 +65,11 @@ class AgentStreamEventCollector {
     }
   }
 
-  private void collectSources(
-      String eventName, String block, List<ChatMessageDO.SourceReference> sources) {
+  private void collectSources(String eventName, String block, List<SourceReference> sources) {
     if (!"sources".equals(eventName) && !"tool_result".equals(eventName)) {
       return;
     }
-    List<ChatMessageDO.SourceReference> extractedSources = sseEventParser.extractSources(block);
+    List<SourceReference> extractedSources = sseEventParser.extractSources(block);
     if ("sources".equals(eventName) || !extractedSources.isEmpty()) {
       sources.clear();
       sources.addAll(extractedSources);
@@ -68,12 +77,11 @@ class AgentStreamEventCollector {
   }
 
   private void collectPersistentEvent(
-      String eventName, String block, List<ChatMessageDO.StreamEventRecord> events) {
-    if (!shouldPersistEvent(eventName) || events.size() >= MAX_PERSISTED_EVENTS) {
+      String eventName, String block, List<StreamEventRecord> events) {
+    if (!persistencePolicy.shouldPersist(eventName) || events.size() >= MAX_PERSISTED_EVENTS) {
       return;
     }
-    ChatMessageDO.StreamEventRecord record =
-        sseEventParser.extractStreamEventRecord(eventName, block);
+    StreamEventRecord record = sseEventParser.extractStreamEventRecord(eventName, block);
     if (record != null) {
       events.add(record);
     }
@@ -85,19 +93,5 @@ class AgentStreamEventCollector {
     }
     int remain = DEBUG_PREVIEW_LIMIT - deltaPreview.length();
     deltaPreview.append(delta, 0, Math.min(remain, delta.length()));
-  }
-
-  private boolean shouldPersistEvent(String eventName) {
-    return switch (eventName) {
-      case "tool_use",
-              "tool_result",
-              "tool_error",
-              "sys_intent_route",
-              "sys_tool_plan",
-              "sys_rag_force",
-              "risk_alert" ->
-          true;
-      default -> false;
-    };
   }
 }

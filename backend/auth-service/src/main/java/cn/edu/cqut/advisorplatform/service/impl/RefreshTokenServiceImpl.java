@@ -3,7 +3,6 @@ package cn.edu.cqut.advisorplatform.service.impl;
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
-import cn.edu.cqut.advisorplatform.dao.AuthRefreshTokenDao;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO;
@@ -11,13 +10,7 @@ import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.RefreshTokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.HexFormat;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
-  private final AuthRefreshTokenDao authRefreshTokenDao;
   private final UserDao userDao;
   private final JwtUtil jwtUtil;
+  private final RefreshTokenRecordSupport recordSupport;
+  private final RefreshTokenPayloadFactory payloadFactory = new RefreshTokenPayloadFactory();
 
   @Value("${advisor.jwt.refresh-max-active:10}")
   private int refreshMaxActive;
@@ -43,15 +37,16 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       throw new BadRequestException("用户信息无效");
     }
 
-    Map<String, Object> accessClaims = buildClaims(user);
+    Map<String, Object> accessClaims = payloadFactory.buildClaims(user);
     String accessToken = jwtUtil.generateAccessToken(accessClaims, user);
 
-    Map<String, Object> refreshClaims = buildClaims(user);
+    Map<String, Object> refreshClaims = payloadFactory.buildClaims(user);
     refreshClaims.put("jti", UUID.randomUUID().toString());
     String refreshToken = jwtUtil.generateRefreshToken(refreshClaims, user);
 
-    enforceActiveLimit(user.getId());
-    saveRefreshToken(user.getId(), refreshToken);
+    recordSupport.enforceActiveLimit(user.getId(), refreshMaxActive);
+    recordSupport.saveRefreshToken(
+        user.getId(), refreshToken, jwtUtil.getRefreshExpiresInSeconds());
 
     return TokenPairResponseDTO.of(
         accessToken,
@@ -69,15 +64,12 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     Claims claims = parseRefreshClaims(refreshToken);
     LocalDateTime now = LocalDateTime.now();
-    String tokenHash = hashToken(refreshToken);
     AuthRefreshTokenDO storedToken =
-        authRefreshTokenDao
-            .findByTokenHashAndRevokedFalseAndExpiresAtAfter(tokenHash, now)
+        recordSupport
+            .findActiveToken(refreshToken, now)
             .orElseThrow(() -> new BadRequestException("refreshToken无效或已过期"));
 
-    storedToken.setRevoked(true);
-    storedToken.setRevokedAt(now);
-    authRefreshTokenDao.save(storedToken);
+    recordSupport.revoke(storedToken, now);
 
     String username = claims.getSubject();
     UserDO user =
@@ -93,16 +85,10 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       throw new BadRequestException("refreshToken不能为空");
     }
 
-    String tokenHash = hashToken(refreshToken);
     LocalDateTime now = LocalDateTime.now();
-    authRefreshTokenDao
-        .findByTokenHashAndRevokedFalseAndExpiresAtAfter(tokenHash, now)
-        .ifPresent(
-            token -> {
-              token.setRevoked(true);
-              token.setRevokedAt(now);
-              authRefreshTokenDao.save(token);
-            });
+    recordSupport
+        .findActiveToken(refreshToken, now)
+        .ifPresent(token -> recordSupport.revoke(token, now));
   }
 
   @Override
@@ -112,23 +98,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       throw new BadRequestException("userId不能为空");
     }
 
-    LocalDateTime now = LocalDateTime.now();
-    List<AuthRefreshTokenDO> activeTokens =
-        authRefreshTokenDao.findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByCreatedAtAsc(
-            userId, now);
-    for (AuthRefreshTokenDO token : activeTokens) {
-      token.setRevoked(true);
-      token.setRevokedAt(now);
-    }
-    authRefreshTokenDao.saveAll(activeTokens);
-  }
-
-  private Map<String, Object> buildClaims(UserDO user) {
-    Map<String, Object> claims = new HashMap<>();
-    claims.put("userId", user.getId());
-    claims.put(
-        "role", user.getRole() == null ? UserDO.UserRole.ADVISOR.name() : user.getRole().name());
-    return claims;
+    recordSupport.revokeAll(userId, LocalDateTime.now());
   }
 
   private Claims parseRefreshClaims(String refreshToken) {
@@ -146,43 +116,5 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
       throw new BadRequestException("refreshToken已过期");
     }
     return claims;
-  }
-
-  private void enforceActiveLimit(Long userId) {
-    LocalDateTime now = LocalDateTime.now();
-    List<AuthRefreshTokenDO> activeTokens =
-        authRefreshTokenDao.findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByCreatedAtAsc(
-            userId, now);
-
-    int overflow = activeTokens.size() - refreshMaxActive + 1;
-    if (overflow <= 0) {
-      return;
-    }
-
-    for (int i = 0; i < overflow; i++) {
-      AuthRefreshTokenDO token = activeTokens.get(i);
-      token.setRevoked(true);
-      token.setRevokedAt(now);
-    }
-    authRefreshTokenDao.saveAll(activeTokens.subList(0, overflow));
-  }
-
-  private void saveRefreshToken(Long userId, String refreshToken) {
-    AuthRefreshTokenDO token = new AuthRefreshTokenDO();
-    token.setUserId(userId);
-    token.setTokenHash(hashToken(refreshToken));
-    token.setExpiresAt(LocalDateTime.now().plusSeconds(jwtUtil.getRefreshExpiresInSeconds()));
-    token.setRevoked(false);
-    authRefreshTokenDao.save(token);
-  }
-
-  private String hashToken(String token) {
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-      return HexFormat.of().formatHex(hash);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256算法不可用", e);
-    }
   }
 }

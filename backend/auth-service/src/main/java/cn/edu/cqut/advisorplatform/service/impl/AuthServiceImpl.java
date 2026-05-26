@@ -10,6 +10,7 @@ import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.UserRole;
 import cn.edu.cqut.advisorplatform.service.AuthService;
 import cn.edu.cqut.advisorplatform.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
     user.setRealName(request.getRealName());
     user.setPhone(request.getPhone());
     user.setEmail(request.getEmail());
-    user.setRole(UserDO.UserRole.ADVISOR);
+    user.setRole(UserRole.ADVISOR);
     userDao.save(user);
   }
 

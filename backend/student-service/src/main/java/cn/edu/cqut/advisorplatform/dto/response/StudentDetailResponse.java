@@ -1,8 +1,6 @@
 package cn.edu.cqut.advisorplatform.dto.response;
 
 import cn.edu.cqut.advisorplatform.entity.StudentProfile;
-import cn.edu.cqut.advisorplatform.enums.InfoCompleteness;
-import cn.edu.cqut.advisorplatform.enums.RiskLevel;
 import java.time.LocalDateTime;
 
 public class StudentDetailResponse {
@@ -28,29 +26,7 @@ public class StudentDetailResponse {
   private LocalDateTime updatedAt;
 
   public static StudentDetailResponse fromEntity(StudentProfile entity) {
-    StudentDetailResponse response = new StudentDetailResponse();
-    response.setId(entity.getId());
-    response.setStudentNo(entity.getStudentNo());
-    response.setName(entity.getName());
-    response.setGender(entity.getGender());
-    response.setGenderText(entity.getGender() == 1 ? "男" : "女");
-    response.setGrade(entity.getGrade());
-    response.setMajor(entity.getMajor());
-    response.setClassCode(entity.getClassCode());
-    response.setCounselorNo(entity.getCounselorNo());
-    response.setPhone(entity.getPhone());
-    response.setEmail(entity.getEmail());
-    response.setDormitory(entity.getDormitory());
-    response.setEmergencyContact(entity.getEmergencyContact());
-    response.setInfoCompleteness(entity.getInfoCompleteness());
-    InfoCompleteness ic = InfoCompleteness.fromCode(entity.getInfoCompleteness());
-    response.setInfoCompletenessText(ic.getDescription());
-    response.setRiskLevel(entity.getRiskLevel());
-    RiskLevel rl = RiskLevel.fromCode(entity.getRiskLevel());
-    response.setRiskLevelText(rl.getDescription());
-    response.setCreatedAt(entity.getCreatedAt());
-    response.setUpdatedAt(entity.getUpdatedAt());
-    return response;
+    return StudentDetailResponseMapper.fromEntity(entity);
   }
 
   public Long getId() {

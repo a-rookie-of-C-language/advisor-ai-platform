@@ -1,16 +1,10 @@
 package cn.edu.cqut.advisorplatform.gateway.filter;
 
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
@@ -23,7 +17,6 @@ import reactor.core.publisher.Mono;
 @Component
 public class RiskResponseSupport {
 
-  private static final Logger log = LoggerFactory.getLogger(RiskResponseSupport.class);
   private static final String SSE_MEDIA_TYPE = "text/event-stream";
 
   @Value("${advisor.risk.control-service-url:http://risk-control-service:8086}")
@@ -32,12 +25,17 @@ public class RiskResponseSupport {
   @Value("${INTERNAL_SERVICE_TOKEN:${advisor.internal.token:}}")
   private String internalServiceToken;
 
-  private final WebClient webClient;
-  private final MeterRegistry meterRegistry;
+  private final RiskNormalResponseHandler normalResponseHandler;
+  private final RiskSseResponseHandler sseResponseHandler;
 
   public RiskResponseSupport(WebClient.Builder webClientBuilder, MeterRegistry meterRegistry) {
-    this.webClient = webClientBuilder.build();
-    this.meterRegistry = meterRegistry;
+    WebClient webClient = webClientBuilder.build();
+    RiskResponseBodyFactory responseBodyFactory = new RiskResponseBodyFactory();
+    RiskOutputCheckClient riskOutputCheckClient = new RiskOutputCheckClient(webClient);
+    this.normalResponseHandler =
+        new RiskNormalResponseHandler(meterRegistry, responseBodyFactory, riskOutputCheckClient);
+    this.sseResponseHandler =
+        new RiskSseResponseHandler(meterRegistry, responseBodyFactory, riskOutputCheckClient);
   }
 
   public Mono<Void> filter(
@@ -77,54 +75,13 @@ public class RiskResponseSupport {
       Publisher<? extends DataBuffer> body,
       DataBufferFactory bufferFactory,
       ServerHttpResponse originalResponse) {
-    return DataBufferUtils.join(Flux.from(body))
-        .flatMap(
-            dataBuffer -> {
-              byte[] content = new byte[dataBuffer.readableByteCount()];
-              dataBuffer.read(content);
-              DataBufferUtils.release(dataBuffer);
-              String responseBody = new String(content, StandardCharsets.UTF_8);
-
-              String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
-              String path = exchange.getRequest().getURI().getPath();
-              return callOutputRiskCheck(userId, path, responseBody)
-                  .flatMap(
-                      riskResponse -> {
-                        if (riskResponse.isPassed()) {
-                          Counter.builder("gateway.risk.output.pass")
-                              .tag("mode", "normal")
-                              .register(meterRegistry)
-                              .increment();
-                          DataBuffer buffer = bufferFactory.wrap(content);
-                          return originalResponse.writeWith(Mono.just(buffer));
-                        }
-
-                        Counter.builder("gateway.risk.output.block")
-                            .tag("mode", "normal")
-                            .tag("category", safeTag(riskResponse.getCategory()))
-                            .register(meterRegistry)
-                            .increment();
-
-                        log.warn(
-                            "Output risk control blocked: userId={}, path={}, category={}",
-                            userId,
-                            path,
-                            riskResponse.getCategory());
-
-                        originalResponse.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                        String errorBody = "{\"code\":451,\"message\":\"鍐呭涓嶅悎瑙勶紝宸茶杩囨护\"}";
-                        byte[] errorBytes = errorBody.getBytes(StandardCharsets.UTF_8);
-                        originalResponse.getHeaders().setContentLength(errorBytes.length);
-                        DataBuffer buffer = bufferFactory.wrap(errorBytes);
-                        return originalResponse.writeWith(Mono.just(buffer));
-                      })
-                  .onErrorResume(
-                      e -> {
-                        log.error("Output risk check failed, passing through", e);
-                        DataBuffer buffer = bufferFactory.wrap(content);
-                        return originalResponse.writeWith(Mono.just(buffer));
-                      });
-            });
+    return normalResponseHandler.handle(
+        exchange,
+        body,
+        bufferFactory,
+        originalResponse,
+        riskControlServiceUrl,
+        internalServiceToken);
   }
 
   private Mono<Void> handleSseResponse(
@@ -132,94 +89,12 @@ public class RiskResponseSupport {
       Publisher<? extends DataBuffer> body,
       DataBufferFactory bufferFactory,
       ServerHttpResponse originalResponse) {
-    String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
-    String path = exchange.getRequest().getURI().getPath();
-    AtomicBoolean blocked = new AtomicBoolean(false);
-
-    Flux<DataBuffer> modifiedBody =
-        Flux.from(body)
-            .concatMap(
-                dataBuffer -> {
-                  if (blocked.get()) {
-                    DataBufferUtils.release(dataBuffer);
-                    return Flux.<DataBuffer>empty();
-                  }
-
-                  byte[] content = new byte[dataBuffer.readableByteCount()];
-                  dataBuffer.read(content);
-                  DataBufferUtils.release(dataBuffer);
-                  String chunk = new String(content, StandardCharsets.UTF_8);
-
-                  return callOutputRiskCheck(userId, path, chunk)
-                      .flatMapMany(
-                          riskResponse -> {
-                            if (riskResponse.isPassed()) {
-                              return Flux.just(bufferFactory.wrap(content));
-                            }
-
-                            blocked.set(true);
-                            Counter.builder("gateway.risk.output.block")
-                                .tag("mode", "sse")
-                                .tag("category", safeTag(riskResponse.getCategory()))
-                                .register(meterRegistry)
-                                .increment();
-
-                            log.warn(
-                                "SSE output blocked: userId={}, path={}, category={}",
-                                userId,
-                                path,
-                                riskResponse.getCategory());
-
-                            String alertEvent =
-                                "event: risk_alert\ndata: "
-                                    + "{\"code\":451,\"message\":\"鍐呭涓嶅悎瑙勶紝宸茶杩囨护\","
-                                    + "\"category\":\""
-                                    + safeTag(riskResponse.getCategory())
-                                    + "\"}\n\n"
-                                    + "event: done\ndata: {\"message\":\"stream_stopped_by_risk\"}\n\n";
-                            return Flux.just(
-                                bufferFactory.wrap(alertEvent.getBytes(StandardCharsets.UTF_8)));
-                          })
-                      .onErrorResume(
-                          e -> {
-                            log.error("SSE output risk check failed, pass chunk", e);
-                            return Flux.just(bufferFactory.wrap(content));
-                          });
-                });
-
-    return originalResponse.writeWith(modifiedBody);
-  }
-
-  private Mono<RiskCheckResponse> callOutputRiskCheck(String userId, String path, String content) {
-    RiskCheckRequest request = new RiskCheckRequest();
-    request.setUserId(parseUserId(userId));
-    request.setIpAddress("internal");
-    request.setRequestPath(path);
-    request.setContent(content);
-    request.setDirection("OUTPUT");
-
-    return webClient
-        .post()
-        .uri(riskControlServiceUrl + "/internal/risk/check")
-        .header("X-Internal-Token", internalServiceToken)
-        .bodyValue(request)
-        .retrieve()
-        .bodyToMono(RiskCheckResponse.class)
-        .defaultIfEmpty(RiskCheckResponse.passed());
-  }
-
-  private Long parseUserId(String userId) {
-    if (userId == null || userId.isBlank()) {
-      return null;
-    }
-    try {
-      return Long.parseLong(userId);
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
-
-  private String safeTag(String value) {
-    return value == null || value.isBlank() ? "unknown" : value;
+    return sseResponseHandler.handle(
+        exchange,
+        body,
+        bufferFactory,
+        originalResponse,
+        riskControlServiceUrl,
+        internalServiceToken);
   }
 }

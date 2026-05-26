@@ -51,6 +51,31 @@ async def test_get_session_summary_returns_none_when_404(monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
+async def test_get_session_summary_maps_response_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = MemoryApiClient(base_url="http://memory.local")
+
+    async def _request(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        return {
+            "data": {
+                "sessionId": 2,
+                "summary": "session summary",
+                "updatedAt": "2026-05-26T10:20:30Z",
+            }
+        }
+
+    monkeypatch.setattr(client, "_request", _request)
+
+    summary = await client.get_session_summary(1)
+
+    assert summary is not None
+    assert summary.session_id == 2
+    assert summary.summary == "session summary"
+    assert summary.updated_at is not None
+
+
+@pytest.mark.asyncio
 async def test_request_retries_on_500_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     client = MemoryApiClient(
         base_url="http://memory.local",

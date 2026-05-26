@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.model;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,16 +13,16 @@ public class ChatStreamProxyResult {
 
   @Nullable private String assistantText;
 
-  @Nullable private List<ChatMessageDO.SourceReference> sources;
+  @Nullable private List<SourceReference> sources;
 
-  @Nullable private List<ChatMessageDO.StreamEventRecord> events;
+  @Nullable private List<StreamEventRecord> events;
 
   public ChatStreamProxyResult(@Nullable String assistantText) {
     this(assistantText, List.of(), List.of());
   }
 
   public ChatStreamProxyResult(
-      @Nullable String assistantText, @Nullable List<ChatMessageDO.SourceReference> sources) {
+      @Nullable String assistantText, @Nullable List<SourceReference> sources) {
     this(assistantText, sources, List.of());
   }
 }

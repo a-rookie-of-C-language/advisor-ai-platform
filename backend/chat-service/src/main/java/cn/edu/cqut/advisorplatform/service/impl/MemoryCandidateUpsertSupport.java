@@ -9,10 +9,7 @@ import cn.edu.cqut.advisorplatform.service.vector.EmbeddingService;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryServiceFactory;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryVectorService;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +25,7 @@ public class MemoryCandidateUpsertSupport {
   private final UserMemoryDao userMemoryDao;
   private final MemoryServiceFactory memoryServiceFactory;
   private final EmbeddingService embeddingService;
+  private final MemoryCandidateEntityFactory entityFactory;
 
   public MemoryCandidateUpsertResponseDTO upsert(
       MemoryCandidateUpsertRequestDTO request, String vectorStore) {
@@ -45,13 +43,13 @@ public class MemoryCandidateUpsertSupport {
     int accepted = 0;
     int rejected = 0;
     for (MemoryCandidateItemDTO candidate : candidates) {
-      if (isBlankCandidate(candidate)) {
+      if (entityFactory.isBlankCandidate(candidate)) {
         rejected++;
         continue;
       }
 
-      String normalizedContent = candidate.getContent().trim();
-      BigDecimal confidence = toDecimal(candidate.getConfidence(), 0.7d, 3);
+      String normalizedContent = entityFactory.normalizeContent(candidate);
+      BigDecimal confidence = entityFactory.resolveConfidence(candidate);
 
       try {
         double[] embedding = embeddingService.embed(normalizedContent);
@@ -60,25 +58,17 @@ public class MemoryCandidateUpsertSupport {
               vectorService.findSimilar(
                   request.getUserId(), request.getKbId(), embedding, SIMILARITY_THRESHOLD);
           if (similar.isPresent()) {
-            updateSimilarMemory(
-                candidate, vectorService, normalizedContent, confidence, embedding, similar.get());
+            entityFactory.updateSimilarMemory(
+                similar.get(), candidate, normalizedContent, confidence);
+            UserMemoryDO row = userMemoryDao.save(similar.get());
+            vectorService.updateEmbedding(row.getId(), embedding);
             accepted++;
             continue;
           }
         }
 
-        UserMemoryDO row = new UserMemoryDO();
-        row.setUserId(request.getUserId());
-        row.setKbId(request.getKbId());
-        row.setContent(normalizedContent);
-        row.setConfidence(confidence);
-        row.setScore(BigDecimal.ZERO.setScale(4));
-        row.setMemoryKey(extractMemoryKey(candidate.getTags()));
-        row.setSourceTurnId(candidate.getSourceTurnId());
-        row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
-        row.setIsDeleted(false);
-        row.setCreatedAt(LocalDateTime.now());
-        row.setUpdatedAt(LocalDateTime.now());
+        UserMemoryDO row =
+            entityFactory.createNewMemory(request, candidate, normalizedContent, confidence);
         row = userMemoryDao.save(row);
         if (vectorService != null) {
           vectorService.updateEmbedding(row.getId(), embedding);
@@ -103,45 +93,5 @@ public class MemoryCandidateUpsertSupport {
         System.currentTimeMillis() - startedAt);
 
     return MemoryCandidateUpsertResponseDTO.of(accepted, rejected, "ok");
-  }
-
-  private boolean isBlankCandidate(MemoryCandidateItemDTO candidate) {
-    return candidate == null
-        || candidate.getContent() == null
-        || candidate.getContent().trim().isEmpty();
-  }
-
-  private void updateSimilarMemory(
-      MemoryCandidateItemDTO candidate,
-      MemoryVectorService vectorService,
-      String normalizedContent,
-      BigDecimal confidence,
-      double[] embedding,
-      UserMemoryDO row) {
-    row.setContent(normalizedContent);
-    row.setConfidence(row.getConfidence().max(confidence));
-    row.setMemoryKey(extractMemoryKey(candidate.getTags()));
-    row.setSourceTurnId(candidate.getSourceTurnId());
-    row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
-    row.setUpdatedAt(LocalDateTime.now());
-    row = userMemoryDao.save(row);
-    vectorService.updateEmbedding(row.getId(), embedding);
-  }
-
-  private String extractMemoryKey(Map<String, Object> tags) {
-    if (tags == null) {
-      return null;
-    }
-    Object raw = tags.get("memory_key");
-    if (raw == null) {
-      return null;
-    }
-    String value = String.valueOf(raw).trim();
-    return value.isEmpty() ? null : value;
-  }
-
-  private BigDecimal toDecimal(Double value, double fallback, int scale) {
-    double safe = value == null ? fallback : Math.max(0d, Math.min(1d, value));
-    return BigDecimal.valueOf(safe).setScale(scale, java.math.RoundingMode.HALF_UP);
   }
 }

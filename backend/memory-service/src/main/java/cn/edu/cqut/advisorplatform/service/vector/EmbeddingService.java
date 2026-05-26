@@ -51,8 +51,7 @@ public class EmbeddingService {
         if (embeddings == null || embeddings.isEmpty()) {
           return new double[embeddingDimension];
         }
-        List<Number> embeddingList = embeddings.get(0);
-        return embeddingList.stream().mapToDouble(Number::doubleValue).toArray();
+        return toEmbeddingVector(embeddings);
       }
 
       log.warn("Ollama embedding 返回格式异常: {}", response);
@@ -66,5 +65,16 @@ public class EmbeddingService {
 
   public int getDimension() {
     return embeddingDimension;
+  }
+
+  double[] toEmbeddingVector(List<List<Number>> embeddings) {
+    if (embeddings == null || embeddings.isEmpty()) {
+      return new double[embeddingDimension];
+    }
+    List<Number> embeddingList = embeddings.get(0);
+    if (embeddingList == null || embeddingList.isEmpty()) {
+      return new double[embeddingDimension];
+    }
+    return embeddingList.stream().mapToDouble(Number::doubleValue).toArray();
   }
 }

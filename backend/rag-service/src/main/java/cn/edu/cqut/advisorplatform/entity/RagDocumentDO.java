@@ -43,11 +43,4 @@ public class RagDocumentDO {
   private LocalDateTime createdAt;
 
   private LocalDateTime updatedAt;
-
-  public enum DocumentStatus {
-    PENDING,
-    INDEXING,
-    READY,
-    FAILED
-  }
 }

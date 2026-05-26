@@ -5,8 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.annotation.Auditable;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.AuditService;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -57,7 +58,7 @@ class AuditAspectTest {
 
     when(joinPoint.getSignature()).thenReturn(methodSignature);
     when(methodSignature.getMethod())
-        .thenReturn(TestController.class.getMethod("search", String.class));
+        .thenReturn(AuditAspectTestController.class.getMethod("search", String.class));
     when(joinPoint.proceed()).thenReturn("ok");
 
     auditAspect.audit(joinPoint);
@@ -66,8 +67,8 @@ class AuditAspectTest {
     verify(auditService).saveAuditLogAsync(captor.capture());
 
     AuditLogDO saved = captor.getValue();
-    assertThat(saved.getModule()).isEqualTo(AuditLogDO.AuditModule.MEMORY);
-    assertThat(saved.getAction()).isEqualTo(AuditLogDO.AuditAction.SEARCH);
+    assertThat(saved.getModule()).isEqualTo(AuditModule.MEMORY);
+    assertThat(saved.getAction()).isEqualTo(AuditAction.SEARCH);
     assertThat(saved.getResponseStatus()).isEqualTo("SUCCESS");
     assertThat(saved.getMethod()).isNotBlank();
     assertThat(saved.getDescription()).isEqualTo("memory_search");
@@ -84,7 +85,7 @@ class AuditAspectTest {
 
     when(joinPoint.getSignature()).thenReturn(methodSignature);
     when(methodSignature.getMethod())
-        .thenReturn(TestController.class.getMethod("failingSearch", String.class));
+        .thenReturn(AuditAspectTestController.class.getMethod("failingSearch", String.class));
     when(joinPoint.proceed()).thenThrow(new IllegalStateException("boom"));
 
     assertThatThrownBy(() -> auditAspect.audit(joinPoint))
@@ -97,7 +98,7 @@ class AuditAspectTest {
     AuditLogDO saved = captor.getValue();
     assertThat(saved.getResponseStatus()).isEqualTo("FAILED");
     assertThat(saved.getErrorMessage()).contains("IllegalStateException").contains("boom");
-    assertThat(saved.getMethod()).isEqualTo("TestController.failingSearch");
+    assertThat(saved.getMethod()).isEqualTo("AuditAspectTestController.failingSearch");
   }
 
   @Test
@@ -111,7 +112,7 @@ class AuditAspectTest {
 
     when(joinPoint.getSignature()).thenReturn(methodSignature);
     when(methodSignature.getMethod())
-        .thenReturn(TestController.class.getMethod("search", String.class));
+        .thenReturn(AuditAspectTestController.class.getMethod("search", String.class));
     when(joinPoint.proceed()).thenReturn("ok");
 
     auditAspect.audit(joinPoint);
@@ -124,25 +125,5 @@ class AuditAspectTest {
     assertThat(saved.getTraceId()).isEqualTo("trace-header-001");
     assertThat(saved.getSessionId()).isEqualTo(1001L);
     assertThat(saved.getTurnId()).isEqualTo("turn-xyz");
-  }
-
-  static class TestController {
-
-    @Auditable(
-        module = AuditLogDO.AuditModule.MEMORY,
-        action = AuditLogDO.AuditAction.SEARCH,
-        logRequestParams = false,
-        description = "memory_search")
-    public String search(String keyword) {
-      return keyword;
-    }
-
-    @Auditable(
-        module = AuditLogDO.AuditModule.MEMORY,
-        action = AuditLogDO.AuditAction.SEARCH,
-        logRequestParams = false)
-    public String failingSearch(String keyword) {
-      return keyword;
-    }
   }
 }

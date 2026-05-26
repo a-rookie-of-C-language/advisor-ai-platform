@@ -29,8 +29,13 @@ class WorkspaceFileServiceImplTest {
 
   @BeforeEach
   void setUp() {
+    WorkspaceFileSupport support = new WorkspaceFileSupport();
     workspaceFileService =
-        new WorkspaceFileServiceImpl(workspaceFileDao, chatSessionDao, new WorkspaceFileSupport());
+        new WorkspaceFileServiceImpl(
+            workspaceFileDao,
+            chatSessionDao,
+            support,
+            new WorkspaceFileUploadSupport(workspaceFileDao, support));
   }
 
   @Test

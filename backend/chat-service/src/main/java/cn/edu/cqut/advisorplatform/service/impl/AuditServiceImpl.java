@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuditService;
 import cn.edu.cqut.advisorplatform.service.storage.AuditLogStorage;

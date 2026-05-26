@@ -1,3 +1,5 @@
+use crate::domain::core::gateway_orchestration::CompletionRequest::CompletionRequest;
+
 /// Estimate token count for a text string.
 ///
 /// Uses a weighted approach:
@@ -24,11 +26,17 @@ pub fn estimate_tokens(text: &str) -> u64 {
         }
     }
 
-    let tokens = (ascii_count as f64 / 4.0)
-        + (cjk_count as f64 / 1.5)
-        + (other_count as f64 / 2.0);
+    let tokens = (ascii_count as f64 / 4.0) + (cjk_count as f64 / 1.5) + (other_count as f64 / 2.0);
 
     tokens.ceil().max(1.0) as u64
+}
+
+pub fn estimate_request_tokens(payload: &CompletionRequest) -> u64 {
+    payload
+        .messages
+        .iter()
+        .map(|m| estimate_tokens(&m.content) + 4)
+        .sum()
 }
 
 fn is_cjk(ch: char) -> bool {
@@ -85,5 +93,31 @@ mod tests {
         let code = "fn main() {\n    println!(\"Hello, world!\");\n}";
         let tokens = estimate_tokens(code);
         assert!(tokens >= 5 && tokens <= 15);
+    }
+
+    #[test]
+    fn test_request_tokens_include_message_overhead() {
+        let payload = CompletionRequest {
+            model: None,
+            messages: vec![
+                crate::domain::core::gateway_orchestration::Message::Message {
+                    role: "user".to_string(),
+                    content: "abcd".to_string(),
+                },
+                crate::domain::core::gateway_orchestration::Message::Message {
+                    role: "assistant".to_string(),
+                    content: "".to_string(),
+                },
+            ],
+            temperature: None,
+            max_tokens: None,
+            top_p: None,
+            frequency_penalty: None,
+            presence_penalty: None,
+            tools: None,
+            response_format: None,
+        };
+
+        assert_eq!(estimate_request_tokens(&payload), 9);
     }
 }

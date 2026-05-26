@@ -1,7 +1,9 @@
 package cn.edu.cqut.advisorplatform.service;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.lang.Nullable;
 
 public interface ChatMessageService {
@@ -12,8 +14,8 @@ public interface ChatMessageService {
       @Nullable String turnId,
       @Nullable String userContent,
       @Nullable String assistantContent,
-      @Nullable List<ChatMessageDO.SourceReference> sources,
-      @Nullable List<ChatMessageDO.StreamEventRecord> events);
+      @Nullable List<SourceReference> sources,
+      @Nullable List<StreamEventRecord> events);
 
   default void saveTurn(
       Long sessionId,
@@ -21,7 +23,7 @@ public interface ChatMessageService {
       @Nullable String turnId,
       @Nullable String userContent,
       @Nullable String assistantContent,
-      @Nullable List<ChatMessageDO.SourceReference> sources) {
+      @Nullable List<SourceReference> sources) {
     saveTurn(sessionId, userId, turnId, userContent, assistantContent, sources, null);
   }
 
@@ -34,6 +36,5 @@ public interface ChatMessageService {
     saveTurn(sessionId, userId, turnId, userContent, assistantContent, null, null);
   }
 
-  @Nullable
-  String findAssistantContent(Long sessionId, Long userId, @Nullable String turnId);
+  Optional<String> findAssistantContent(Long sessionId, Long userId, @Nullable String turnId);
 }

@@ -79,26 +79,4 @@ public class AuditLogDO {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
   }
-
-  public enum AuditModule {
-    AUTH,
-    RAG,
-    MEMORY,
-    CHAT
-  }
-
-  public enum AuditAction {
-    LOGIN,
-    LOGOUT,
-    SEARCH,
-    QUERY,
-    UPLOAD_DOCUMENT,
-    DELETE_DOCUMENT,
-    STORE,
-    RETRIEVE,
-    UPDATE,
-    DELETE,
-    CHAT,
-    STREAM_CHAT
-  }
 }

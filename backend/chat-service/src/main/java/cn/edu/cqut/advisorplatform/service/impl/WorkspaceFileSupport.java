@@ -42,7 +42,7 @@ public class WorkspaceFileSupport {
     Path sessionDir = baseDir.resolve(sessionId.toString()).normalize();
     Path filePath = sessionDir.resolve(safeFilename).normalize();
     if (!filePath.startsWith(baseDir)) {
-      throw new BadRequestException("闈炴硶鏂囦欢璺緞");
+      throw new BadRequestException("非法文件路径");
     }
     return filePath;
   }
@@ -91,7 +91,7 @@ public class WorkspaceFileSupport {
     try {
       Files.deleteIfExists(path);
     } catch (IOException e) {
-      log.warn("鍒犻櫎鏂囦欢澶辫触: {}", path, e);
+      log.warn("删除文件失败: {}", path, e);
     }
   }
 

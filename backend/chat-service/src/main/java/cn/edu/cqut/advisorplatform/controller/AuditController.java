@@ -2,9 +2,9 @@ package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AuditService;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;

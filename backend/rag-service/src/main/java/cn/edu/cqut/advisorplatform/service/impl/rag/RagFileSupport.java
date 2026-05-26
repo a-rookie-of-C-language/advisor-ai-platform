@@ -4,6 +4,7 @@ import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.UserRole;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +42,7 @@ public class RagFileSupport {
     user.setId(currentUser.getId());
     user.setUsername(currentUser.getUsername());
     user.setRealName(currentUser.getRealName());
-    user.setRole(UserDO.UserRole.valueOf(currentUser.getRole().name()));
+    user.setRole(UserRole.valueOf(currentUser.getRole().name()));
     user.setEnabled(currentUser.isEnabled());
     return user;
   }

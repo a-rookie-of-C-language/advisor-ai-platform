@@ -4,14 +4,17 @@ use axum::{
     Json,
 };
 use serde_json::json;
+use std::time::Instant;
 
 use crate::domain::core::gateway_orchestration::CompletionRequest::CompletionRequest;
-use crate::domain::core::quota_billing::TokenUsage::TokenUsage;
 use crate::domain::core::tenant_access_control::TenantIdentity::TenantIdentity;
 use crate::domain::supporting::observability_audit::TraceRecord::TraceRecord;
 use crate::infrastructure::http::AppState::AppState;
+use crate::interfaces::http::chat_audit::persist_chat_audit;
+use crate::interfaces::http::chat_completion_usage::settle_completion_usage;
 use crate::shared::json_extractor::UnifiedJson;
 use crate::shared::response;
+use crate::shared::token_estimator::estimate_request_tokens;
 use crate::shared::validator::validate_request;
 
 pub async fn chat_completions(
@@ -20,22 +23,8 @@ pub async fn chat_completions(
     headers: HeaderMap,
     UnifiedJson(payload): UnifiedJson<CompletionRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let started_at = Instant::now();
     validate_request(&payload)?;
-
-    let estimated_tokens: u64 = payload
-        .messages
-        .iter()
-        .map(|m| crate::shared::token_estimator::estimate_tokens(&m.content) + 4)
-        .sum();
-
-    match state.try_consume_tokens(estimated_tokens, &tenant.tenant_id, &tenant.app_id).await {
-        Ok(true) => {}
-        Ok(false) => return Err(response::err(StatusCode::PAYMENT_REQUIRED, "quota exceeded")),
-        Err(e) => {
-            tracing::error!("quota check failed: {}", e);
-            return Err(response::err(StatusCode::INTERNAL_SERVER_ERROR, "quota service unavailable"));
-        }
-    }
 
     let request_id = headers
         .get("x-request-id")
@@ -49,6 +38,50 @@ pub async fn chat_completions(
         span_id: None,
     };
 
+    let estimated_tokens = estimate_request_tokens(&payload);
+
+    match state
+        .try_consume_tokens(estimated_tokens, &tenant.tenant_id, &tenant.app_id)
+        .await
+    {
+        Ok(true) => {}
+        Ok(false) => {
+            persist_chat_audit(
+                &state,
+                &tenant,
+                &trace,
+                "POST",
+                "/v1/chat/completions",
+                StatusCode::PAYMENT_REQUIRED,
+                started_at.elapsed(),
+                Some("quota exceeded".to_string()),
+            )
+            .await;
+            return Err(response::err(
+                StatusCode::PAYMENT_REQUIRED,
+                "quota exceeded",
+            ));
+        }
+        Err(e) => {
+            tracing::error!("quota check failed: {}", e);
+            persist_chat_audit(
+                &state,
+                &tenant,
+                &trace,
+                "POST",
+                "/v1/chat/completions",
+                StatusCode::INTERNAL_SERVER_ERROR,
+                started_at.elapsed(),
+                Some("quota service unavailable".to_string()),
+            )
+            .await;
+            return Err(response::err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "quota service unavailable",
+            ));
+        }
+    }
+
     tracing::info!(
         tenant_id = %tenant.tenant_id,
         app_id = %tenant.app_id,
@@ -60,46 +93,43 @@ pub async fn chat_completions(
 
     match state.chat_service.complete(payload).await {
         Ok(data) => {
-            if let Some(tt) = data.total_tokens {
-                let actual = tt as u64;
-                if actual > estimated_tokens {
-                    if let Err(e) = state.try_consume_tokens(actual - estimated_tokens, &tenant.tenant_id, &tenant.app_id).await {
-                        tracing::warn!(request_id = %trace.request_id, "quota top-up failed: {}", e);
-                    }
-                } else if actual < estimated_tokens {
-                    if let Err(e) = state.release_tokens(estimated_tokens - actual, &tenant.tenant_id, &tenant.app_id).await {
-                        tracing::warn!(request_id = %trace.request_id, "quota rollback failed: {}", e);
-                    }
-                }
-            }
-            if let (Some(pt), Some(ct), Some(tt)) = (data.prompt_tokens, data.completion_tokens, data.total_tokens) {
-                if let Some(ref dao) = state.token_usage_dao {
-                    let usage = TokenUsage {
-                        request_id: trace.request_id.clone(),
-                        tenant_id: tenant.tenant_id.clone(),
-                        app_id: tenant.app_id.clone(),
-                        model: data.model.clone(),
-                        prompt_tokens: pt,
-                        completion_tokens: ct,
-                        total_tokens: tt,
-                        created_at: chrono::Utc::now(),
-                    };
-                    if let Err(e) = dao.insert(&usage).await {
-                        tracing::error!(request_id = %trace.request_id, "failed to persist token usage: {}", e);
-                        if let Err(rollback_err) = state.release_tokens(estimated_tokens, &tenant.tenant_id, &tenant.app_id).await {
-                            tracing::error!(request_id = %trace.request_id, "quota rollback failed: {}", rollback_err);
-                        }
-                    }
-                }
-            }
+            settle_completion_usage(&state, &tenant, &trace, &data, estimated_tokens).await;
+            persist_chat_audit(
+                &state,
+                &tenant,
+                &trace,
+                "POST",
+                "/v1/chat/completions",
+                StatusCode::OK,
+                started_at.elapsed(),
+                None,
+            )
+            .await;
             Ok(response::ok(json!(data)))
         }
         Err(err) => {
             tracing::error!(request_id = %trace.request_id, "provider error: {:?}", err);
-            if let Err(e) = state.release_tokens(estimated_tokens, &tenant.tenant_id, &tenant.app_id).await {
+            if let Err(e) = state
+                .release_tokens(estimated_tokens, &tenant.tenant_id, &tenant.app_id)
+                .await
+            {
                 tracing::error!(request_id = %trace.request_id, "quota rollback on provider error failed: {}", e);
             }
-            Err(response::err(StatusCode::BAD_GATEWAY, "upstream service error"))
+            persist_chat_audit(
+                &state,
+                &tenant,
+                &trace,
+                "POST",
+                "/v1/chat/completions",
+                StatusCode::BAD_GATEWAY,
+                started_at.elapsed(),
+                Some("upstream service error".to_string()),
+            )
+            .await;
+            Err(response::err(
+                StatusCode::BAD_GATEWAY,
+                "upstream service error",
+            ))
         }
     }
 }

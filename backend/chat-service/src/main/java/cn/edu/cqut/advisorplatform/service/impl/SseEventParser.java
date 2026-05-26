@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,27 +21,18 @@ class SseEventParser {
   }
 
   String extractEventName(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    String event = "message";
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("event:")) {
-        event = trimmed.substring(6).trim();
-        break;
-      }
-    }
-    return event;
+    return SseEventBlock.parse(sseBlock).eventName();
   }
 
-  ChatMessageDO.StreamEventRecord extractStreamEventRecord(String eventName, String sseBlock) {
-    String dataJson = extractDataJson(sseBlock);
-    if (dataJson.isBlank()) {
+  StreamEventRecord extractStreamEventRecord(String eventName, String sseBlock) {
+    SseEventBlock block = SseEventBlock.parse(sseBlock);
+    if (block.dataJson().isBlank()) {
       return null;
     }
     try {
-      JsonNode node = objectMapper.readTree(dataJson);
+      JsonNode node = objectMapper.readTree(block.dataJson());
       JsonNode payloadNode = node.has("payload") ? node.path("payload") : node;
-      ChatMessageDO.StreamEventRecord record = new ChatMessageDO.StreamEventRecord();
+      StreamEventRecord record = new StreamEventRecord();
       record.setEvent(eventName);
       record.setSource(node.path("source").asText(""));
       record.setTraceId(node.path("trace_id").asText(""));
@@ -55,26 +47,14 @@ class SseEventParser {
   }
 
   String extractDelta(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    String event = "message";
-    StringBuilder dataBuilder = new StringBuilder();
-
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("event:")) {
-        event = trimmed.substring(6).trim();
-      } else if (trimmed.startsWith("data:")) {
-        dataBuilder.append(trimmed.substring(5).trim());
-      }
-    }
-
-    if (dataBuilder.isEmpty()) {
+    SseEventBlock block = SseEventBlock.parse(sseBlock);
+    if (block.dataJson().isEmpty()) {
       return null;
     }
 
     try {
-      JsonNode node = objectMapper.readTree(dataBuilder.toString());
-      if ("llm_data".equals(event)) {
+      JsonNode node = objectMapper.readTree(block.dataJson());
+      if ("llm_data".equals(block.eventName())) {
         String text = node.path("payload").path("text").asText("");
         if (text.isBlank()) {
           text = node.path("text").asText("");
@@ -87,44 +67,34 @@ class SseEventParser {
     }
   }
 
-  List<ChatMessageDO.SourceReference> extractSources(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    String event = "message";
-    StringBuilder dataBuilder = new StringBuilder();
-
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("event:")) {
-        event = trimmed.substring(6).trim();
-      } else if (trimmed.startsWith("data:")) {
-        dataBuilder.append(trimmed.substring(5).trim());
-      }
-    }
-
-    if (!"sources".equals(event) && !"tool_result".equals(event)) {
+  List<SourceReference> extractSources(String sseBlock) {
+    SseEventBlock block = SseEventBlock.parse(sseBlock);
+    if (!"sources".equals(block.eventName()) && !"tool_result".equals(block.eventName())) {
       return List.of();
     }
-    if (dataBuilder.isEmpty()) {
+    if (block.dataJson().isEmpty()) {
       return List.of();
     }
 
     try {
-      JsonNode node = objectMapper.readTree(dataBuilder.toString());
+      JsonNode node = objectMapper.readTree(block.dataJson());
       JsonNode payload = node.path("payload");
       JsonNode items =
-          "tool_result".equals(event)
+          "tool_result".equals(block.eventName())
               ? payload.path("derived").path("sources")
               : payload.path("items");
       if (items.isMissingNode()) {
         items =
-            "tool_result".equals(event) ? node.path("derived").path("sources") : node.path("items");
+            "tool_result".equals(block.eventName())
+                ? node.path("derived").path("sources")
+                : node.path("items");
       }
       if (!items.isArray()) {
         return List.of();
       }
-      List<ChatMessageDO.SourceReference> results = new ArrayList<>();
+      List<SourceReference> results = new ArrayList<>();
       for (JsonNode item : items) {
-        ChatMessageDO.SourceReference source = new ChatMessageDO.SourceReference();
+        SourceReference source = new SourceReference();
         source.setDocumentId(item.path("id").isMissingNode() ? null : item.path("id").asLong());
         source.setDocName(item.path("docName").asText(""));
         source.setSnippet(item.path("snippet").asText(""));
@@ -134,17 +104,5 @@ class SseEventParser {
     } catch (Exception e) {
       return List.of();
     }
-  }
-
-  private String extractDataJson(String sseBlock) {
-    String[] lines = sseBlock.split("\n");
-    StringBuilder dataBuilder = new StringBuilder();
-    for (String line : lines) {
-      String trimmed = line.trim();
-      if (trimmed.startsWith("data:")) {
-        dataBuilder.append(trimmed.substring(5).trim());
-      }
-    }
-    return dataBuilder.toString();
   }
 }

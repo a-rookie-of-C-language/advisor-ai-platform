@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.service.ChatService;
 import java.util.List;
 import java.util.Map;
@@ -18,11 +18,11 @@ public class ChatServiceImpl implements ChatService {
   private final ChatSessionDao chatSessionDao;
   private final ChatMessageDao chatMessageDao;
   private final ChatSessionSupport chatSessionSupport;
+  private final ChatSessionMutationSupport sessionMutationSupport;
 
   @Override
   @Transactional(readOnly = true)
-  public List<Map<String, Object>> listSessions(
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
+  public List<Map<String, Object>> listSessions(@Nullable UserPrincipal currentUser) {
     Long userId = chatSessionSupport.requireUserId(currentUser);
     return chatSessionDao.findByUserIdOrderByUpdatedAtDesc(userId).stream()
         .map(chatSessionSupport::toSessionMap)
@@ -31,54 +31,28 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   @Transactional
-  public Map<String, Object> createSession(
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    ChatSessionDO session = new ChatSessionDO();
-    session.setUser(
-        chatSessionSupport.toUserReference(chatSessionSupport.requireUser(currentUser)));
-    session.setTitle("???");
-    session.setKbId(0L);
-    java.time.LocalDateTime now = java.time.LocalDateTime.now();
-    session.setCreatedAt(now);
-    session.setUpdatedAt(now);
-    ChatSessionDO saved = chatSessionDao.save(session);
-    return chatSessionSupport.toSessionMap(saved);
+  public Map<String, Object> createSession(@Nullable UserPrincipal currentUser) {
+    return sessionMutationSupport.createSession(currentUser);
   }
 
   @Override
   @Transactional
-  public void deleteSession(
-      Long sessionId,
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    ChatSessionDO session = getOwnedSession(sessionId, currentUser);
-    chatSessionDao.deleteById(session.getId());
+  public void deleteSession(Long sessionId, @Nullable UserPrincipal currentUser) {
+    sessionMutationSupport.deleteSession(sessionId, currentUser);
   }
 
   @Override
   @Transactional
   public Map<String, Object> updateSessionKb(
-      Long sessionId,
-      Long kbId,
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    if (kbId == null || kbId <= 0) {
-      session.setKbId(0L);
-    } else {
-      if (!chatSessionSupport.existsKnowledgeBase(kbId)) {
-        throw new cn.edu.cqut.advisorplatform.common.exception.NotFoundException("知识库不存在");
-      }
-      session.setKbId(kbId);
-    }
-    session.setUpdatedAt(java.time.LocalDateTime.now());
-    return chatSessionSupport.toSessionMap(chatSessionDao.save(session));
+      Long sessionId, Long kbId, @Nullable UserPrincipal currentUser) {
+    return sessionMutationSupport.updateSessionKb(sessionId, kbId, currentUser);
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<Map<String, Object>> listMessages(
-      Long sessionId,
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    getOwnedSession(sessionId, currentUser);
+      Long sessionId, @Nullable UserPrincipal currentUser) {
+    sessionMutationSupport.getOwnedSession(sessionId, currentUser);
     return chatMessageDao.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId).stream()
         .map(chatSessionSupport::toMessageMap)
         .toList();
@@ -86,32 +60,7 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   @Transactional(readOnly = true)
-  public long getSessionKbId(
-      Long sessionId,
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    Long kbId = session.getKbId();
-    return kbId == null ? 0L : kbId;
-  }
-
-  private ChatSessionDO getSessionForLoggedInUser(
-      Long sessionId,
-      @Nullable cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    chatSessionSupport.requireUserId(currentUser);
-    return chatSessionDao
-        .findById(sessionId)
-        .orElseThrow(
-            () -> new cn.edu.cqut.advisorplatform.common.exception.NotFoundException("会话不存在"));
-  }
-
-  private ChatSessionDO getOwnedSession(
-      Long sessionId, cn.edu.cqut.advisorplatform.common.security.UserPrincipal currentUser) {
-    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    Long currentUserId = chatSessionSupport.requireUserId(currentUser);
-    Long ownerId = session.getUser() == null ? null : session.getUser().getId();
-    if (ownerId == null || !ownerId.equals(currentUserId)) {
-      throw new cn.edu.cqut.advisorplatform.common.exception.ForbiddenException("无权访问该会话");
-    }
-    return session;
+  public long getSessionKbId(Long sessionId, @Nullable UserPrincipal currentUser) {
+    return sessionMutationSupport.getSessionKbId(sessionId, currentUser);
   }
 }

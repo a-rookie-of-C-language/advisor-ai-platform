@@ -4,6 +4,7 @@ import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorRealtimeResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.UserRole;
 import cn.edu.cqut.advisorplatform.service.MonitorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;
@@ -24,7 +25,7 @@ public class MonitorController {
       @RequestParam(value = "minutes", defaultValue = "15") int minutes,
       @RequestParam(value = "stepSeconds", defaultValue = "10") int stepSeconds,
       @AuthenticationPrincipal @Nullable UserDO currentUser) {
-    if (currentUser == null || currentUser.getRole() != UserDO.UserRole.ADMIN) {
+    if (currentUser == null || currentUser.getRole() != UserRole.ADMIN) {
       throw new ForbiddenException("仅管理员可访问监控数据");
     }
     return ApiResponseDTO.success(monitorService.getRealtimeMetrics(minutes, stepSeconds));

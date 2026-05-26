@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
-import os
 
 from json_types import JsonObject
-from tools.DirectHttpMcpClient import DirectHttpMcpClient
 from tools.McpCallToolResultProtocol import McpCallToolResultProtocol
 from tools.McpClientProtocol import McpClientProtocol
 from tools.McpConnection import McpConnection
 from tools.McpServerConfig import McpServerConfig
+from tools.mcp_config_parser import parse_mcp_server_configs
+from tools.mcp_connection_factory import McpConnectionFactory
+from tools.mcp_tool_result_parser import parse_mcp_tool_result
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +39,15 @@ class McpClientPool:
         self._remote_semaphore = asyncio.Semaphore(REMOTE_CONCURRENCY_LIMIT)
         self._locks: dict[str, asyncio.Lock] = {}
         self._cache_clear_event = asyncio.Event()
+        self._connection_factory = McpConnectionFactory(
+            local_semaphore=self._local_semaphore,
+            remote_semaphore=self._remote_semaphore,
+        )
 
     def _get_lock(self, server_name: str) -> asyncio.Lock:
         if server_name not in self._locks:
             self._locks[server_name] = asyncio.Lock()
         return self._locks[server_name]
-
-    def _get_semaphore(self, config: McpServerConfig) -> asyncio.Semaphore:
-        return self._local_semaphore if config.transport_type == "stdio" else self._remote_semaphore
 
     @staticmethod
     def parse_env_config() -> list[McpServerConfig]:
@@ -55,36 +58,7 @@ class McpClientPool:
         示例：
             MCP_SERVERS=filesystem:stdio:/path/to/server,github:http:http://localhost:8000
         """
-        servers_str = os.getenv("MCP_SERVERS", "").strip()
-        if not servers_str:
-            return []
-
-        configs = []
-        for server_entry in servers_str.split(","):
-            server_entry = server_entry.strip()
-            if not server_entry:
-                continue
-
-            parts = server_entry.split(":")
-            if len(parts) < 3:
-                logger.warning(f"Invalid MCP server config (skip): {server_entry}")
-                continue
-
-            name, transport_type, url_or_command = parts[0], parts[1], ":".join(parts[2:])
-            # 将连字符替换为下划线，以匹配环境变量命名约定（如 MCP_TOKEN_STUDENT_SERVICE）
-            token_key = f"MCP_TOKEN_{name.upper().replace('-', '_')}"
-            token = os.getenv(token_key)
-
-            configs.append(
-                McpServerConfig(
-                    name=name,
-                    transport_type=transport_type,
-                    url_or_command=url_or_command,
-                    token=token,
-                )
-            )
-
-        return configs
+        return parse_mcp_server_configs()
 
     async def get_connection(self, config: McpServerConfig) -> McpConnection:
         """获取或创建 MCP 连接（按需）"""
@@ -132,64 +106,7 @@ class McpClientPool:
 
     async def _connect(self, config: McpServerConfig) -> McpClientProtocol:
         """建立 MCP 连接"""
-        if config.transport_type == "stdio":
-            return await self._connect_stdio(config)
-        elif config.transport_type == "http":
-            return await self._connect_http(config)
-        else:
-            raise ValueError(f"Unsupported transport type: {config.transport_type}")
-
-    async def _connect_stdio(self, config: McpServerConfig) -> McpClientProtocol:
-        """通过 stdio 连接到 MCP 服务器"""
-        import importlib.util
-
-        if importlib.util.find_spec("mcp") is None:
-            raise ImportError("Please install mcp: pip install mcp")
-
-        from mcp import ClientSession  # noqa: F401  # noqa: F401
-        from mcp.client.stdio import stdio_client  # noqa: F401
-
-        semaphore = self._get_semaphore(config)
-
-        async with semaphore:
-            parts = config.url_or_command.split()
-            command = parts[0]
-            args = parts[1:] if len(parts) > 1 else []
-
-            stdio_env_str = os.getenv("MCP_STDIO_ENV", "")
-            stdio_env = None
-            if stdio_env_str:
-                stdio_env = {}
-                for s in stdio_env_str.split():
-                    if "=" in s:
-                        key, val = s.split("=", 1)
-                        stdio_env[key] = val
-
-            async with stdio_client(
-                command=command,
-                args=args,
-                env=stdio_env,
-            ) as (read_stream, write_stream):
-                client = ClientSession(read_stream, write_stream)
-                await client.initialize()
-                return client
-
-    async def _connect_http(self, config: McpServerConfig) -> McpClientProtocol:
-        """通过 HTTP 连接到 MCP 服务器（直接 JSON-RPC POST）"""
-        import importlib.util
-
-        if importlib.util.find_spec("mcp") is None:
-            raise ImportError("Please install mcp: pip install mcp")
-
-        from mcp import ClientSession  # noqa: F401
-
-        semaphore = self._get_semaphore(config)
-
-        async with semaphore:
-            # 创建自定义 HTTP 客户端来连接 MCP 服务器
-            client = DirectHttpMcpClient(config)
-            await client.initialize()
-            return client
+        return await self._connection_factory.connect(config)
 
     async def call_tool(
         self,
@@ -239,33 +156,14 @@ class McpClientPool:
 
     def _parse_tool_result(self, result: McpCallToolResultProtocol) -> JsonObject:
         """解析 MCP 工具调用结果"""
-        content = []
-        if hasattr(result, "content"):
-            for item in result.content:
-                if hasattr(item, "text"):
-                    content.append({"type": "text", "text": item.text})
-                elif hasattr(item, "data"):
-                    content.append({"type": "text", "text": item.data})
-                elif hasattr(item, "type"):
-                    content.append({"type": item.type, "text": getattr(item, "text", "")})
-
-        return {
-            "ok": True,
-            "content": content,
-            "isError": getattr(result, "isError", False),
-        }
+        return parse_mcp_tool_result(result)
 
     def _invalidate_connection(self, server_name: str) -> None:
         """失效连接缓存，触发重连"""
         if server_name in self._connections:
             conn = self._connections[server_name]
             if conn.client:
-                try:
-                    # 尝试关闭连接
-                    if hasattr(conn.client, "close"):
-                        asyncio.create_task(conn.client.close())
-                except Exception:
-                    pass
+                self._schedule_client_close(server_name, conn.client)
             conn.client = None
             conn.error = None
 
@@ -282,18 +180,30 @@ class McpClientPool:
         if server_name in self._connections:
             conn = self._connections[server_name]
             if conn.client:
-                try:
-                    if hasattr(conn.client, "close"):
-                        asyncio.create_task(conn.client.close())
-                except Exception:
-                    pass
+                self._schedule_client_close(server_name, conn.client)
             del self._connections[server_name]
+
+    def _schedule_client_close(self, server_name: str, client: McpClientProtocol) -> None:
+        close = getattr(client, "close", None)
+        if close is None:
+            return
+        try:
+            result = close()
+        except Exception as exc:
+            logger.debug("MCP client close failed: server=%s, error=%s", server_name, exc)
+            return
+        if inspect.isawaitable(result):
+            asyncio.create_task(self._await_client_close(server_name, result))
+
+    async def _await_client_close(self, server_name: str, close_result) -> None:
+        try:
+            await close_result
+        except Exception as exc:
+            logger.debug("MCP client async close failed: server=%s, error=%s", server_name, exc)
 
     async def cleanup_idle(self) -> None:
         """清理空闲连接"""
-        import time
-
-        current_time = time.time()
+        current_time = asyncio.get_event_loop().time()
         for server_name, conn in list(self._connections.items()):
             if conn.client and (current_time - conn.last_used) > IDLE_TIMEOUT_SECONDS:
                 logger.info(f"Closing idle MCP connection: {server_name}")

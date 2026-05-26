@@ -16,6 +16,7 @@ import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.UserRole;
 import cn.edu.cqut.advisorplatform.service.RefreshTokenService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class AuthServiceImplTest {
     UserDO user = new UserDO();
     user.setId(1L);
     user.setUsername("testuser");
-    user.setRole(UserDO.UserRole.ADVISOR);
+    user.setRole(UserRole.ADVISOR);
 
     TokenPairResponseDTO tokenPair = new TokenPairResponseDTO();
     tokenPair.setAccessToken("access-token");

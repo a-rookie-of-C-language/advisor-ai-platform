@@ -10,14 +10,13 @@ from tools.workspace.FileSizeLimitError import FileSizeLimitError
 from tools.workspace.PathTraversalError import PathTraversalError
 from tools.workspace.WorkspaceError import WorkspaceError
 from tools.workspace.workspace_limits import (
-    BINARY_EXTENSIONS,
     CACHE_DIR,
-    FINAL_DIR,
-    MAX_DEPTH,
     MAX_FILE_SIZE,
-    MAX_FILES_PER_SESSION,
     OPERATION_TIMEOUT,
 )
+from tools.workspace.workspace_listing import build_workspace_listing
+from tools.workspace.workspace_path_guard import WorkspacePathGuard
+from tools.workspace.workspace_stats import build_workspace_stats
 
 
 class WorkspaceManager:
@@ -27,63 +26,27 @@ class WorkspaceManager:
         if base_path is None:
             base_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "workspace")
         self._base_path = Path(base_path).resolve()
+        self._path_guard = WorkspacePathGuard(self._base_path)
 
     def _get_session_path(self, user_id: int | None, session_id: int | None) -> Path:
         """获取用户 session 的 workspace 路径"""
-        user_id = user_id or 0
-        session_id = session_id or 0
-        return self._base_path / str(user_id) / str(session_id)
+        return self._path_guard.get_session_path(user_id, session_id)
 
     def _validate_path(self, user_id: int | None, session_id: int | None, relative_path: str) -> Path:
         """验证路径安全性，返回绝对路径"""
-        session_path = self._get_session_path(user_id, session_id)
-        try:
-            target = (session_path / relative_path).resolve()
-            # 检查是否在 session_path 下
-            target.relative_to(session_path)
-        except ValueError:
-            raise PathTraversalError(f"路径穿越尝试: {relative_path}")
-
-        # 检查二进制文件
-        if target.suffix.lower() in BINARY_EXTENSIONS:
-            raise BinaryFileError(f"不支持操作二进制文件: {target.suffix}")
-
-        return target
+        return self._path_guard.validate_path(user_id, session_id, relative_path)
 
     def _ensure_session_path(self, user_id: int | None, session_id: int | None) -> Path:
         """确保 session 路径存在"""
-        session_path = self._get_session_path(user_id, session_id)
-        session_path.mkdir(parents=True, exist_ok=True)
-        return session_path
+        return self._path_guard.ensure_session_path(user_id, session_id)
 
     def _check_depth(self, user_id: int | None, session_id: int | None, path: Path) -> None:
         """检查目录深度"""
-        try:
-            session_path = self._get_session_path(user_id, session_id)
-            rel = path.relative_to(session_path)
-            if len(rel.parts) > MAX_DEPTH:
-                raise DepthLimitError(f"目录深度超限（最大 {MAX_DEPTH} 层）: {rel}")
-        except ValueError:
-            pass
-
-    def _count_files(self, session_path: Path) -> int:
-        """统计文件数量（不计入 .cache 和 final 目录）"""
-        count = 0
-        if not session_path.exists():
-            return 0
-        for item in session_path.rglob("*"):
-            if item.is_file():
-                # 排除 .cache 和 final 目录
-                parts = item.parts
-                if ".cache" not in parts and "final" not in parts:
-                    count += 1
-        return count
+        self._path_guard.check_depth(user_id, session_id, path)
 
     def _check_file_limit(self, session_path: Path) -> None:
         """检查文件数量限制"""
-        count = self._count_files(session_path)
-        if count >= MAX_FILES_PER_SESSION:
-            raise FileCountLimitError(f"文件数量超限（最大 {MAX_FILES_PER_SESSION} 个）")
+        self._path_guard.check_file_limit(session_path)
 
     def read(self, user_id: int | None, session_id: int | None, relative_path: str, offset: int = 0, limit: int = 8192) -> str:
         """读取文件内容"""
@@ -107,7 +70,7 @@ class WorkspaceManager:
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
 
-        target_path = path if not is_final else session_path / FINAL_DIR / relative_path
+        target_path = path if not is_final else self._path_guard.final_path(session_path, relative_path)
         self._check_depth(user_id, session_id, target_path)
 
         # 检查文件内容大小
@@ -122,7 +85,7 @@ class WorkspaceManager:
 
         if is_final:
             # 写入 final 目录
-            final_path = session_path / FINAL_DIR / relative_path
+            final_path = self._path_guard.final_path(session_path, relative_path)
             final_path.parent.mkdir(parents=True, exist_ok=True)
             with open(final_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -147,11 +110,12 @@ class WorkspaceManager:
         new_content = content.replace(old_string, new_string, 1)
 
         if is_final:
-            final_path = self._get_session_path(user_id, session_id) / FINAL_DIR / relative_path
+            session_path = self._get_session_path(user_id, session_id)
+            final_path = self._path_guard.final_path(session_path, relative_path)
             final_path.parent.mkdir(parents=True, exist_ok=True)
             with open(final_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
-            return {"path": str(final_path.relative_to(self._get_session_path(user_id, session_id))), "replaced": True}
+            return {"path": str(final_path.relative_to(session_path)), "replaced": True}
         else:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(new_content)
@@ -162,56 +126,18 @@ class WorkspaceManager:
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
 
-        if not path.exists():
-            return []
-
-        if not path.is_dir():
-            return [{"name": path.name, "type": "file", "size": path.stat().st_size}]
-
-        results = []
-        if recursive:
-            for item in path.rglob("*"):
-                if item.is_file():
-                    rel = item.relative_to(path)
-                    results.append({
-                        "name": str(rel),
-                        "type": "file",
-                        "size": item.stat().st_size,
-                    })
-                elif item.is_dir() and ".cache" not in item.parts:
-                    rel = item.relative_to(path)
-                    results.append({
-                        "name": str(rel),
-                        "type": "dir",
-                    })
-        else:
-            for item in sorted(path.iterdir()):
-                if item.name == ".cache":
-                    continue
-                if item.is_file():
-                    results.append({
-                        "name": item.name,
-                        "type": "file",
-                        "size": item.stat().st_size,
-                    })
-                elif item.is_dir():
-                    results.append({
-                        "name": item.name,
-                        "type": "dir",
-                    })
-
-        return results
+        return build_workspace_listing(path, recursive=recursive)
 
     def create_dir(self, user_id: int | None, session_id: int | None, relative_path: str, is_final: bool = False) -> dict:
         """创建目录"""
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
 
-        target_path = path if not is_final else session_path / FINAL_DIR / relative_path
+        target_path = path if not is_final else self._path_guard.final_path(session_path, relative_path)
         self._check_depth(user_id, session_id, target_path)
 
         if is_final:
-            final_path = session_path / FINAL_DIR / relative_path
+            final_path = self._path_guard.final_path(session_path, relative_path)
             final_path.mkdir(parents=True, exist_ok=True)
             return {"path": str(final_path.relative_to(session_path)), "created": True}
         else:
@@ -245,38 +171,4 @@ class WorkspaceManager:
     def get_stats(self, user_id: int | None, session_id: int | None) -> dict:
         """获取 workspace 统计信息"""
         session_path = self._get_session_path(user_id, session_id)
-
-        total_files = 0
-        total_size = 0
-        cache_files = 0
-        cache_size = 0
-        final_files = 0
-        final_size = 0
-
-        if session_path.exists():
-            for item in session_path.rglob("*"):
-                if item.is_file():
-                    size = item.stat().st_size
-                    parts = item.parts
-                    if ".cache" in parts:
-                        cache_files += 1
-                        cache_size += size
-                    elif "final" in parts:
-                        final_files += 1
-                        final_size += size
-                    else:
-                        total_files += 1
-                        total_size += size
-
-        return {
-            "user_id": user_id,
-            "session_id": session_id,
-            "total_files": total_files,
-            "total_size": total_size,
-            "cache_files": cache_files,
-            "cache_size": cache_size,
-            "final_files": final_files,
-            "final_size": final_size,
-            "cache_dir": str(session_path / CACHE_DIR),
-            "final_dir": str(session_path / FINAL_DIR),
-        }
+        return build_workspace_stats(session_path, user_id, session_id)

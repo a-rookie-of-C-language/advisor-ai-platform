@@ -5,14 +5,12 @@ import cn.edu.cqut.advisorplatform.checkin.client.StudentServiceClient;
 import cn.edu.cqut.advisorplatform.checkin.client.dto.StudentClassResponse;
 import cn.edu.cqut.advisorplatform.checkin.client.dto.UserIdentityResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityRequest;
-import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDetailResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInActivity;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInActivityVO;
-import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.common.security.UserPrincipal.UserRole;
+import cn.edu.cqut.advisorplatform.common.security.UserRole;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,7 +31,7 @@ public class CheckInServiceSupport {
 
   public void requireRole(UserPrincipal userPrincipal, UserRole requiredRole) {
     if (userPrincipal == null || userPrincipal.getRole() != requiredRole) {
-      throw new ForbiddenException("鏃犳潈鎵ц璇ユ搷浣?");
+      throw new ForbiddenException("无权执行该操作");
     }
   }
 
@@ -41,7 +39,7 @@ public class CheckInServiceSupport {
     UserIdentityResponse identity = requireIdentity(userPrincipal.getId(), "STUDENT");
     StudentClassResponse student = studentServiceClient.getStudentClass(identity.getIdentityNo());
     if (student == null || student.getClassCode() == null || student.getClassCode().isBlank()) {
-      throw new BadRequestException("瀛︾敓鏈粦瀹氱彮绾?");
+      throw new BadRequestException("学生未绑定班级");
     }
     return student;
   }
@@ -51,7 +49,7 @@ public class CheckInServiceSupport {
     if (identity == null
         || identity.getIdentityNo() == null
         || identity.getIdentityNo().isBlank()) {
-      throw new BadRequestException("鐢ㄦ埛鏈粦瀹? " + identityType + "韬唤");
+      throw new BadRequestException("用户未绑定 " + identityType + " 身份");
     }
     return identity;
   }
@@ -60,7 +58,7 @@ public class CheckInServiceSupport {
     if (request.getStartTime() == null
         || request.getEndTime() == null
         || !request.getStartTime().isBefore(request.getEndTime())) {
-      throw new BadRequestException("鎵撳崱鏃堕棿鑼冨洿涓嶅悎娉?");
+      throw new BadRequestException("打卡时间范围不合法");
     }
   }
 
@@ -72,7 +70,7 @@ public class CheckInServiceSupport {
       }
     }
     if (values.isEmpty()) {
-      throw new BadRequestException("鐝骇涓嶈兘涓虹┖");
+      throw new BadRequestException("班级不能为空");
     }
     return values;
   }
@@ -81,13 +79,13 @@ public class CheckInServiceSupport {
     LocalDate normalizedBegin = begin == null ? LocalDate.now() : begin;
     LocalDate normalizedEnd = end == null ? normalizedBegin : end;
     if (normalizedBegin.isAfter(normalizedEnd)) {
-      throw new BadRequestException("寮€濮嬫棩鏈熶笉鑳芥櫄浜庣粨鏉熸棩鏈?");
+      throw new BadRequestException("开始日期不能晚于结束日期");
     }
     return new LocalDate[] {normalizedBegin, normalizedEnd};
   }
 
   public String resolveTitle(String title, String courseName) {
-    return title == null || title.isBlank() ? courseName + "璇惧爞鎵撳崱" : title.trim();
+    return title == null || title.isBlank() ? courseName + "课堂打卡" : title.trim();
   }
 
   public CheckInActivityVO toActivityVO(CheckInActivity activity, List<String> classCodes) {
@@ -102,15 +100,6 @@ public class CheckInServiceSupport {
     vo.setStartTime(activity.getStartTime());
     vo.setEndTime(activity.getEndTime());
     return vo;
-  }
-
-  public StudentCheckInDetailResponse.CheckInRecordItem toRecordItem(CheckInRecordVO record) {
-    StudentCheckInDetailResponse.CheckInRecordItem item =
-        new StudentCheckInDetailResponse.CheckInRecordItem();
-    item.setCheckDate(record.getCheckDate().toString());
-    item.setCheckedIn(record.getCheckedIn());
-    item.setCheckTime(record.getCheckTime());
-    return item;
   }
 
   public String blankToNull(String value) {

@@ -7,6 +7,7 @@ import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.UserRole;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -51,7 +52,7 @@ public class ChatSessionSupport {
     user.setId(currentUser.getId());
     user.setUsername(currentUser.getUsername());
     user.setRealName(currentUser.getRealName());
-    user.setRole(UserDO.UserRole.valueOf(currentUser.getRole().name()));
+    user.setRole(UserRole.valueOf(currentUser.getRole().name()));
     user.setEnabled(currentUser.isEnabled());
     return user;
   }

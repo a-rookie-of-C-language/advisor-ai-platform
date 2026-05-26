@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,7 +29,9 @@ class ChatMessageServiceImplTest {
 
   @Mock private ChatSessionDao chatSessionDao;
 
-  @InjectMocks private ChatMessageServiceImpl chatMessageService;
+  private ChatSessionOwnershipSupport sessionOwnershipSupport;
+
+  private ChatMessageServiceImpl chatMessageService;
 
   private ChatSessionDO session;
 
@@ -43,6 +44,13 @@ class ChatMessageServiceImplTest {
     session.setId(1001L);
     session.setUser(owner);
     session.setTitle("\u65b0\u5bf9\u8bdd");
+
+    sessionOwnershipSupport = new ChatSessionOwnershipSupport(chatSessionDao);
+    chatMessageService =
+        new ChatMessageServiceImpl(
+            chatMessageDao,
+            sessionOwnershipSupport,
+            new ChatMessageTurnPersistenceSupport(chatMessageDao, chatSessionDao));
   }
 
   @Test
@@ -102,9 +110,9 @@ class ChatMessageServiceImplTest {
     when(chatMessageDao.findFirstBySessionIdAndTurnIdAndRole(1001L, "turn-4", "assistant"))
         .thenReturn(Optional.of(assistant));
 
-    String result = chatMessageService.findAssistantContent(1001L, 1L, "turn-4");
+    Optional<String> result = chatMessageService.findAssistantContent(1001L, 1L, "turn-4");
 
-    assertThat(result).isEqualTo("cached answer");
+    assertThat(result).contains("cached answer");
     verify(chatMessageDao)
         .findFirstBySessionIdAndTurnIdAndRole(eq(1001L), eq("turn-4"), eq("assistant"));
   }

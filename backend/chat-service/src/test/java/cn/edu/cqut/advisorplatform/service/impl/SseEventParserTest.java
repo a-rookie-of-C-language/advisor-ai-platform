@@ -2,7 +2,8 @@ package cn.edu.cqut.advisorplatform.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class SseEventParserTest {
         data: {"payload":{"derived":{"sources":[{"id":7,"docName":"doc","snippet":"hit"}]}}}
         """;
 
-    List<ChatMessageDO.SourceReference> sources = parser.extractSources(block);
+    List<SourceReference> sources = parser.extractSources(block);
 
     assertThat(sources).hasSize(1);
     assertThat(sources.get(0).getDocumentId()).isEqualTo(7L);
@@ -47,8 +48,7 @@ class SseEventParserTest {
         data: {"source":"system","trace_id":"t1","timestamp":123,"payload":{"matched_by":"fallback"}}
         """;
 
-    ChatMessageDO.StreamEventRecord record =
-        parser.extractStreamEventRecord("sys_intent_route", block);
+    StreamEventRecord record = parser.extractStreamEventRecord("sys_intent_route", block);
 
     assertThat(record).isNotNull();
     assertThat(record.getEvent()).isEqualTo("sys_intent_route");

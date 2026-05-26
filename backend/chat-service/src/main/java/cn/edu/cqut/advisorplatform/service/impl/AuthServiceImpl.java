@@ -6,6 +6,7 @@ import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.UserRole;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.service.AuthService;
@@ -47,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
     user.setRealName(request.getRealName());
     user.setPhone(request.getPhone());
     user.setEmail(request.getEmail());
-    user.setRole(UserDO.UserRole.ADVISOR);
+    user.setRole(UserRole.ADVISOR);
     userDao.save(user);
   }
 }

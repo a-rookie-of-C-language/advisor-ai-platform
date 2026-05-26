@@ -120,18 +120,47 @@ class MemoryWorkerSubAgent(SubAgent):
                 )
                 try:
                     await self.mark_task_failed(task_id, error_text)
-                except PermissionError:
-                    # Fallback: ensure task is marked failed when permission is misconfigured.
-                    try:
-                        if self._memory_client is not None:
-                            await self._memory_client.mark_task_failed(task_id, error_text)
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+                except PermissionError as permission_error:
+                    logger.warning(
+                        "memory_worker_mark_failed_permission_denied id=%s session=%s err=%s",
+                        task_id,
+                        session_id,
+                        permission_error,
+                    )
+                    await self._mark_task_failed_direct(task_id, session_id, error_text)
+                except Exception as mark_error:
+                    logger.warning(
+                        "memory_worker_mark_failed_error id=%s session=%s err=%s",
+                        task_id,
+                        session_id,
+                        mark_error,
+                    )
                 stats["failed"] += 1
 
         return stats
+
+    async def _mark_task_failed_direct(
+        self,
+        task_id: int,
+        session_id: int | None,
+        error_text: str,
+    ) -> None:
+        if self._memory_client is None:
+            logger.warning(
+                "memory_worker_mark_failed_fallback_skipped id=%s session=%s reason=no_client",
+                task_id,
+                session_id,
+            )
+            return
+        try:
+            await self._memory_client.mark_task_failed(task_id, error_text)
+        except Exception as fallback_error:
+            logger.warning(
+                "memory_worker_mark_failed_fallback_error id=%s session=%s err=%s",
+                task_id,
+                session_id,
+                fallback_error,
+            )
 
     async def run(self) -> None:
         """Run polling loop continuously until stopped."""

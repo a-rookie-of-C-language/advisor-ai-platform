@@ -1,104 +1,53 @@
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Input, Skeleton, Space, Tag, Typography } from 'antd'
-import {
-  LoadingOutlined,
-  PaperClipOutlined,
-  RobotOutlined,
-  SendOutlined,
-} from '@ant-design/icons'
-import { useSearchParams } from 'react-router-dom'
-import { chatApi, type StreamSourceItem } from '../../api/chatApi'
-import { workspaceApi, type WorkspaceFileDTO } from '../../api/workspaceApi'
-import { globalMessage } from '../../utils/globalMessage'
-import {
-  type ChatEvent,
-  type ChatMessage,
-  type ChatSession,
-  type Source,
-  type ToolCall,
-  describeSystemState,
-  isSessionNotFoundError,
-  normalizeEventRecords,
-  streamEventRecord,
-  toChatMessage,
-  toChatSession,
-  toolCallsFromEvents,
-} from './chatMessageModel'
-import { formatFileSize, getFileIcon, MsgBubble } from './ChatMessageBubble'
-import { emitChatSessionsRefresh, onChatSessionsRefresh } from './chatSessionEvents'
+import { useEffect, useRef, useState } from 'react'
+import { ChatConversationPanel } from './ChatConversationPanel'
+import { ChatInputComposer } from './ChatInputComposer'
+import { useChatMessagesLoader } from './useChatMessagesLoader'
+import { useChatSender } from './useChatSender'
+import { usePendingChatFiles } from './usePendingChatFiles'
+import { useChatSessions } from './useChatSessions'
 import styles from './ChatPage.module.css'
 
-const { Text, Title } = Typography
-
 export default function ChatPage() {
-  const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [activeId, setActiveId] = useState<number | null>(null)
   const [inputText, setInputText] = useState('')
-  const [pendingFiles, setPendingFiles] = useState<WorkspaceFileDTO[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [sending, setSending] = useState(false)
   const [messagesLoading, setMessagesLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const msgListRef = useRef<HTMLDivElement>(null)
-  const messageLoadSeqRef = useRef(0)
   const shouldAutoScrollRef = useRef(true)
-  const routeSyncRef = useRef(false)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const {
+    setSessions,
+    activeId,
+    setActiveId,
+    activeSession,
+    applyRouteSessionId,
+    recoverInvalidSession,
+  } = useChatSessions({ shouldAutoScrollRef })
+  const {
+    pendingFiles,
+    uploading,
+    handleFileSelect,
+    clearPendingFiles,
+    removePendingFile,
+  } = usePendingChatFiles(activeSession)
+  const { sending, handleSend } = useChatSender({
+    inputText,
+    pendingFiles,
+    activeSession,
+    shouldAutoScrollRef,
+    setInputText,
+    setSessions,
+    setActiveId,
+    applyRouteSessionId,
+    recoverInvalidSession,
+    clearPendingFiles,
+  })
 
-  const activeSession = useMemo(
-    () => sessions.find((session) => session.id === activeId) ?? null,
-    [sessions, activeId],
-  )
-  const applyRouteSessionId = (sessionId: number | null) => {
-    routeSyncRef.current = true
-    if (sessionId == null) {
-      setSearchParams({}, { replace: true })
-      return
-    }
-    setSearchParams({ sessionId: String(sessionId) }, { replace: true })
-  }
-
-  const reloadSessions = async (preferredSessionId?: number, syncRoute = false): Promise<ChatSession[]> => {
-    const response = await chatApi.listSessions()
-    const baseSessions: ChatSession[] = (response.data ?? []).map(toChatSession)
-    let nextSessions: ChatSession[] = baseSessions
-    setSessions((prev) => {
-      const messageMap = new Map(prev.map((session) => [session.id, session.messages]))
-      nextSessions = baseSessions.map((session) => ({
-        ...session,
-        messages: messageMap.get(session.id) ?? [],
-      }))
-      return nextSessions
-    })
-    const targetId = preferredSessionId ?? Number(searchParams.get('sessionId') ?? '')
-    if (nextSessions.length === 0) {
-      setActiveId(null)
-      if (syncRoute) {
-        applyRouteSessionId(null)
-      }
-      return nextSessions
-    }
-    const matched = Number.isFinite(targetId) && targetId > 0
-      ? nextSessions.find((item) => item.id === targetId)
-      : null
-    const nextActiveId = matched ? matched.id : nextSessions[0].id
-    setActiveId(nextActiveId)
-    if (syncRoute) {
-      applyRouteSessionId(nextActiveId)
-    }
-    return nextSessions
-  }
-
-  const recoverInvalidSession = async (error: unknown): Promise<boolean> => {
-    if (!isSessionNotFoundError(error)) {
-      return false
-    }
-    await reloadSessions(undefined, true)
-    emitChatSessionsRefresh()
-    globalMessage.error('会话不存在，已自动刷新会话列表')
-    return true
-  }
+  useChatMessagesLoader({
+    activeId,
+    setMessagesLoading,
+    setSessions,
+    recoverInvalidSession,
+  })
 
   useEffect(() => {
     if (!activeSession) {
@@ -110,550 +59,35 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
   }, [activeSession?.id, activeSession?.messages.length])
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        await reloadSessions()
-      } catch (error) {
-        globalMessage.error(typeof error === 'string' ? error : '加载会话失败')
-      }
-    })()
-  }, [])
-
-  useEffect(() => {
-    const unsubscribe = onChatSessionsRefresh(() => {
-      void reloadSessions(activeId ?? undefined)
-    })
-    return unsubscribe
-  }, [activeId])
-
-  useEffect(() => {
-    const routeSessionId = Number(searchParams.get('sessionId') ?? '')
-    if (routeSyncRef.current) {
-      routeSyncRef.current = false
-      return
-    }
-    if (!Number.isFinite(routeSessionId) || routeSessionId <= 0) {
-      if (sessions.length > 0 && activeId !== sessions[0].id) {
-        shouldAutoScrollRef.current = true
-        setActiveId(sessions[0].id)
-      }
-      return
-    }
-
-    const matched = sessions.find((session) => session.id === routeSessionId)
-    if (!matched) {
-      void reloadSessions(routeSessionId, true)
-      return
-    }
-
-    if (routeSessionId !== activeId) {
-      shouldAutoScrollRef.current = true
-      setActiveId(routeSessionId)
-    }
-  }, [searchParams, activeId, sessions, setSearchParams])
-
-  useEffect(() => {
-    if (activeId == null) {
-      setMessagesLoading(false)
-      return
-    }
-
-    setMessagesLoading(true)
-    const currentSeq = ++messageLoadSeqRef.current
-    void (async () => {
-      try {
-        const response = await chatApi.listMessages(activeId)
-        if (currentSeq !== messageLoadSeqRef.current) {
-          return
-        }
-        const messages = (response.data ?? []).map(toChatMessage)
-        setSessions((prev) => prev.map((session) => (
-          session.id === activeId
-            ? { ...session, messages }
-            : session
-        )))
-      } catch (error) {
-        if (currentSeq !== messageLoadSeqRef.current) {
-          return
-        }
-        if (await recoverInvalidSession(error)) {
-          return
-        }
-        globalMessage.error(typeof error === 'string' ? error : '加载消息失败')
-      } finally {
-        if (currentSeq === messageLoadSeqRef.current) {
-          setMessagesLoading(false)
-        }
-      }
-    })()
-  }, [activeId])
-
-  const updateAssistantMessage = (sessionId: number, messageId: number, patch: Partial<ChatMessage>) => {
-    setSessions((prev) => prev.map((session) => {
-      if (session.id !== sessionId) {
-        return session
-      }
-      return {
-        ...session,
-        messages: session.messages.map((msg) => (msg.id === messageId ? { ...msg, ...patch } : msg)),
-      }
-    }))
-  }
-
-  const toDisplaySources = (items: StreamSourceItem[], message?: string): Source[] => {
-    if (items.length > 0) {
-      return items.map((item, index) => ({
-        id: item.id || index + 1,
-        docName: item.docName || '未命名文档',
-        snippet: item.snippet || '',
-        score: item.score,
-      }))
-    }
-    return [{
-      id: -1,
-      docName: '检索提示',
-      snippet: message || '未返回可展示来源',
-    }]
-  }
-
-  const upsertToolCall = (sessionId: number, messageId: number, patch: ToolCall) => {
-    setSessions((prev) => prev.map((session) => {
-      if (session.id !== sessionId) {
-        return session
-      }
-      return {
-        ...session,
-        messages: session.messages.map((msg) => {
-          if (msg.id !== messageId) {
-            return msg
-          }
-          const calls = msg.toolCalls ?? []
-          const index = calls.findIndex((item) => item.id === patch.id)
-          const nextCalls = index >= 0
-            ? calls.map((item) => (item.id === patch.id ? { ...item, ...patch } : item))
-            : [...calls, patch]
-          return { ...msg, toolCalls: nextCalls }
-        }),
-      }
-    }))
-  }
-
-  const appendMessageEvent = (sessionId: number, messageId: number, event: ChatEvent) => {
-    setSessions((prev) => prev.map((session) => {
-      if (session.id !== sessionId) {
-        return session
-      }
-      return {
-        ...session,
-        messages: session.messages.map((msg) => {
-          if (msg.id !== messageId) {
-            return msg
-          }
-          const events = msg.events ?? []
-          return {
-            ...msg,
-            events: events.some((item) => item.id === event.id) ? events : [...events, event],
-          }
-        }),
-      }
-    }))
-  }
-
-  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? [])
-    event.target.value = ''
-    if (files.length === 0) {
-      return
-    }
-    if (!activeSession) {
-      globalMessage.warning('请先创建或选择会话后再上传附件')
-      return
-    }
-    const availableSlots = Math.max(10 - pendingFiles.length, 0)
-    if (availableSlots <= 0) {
-      globalMessage.warning('最多只能同时附加 10 个文件')
-      return
-    }
-
-    const selectedFiles = files.slice(0, availableSlots)
-    const oversized = selectedFiles.find((file) => file.size > 20 * 1024 * 1024)
-    if (oversized) {
-      globalMessage.error(`文件 ${oversized.name} 超过 20MB`)
-      return
-    }
-
-    setUploading(true)
-    try {
-      const uploaded: WorkspaceFileDTO[] = []
-      for (const file of selectedFiles) {
-        const response = await workspaceApi.uploadFile(activeSession.id, file)
-        if (response.data) {
-          uploaded.push(response.data)
-        }
-      }
-      setPendingFiles((prev) => [...prev, ...uploaded].slice(0, 10))
-      if (uploaded.length > 0) {
-        globalMessage.success(`已上传 ${uploaded.length} 个附件`)
-      }
-    } catch (error) {
-      globalMessage.error(typeof error === 'string' ? error : '附件上传失败')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const handleSend = async () => {
-    const text = inputText.trim()
-    if ((!text && pendingFiles.length === 0) || sending) {
-      return
-    }
-
-    let targetSession = activeSession
-    if (!targetSession) {
-      try {
-        const response = await chatApi.createSession()
-        const created = response.data
-        if (!created?.id) {
-          globalMessage.error('创建会话失败，无法发送消息')
-          return
-        }
-        targetSession = toChatSession(created)
-        setSessions((prev) => [targetSession!, ...prev])
-        setActiveId(targetSession.id)
-        applyRouteSessionId(targetSession.id)
-      } catch (error) {
-        if (await recoverInvalidSession(error)) {
-          return
-        }
-        globalMessage.error(typeof error === 'string' ? error : '创建会话失败，无法发送消息')
-        return
-      }
-    }
-
-    if (!targetSession) {
-      return
-    }
-
-    const sessionId = targetSession.id
-    const userMsgId = Date.now()
-    const aiMsgId = userMsgId + 1
-    const currentAttachments = [...pendingFiles]
-
-    const userMessage: ChatMessage = {
-      id: userMsgId,
-      role: 'user',
-      content: text,
-      attachments: currentAttachments,
-      streaming: false,
-    }
-    const assistantPlaceholder: ChatMessage = {
-      id: aiMsgId,
-      role: 'assistant',
-      content: '',
-      streaming: true,
-      progressText: '模型思考中，请稍候... (0s)',
-    }
-
-    const historyMessages = [
-      ...targetSession.messages,
-      userMessage,
-    ]
-      .map((msg) => ({
-        role: msg.role,
-        content: msg.content.trim(),
-        attachments: msg.attachments?.map((f) => f.id),
-      }))
-      .filter((msg) => msg.content.length > 0 || (msg.attachments && msg.attachments.length > 0))
-
-    setInputText('')
-    setPendingFiles([])
-    setSending(true)
-    shouldAutoScrollRef.current = true
-    setSessions((prev) => {
-      let matched = false
-      const mapped = prev.map((session) => {
-        if (session.id !== sessionId) {
-          return session
-        }
-        matched = true
-        const nextTitle = session.messages.length === 0 ? text.slice(0, 5) : session.title
-        return {
-          ...session,
-          title: nextTitle,
-          messages: [...session.messages, userMessage, assistantPlaceholder],
-        }
-      })
-
-      if (matched) {
-        return mapped
-      }
-
-      return [{
-        id: sessionId,
-        title: text.slice(0, 5),
-        updatedAt: targetSession.updatedAt,
-        kbId: targetSession.kbId,
-        messages: [userMessage, assistantPlaceholder],
-      }, ...mapped]
-    })
-
-    try {
-      let streamFailed = false
-      let streamError = ''
-
-      await chatApi.streamChat(
-        {
-          messages: historyMessages,
-          sessionId,
-          attachments: currentAttachments.map((f) => f.id),
-        },
-        {
-          onEvent: ({ event, payload }) => {
-            const record = streamEventRecord(event, payload)
-            if (record) {
-              appendMessageEvent(sessionId, aiMsgId, record)
-            }
-          },
-          onDelta: (chunk) => {
-            setSessions((prev) => prev.map((session) => {
-              if (session.id !== sessionId) {
-                return session
-              }
-              return {
-                ...session,
-                messages: session.messages.map((msg) => (
-                  msg.id === aiMsgId
-                    ? { ...msg, content: `${msg.content}${chunk}`, streaming: true, progressText: undefined }
-                    : msg
-                )),
-              }
-            }))
-          },
-          onReasoningDelta: () => {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              progressText: '模型正在整理思路...',
-            })
-          },
-          onProgress: (message, elapsedSec) => {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              progressText: `${message}${typeof elapsedSec === 'number' ? ` (${elapsedSec}s)` : ''}`,
-            })
-          },
-          onSystemEvent: ({ event, payload }) => {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              progressText: describeSystemState(event, payload),
-            })
-          },
-          onEnd: () => {
-            updateAssistantMessage(sessionId, aiMsgId, { streaming: false })
-          },
-          onToolUse: (data) => {
-            upsertToolCall(sessionId, aiMsgId, {
-              id: data.toolCallId || data.toolName,
-              toolName: data.toolName,
-              input: data.input,
-            })
-            updateAssistantMessage(sessionId, aiMsgId, {
-              progressText: data.toolName ? `正在调用工具：${data.toolName}` : '正在调用工具',
-            })
-          },
-          onToolResult: (data) => {
-            upsertToolCall(sessionId, aiMsgId, {
-              id: data.toolCallId || data.toolName,
-              toolName: data.toolName,
-              status: data.result.status,
-              message: data.result.message,
-              result: data.result,
-            })
-            updateAssistantMessage(sessionId, aiMsgId, {
-              progressText: data.toolName ? `工具已返回：${data.toolName}` : '工具已返回',
-            })
-          },
-          onSources: (items, _status, message) => {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              sources: toDisplaySources(items, message),
-            })
-          },
-          onToolError: (data) => {
-            upsertToolCall(sessionId, aiMsgId, {
-              id: data.toolCallId || data.toolName,
-              toolName: data.toolName,
-              status: 'error',
-              message: data.message,
-            })
-            updateAssistantMessage(sessionId, aiMsgId, {
-              progressText: data.toolName ? `工具调用失败：${data.toolName}` : '工具调用失败',
-            })
-          },
-          onError: (message) => {
-            streamFailed = true
-            streamError = message ?? 'stream error'
-          },
-          onRiskAlert: (alertData) => {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              streaming: false,
-              content: alertData.message || '该内容因不合规已被过滤',
-            })
-          },
-        },
-      )
-
-      if (streamFailed) {
-        globalMessage.warning('流式失败，已自动降级为非流式请求')
-        let fallbackResp
-        try {
-          fallbackResp = await chatApi.sendMessage(sessionId, text)
-        } catch (fallbackError) {
-          if (await recoverInvalidSession(fallbackError)) {
-            updateAssistantMessage(sessionId, aiMsgId, {
-              streaming: false,
-              content: '会话不存在，已自动刷新，请重新发送消息。',
-            })
-            return
-          }
-          throw fallbackError
-        }
-        const fallbackEvents = normalizeEventRecords(fallbackResp.data?.events)
-        updateAssistantMessage(sessionId, aiMsgId, {
-          streaming: false,
-          content: fallbackResp.data?.content ?? (streamError || '请求失败，请稍后重试。'),
-          events: fallbackEvents,
-          toolCalls: toolCallsFromEvents(fallbackEvents),
-        })
-      }
-    } catch {
-      globalMessage.warning('流式失败，已自动降级为非流式请求')
-      try {
-        const fallbackResp = await chatApi.sendMessage(sessionId, text)
-        const fallbackEvents = normalizeEventRecords(fallbackResp.data?.events)
-        updateAssistantMessage(sessionId, aiMsgId, {
-          streaming: false,
-          content: fallbackResp.data?.content ?? '请求失败，请稍后重试。',
-          events: fallbackEvents,
-          toolCalls: toolCallsFromEvents(fallbackEvents),
-        })
-      } catch (fallbackError) {
-        if (await recoverInvalidSession(fallbackError)) {
-          updateAssistantMessage(sessionId, aiMsgId, {
-            streaming: false,
-            content: '会话不存在，已自动刷新，请重新发送消息。',
-          })
-          return
-        }
-        updateAssistantMessage(sessionId, aiMsgId, {
-          streaming: false,
-          content: typeof fallbackError === 'string' ? `请求失败：${fallbackError}` : '请求失败，请稍后重试。',
-        })
-      }
-    } finally {
-      emitChatSessionsRefresh()
-      setSending(false)
-    }
-  }
-
   return (
     <div className={styles.container}>
       <main className={styles.main}>
-        {messagesLoading && (!activeSession || activeSession.messages.length === 0)
-          ? (
-            <div className={styles.emptyChat}>
-              <div style={{ width: 'min(780px, 100%)' }}>
-                <Skeleton active paragraph={{ rows: 4 }} title={false} />
-              </div>
-            </div>
-            )
-          : !activeSession || activeSession.messages.length === 0
-          ? (
-            <div className={styles.emptyChat}>
-              <RobotOutlined style={{ fontSize: 52, color: '#CBD5E1', marginBottom: 16 }} />
-              <Title level={4} style={{ color: '#94A3B8', marginBottom: 8 }}>开始和 AI 助手对话</Title>
-              <Text type="secondary">输入问题后发送，系统会按流式返回答案。</Text>
-            </div>
-            )
-          : (
-            <div
-              className={styles.msgList}
-              ref={msgListRef}
-              onScroll={(event) => {
-                const target = event.currentTarget
-                const delta = target.scrollHeight - target.scrollTop - target.clientHeight
-                shouldAutoScrollRef.current = delta < 80
-              }}
-            >
-              {activeSession.messages.map((msg) => (
-                <MsgBubble key={msg.id} msg={msg} />
-              ))}
-              <div ref={bottomRef} />
-            </div>
-            )}
+        <ChatConversationPanel
+          activeSession={activeSession}
+          messagesLoading={messagesLoading}
+          msgListRef={msgListRef}
+          bottomRef={bottomRef}
+          onMessageListScroll={(event) => {
+            const target = event.currentTarget
+            const delta = target.scrollHeight - target.scrollTop - target.clientHeight
+            shouldAutoScrollRef.current = delta < 80
+          }}
+        />
 
-        <div className={styles.inputArea}>
-          <div className={styles.inputRow}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.md,.txt"
-              style={{ display: 'none' }}
-              onChange={(e) => void handleFileSelect(e)}
-            />
-            <Button
-              icon={<PaperClipOutlined />}
-              disabled={sending || uploading || !activeSession}
-              loading={uploading}
-              onClick={() => fileInputRef.current?.click()}
-              style={{ height: 40, borderRadius: 8 }}
-            />
-
-            <Input.TextArea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="输入问题，按 Ctrl+Enter 发送"
-              autoSize={{ minRows: 1, maxRows: 5 }}
-              disabled={sending}
-              onKeyDown={(e) => {
-                if (e.ctrlKey && e.key === 'Enter') {
-                  void handleSend()
-                }
-              }}
-              style={{ borderRadius: 8, resize: 'none', flex: 1 }}
-            />
-
-            <Button
-              type="primary"
-              icon={sending ? <LoadingOutlined /> : <SendOutlined />}
-              disabled={(!inputText.trim() && pendingFiles.length === 0) || sending}
-              onClick={() => void handleSend()}
-              style={{ height: 40, paddingInline: 20, borderRadius: 8 }}
-            >
-              发送
-            </Button>
-          </div>
-
-          {pendingFiles.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              <Space wrap size={[6, 6]}>
-                {pendingFiles.map((file) => (
-                  <Tag
-                    key={file.id}
-                    closable={!sending}
-                    icon={getFileIcon(file.fileType)}
-                    onClose={() => {
-                      setPendingFiles((prev) => prev.filter((item) => item.id !== file.id))
-                    }}
-                  >
-                    {file.fileName} · {formatFileSize(file.fileSize)}
-                  </Tag>
-                ))}
-              </Space>
-            </div>
-          )}
-
-          <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: 'block', textAlign: 'center' }}>
-            AI 回答仅供参考，请结合实际情况进行判断。支持上传图片/PDF/Word/Markdown（单文件20MB，最多10个）
-          </Text>
-        </div>
+        <ChatInputComposer
+          fileInputRef={fileInputRef}
+          inputText={inputText}
+          pendingFiles={pendingFiles}
+          uploading={uploading}
+          sending={sending}
+          canUpload={Boolean(activeSession)}
+          onFileSelect={(event) => void handleFileSelect(event)}
+          onInputChange={setInputText}
+          onSend={() => void handleSend()}
+          onRemoveFile={(fileId) => {
+            removePendingFile(fileId)
+          }}
+        />
       </main>
     </div>
   )

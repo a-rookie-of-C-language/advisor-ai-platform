@@ -9,9 +9,11 @@ import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dao.RagDocumentDao;
 import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
+import cn.edu.cqut.advisorplatform.entity.KnowledgeBaseStatus;
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.service.impl.rag.RagDocumentStorageSupport;
 import cn.edu.cqut.advisorplatform.service.impl.rag.RagFileSupport;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,16 @@ class RagServiceImplTest {
 
   @org.junit.jupiter.api.BeforeEach
   void setUp() {
-    ragService = new RagServiceImpl(knowledgeBaseDao, documentDao, new RagFileSupport());
+    RagFileSupport ragFileSupport = new RagFileSupport();
+    RagDocumentStorageSupport documentStorageSupport =
+        new RagDocumentStorageSupport(ragFileSupport);
+    ragService =
+        new RagServiceImpl(
+            knowledgeBaseDao,
+            documentDao,
+            ragFileSupport,
+            new RagDocumentMutationSupport(
+                knowledgeBaseDao, documentDao, ragFileSupport, documentStorageSupport));
   }
 
   @Test
@@ -42,7 +53,7 @@ class RagServiceImplTest {
     RagKnowledgeBaseDO saved = new RagKnowledgeBaseDO();
     saved.setId(10L);
     saved.setName("kb");
-    saved.setStatus(RagKnowledgeBaseDO.KnowledgeBaseStatus.READY);
+    saved.setStatus(KnowledgeBaseStatus.READY);
     when(knowledgeBaseDao.save(any(RagKnowledgeBaseDO.class))).thenReturn(saved);
 
     KnowledgeBaseResponseDTO response = ragService.createKnowledgeBase("kb", "desc", user);

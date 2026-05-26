@@ -18,6 +18,7 @@ import cn.edu.cqut.advisorplatform.service.ChatService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -43,7 +44,7 @@ class ChatControllerSendMessageConsistencyTest {
     when(chatService.listMessages(1001L, user))
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
     when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString()))
-        .thenReturn("cached answer");
+        .thenReturn(Optional.of("cached answer"));
 
     ApiResponseDTO<Map<String, Object>> response = chatController.sendMessage(1001L, body, user);
 
@@ -62,7 +63,8 @@ class ChatControllerSendMessageConsistencyTest {
     Map<String, String> body = Map.of("content", "hello", "kbId", "999");
     when(chatService.listMessages(1001L, user))
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
-    when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn(null);
+    when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString()))
+        .thenReturn(Optional.empty());
     when(agentProxyService.proxyChatOnce(any(ChatStreamRequestDTO.class), eq(1L)))
         .thenReturn(new ChatStreamProxyResult("assistant reply"));
 
@@ -91,7 +93,8 @@ class ChatControllerSendMessageConsistencyTest {
     Map<String, String> body = Map.of("content", "hello", "kbId", "999");
     when(chatService.listMessages(1001L, user))
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
-    when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString())).thenReturn(null);
+    when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString()))
+        .thenReturn(Optional.empty());
     when(agentProxyService.proxyChatOnce(any(ChatStreamRequestDTO.class), eq(1L)))
         .thenThrow(new RuntimeException("agent boom"));
 

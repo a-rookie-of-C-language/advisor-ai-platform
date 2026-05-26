@@ -26,7 +26,7 @@ class CircuitBreaker:
         failure_threshold: int = 3,
         recovery_timeout: float = 30.0,
         half_open_attempts: int = 2,
-        half_open_max_concurrent: int = 1,
+        half_open_max_concurrent: int = 2,
         max_recovery_timeout: float = 300.0,
     ) -> None:
         self._failure_threshold = failure_threshold

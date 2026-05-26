@@ -1,6 +1,8 @@
 package cn.edu.cqut.advisorplatform.dao;
 
+import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -15,11 +17,9 @@ public interface AuditLogDao extends JpaRepository<AuditLogDO, Long> {
 
   Page<AuditLogDO> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
-  Page<AuditLogDO> findByModuleOrderByCreatedAtDesc(
-      AuditLogDO.AuditModule module, Pageable pageable);
+  Page<AuditLogDO> findByModuleOrderByCreatedAtDesc(AuditModule module, Pageable pageable);
 
-  Page<AuditLogDO> findByActionOrderByCreatedAtDesc(
-      AuditLogDO.AuditAction action, Pageable pageable);
+  Page<AuditLogDO> findByActionOrderByCreatedAtDesc(AuditAction action, Pageable pageable);
 
   @Query(
       "SELECT a FROM AuditLogDO a WHERE a.createdAt BETWEEN :startTime AND :endTime ORDER BY a.createdAt DESC")
@@ -38,8 +38,8 @@ public interface AuditLogDao extends JpaRepository<AuditLogDO, Long> {
           + "ORDER BY a.createdAt DESC")
   Page<AuditLogDO> searchAuditLogs(
       @Param("userId") Long userId,
-      @Param("module") AuditLogDO.AuditModule module,
-      @Param("action") AuditLogDO.AuditAction action,
+      @Param("module") AuditModule module,
+      @Param("action") AuditAction action,
       @Param("startTime") LocalDateTime startTime,
       @Param("endTime") LocalDateTime endTime,
       Pageable pageable);
@@ -47,13 +47,12 @@ public interface AuditLogDao extends JpaRepository<AuditLogDO, Long> {
   List<AuditLogDO> findTop100ByOrderByCreatedAtDesc();
 
   @Query("SELECT COUNT(a) FROM AuditLogDO a WHERE a.userId = :userId AND a.module = :module")
-  long countByUserAndModule(
-      @Param("userId") Long userId, @Param("module") AuditLogDO.AuditModule module);
+  long countByUserAndModule(@Param("userId") Long userId, @Param("module") AuditModule module);
 
   @Query(
       "SELECT COUNT(a) FROM AuditLogDO a WHERE a.userId = :userId AND a.module = :module AND a.action = :action")
   long countByUserAndModuleAndAction(
       @Param("userId") Long userId,
-      @Param("module") AuditLogDO.AuditModule module,
-      @Param("action") AuditLogDO.AuditAction action);
+      @Param("module") AuditModule module,
+      @Param("action") AuditAction action);
 }

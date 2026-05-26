@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from fusion.source_candidate import SourceCandidate
-from graph.helpers import _inject_fusion_context, _prefer_rag_only, _strip_surrogates
+from graph.fusion_context_flow import inject_fusion_context
+from graph.helpers import _prefer_rag_only, _strip_surrogates
 from llm.chat_message import ChatMessage
 
 
@@ -17,7 +18,7 @@ def test_strip_surrogates_removes_invalid_code_units() -> None:
 
 def test_inject_fusion_context_uses_shared_chinese_prompt() -> None:
     messages = [ChatMessage(role="user", content="问题")]
-    injected = _inject_fusion_context(
+    injected = inject_fusion_context(
         messages,
         {
             "candidates": [
