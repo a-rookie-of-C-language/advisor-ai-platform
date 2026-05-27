@@ -3,15 +3,17 @@ from __future__ import annotations
 import logging
 
 from agents.base.subagent import SubAgent
+from agents.task_planner.task_planner_fallback import (
+    build_fallback_plan,
+    build_web_query,
+    looks_like_education_query,
+    looks_like_realtime_query,
+)
 from agents.task_planner.task_planner_llm_flow import (
     build_task_planner_prompt,
     plan_with_llm,
 )
 from agents.task_planner.task_planner_support import (
-    build_fallback_plan,
-    build_web_query,
-    looks_like_education_query,
-    looks_like_realtime_query,
     prioritize_tools,
     render_task_plan_prompt,
 )

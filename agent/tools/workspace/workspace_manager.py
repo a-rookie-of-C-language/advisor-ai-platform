@@ -3,7 +3,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from tools.workspace.BinaryFileError import BinaryFileError  # noqa: F401
+from tools.workspace.DepthLimitError import DepthLimitError  # noqa: F401
+from tools.workspace.FileCountLimitError import FileCountLimitError  # noqa: F401
 from tools.workspace.FileSizeLimitError import FileSizeLimitError
+from tools.workspace.PathTraversalError import PathTraversalError  # noqa: F401
 from tools.workspace.workspace_limits import (
     CACHE_DIR,
     MAX_FILE_SIZE,
@@ -11,6 +15,7 @@ from tools.workspace.workspace_limits import (
 from tools.workspace.workspace_listing import build_workspace_listing
 from tools.workspace.workspace_path_guard import WorkspacePathGuard
 from tools.workspace.workspace_stats import build_workspace_stats
+from tools.workspace.WorkspaceError import WorkspaceError  # noqa: F401
 
 
 class WorkspaceManager:
