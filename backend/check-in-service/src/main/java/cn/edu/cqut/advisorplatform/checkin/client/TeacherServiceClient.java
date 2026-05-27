@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.checkin.client;
 
 import cn.edu.cqut.advisorplatform.checkin.client.dto.CourseTeachingClassResponse;
-import cn.edu.cqut.advisorplatform.checkin.config.feign.InternalTokenFeignConfig;
+import cn.edu.cqut.advisorplatform.common.config.InternalTokenFeignConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

@@ -44,7 +44,8 @@ public class CheckInController {
 
   @PostMapping("/student/{checkInId}")
   public ApiResponseDTO<String> studentCheckIn(
-      @AuthenticationPrincipal UserPrincipal userPrincipal, @PathVariable String checkInId) {
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
+      @PathVariable("checkInId") String checkInId) {
     return ApiResponseDTO.success(checkInService.studentCheckIn(userPrincipal, checkInId));
   }
 
@@ -56,12 +57,14 @@ public class CheckInController {
   @GetMapping("/records")
   public ApiResponseDTO<PageResultVO<CheckInRecordVO>> listCheckInRecords(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(required = false) Long studentId,
-      @RequestParam(required = false) String checkInId,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end,
-      @RequestParam(defaultValue = "1") Integer page,
-      @RequestParam(defaultValue = "10") Integer pageSize) {
+      @RequestParam(name = "studentId", required = false) Long studentId,
+      @RequestParam(name = "checkInId", required = false) String checkInId,
+      @RequestParam(name = "begin", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd")
+          LocalDate begin,
+      @RequestParam(name = "end", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd")
+          LocalDate end,
+      @RequestParam(name = "page", defaultValue = "1") Integer page,
+      @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize) {
     return ApiResponseDTO.success(
         checkInService.listCheckInRecords(
             userPrincipal, studentId, checkInId, begin, end, page, pageSize));

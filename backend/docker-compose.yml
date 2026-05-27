@@ -343,6 +343,8 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
@@ -351,6 +353,8 @@ services:
       nacos:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8087:8087"

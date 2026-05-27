@@ -24,6 +24,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     table: flyway_schema_history_check_in
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 mybatis:
   mapper-locations: classpath:cn/edu/cqut/advisorplatform/checkin/mapper/*.xml
