@@ -54,7 +54,8 @@ class SseEventParser {
 
     try {
       JsonNode node = objectMapper.readTree(block.dataJson());
-      if ("llm_data".equals(block.eventName())) {
+      String eventName = block.eventName();
+      if ("llm_data".equals(eventName) || "llm_delta".equals(eventName)) {
         String text = node.path("payload").path("text").asText("");
         if (text.isBlank()) {
           text = node.path("text").asText("");
