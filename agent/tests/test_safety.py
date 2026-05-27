@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from safety.privacy_filter import PrivacyFilterWrapper
 from safety.RegexFilter import RegexFilter
-from safety.StreamingRegexFilter import StreamingRegexFilter
-from safety.SafetyResult import SafetyResult
 from safety.safety_pipeline import SafetyPipeline
+from safety.SafetyResult import SafetyResult
+from safety.StreamingRegexFilter import StreamingRegexFilter
 
 
 class TestRegexFilter:

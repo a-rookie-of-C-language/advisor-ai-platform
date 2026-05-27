@@ -10,8 +10,8 @@ from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from tools.tool_permission import PermissionConfig, ToolPermission
 
-from .ChunkAnnotation import ChunkAnnotation
 from .base_annotator import BaseChunkAnnotator
+from .ChunkAnnotation import ChunkAnnotation
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
 
         # 在 async 上下文中调用父类的默认实现（使用 run_in_executor）
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # 已在 async 上下文，直接返回 await
             return asyncio.run(self._annotate_async(text, ann))
         except RuntimeError:

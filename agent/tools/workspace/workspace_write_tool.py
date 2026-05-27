@@ -6,16 +6,16 @@ from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.WorkspaceWriteInput import WorkspaceWriteInput
-from tools.workspace.WorkspaceWriteOutput import WorkspaceWriteOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
+    DepthLimitError,
+    FileCountLimitError,
     FileSizeLimitError,
     PathTraversalError,
     WorkspaceManager,
-    DepthLimitError,
-    FileCountLimitError,
 )
+from tools.workspace.WorkspaceWriteInput import WorkspaceWriteInput
+from tools.workspace.WorkspaceWriteOutput import WorkspaceWriteOutput
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,10 @@ class WorkspaceWriteTool(BaseTool[WorkspaceWriteInput, WorkspaceWriteOutput]):
     def __init__(self, manager: WorkspaceManager) -> None:
         super().__init__(
             name="workspace_write",
-            description="Write content to a file in workspace. Use is_final=True to mark as final output (preserved after cleanup).",
+            description=(
+                "Write content to a file in workspace. "
+                "Use is_final=True to mark as final output (preserved after cleanup)."
+            ),
             input_model=WorkspaceWriteInput,
             required_permissions={ToolPermission.FILE_WRITE},
             category="workspace",
@@ -59,10 +62,10 @@ class WorkspaceWriteTool(BaseTool[WorkspaceWriteInput, WorkspaceWriteOutput]):
             return ToolResult.denied(f"安全错误: {e}")
         except BinaryFileError:
             return ToolResult.error("不支持写入二进制文件")
-        except FileSizeLimitError as e:
-            return ToolResult.error(f"内容大小超限（最大 1MB）")
-        except DepthLimitError as e:
-            return ToolResult.error(f"目录深度超限（最大 5 层）")
+        except FileSizeLimitError:
+            return ToolResult.error("内容大小超限（最大 1MB）")
+        except DepthLimitError:
+            return ToolResult.error("目录深度超限（最大 5 层）")
         except FileCountLimitError as e:
             return ToolResult.error(f"{e}")
         except Exception as e:

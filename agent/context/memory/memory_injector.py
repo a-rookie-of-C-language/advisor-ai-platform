@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from context.ContextSegment import ContextSegment
 from context.memory.core.MemoryContext import MemoryContext
 from context.memory.pipeline.work_memory import WorkMemory
-from context.ContextSegment import ContextSegment
 from context.ModelContext import ModelContext
 
 

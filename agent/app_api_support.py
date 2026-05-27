@@ -11,7 +11,6 @@ from fastapi import HTTPException, Request
 from ChatStreamRequestDTO import ChatStreamRequestDTO
 from llm.chat_message import ChatMessage
 
-
 logger = logging.getLogger(__name__)
 
 STREAM_RESPONSE_HEADERS = {

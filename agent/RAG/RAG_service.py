@@ -5,16 +5,16 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from json_types import JsonObject
-from RAG.rag_dao import PgVectorDAO
 from RAG.rag_candidate_builder import build_candidate_rows
+from RAG.rag_dao import PgVectorDAO
 from RAG.rag_embedding_factory import build_embedding_engine
 from RAG.rag_ranked_items import build_ranked_items
 from RAG.rag_ranking_flow import current_rerank_chain_name, rank_candidate_rows
 from RAG.rag_response_factory import build_rag_error_response, build_rag_success_response
-from RAG.rag_search_plan import build_rag_search_plan
 from RAG.rag_scoring import (
     latency_ms,
 )
+from RAG.rag_search_plan import build_rag_search_plan
 from RAG.rerank_strategy import (
     ChunkDocTwoStageRerankStrategy,
     ChunkScoreRerankStrategy,

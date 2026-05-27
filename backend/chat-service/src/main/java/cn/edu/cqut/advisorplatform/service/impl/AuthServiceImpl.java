@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl;
 
-import cn.edu.cqut.advisorplatform.config.security.JwtUtil;
+import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
 import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import AsyncIterator
+from typing import AsyncIterator, Iterable
 
 from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
@@ -12,29 +12,33 @@ from chat.legacy_force_fetch_flow import stream_legacy_force_fetch_response
 from chat.legacy_llm_delta_stream import stream_legacy_llm_data
 from chat.legacy_message_prepare import prepare_legacy_messages
 from chat.legacy_plain_chat_flow import stream_legacy_plain_chat
-from chat.legacy_tool_explorer_flow import prepare_legacy_tool_explorer_context
 from chat.legacy_tool_chat_flow import stream_legacy_tool_chat_events
+from chat.legacy_tool_explorer_flow import prepare_legacy_tool_explorer_context
 from chat.legacy_tool_route_flow import prepare_legacy_tool_route
+from chat.stream_compaction import ChatStreamCompactionSupport
 from chat.stream_defaults import (
-    DEFER_THRESHOLD,
     STREAM_ERROR_MESSAGE,
     Extractor,
     build_default_fusion_pipeline,
+)
+from chat.stream_failure_memory import ChatStreamFailureMemorySupport
+from chat.stream_memory_context import ChatStreamMemoryContextSupport
+from chat.stream_message_utils import (
+    last_user_message,
+    validate_messages,
 )
 from chat.stream_protocol import (
     build_stream_error_payload,
     serialize_protocol_event,
 )
-from chat.stream_compaction import ChatStreamCompactionSupport
-from chat.stream_failure_memory import ChatStreamFailureMemorySupport
-from chat.stream_memory_context import ChatStreamMemoryContextSupport
 from chat.stream_runtime_config import ChatStreamRuntimeConfig
 from chat.stream_service_bootstrap import (
     build_stream_health,
     build_stream_tool_permission,
     build_stream_tool_registry,
 )
-from chat.subagent_provider_factory import SubagentProviderFactory
+from chat.stream_tool_support import ChatStreamToolSupport
+from chat.stream_trace_flow import stream_with_progress_trace
 from chat.subagent_provider_builders import (
     build_context_compaction_provider,
     build_task_planner_provider,
@@ -42,12 +46,7 @@ from chat.subagent_provider_builders import (
     build_web_fetch_provider,
     build_web_search_provider,
 )
-from chat.stream_tool_support import ChatStreamToolSupport
-from chat.stream_message_utils import (
-    last_user_message,
-    validate_messages,
-)
-from chat.stream_trace_flow import stream_with_progress_trace
+from chat.subagent_provider_factory import SubagentProviderFactory
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from graph.runner import GraphRunner
@@ -56,10 +55,6 @@ from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_store import FailureMemoryStore
 from prompt.PromptBuilder import PromptBuilder
-from query_engine.ConversationQueryEngine import ConversationQueryEngine
-from query_engine.EngineContext import EngineContext
-from query_engine.GraphEngineStrategy import GraphEngineStrategy
-from query_engine.LegacyEngineStrategy import LegacyEngineStrategy
 from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import IntentRouter
 
@@ -364,10 +359,10 @@ class ChatStreamService:
                 route_decision = route_context.route_decision
                 matched_tools = route_context.matched_tools
                 tools = route_context.tools
-                deferred_specs = route_context.deferred_specs
-                education_domain = route_context.education_domain
+                _ = route_context.deferred_specs
+                _ = route_context.education_domain
                 exploration_query = route_context.exploration_query
-                task_plan = route_context.task_plan
+                _ = route_context.task_plan
 
                 if exploration_query and self._tool_explorer_subagent is not None:
                     try:
@@ -444,7 +439,6 @@ class ChatStreamService:
                     tool_executor,
                     max_tool_calls=1,
                     max_tool_retries=3,
-                    on_tool_result=on_tool_result if deferred_specs and len(tools) > DEFER_THRESHOLD else None,
                 )
                 async for tool_chat_event in stream_legacy_tool_chat_events(
                     tool_events,

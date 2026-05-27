@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import List
 
-from .ChunkAnnotation import ChunkAnnotation
 from .base_annotator import BaseChunkAnnotator
+from .ChunkAnnotation import ChunkAnnotation
 
 logger = logging.getLogger(__name__)
 

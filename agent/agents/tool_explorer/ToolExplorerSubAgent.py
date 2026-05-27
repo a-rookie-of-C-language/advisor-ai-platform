@@ -4,9 +4,6 @@ import logging
 from typing import Awaitable, Callable
 
 from agents.base.subagent import SubAgent
-from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
-from agents.tool_explorer.ToolExplorerOutcome import ToolExplorerOutcome
-from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
 from agents.tool_explorer.tool_explorer_events import (
     build_rejected_tool_event,
 )
@@ -21,6 +18,9 @@ from agents.tool_explorer.tool_explorer_support import (
     dedupe_tools,
     resolve_max_steps,
 )
+from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
+from agents.tool_explorer.ToolExplorerOutcome import ToolExplorerOutcome
+from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage

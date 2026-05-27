@@ -12,7 +12,8 @@ from llm.openai_stream_recovery import (
     MAX_TRUNCATION_RECOVERY_ATTEMPTS,
     TRUNCATION_RECOVERY_MESSAGE,
 )
-from llm.tool_call_runner import encode_tool_calls, parse_tool_output_json, run_tool_call
+from llm.tool_call_payloads import encode_tool_calls, parse_tool_output_json
+from llm.tool_call_runner import run_tool_call
 from llm.tool_spec import ToolSpec
 from llm.with_retry import call_with_retry
 

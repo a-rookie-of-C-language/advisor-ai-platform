@@ -6,15 +6,15 @@ from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.WorkspaceEditInput import WorkspaceEditInput
-from tools.workspace.WorkspaceEditOutput import WorkspaceEditOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
-    PathTraversalError,
-    WorkspaceManager,
     DepthLimitError,
     FileCountLimitError,
+    PathTraversalError,
+    WorkspaceManager,
 )
+from tools.workspace.WorkspaceEditInput import WorkspaceEditInput
+from tools.workspace.WorkspaceEditOutput import WorkspaceEditOutput
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,10 @@ class WorkspaceEditTool(BaseTool[WorkspaceEditInput, WorkspaceEditOutput]):
     def __init__(self, manager: WorkspaceManager) -> None:
         super().__init__(
             name="workspace_edit",
-            description="Edit a file in workspace by replacing old_string with new_string. Use is_final=True to save to final output.",
+            description=(
+                "Edit a file in workspace by replacing old_string with new_string. "
+                "Use is_final=True to save to final output."
+            ),
             input_model=WorkspaceEditInput,
             required_permissions={ToolPermission.FILE_WRITE},
             category="workspace",
@@ -39,7 +42,7 @@ class WorkspaceEditTool(BaseTool[WorkspaceEditInput, WorkspaceEditOutput]):
         session_id = context.get("session_id")
 
         try:
-            result = self._manager.edit(
+            self._manager.edit(
                 user_id=user_id,
                 session_id=session_id,
                 relative_path=tool_input.path,
@@ -68,8 +71,8 @@ class WorkspaceEditTool(BaseTool[WorkspaceEditInput, WorkspaceEditOutput]):
             )
         except ValueError as e:
             return ToolResult.error(f"编辑失败: {e}")
-        except DepthLimitError as e:
-            return ToolResult.error(f"目录深度超限（最大 5 层）")
+        except DepthLimitError:
+            return ToolResult.error("目录深度超限（最大 5 层）")
         except FileCountLimitError as e:
             return ToolResult.error(f"{e}")
         except Exception as e:

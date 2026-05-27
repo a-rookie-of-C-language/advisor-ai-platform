@@ -3,16 +3,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from tools.workspace.BinaryFileError import BinaryFileError
-from tools.workspace.DepthLimitError import DepthLimitError
-from tools.workspace.FileCountLimitError import FileCountLimitError
 from tools.workspace.FileSizeLimitError import FileSizeLimitError
-from tools.workspace.PathTraversalError import PathTraversalError
-from tools.workspace.WorkspaceError import WorkspaceError
 from tools.workspace.workspace_limits import (
     CACHE_DIR,
     MAX_FILE_SIZE,
-    OPERATION_TIMEOUT,
 )
 from tools.workspace.workspace_listing import build_workspace_listing
 from tools.workspace.workspace_path_guard import WorkspacePathGuard
@@ -48,7 +42,14 @@ class WorkspaceManager:
         """检查文件数量限制"""
         self._path_guard.check_file_limit(session_path)
 
-    def read(self, user_id: int | None, session_id: int | None, relative_path: str, offset: int = 0, limit: int = 8192) -> str:
+    def read(
+        self,
+        user_id: int | None,
+        session_id: int | None,
+        relative_path: str,
+        offset: int = 0,
+        limit: int = 8192,
+    ) -> str:
         """读取文件内容"""
         path = self._validate_path(user_id, session_id, relative_path)
         if not path.exists() or not path.is_file():
@@ -65,7 +66,14 @@ class WorkspaceManager:
         data = path.read_bytes()
         return data[offset : offset + limit].decode("utf-8", errors="replace")
 
-    def write(self, user_id: int | None, session_id: int | None, relative_path: str, content: str, is_final: bool = False) -> dict:
+    def write(
+        self,
+        user_id: int | None,
+        session_id: int | None,
+        relative_path: str,
+        content: str,
+        is_final: bool = False,
+    ) -> dict:
         """写入文件内容"""
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
@@ -95,7 +103,15 @@ class WorkspaceManager:
                 f.write(content)
             return {"path": relative_path, "size": len(content_bytes)}
 
-    def edit(self, user_id: int | None, session_id: int | None, relative_path: str, old_string: str, new_string: str, is_final: bool = False) -> dict:
+    def edit(
+        self,
+        user_id: int | None,
+        session_id: int | None,
+        relative_path: str,
+        old_string: str,
+        new_string: str,
+        is_final: bool = False,
+    ) -> dict:
         """编辑文件内容"""
         path = self._validate_path(user_id, session_id, relative_path)
         if not path.exists() or not path.is_file():
@@ -121,14 +137,26 @@ class WorkspaceManager:
                 f.write(new_content)
             return {"path": relative_path, "replaced": True}
 
-    def list(self, user_id: int | None, session_id: int | None, relative_path: str = ".", recursive: bool = False) -> list[dict]:
+    def list(
+        self,
+        user_id: int | None,
+        session_id: int | None,
+        relative_path: str = ".",
+        recursive: bool = False,
+    ) -> list[dict]:
         """列出目录内容"""
-        session_path = self._ensure_session_path(user_id, session_id)
+        self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)
 
         return build_workspace_listing(path, recursive=recursive)
 
-    def create_dir(self, user_id: int | None, session_id: int | None, relative_path: str, is_final: bool = False) -> dict:
+    def create_dir(
+        self,
+        user_id: int | None,
+        session_id: int | None,
+        relative_path: str,
+        is_final: bool = False,
+    ) -> dict:
         """创建目录"""
         session_path = self._ensure_session_path(user_id, session_id)
         path = self._validate_path(user_id, session_id, relative_path)

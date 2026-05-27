@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Iterable
+
 from chat.ChatStreamAnswerBuffer import ChatStreamAnswerBuffer
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage

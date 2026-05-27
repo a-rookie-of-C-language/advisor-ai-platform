@@ -6,13 +6,13 @@ from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.WorkspaceListInput import WorkspaceListInput
-from tools.workspace.WorkspaceListOutput import WorkspaceListOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
     PathTraversalError,
     WorkspaceManager,
 )
+from tools.workspace.WorkspaceListInput import WorkspaceListInput
+from tools.workspace.WorkspaceListOutput import WorkspaceListOutput
 
 logger = logging.getLogger(__name__)
 

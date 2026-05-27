@@ -7,16 +7,19 @@ import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
 import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AuditService;
 import java.time.LocalDateTime;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/audit")
-@RequiredArgsConstructor
 public class AuditController {
 
   private final AuditService auditService;
+
+  public AuditController(@Qualifier("auditServiceImpl") AuditService auditService) {
+    this.auditService = auditService;
+  }
 
   @GetMapping("/logs")
   public ApiResponseDTO<PageResponseDTO<AuditLogDO>> getAuditLogs(

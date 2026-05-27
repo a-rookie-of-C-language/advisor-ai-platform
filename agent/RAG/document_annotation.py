@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from RAG.annotator.ChunkAnnotation import ChunkAnnotation
 from RAG.annotator.annotation_pipeline import AnnotationPipeline
+from RAG.annotator.ChunkAnnotation import ChunkAnnotation
 
 logger = logging.getLogger(__name__)
 

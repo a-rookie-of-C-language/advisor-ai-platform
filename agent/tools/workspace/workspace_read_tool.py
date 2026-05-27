@@ -6,16 +6,14 @@ from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.WorkspaceReadInput import WorkspaceReadInput
-from tools.workspace.WorkspaceReadOutput import WorkspaceReadOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
     FileSizeLimitError,
     PathTraversalError,
     WorkspaceManager,
-    DepthLimitError,
-    FileCountLimitError,
 )
+from tools.workspace.WorkspaceReadInput import WorkspaceReadInput
+from tools.workspace.WorkspaceReadOutput import WorkspaceReadOutput
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +56,11 @@ class WorkspaceReadTool(BaseTool[WorkspaceReadInput, WorkspaceReadOutput]):
             return ToolResult.denied(f"安全错误: {e}")
         except BinaryFileError as e:
             logger.warning("workspace_read binary file: %s", e)
-            return ToolResult.error(f"不支持操作二进制文件")
+            return ToolResult.error("不支持操作二进制文件")
         except FileSizeLimitError as e:
             logger.warning("workspace_read size limit: %s", e)
             return ToolResult.error(f"文件大小超限: {e}")
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             return ToolResult(
                 ok=True,
                 status="miss",

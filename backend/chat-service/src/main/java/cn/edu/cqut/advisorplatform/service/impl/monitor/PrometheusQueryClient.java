@@ -10,8 +10,11 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
 public class PrometheusQueryClient {
 
   private final HttpClient httpClient;
@@ -20,7 +23,9 @@ public class PrometheusQueryClient {
       new PrometheusResponseParser(objectMapper);
   private final PrometheusQueryUrlBuilder urlBuilder;
 
-  public PrometheusQueryClient(String prometheusBaseUrl, long timeoutMs) {
+  public PrometheusQueryClient(
+      @Value("${advisor.monitor.prometheus.base-url}") String prometheusBaseUrl,
+      @Value("${advisor.monitor.prometheus.timeout-ms}") long timeoutMs) {
     this.urlBuilder = new PrometheusQueryUrlBuilder(prometheusBaseUrl);
     this.httpClient =
         HttpClient.newBuilder()

@@ -5,8 +5,8 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from .ChunkResult import ChunkResult
 from .base_chunk_engine import BaseChunkEngine
+from .ChunkResult import ChunkResult
 from .file_profile import FileProfile
 
 try:

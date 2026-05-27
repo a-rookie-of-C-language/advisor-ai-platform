@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from json_types import JsonObject
-from safety.StreamingRegexFilter import StreamingRegexFilter
 from safety.safety_pipeline import SafetyPipeline
+from safety.StreamingRegexFilter import StreamingRegexFilter
 
 
 class GraphStreamAccumulator:

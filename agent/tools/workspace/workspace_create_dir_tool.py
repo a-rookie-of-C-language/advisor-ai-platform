@@ -6,15 +6,15 @@ from json_types import JsonObject
 from tools.base_tool import BaseTool
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
-from tools.workspace.WorkspaceCreateDirInput import WorkspaceCreateDirInput
-from tools.workspace.WorkspaceCreateDirOutput import WorkspaceCreateDirOutput
 from tools.workspace.workspace_manager import (
     BinaryFileError,
-    PathTraversalError,
-    WorkspaceManager,
     DepthLimitError,
     FileCountLimitError,
+    PathTraversalError,
+    WorkspaceManager,
 )
+from tools.workspace.WorkspaceCreateDirInput import WorkspaceCreateDirInput
+from tools.workspace.WorkspaceCreateDirOutput import WorkspaceCreateDirOutput
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class WorkspaceCreateDirTool(BaseTool[WorkspaceCreateDirInput, WorkspaceCreateDi
         session_id = context.get("session_id")
 
         try:
-            result = self._manager.create_dir(
+            self._manager.create_dir(
                 user_id=user_id,
                 session_id=session_id,
                 relative_path=tool_input.path,
@@ -57,8 +57,8 @@ class WorkspaceCreateDirTool(BaseTool[WorkspaceCreateDirInput, WorkspaceCreateDi
             return ToolResult.denied(f"安全错误: {e}")
         except BinaryFileError:
             return ToolResult.error("不支持操作二进制文件")
-        except DepthLimitError as e:
-            return ToolResult.error(f"目录深度超限（最大 5 层）")
+        except DepthLimitError:
+            return ToolResult.error("目录深度超限（最大 5 层）")
         except FileCountLimitError as e:
             return ToolResult.error(f"{e}")
         except Exception as e:

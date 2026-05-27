@@ -10,17 +10,17 @@ from functools import lru_cache
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from app_cli import run_cli as run_chat_cli
 from app_chat_routes import register_chat_routes
-from app_graph_routes import register_graph_routes
-from app_run_modes import run_all as run_all_mode
-from app_run_modes import run_all_async, run_api, run_indexer
-from app_workspace_routes import register_workspace_routes
+from app_cli import run_cli as run_chat_cli
 from app_dependencies import (
     build_llm_extractor_from_env,
     build_memory_orchestrator_from_env,
     build_rag_service_from_env,
 )
+from app_graph_routes import register_graph_routes
+from app_run_modes import run_all as run_all_mode
+from app_run_modes import run_all_async, run_api, run_indexer
+from app_workspace_routes import register_workspace_routes
 from chat.stream_service import ChatStreamService
 from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
 from context.memory.pipeline.orchestrator import MemoryOrchestrator

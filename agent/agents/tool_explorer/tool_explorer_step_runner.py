@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
-from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
 from agents.tool_explorer.tool_explorer_events import (
     build_tool_call_record,
     build_tool_observation,
@@ -12,6 +10,8 @@ from agents.tool_explorer.tool_explorer_events import (
     build_tool_use_event,
 )
 from agents.tool_explorer.tool_explorer_support import parse_tool_execution
+from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
+from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
 from json_types import JsonObject
 
 ToolExecutor = Callable[[str, JsonObject], Awaitable[str]]

@@ -3,12 +3,6 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
-from agents.task_planner.task_planner_fallback import (
-    build_fallback_plan,
-    build_web_query,
-    looks_like_education_query,
-    looks_like_realtime_query,
-)
 from agents.task_planner.task_planner_name_utils import coerce_names
 from json_types import JsonObject
 from llm.chat_message import ChatMessage

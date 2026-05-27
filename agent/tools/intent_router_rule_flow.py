@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-from tools.RouteDecision import RouteDecision
 from tools.base_tool import BaseTool
 from tools.intent_router_support import (
     apply_structured_student_query_boost,
@@ -18,6 +17,7 @@ from tools.intent_router_tool_matching import (
     match_tools_by_patterns,
     match_tools_by_semantics,
 )
+from tools.RouteDecision import RouteDecision
 
 
 def route_by_rules_and_scores(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 MCP_TOOL_QUERY_PATTERNS: dict[str, list[str]] = {
     "list_students": [
         r"学生(?:列表|名单|有哪些|信息)",

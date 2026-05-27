@@ -3,11 +3,11 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
 from agents.tool_explorer.tool_explorer_support import (
     contextual_followup_step,
     planned_step,
 )
+from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
 from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec

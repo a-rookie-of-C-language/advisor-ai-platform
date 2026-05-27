@@ -10,7 +10,6 @@ from chat.legacy_subagent_events import (
     explorer_event_source,
 )
 from chat.stream_message_utils import build_explorer_context
-from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from llm.tool_spec import ToolSpec
 

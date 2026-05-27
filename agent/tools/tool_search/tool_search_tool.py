@@ -7,9 +7,9 @@ from pydantic import BaseModel
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
 from tools.base_tool import BaseTool
-from tools.tool_search.ToolSearchInput import ToolSearchInput
 from tools.tool_permission import ToolPermission
 from tools.tool_result import ToolResult
+from tools.tool_search.ToolSearchInput import ToolSearchInput
 
 
 class ToolSearchTool(BaseTool[ToolSearchInput, BaseModel]):

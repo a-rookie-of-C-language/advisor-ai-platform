@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from agents.tool_explorer.tool_explorer_support import compact_items as compact_tool_items
 from agents.tool_explorer.ToolExplorerEvent import ToolExplorerEvent
 from agents.tool_explorer.ToolExplorerStep import ToolExplorerStep
-from agents.tool_explorer.tool_explorer_support import compact_items as compact_tool_items
 from json_types import JsonObject, JsonValue
 
 

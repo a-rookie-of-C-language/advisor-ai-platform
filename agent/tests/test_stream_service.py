@@ -10,17 +10,41 @@ from llm import openai_provider as openai_provider_module
 from llm.chat_message import ChatMessage
 from tests.stream_service_fakes import (
     CapturingOpenAIProvider as _CapturingOpenAIProvider,
+)
+from tests.stream_service_fakes import (
     ExplorerUsed as _ExplorerUsed,
+)
+from tests.stream_service_fakes import (
     MemoryLoadError as _MemoryLoadError,
+)
+from tests.stream_service_fakes import (
     MemoryOkFlushError as _MemoryOkFlushError,
+)
+from tests.stream_service_fakes import (
     ProviderError as _ProviderError,
+)
+from tests.stream_service_fakes import (
     ProviderLegacyToolUse as _ProviderLegacyToolUse,
+)
+from tests.stream_service_fakes import (
     ProviderOk as _ProviderOk,
+)
+from tests.stream_service_fakes import (
     ProviderRouteCapture as _ProviderRouteCapture,
+)
+from tests.stream_service_fakes import (
     ProviderRouteJsonThenAnswer as _ProviderRouteJsonThenAnswer,
+)
+from tests.stream_service_fakes import (
     ProviderToolUse as _ProviderToolUse,
+)
+from tests.stream_service_fakes import (
     RagHit as _RagHit,
+)
+from tests.stream_service_fakes import (
     RagMiss as _RagMiss,
+)
+from tests.stream_service_fakes import (
     RagMustNotRun as _RagMustNotRun,
 )
 

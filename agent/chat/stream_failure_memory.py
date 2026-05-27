@@ -7,8 +7,8 @@ from eval.action_score import score_action
 from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from memory.failure_memory_matcher import FailureMemoryMatcher
-from memory.FailureMemoryItem import FailureMemoryItem
 from memory.failure_memory_store import FailureMemoryStore
+from memory.FailureMemoryItem import FailureMemoryItem
 from prompt.PromptBuilder import PromptBuilder
 
 logger = logging.getLogger(__name__)

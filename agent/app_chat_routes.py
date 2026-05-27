@@ -6,7 +6,6 @@ from collections.abc import Callable
 from fastapi import FastAPI, Request
 from starlette.responses import StreamingResponse
 
-from ChatStreamRequestDTO import ChatStreamRequestDTO
 from app_api_support import (
     STREAM_RESPONSE_HEADERS,
     build_chat_messages,
@@ -14,6 +13,7 @@ from app_api_support import (
     require_agent_token,
 )
 from chat.stream_service import ChatStreamService
+from ChatStreamRequestDTO import ChatStreamRequestDTO
 
 logger = logging.getLogger(__name__)
 

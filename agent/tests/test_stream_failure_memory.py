@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from chat.stream_failure_memory import ChatStreamFailureMemorySupport
 from llm.chat_message import ChatMessage
-from memory.FailureMemoryItem import FailureMemoryItem
 from memory.failure_memory_store import FailureMemoryStore
+from memory.FailureMemoryItem import FailureMemoryItem
 
 
 def test_inject_avoidance_prompt_for_similar_failure(tmp_path) -> None:

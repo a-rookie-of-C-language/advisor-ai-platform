@@ -8,10 +8,10 @@ import pytest
 
 from tools.DirectMcpCallToolResult import DirectMcpCallToolResult
 from tools.DirectMcpToolListResult import DirectMcpToolListResult
+from tools.mcp_client_pool import McpClientPool
+from tools.mcp_config_parser import parse_stdio_env
 from tools.McpConnection import McpConnection
 from tools.McpServerConfig import McpServerConfig
-from tools.mcp_config_parser import parse_stdio_env
-from tools.mcp_client_pool import McpClientPool
 
 
 def test_parse_env_config_reads_servers_and_token(monkeypatch):

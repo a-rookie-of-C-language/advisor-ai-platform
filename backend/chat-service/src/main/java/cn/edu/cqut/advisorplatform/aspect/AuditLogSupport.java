@@ -12,22 +12,26 @@ import java.lang.reflect.Parameter;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class AuditLogSupport {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final AuditService auditService;
+
   private final AuditValueSanitizer valueSanitizer = new AuditValueSanitizer();
   private final AuditContextResolver contextResolver = new AuditContextResolver();
+
+  public AuditLogSupport(@Qualifier("remoteAuditServiceImpl") AuditService auditService) {
+    this.auditService = auditService;
+  }
 
   public void saveAuditLog(
       ProceedingJoinPoint joinPoint,

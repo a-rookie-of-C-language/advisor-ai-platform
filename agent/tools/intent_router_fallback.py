@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from tools.RouteDecision import RouteDecision
 from tools.intent_router_rules import DEFAULT_READ_ONLY_CATEGORIES
+from tools.RouteDecision import RouteDecision
 
 
 def build_fallback_decision(

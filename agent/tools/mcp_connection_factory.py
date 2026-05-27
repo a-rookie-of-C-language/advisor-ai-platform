@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 
 from tools.DirectHttpMcpClient import DirectHttpMcpClient
+from tools.mcp_config_parser import parse_stdio_env
 from tools.McpClientProtocol import McpClientProtocol
 from tools.McpServerConfig import McpServerConfig
-from tools.mcp_config_parser import parse_stdio_env
 
 
 class McpConnectionFactory:
