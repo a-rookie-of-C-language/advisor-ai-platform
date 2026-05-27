@@ -43,6 +43,24 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
         self._interrupt_behavior = "block"
         self._requires_user_interaction = False
 
+    def get_semantic_keywords(self) -> list[str]:
+        """返回语义关键词，用于意图路由匹配。"""
+        return [
+            "知识库",
+            "文档",
+            "资料",
+            "检索",
+            "查找",
+            "RAG",
+            "rag",
+            "搜索",
+            "查询",
+            "问答",
+            "政策",
+            "规定",
+            "制度",
+        ]
+
     async def execute(self, tool_input: RAGSearchInput, context: JsonObject) -> ToolResult:
         user_id = context.get("user_id")
         session_id = context.get("session_id")
