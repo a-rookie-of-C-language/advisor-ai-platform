@@ -9,6 +9,7 @@ class StreamEventPersistencePolicy {
               "tool_error",
               "sys_intent_route",
               "sys_tool_plan",
+              "sys_reasoning",
               "sys_rag_force",
               "risk_alert" ->
           true;

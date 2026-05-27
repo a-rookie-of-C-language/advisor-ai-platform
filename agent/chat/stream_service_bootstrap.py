@@ -18,6 +18,7 @@ def build_stream_tool_permission() -> PermissionConfig:
             ToolPermission.MEMORY_WRITE,
             ToolPermission.WORKSPACE_READ,
             ToolPermission.WORKSPACE_WRITE,
+            ToolPermission.SEARCH,
         },
         read_resources={"context", "memory", "workspace"},
         write_resources={"memory", "workspace"},
