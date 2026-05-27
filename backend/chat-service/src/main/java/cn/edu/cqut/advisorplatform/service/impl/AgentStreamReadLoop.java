@@ -62,6 +62,10 @@ class AgentStreamReadLoop {
     return null;
   }
 
+  String getClientWriterMetricsSummary() {
+    return clientWriter.getMetrics().summary();
+  }
+
   private void logFirstDelta(
       int deltaCount, AtomicBoolean firstDeltaLogged, int before, long startAt) {
     if (deltaCount > before && firstDeltaLogged.compareAndSet(false, true)) {

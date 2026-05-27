@@ -68,13 +68,14 @@ class AgentStreamResponseReader {
     validateDeltaCount(
         state.deltaCount().get(), state.sawDoneEvent(), state.sawErrorEvent(), startAt);
     log.info(
-        "agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawError={}, elapsedMs={}",
+        "agent_proxy done, deltas={}, answerLen={}, finishReason={}, sawDone={}, sawError={}, elapsedMs={}, transfer={}",
         state.deltaCount().get(),
         state.assistantText().length(),
         finishReason(state.sawDoneEvent(), state.sawErrorEvent()),
         state.sawDoneEvent().get(),
         state.sawErrorEvent().get(),
-        transportSupport.elapsedSince(startAt));
+        transportSupport.elapsedSince(startAt),
+        readLoop.getClientWriterMetricsSummary());
 
     return new ChatStreamProxyResult(
         state.assistantText().toString(), state.sources(), state.events());
