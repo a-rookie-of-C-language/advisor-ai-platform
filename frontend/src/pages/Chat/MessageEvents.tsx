@@ -24,7 +24,8 @@ export function MessageEvents({ msg }: MessageEventsProps) {
         label: (
           <Text type="secondary" style={{ fontSize: 12 }}>
             <FileTextOutlined style={{ marginRight: 4 }} />
-            鎵ц杩囩▼ {msg.events.length} 鏉?          </Text>
+            执行过程 {msg.events.length} 条
+          </Text>
         ),
         children: (
           <Space direction="vertical" style={{ width: '100%' }}>

@@ -43,7 +43,7 @@ export function useChatMessagesLoader({
         if (await recoverInvalidSession(error)) {
           return
         }
-        globalMessage.error(typeof error === 'string' ? error : '鍔犺浇娑堟伅澶辫触')
+        globalMessage.error(typeof error === 'string' ? error : '加载消息失败')
       } finally {
         if (currentSeq === messageLoadSeqRef.current) {
           setMessagesLoading(false)

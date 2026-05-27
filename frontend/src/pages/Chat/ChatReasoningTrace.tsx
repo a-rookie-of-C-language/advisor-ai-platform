@@ -22,7 +22,7 @@ export function ChatReasoningTrace({ msg }: ChatReasoningTraceProps) {
   return (
     <div className={styles.reasoningTrace}>
       <Text type="secondary" className={styles.reasoningTraceTitle}>
-        鎵ц鎬濊矾
+        执行思路
       </Text>
       <Space direction="vertical" style={{ width: '100%' }} size={8}>
         {reasoningEvents.map((item) => {

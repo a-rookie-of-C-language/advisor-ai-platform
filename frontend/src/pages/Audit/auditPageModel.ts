@@ -8,25 +8,25 @@ export const moduleColors: Record<AuditModule, string> = {
 }
 
 export const moduleLabels: Record<AuditModule, string> = {
-  AUTH: '璁よ瘉',
+  AUTH: '认证',
   RAG: '知识库',
-  MEMORY: '璁板繂',
-  CHAT: '瀵硅瘽',
+  MEMORY: '记忆',
+  CHAT: '对话',
 }
 
 export const actionLabels: Record<AuditAction, string> = {
-  LOGIN: '鐧诲綍',
-  LOGOUT: '鐧诲嚭',
-  SEARCH: '鎼滅储',
-  QUERY: '鏌ヨ',
-  UPLOAD_DOCUMENT: '涓婁紶鏂囨。',
-  DELETE_DOCUMENT: '鍒犻櫎鏂囨。',
-  STORE: '瀛樺偍',
+  LOGIN: '登录',
+  LOGOUT: '登出',
+  SEARCH: '搜索',
+  QUERY: '查询',
+  UPLOAD_DOCUMENT: '上传文档',
+  DELETE_DOCUMENT: '删除文档',
+  STORE: '存储',
   RETRIEVE: '检索',
-  UPDATE: '鏇存柊',
-  DELETE: '鍒犻櫎',
-  CHAT: '瀵硅瘽',
-  STREAM_CHAT: '娴佸紡瀵硅瘽',
+  UPDATE: '更新',
+  DELETE: '删除',
+  CHAT: '对话',
+  STREAM_CHAT: '流式对话',
 }
 
 export interface QueryParams {

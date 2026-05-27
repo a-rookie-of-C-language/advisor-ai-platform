@@ -10,18 +10,18 @@ export function createAuditLogColumns(
 ): ColumnsType<AuditLogDTO> {
   return [
     {
-      title: '鏃堕棿',
+      title: '时间',
       dataIndex: 'createdAt',
       width: 180,
       render: (val) => dayjs(val).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
-      title: '鐢ㄦ埛',
+      title: '用户',
       dataIndex: 'username',
       width: 100,
     },
     {
-      title: '妯″潡',
+      title: '模块',
       dataIndex: 'module',
       width: 100,
       render: (val: AuditModule) => (
@@ -29,13 +29,13 @@ export function createAuditLogColumns(
       ),
     },
     {
-      title: '鎿嶄綔',
+      title: '操作',
       dataIndex: 'action',
       width: 100,
       render: (val: AuditAction) => actionLabels[val] || val,
     },
     {
-      title: '璇锋眰璺緞',
+      title: '请求路径',
       dataIndex: 'requestUri',
       ellipsis: true,
     },
@@ -44,11 +44,11 @@ export function createAuditLogColumns(
       dataIndex: 'responseStatus',
       width: 100,
       render: (val) => (
-        <Tag color={val === 'SUCCESS' ? 'green' : 'red'}>{val === 'SUCCESS' ? '鎴愬姛' : '澶辫触'}</Tag>
+        <Tag color={val === 'SUCCESS' ? 'green' : 'red'}>{val === 'SUCCESS' ? '成功' : '失败'}</Tag>
       ),
     },
     {
-      title: '鑰楁椂',
+      title: '耗时',
       dataIndex: 'durationMs',
       width: 100,
       render: (val) => `${val}ms`,
@@ -60,7 +60,7 @@ export function createAuditLogColumns(
       ellipsis: true,
     },
     {
-      title: '鎿嶄綔',
+      title: '操作',
       key: 'action',
       width: 80,
       fixed: 'right',
@@ -70,7 +70,7 @@ export function createAuditLogColumns(
           icon={<EyeOutlined />}
           onClick={() => onViewDetail(record)}
         >
-          璇︽儏
+          详情
         </Button>
       ),
     },

@@ -23,7 +23,8 @@ export function MessageSources({ msg }: MessageSourcesProps) {
         label: (
           <Text type="secondary" style={{ fontSize: 12 }}>
             <FileTextOutlined style={{ marginRight: 4 }} />
-            寮曠敤鏉ユ簮 {msg.sources.length} 鏉?          </Text>
+            引用来源 {msg.sources.length} 条
+          </Text>
         ),
         children: (
           <Space direction="vertical" style={{ width: '100%' }}>
