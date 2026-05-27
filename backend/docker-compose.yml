@@ -251,7 +251,7 @@ services:
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       CLI_BACKEND_BASE_URL: http://gateway:8080
       LLM_THINKING_PROVIDER: none
-      MCP_SERVERS: student:http:http://student-service:8085/mcp/message
+      MCP_SERVERS: student:http:http://student-service:8091/mcp/message
       MCP_TOKEN_STUDENT: ${MCP_TOKEN_STUDENT:?MCP_TOKEN_STUDENT is required}
       OPENAI_TEMPERATURE: 0.2
       EMBEDDING_PROVIDER: ollama
