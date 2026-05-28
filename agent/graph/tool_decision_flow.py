@@ -82,7 +82,10 @@ async def decide_graph_tools(
         and runtime.tools.get("rag_search") is not None
     ):
         route_categories = {"retrieval"}
-    web_search_enabled = "search" in route_categories and runtime.tools.get("web_search") is not None
+    web_search_enabled = (
+        ("search" in route_categories or "retrieval" in route_categories)
+        and runtime.tools.get("web_search") is not None
+    )
     use_tool = runtime.enable_tool_use and has_query and bool(route_categories)
     task_plan: JsonObject = {}
     task_planner_subagent = getattr(runtime, "task_planner_subagent", None)

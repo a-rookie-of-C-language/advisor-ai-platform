@@ -58,10 +58,8 @@ async def run_generate_node(
             if "web_fetch" in (state.get("matched_tools", []) or []):
                 force_fetch_url = _extract_first_url(user_query)
 
-            fusion_context = await run_fusion_pipeline(state, user_query, model_messages)
-            if fusion_context:
-                model_messages = inject_fusion_context(model_messages, fusion_context)
-            direct_generate = bool(fusion_context and fusion_context.get("candidates"))
+            fusion_context = None
+            direct_generate = False
 
             tools, route_categories, matched_tools = select_generation_tools(
                 runtime=runtime,
@@ -69,6 +67,13 @@ async def run_generate_node(
                 task_plan=task_plan,
                 user_query=user_query,
             )
+            
+            # 只在没有明确工具匹配时才运行 fusion pipeline
+            if not matched_tools:
+                fusion_context = await run_fusion_pipeline(state, user_query, model_messages)
+                if fusion_context:
+                    model_messages = inject_fusion_context(model_messages, fusion_context)
+                direct_generate = bool(fusion_context and fusion_context.get("candidates"))
 
             planned_observations = await execute_planned_tool_steps(
                 state=state,

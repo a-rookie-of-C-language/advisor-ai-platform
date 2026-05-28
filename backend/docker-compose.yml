@@ -181,6 +181,8 @@ services:
         condition: service_started
     ports:
       - "8082:8082"
+    volumes:
+      - ./chat-service/target/chat-service-patched.jar:/app/app.jar
 
   rag-service:
     build:
