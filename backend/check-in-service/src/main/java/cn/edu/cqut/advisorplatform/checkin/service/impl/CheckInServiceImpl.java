@@ -3,9 +3,11 @@ package cn.edu.cqut.advisorplatform.checkin.service.impl;
 import cn.edu.cqut.advisorplatform.checkin.client.TeacherServiceClient;
 import cn.edu.cqut.advisorplatform.checkin.client.dto.StudentClassResponse;
 import cn.edu.cqut.advisorplatform.checkin.dao.CheckInDao;
+import cn.edu.cqut.advisorplatform.checkin.enums.ExceptionStatus;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityRequest;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDetailResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
+import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.AvailableCheckInActivityVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInActivityVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
@@ -16,7 +18,9 @@ import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.common.security.UserRole;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,5 +113,91 @@ public class CheckInServiceImpl implements CheckInService {
   @Override
   public String studentCheckIn(Long studentId) {
     throw new BadRequestException("请使用打卡ID进行打卡");
+  }
+
+  @Override
+  @Transactional
+  public CheckInException handleException(
+      UserPrincipal userPrincipal,
+      Long exceptionId,
+      String status,
+      String handlerNote) {
+    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
+    
+    CheckInException exception = checkInDao.findExceptionById(exceptionId);
+    if (exception == null) {
+      throw new BadRequestException("异常记录不存在");
+    }
+    
+    if (!ExceptionStatus.PENDING.getCode().equals(exception.getStatus())
+        && !ExceptionStatus.PROCESSING.getCode().equals(exception.getStatus())) {
+      throw new BadRequestException("当前状态不允许处理");
+    }
+    
+    Long handlerId = checkInServiceSupport.resolveUserId(userPrincipal);
+    checkInDao.updateException(exceptionId, status, handlerId, handlerNote);
+    
+    return checkInDao.findExceptionById(exceptionId);
+  }
+
+  @Override
+  public List<CheckInException> listExceptions(
+      UserPrincipal userPrincipal,
+      Long studentId,
+      String checkInId,
+      String status) {
+    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
+    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
+    return checkInDao.findExceptions(studentId, checkInId, status, teacherUserId);
+  }
+
+  @Override
+  public Map<String, Object> getAttendanceStatistics(
+      UserPrincipal userPrincipal,
+      LocalDate begin,
+      LocalDate end) {
+    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
+    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
+    
+    Map<String, Object> statistics = new HashMap<>();
+    statistics.put("totalRecords", checkInDao.countRecordsByTeacher(teacherUserId, begin, end));
+    statistics.put("normalCount", checkInDao.countRecordsByStatus(teacherUserId, "NORMAL", begin, end));
+    statistics.put("lateCount", checkInDao.countRecordsByStatus(teacherUserId, "LATE", begin, end));
+    statistics.put("absentCount", checkInDao.countRecordsByStatus(teacherUserId, "ABSENT", begin, end));
+    statistics.put("leaveCount", checkInDao.countRecordsByStatus(teacherUserId, "LEAVE", begin, end));
+    
+    long totalRecords = (long) statistics.get("totalRecords");
+    long normalCount = (long) statistics.get("normalCount");
+    double attendanceRate = totalRecords > 0 ? (double) normalCount / totalRecords * 100 : 0;
+    statistics.put("attendanceRate", Math.round(attendanceRate * 100.0) / 100.0);
+    
+    return statistics;
+  }
+
+  @Override
+  public List<Map<String, Object>> getClassAttendanceStatistics(
+      UserPrincipal userPrincipal,
+      LocalDate begin,
+      LocalDate end) {
+    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
+    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
+    return checkInDao.getClassAttendanceStatistics(teacherUserId, begin, end);
+  }
+
+  @Override
+  public byte[] exportAttendanceRecords(
+      UserPrincipal userPrincipal,
+      Long studentId,
+      String checkInId,
+      LocalDate begin,
+      LocalDate end) {
+    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
+    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
+    
+    List<CheckInRecordVO> records = checkInDao.selectRecordsForExport(
+        studentId, checkInId, teacherUserId, begin, end);
+    
+    // TODO: 实现 Excel 导出逻辑
+    return new byte[0];
   }
 }

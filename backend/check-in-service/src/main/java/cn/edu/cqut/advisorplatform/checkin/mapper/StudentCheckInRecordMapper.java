@@ -56,4 +56,15 @@ public interface StudentCheckInRecordMapper {
       @Param("classCode") String classCode,
       @Param("studentId") Long studentId,
       @Param("now") LocalDateTime now);
+
+  List<CheckInRecordVO> selectCheckInRecordsByClass(
+      @Param("classCode") String classCode,
+      @Param("teacherUserId") Long teacherUserId,
+      @Param("beginDate") LocalDate begin,
+      @Param("endDate") LocalDate end);
+
+  int updateRecordStatus(
+      @Param("checkInId") String checkInId,
+      @Param("studentId") Long studentId,
+      @Param("status") String status);
 }

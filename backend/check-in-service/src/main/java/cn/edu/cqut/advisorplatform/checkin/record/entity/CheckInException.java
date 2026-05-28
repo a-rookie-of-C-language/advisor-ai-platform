@@ -1,6 +1,5 @@
 package cn.edu.cqut.advisorplatform.checkin.record.entity;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class StudentCheckInRecord {
+public class CheckInException {
 
   private Long id;
 
@@ -19,15 +18,15 @@ public class StudentCheckInRecord {
 
   private String checkInId;
 
-  private String classCode;
-
-  private LocalDate checkDate;
-
-  private Boolean checkedIn;
+  private String exceptionType;
 
   private String status;
 
-  private LocalDateTime checkTime;
+  private Long handlerId;
+
+  private String handlerNote;
+
+  private LocalDateTime handledAt;
 
   private LocalDateTime createdAt;
 

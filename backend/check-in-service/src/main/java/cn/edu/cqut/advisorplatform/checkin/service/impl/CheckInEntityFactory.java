@@ -34,13 +34,14 @@ class CheckInEntityFactory {
   }
 
   StudentCheckInRecord createRecord(
-      StudentClassResponse student, String checkInId, LocalDateTime now) {
+      StudentClassResponse student, String checkInId, LocalDateTime now, String status) {
     StudentCheckInRecord record = new StudentCheckInRecord();
     record.setStudentId(student.getStudentId());
     record.setCheckInId(checkInId);
     record.setClassCode(student.getClassCode());
     record.setCheckDate(now.toLocalDate());
     record.setCheckedIn(true);
+    record.setStatus(status);
     record.setCheckTime(now);
     return record;
   }

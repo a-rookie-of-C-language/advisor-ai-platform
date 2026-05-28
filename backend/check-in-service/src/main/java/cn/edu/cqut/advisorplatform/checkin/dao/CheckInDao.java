@@ -1,14 +1,17 @@
 package cn.edu.cqut.advisorplatform.checkin.dao;
 
+import cn.edu.cqut.advisorplatform.checkin.mapper.CheckInExceptionMapper;
 import cn.edu.cqut.advisorplatform.checkin.mapper.StudentCheckInRecordMapper;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInActivity;
+import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.AvailableCheckInActivityVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class CheckInDao {
   private final StudentCheckInRecordMapper mapper;
+  private final CheckInExceptionMapper exceptionMapper;
 
   public List<CheckInRecordVO> selectRecords(
       Long studentId,
@@ -65,5 +69,46 @@ public class CheckInDao {
   public List<AvailableCheckInActivityVO> findAvailableActivities(
       String classCode, Long studentId, LocalDateTime now) {
     return mapper.selectAvailableActivities(classCode, studentId, now);
+  }
+
+  // 异常处理
+  public CheckInException findExceptionById(Long id) {
+    return exceptionMapper.selectExceptionById(id);
+  }
+
+  public int updateException(Long id, String status, Long handlerId, String handlerNote) {
+    return exceptionMapper.updateException(id, status, handlerId, handlerNote);
+  }
+
+  public List<CheckInException> findExceptions(
+      Long studentId, String checkInId, String status, Long handlerId) {
+    return exceptionMapper.selectExceptions(studentId, checkInId, status, handlerId);
+  }
+
+  // 统计查询
+  public long countRecordsByTeacher(Long teacherUserId, LocalDate begin, LocalDate end) {
+    return mapper.countCheckInRecords(null, null, teacherUserId, begin, end);
+  }
+
+  public long countRecordsByStatus(
+      Long teacherUserId, String status, LocalDate begin, LocalDate end) {
+    // TODO: 实现按状态统计
+    return 0;
+  }
+
+  public List<Map<String, Object>> getClassAttendanceStatistics(
+      Long teacherUserId, LocalDate begin, LocalDate end) {
+    // TODO: 实现班级考勤统计
+    return List.of();
+  }
+
+  public List<CheckInRecordVO> selectRecordsForExport(
+      Long studentId, String checkInId, Long teacherUserId, LocalDate begin, LocalDate end) {
+    return mapper.selectCheckInRecords(
+        studentId, checkInId, teacherUserId, begin, end, null, 0);
+  }
+
+  public int updateRecordStatus(String checkInId, Long studentId, String status) {
+    return mapper.updateRecordStatus(checkInId, studentId, status);
   }
 }

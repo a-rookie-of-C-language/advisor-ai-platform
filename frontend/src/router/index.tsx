@@ -12,6 +12,7 @@ const MonitorPage = lazy(() => import('../pages/Monitor/MonitorPage'))
 const StudentListPage = lazy(() => import('../pages/Student/StudentListPage'))
 const StudentDetailPage = lazy(() => import('../pages/Student/StudentDetailPage'))
 const CheckInManagementPage = lazy(() => import('../pages/Student/CheckInManagementPage'))
+const AttendanceManagementPage = lazy(() => import('../pages/CheckIn/AttendanceManagementPage'))
 const NotFound = lazy(() => import('../pages/NotFound'))
 
 function PageSuspense({ children }: { children: ReactNode }) {
@@ -63,6 +64,14 @@ export default function AppRouter() {
         <Route path="student" element={<PageSuspense><StudentListPage /></PageSuspense>} />
         <Route path="student/:id" element={<PageSuspense><StudentDetailPage /></PageSuspense>} />
         <Route path="student/check-in" element={<PageSuspense><CheckInManagementPage /></PageSuspense>} />
+        <Route
+          path="attendance"
+          element={
+            <AdminRoute>
+              <PageSuspense><AttendanceManagementPage /></PageSuspense>
+            </AdminRoute>
+          }
+        />
       </Route>
       <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
     </Routes>

@@ -105,4 +105,11 @@ public class CheckInServiceSupport {
   public String blankToNull(String value) {
     return value == null || value.isBlank() ? null : value.trim();
   }
+
+  public Long resolveUserId(UserPrincipal userPrincipal) {
+    if (userPrincipal == null) {
+      throw new BadRequestException("用户未登录");
+    }
+    return userPrincipal.getId();
+  }
 }
