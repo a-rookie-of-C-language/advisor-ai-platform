@@ -77,9 +77,9 @@ export default function AppRouter() {
             </AdminRoute>
           }
         />
-        <Route path="student" element={<PageSuspense><StudentListPage /></PageSuspense>} />
-        <Route path="student/:id" element={<PageSuspense><StudentDetailPage /></PageSuspense>} />
-        <Route path="student/check-in" element={<PageSuspense><CheckInManagementPage /></PageSuspense>} />
+        <Route path="student" element={<AdvisorRoute><PageSuspense><StudentListPage /></PageSuspense></AdvisorRoute>} />
+        <Route path="student/:id" element={<AdvisorRoute><PageSuspense><StudentDetailPage /></PageSuspense></AdvisorRoute>} />
+        <Route path="student/check-in" element={<AdvisorRoute><PageSuspense><CheckInManagementPage /></PageSuspense></AdvisorRoute>} />
         <Route
           path="attendance"
           element={

@@ -19,8 +19,12 @@ interface MainNavigationProps {
 export default function MainNavigation({ role, selectedPath, onNavigate }: MainNavigationProps) {
   const menuItems = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
-    { key: '/student', icon: <TeamOutlined />, label: '学生管理' },
-    { key: '/student/check-in', icon: <CheckCircleOutlined />, label: '打卡管理' },
+    ...(role === 'ADMIN' || role === 'ADVISOR'
+      ? [
+          { key: '/student', icon: <TeamOutlined />, label: '学生管理' },
+          { key: '/student/check-in', icon: <CheckCircleOutlined />, label: '打卡管理' },
+        ]
+      : []),
     { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
     ...(role === 'ADMIN' || role === 'ADVISOR'
       ? [{ key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' }]
