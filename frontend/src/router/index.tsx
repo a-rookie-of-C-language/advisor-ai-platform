@@ -52,7 +52,7 @@ export default function AppRouter() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<PageSuspense><Dashboard /></PageSuspense>} />
-        <Route path="rag" element={<PageSuspense><RAGPage /></PageSuspense>} />
+        <Route path="rag" element={<AdvisorRoute><PageSuspense><RAGPage /></PageSuspense></AdvisorRoute>} />
         <Route
           path="chat"
           element={
