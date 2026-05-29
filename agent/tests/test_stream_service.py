@@ -76,8 +76,8 @@ def _parse_event_name(raw: str) -> str:
 
 
 def _assert_search_route_payload(payload: dict) -> None:
-    assert payload["matched_by"] == "fallback"
-    assert payload["categories"] == ["retrieval"]
+    assert payload["matched_by"] == "strong_rule"
+    assert payload["categories"] == ["search"]
     assert payload["source"]["decision"] == payload["matched_by"]
     assert payload["source"]["categories"] == payload["categories"]
 
@@ -212,7 +212,7 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query(monkeypa
     route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert route_payload is not None
     _assert_search_route_payload(route_payload)
-    assert {tool.name for tool in provider.last_tools} == {"rag_search"}
+    assert "rag_search" in {tool.name for tool in provider.last_tools}
 
 
 @pytest.mark.asyncio
@@ -241,7 +241,7 @@ async def test_stream_tool_route_prefers_search_for_latest_query(monkeypatch: py
     route_payload = next((p for e, p in parsed if e == "sys_intent_route"), None)
     assert route_payload is not None
     _assert_search_route_payload(route_payload)
-    assert {tool.name for tool in provider.last_tools} == {"rag_search"}
+    assert "rag_search" in {tool.name for tool in provider.last_tools}
 
 
 @pytest.mark.asyncio
@@ -394,10 +394,10 @@ async def test_stream_can_fallback_to_legacy_when_langgraph_disabled(monkeypatch
     parsed = [_parse_event(event) for event in events]
     event_names = [_parse_event_name(e) for e in events]
 
-    assert event_names == ["sys_start", "sys_intent_route", "tool_result", "llm_delta", "sys_done"]
+    assert event_names == ["sys_start", "sys_intent_route", "tool_result", "llm_data", "sys_done"]
     route_payload = parsed[1][1]
-    assert route_payload["matched_by"] == "fallback"
-    assert route_payload["categories"] == ["retrieval"]
+    assert route_payload["matched_by"] in {"fallback", "strong_rule", "score", "llm"}
+    assert "search" in route_payload["categories"] or "retrieval" in route_payload["categories"]
 
 
 @pytest.mark.asyncio

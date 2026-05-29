@@ -159,7 +159,7 @@ async def test_stream_chat_retries_create_error(monkeypatch):
     async def fake_sleep(delay: float):
         delays.append(delay)
 
-    monkeypatch.setattr("llm.openai_provider.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("llm.openai_plain_stream.asyncio.sleep", fake_sleep)
     provider, completions = make_provider([StatusError(429), stream_chunks("ok")], max_retries=1)
     messages = [ChatMessage(role="user", content="hi")]
 
@@ -175,7 +175,7 @@ async def test_stream_chat_does_not_retry_auth_error(monkeypatch):
     async def fail_sleep(delay: float):
         raise AssertionError("sleep should not be called")
 
-    monkeypatch.setattr("llm.openai_provider.asyncio.sleep", fail_sleep)
+    monkeypatch.setattr("llm.openai_plain_stream.asyncio.sleep", fail_sleep)
     provider, completions = make_provider([StatusError(401)], max_retries=2)
     messages = [ChatMessage(role="user", content="hi")]
 
@@ -190,7 +190,7 @@ async def test_stream_chat_retries_timeout(monkeypatch):
     async def fake_sleep(delay: float):
         return None
 
-    monkeypatch.setattr("llm.openai_provider.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("llm.openai_plain_stream.asyncio.sleep", fake_sleep)
     provider, completions = make_provider([TimeoutError(), stream_chunks("ok")], max_retries=1)
     messages = [ChatMessage(role="user", content="hi")]
 
@@ -205,7 +205,7 @@ async def test_stream_chat_retries_iteration_error_before_delta(monkeypatch):
     async def fake_sleep(delay: float):
         return None
 
-    monkeypatch.setattr("llm.openai_provider.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("llm.openai_plain_stream.asyncio.sleep", fake_sleep)
     provider, completions = make_provider([failing_stream_before_delta(), stream_chunks("ok")], max_retries=1)
     messages = [ChatMessage(role="user", content="hi")]
 
@@ -220,7 +220,7 @@ async def test_stream_chat_does_not_retry_after_delta(monkeypatch):
     async def fail_sleep(delay: float):
         raise AssertionError("sleep should not be called")
 
-    monkeypatch.setattr("llm.openai_provider.asyncio.sleep", fail_sleep)
+    monkeypatch.setattr("llm.openai_plain_stream.asyncio.sleep", fail_sleep)
     provider, completions = make_provider(
         [failing_stream_after_first_delta(), stream_chunks("duplicate")],
         max_retries=1,
