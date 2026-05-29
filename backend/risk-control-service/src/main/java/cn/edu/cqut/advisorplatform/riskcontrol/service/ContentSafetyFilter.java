@@ -50,11 +50,11 @@ public class ContentSafetyFilter implements RiskFilter {
         return RiskCheckResponse.builder()
             .passed(false)
             .action(riskActionDecider.decideAction(rule, "reject"))
-            .reason("鍐呭瀹夊叏杩濊")
+            .reason("内容安全违规")
             .category("content_safety")
             .matchedKeyword(rule.getName())
             .statusCode(400)
-            .message("鎮ㄧ殑闂娑夊強鏁忔劅鍐呭锛屾棤娉曞洖绛?")
+            .message("您的问题涉及敏感内容，无法回答")
             .build();
       }
     }
