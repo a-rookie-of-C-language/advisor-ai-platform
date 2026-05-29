@@ -72,7 +72,7 @@ class DocumentIndexer:
                 except asyncio.CancelledError:
                     logger.info("监听任务已取消，准备退出")
                     raise
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 — 监听中断需要重连而非崩溃
                     logger.exception("监听中断，%.1f 秒后重连: %s", self._retry_backoff_sec, exc)
                     await asyncio.sleep(self._retry_backoff_sec)
                 finally:
@@ -87,7 +87,7 @@ class DocumentIndexer:
     def _on_notify(self, _connection, _pid, _channel, payload) -> None:
         try:
             document_id = int(payload)
-        except Exception:
+        except (ValueError, TypeError):
             logger.warning("收到非法通知载荷: %s", payload)
             return
 
@@ -115,11 +115,11 @@ class DocumentIndexer:
             return
         try:
             await conn.remove_listener("rag_index", self._on_notify)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 清理操作不应阻断后续关闭
             pass
         try:
             await conn.close()
-        except Exception:
+        except Exception:  # noqa: BLE001 — 清理操作不应阻断后续关闭
             pass
         if self._listen_conn is conn:
             self._listen_conn = None

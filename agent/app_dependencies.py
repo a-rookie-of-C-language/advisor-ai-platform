@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-import os
 
+from config.environment import read_float_env, read_int_env, read_str_env
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.pipeline.llm_extractor import OpenAILLMExtractor
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
@@ -12,34 +12,12 @@ from RAG.RAG_service import RAG_service
 logger = logging.getLogger(__name__)
 
 
-def read_int_env(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return int(value)
-    except ValueError:
-        logger.warning("Env %s is invalid, fallback to %s", name, default)
-        return default
-
-
-def read_float_env(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except ValueError:
-        logger.warning("Env %s is invalid, fallback to %.1f", name, default)
-        return default
-
-
 def build_memory_orchestrator_from_env() -> MemoryOrchestrator | None:
-    memory_api_base_url = os.getenv("MEMORY_API_BASE_URL", "").strip()
+    memory_api_base_url = read_str_env("MEMORY_API_BASE_URL")
     if not memory_api_base_url:
         return None
 
-    token = os.getenv("MEMORY_API_TOKEN", "").strip()
+    token = read_str_env("MEMORY_API_TOKEN")
     if not token:
         logger.error("MEMORY_API_TOKEN is required when MEMORY_API_BASE_URL is configured.")
         raise RuntimeError("Missing MEMORY_API_TOKEN for memory API access")
@@ -55,9 +33,9 @@ def build_memory_orchestrator_from_env() -> MemoryOrchestrator | None:
 
 
 def build_llm_extractor_from_env() -> OpenAILLMExtractor | None:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    model = os.getenv("OPENAI_MODEL", "").strip()
-    base_url = os.getenv("OPENAI_BASE_URL", "").strip()
+    api_key = read_str_env("OPENAI_API_KEY")
+    model = read_str_env("OPENAI_MODEL")
+    base_url = read_str_env("OPENAI_BASE_URL")
 
     if not api_key:
         raise RuntimeError("Missing OPENAI_API_KEY for llm extractor")
@@ -69,24 +47,20 @@ def build_llm_extractor_from_env() -> OpenAILLMExtractor | None:
 
 
 def build_rag_service_from_env() -> RAG_service | None:
-    db_dsn = os.getenv("DATABASE_URL", "").strip()
+    db_dsn = read_str_env("DATABASE_URL")
     if not db_dsn:
         logger.warning("DATABASE_URL is not set, RAG service will be disabled.")
         return None
 
-    embedding_openai_base_url = os.getenv("EMBEDDING_OPENAI_BASE_URL", "").strip() or os.getenv(
-        "OPENAI_BASE_URL", ""
-    ).strip()
-    embedding_openai_api_key = os.getenv("EMBEDDING_OPENAI_API_KEY", "").strip() or os.getenv(
-        "OPENAI_API_KEY", ""
-    ).strip()
+    embedding_openai_base_url = read_str_env("EMBEDDING_OPENAI_BASE_URL") or read_str_env("OPENAI_BASE_URL")
+    embedding_openai_api_key = read_str_env("EMBEDDING_OPENAI_API_KEY") or read_str_env("OPENAI_API_KEY")
 
     try:
         return RAG_service(
             db_dsn=db_dsn,
-            ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip(),
-            embedding_provider=os.getenv("EMBEDDING_PROVIDER", "ollama").strip().lower(),
-            embedding_model=os.getenv("EMBEDDING_MODEL", "bge-m3").strip(),
+            ollama_base_url=read_str_env("OLLAMA_BASE_URL", "http://localhost:11434"),
+            embedding_provider=read_str_env("EMBEDDING_PROVIDER", "ollama").lower(),
+            embedding_model=read_str_env("EMBEDDING_MODEL", "bge-m3"),
             embedding_openai_base_url=embedding_openai_base_url or None,
             embedding_openai_api_key=embedding_openai_api_key or None,
         )
@@ -96,7 +70,7 @@ def build_rag_service_from_env() -> RAG_service | None:
 
 
 def build_indexer_from_env() -> DocumentIndexer:
-    db_dsn = os.getenv("DATABASE_URL")
+    db_dsn = read_str_env("DATABASE_URL")
     if not db_dsn:
         raise RuntimeError("Missing DATABASE_URL")
 
@@ -115,7 +89,7 @@ def build_indexer_from_env() -> DocumentIndexer:
 
     return DocumentIndexer(
         db_dsn=db_dsn,
-        ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        ollama_base_url=read_str_env("OLLAMA_BASE_URL", "http://localhost:11434"),
         db_pool_minconn=db_pool_minconn,
         db_pool_maxconn=db_pool_maxconn,
         db_statement_timeout_sec=db_statement_timeout_sec,

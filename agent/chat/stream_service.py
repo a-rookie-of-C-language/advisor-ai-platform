@@ -7,13 +7,9 @@ from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from agents.tool_explorer import ToolExplorerSubAgent
 from chat.ChatStreamAnswerBuffer import ChatStreamAnswerBuffer
 from chat.graph_stream_flow import stream_graph_events
-from chat.legacy_force_fetch import resolve_force_fetch_url
-from chat.legacy_force_fetch_flow import stream_legacy_force_fetch_response
-from chat.legacy_llm_delta_stream import stream_legacy_llm_data
 from chat.legacy_message_prepare import prepare_legacy_messages
 from chat.legacy_plain_chat_flow import stream_legacy_plain_chat
-from chat.legacy_tool_chat_flow import stream_legacy_tool_chat_events
-from chat.legacy_tool_explorer_flow import prepare_legacy_tool_explorer_context
+from chat.legacy_tool_flow import stream_legacy_tool_flow
 from chat.legacy_tool_route_flow import prepare_legacy_tool_route
 from chat.stream_compaction import ChatStreamCompactionSupport
 from chat.stream_defaults import (
@@ -54,7 +50,6 @@ from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_store import FailureMemoryStore
-from prompt.PromptBuilder import PromptBuilder
 from safety.safety_pipeline import SafetyPipeline
 from tools.intent_router import IntentRouter
 
@@ -356,97 +351,25 @@ class ChatStreamService:
                 )
                 for route_event in route_context.events:
                     yield route_event
-                route_decision = route_context.route_decision
-                matched_tools = route_context.matched_tools
-                tools = route_context.tools
-                _ = route_context.deferred_specs
-                _ = route_context.education_domain
-                exploration_query = route_context.exploration_query
-                _ = route_context.task_plan
 
-                if exploration_query and self._tool_explorer_subagent is not None:
-                    try:
-                        explorer_context = await prepare_legacy_tool_explorer_context(
-                            exploration_query=exploration_query,
-                            tool_explorer_subagent=self._tool_explorer_subagent,
-                            user_query=user_query,
-                            validated_messages=validated_messages,
-                            available_tools=self._tools.allowed_specs(self._tool_permission),
-                            route_decision=route_decision,
-                            matched_tools=matched_tools,
-                            serialize_protocol_event=self._serialize_protocol_event,
-                            trace_id=trace_id,
-                        )
-                        for explorer_event in explorer_context.events:
-                            yield explorer_event
-                        if explorer_context.used:
-                            model_messages = PromptBuilder.assemble_messages(
-                                model_messages,
-                                dynamic_prompts=[explorer_context.dynamic_prompt],
-                            )
-                            async for delta_event in stream_legacy_llm_data(
-                                self._provider,
-                                model_messages,
-                                answer_buffer,
-                                self._serialize_protocol_event,
-                                trace_id,
-                            ):
-                                yield delta_event
-                            yield self._serialize_protocol_event(
-                                event="sys_done",
-                                source="system",
-                                trace_id=trace_id,
-                                payload={"finish_reason": "stream_finished"},
-                            )
-                            return
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("tool_explorer failed, fallback to legacy tool flow: %s", exc)
-
-                async def tool_executor(tool_name: str, tool_args: dict, **kwargs) -> str:
-                    return await self._tool_support.execute_tool(
-                        tool_name=tool_name,
-                        tool_args=tool_args,
-                        user_id=user_id,
-                        session_id=session_id,
-                        user_query=user_query,
-                        trace_id=trace_id,
-                        turn_id=turn_id,
-                        idempotency_key=kwargs.get("idempotency_key"),
-                    )
-
-                force_fetch_url = resolve_force_fetch_url(
-                    matched_tools=matched_tools,
+                async for tool_event in stream_legacy_tool_flow(
+                    route_context=route_context,
+                    model_messages=model_messages,
+                    provider=self._provider,
+                    tool_support=self._tool_support,
+                    tool_explorer_subagent=self._tool_explorer_subagent,
+                    tools_registry=self._tools,
+                    tool_permission=self._tool_permission,
+                    answer_buffer=answer_buffer,
+                    serialize_protocol_event=self._serialize_protocol_event,
+                    trace_id=trace_id,
+                    user_id=user_id,
+                    session_id=session_id,
                     user_query=user_query,
-                )
-                if force_fetch_url:
-                    async for force_fetch_event in stream_legacy_force_fetch_response(
-                        force_fetch_url=force_fetch_url,
-                        model_messages=model_messages,
-                        tool_executor=tool_executor,
-                        provider=self._provider,
-                        answer_buffer=answer_buffer,
-                        serialize_protocol_event=self._serialize_protocol_event,
-                        trace_id=trace_id,
-                        debug_stream=self._debug_stream,
-                        logger=logger,
-                    ):
-                        yield force_fetch_event
-                    return
-
-                tool_events = self._provider.stream_chat_with_tools(
-                    model_messages,
-                    tools,
-                    tool_executor,
-                    max_tool_calls=1,
-                    max_tool_retries=3,
-                )
-                async for tool_chat_event in stream_legacy_tool_chat_events(
-                    tool_events,
-                    answer_buffer,
-                    self._serialize_protocol_event,
-                    trace_id,
+                    validated_messages=validated_messages,
+                    debug_stream=self._debug_stream,
                 ):
-                    yield tool_chat_event
+                    yield tool_event
             else:
                 async for plain_event in stream_legacy_plain_chat(
                     provider=self._provider,
@@ -479,7 +402,7 @@ class ChatStreamService:
                 trace_id=trace_id,
                 payload={"finish_reason": "stream_finished"},
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — 顶层流式错误处理，必须捕获所有异常以通知客户端
             logger.exception(
                 "Legacy stream failed: user_id=%s, session_id=%s",
                 user_id,
@@ -500,7 +423,7 @@ class ChatStreamService:
                     retryable=True,
                 ):
                     yield terminal_event
-            except Exception as send_error_exc:
+            except Exception as send_error_exc:  # noqa: BLE001 — 发送错误事件失败时静默退出
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
 

@@ -47,26 +47,25 @@ class StudentCheckInProcessor {
     if (checkInDao.existsRecord(checkInId, student.getStudentId())) {
       return CheckInConstant.ALREADY_CHECKED_IN;
     }
-    
+
     // 判断考勤状态
     String status = determineAttendanceStatus(now, activity);
-    
+
     var record = entityFactory.createRecord(student, checkInId, now, status);
     int rows = checkInDao.insertRecord(record);
     return rows == 1 ? CheckInConstant.CHECK_IN_SUCCESS : CheckInConstant.ALREADY_CHECKED_IN;
   }
 
   private String determineAttendanceStatus(LocalDateTime checkTime, CheckInActivity activity) {
-    int lateThresholdMinutes = activity.getLateThresholdMinutes() != null 
-        ? activity.getLateThresholdMinutes() 
-        : 15;
-    
+    int lateThresholdMinutes =
+        activity.getLateThresholdMinutes() != null ? activity.getLateThresholdMinutes() : 15;
+
     LocalDateTime lateDeadline = activity.getStartTime().plusMinutes(lateThresholdMinutes);
-    
+
     if (checkTime.isAfter(lateDeadline)) {
       return AttendanceStatus.LATE.getCode();
     }
-    
+
     return AttendanceStatus.NORMAL.getCode();
   }
 }

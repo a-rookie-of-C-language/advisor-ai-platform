@@ -83,10 +83,7 @@ public class CheckInController {
       @RequestBody Map<String, String> request) {
     return ApiResponseDTO.success(
         checkInService.handleException(
-            userPrincipal,
-            exceptionId,
-            request.get("status"),
-            request.get("handlerNote")));
+            userPrincipal, exceptionId, request.get("status"), request.get("handlerNote")));
   }
 
   @GetMapping("/exceptions")
@@ -132,9 +129,9 @@ public class CheckInController {
           LocalDate begin,
       @RequestParam(name = "end", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd")
           LocalDate end) {
-    byte[] data = checkInService.exportAttendanceRecords(
-        userPrincipal, studentId, checkInId, begin, end);
-    
+    byte[] data =
+        checkInService.exportAttendanceRecords(userPrincipal, studentId, checkInId, begin, end);
+
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=attendance.xlsx")
         .contentType(MediaType.APPLICATION_OCTET_STREAM)

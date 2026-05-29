@@ -9,6 +9,8 @@
         SELECT r.check_in_id AS checkInId,
                a.title AS activityTitle,
                r.student_id AS studentId,
+               s.student_no AS studentNo,
+               s.name AS studentName,
                COALESCE(r.class_code, s.class_code) AS classCode,
                r.check_date AS checkDate,
                r.checked_in AS checkedIn,
@@ -45,6 +47,26 @@
         <if test="teacherUserId != null">
             AND a.teacher_user_id = #{teacherUserId}
         </if>
+        <if test="status != null and status != ''">
+            AND r.status = #{status}
+        </if>
+    </select>
+
+    <select id="selectClassAttendanceStatistics"
+            resultType="java.util.Map">
+        SELECT COALESCE(r.class_code, s.class_code) AS "classCode",
+               COUNT(*) AS "total",
+               COALESCE(SUM(CASE WHEN r.status = 'NORMAL' THEN 1 ELSE 0 END), 0) AS "normal",
+               COALESCE(SUM(CASE WHEN r.status = 'LATE' THEN 1 ELSE 0 END), 0) AS "late",
+               COALESCE(SUM(CASE WHEN r.status = 'ABSENT' THEN 1 ELSE 0 END), 0) AS "absent",
+               COALESCE(SUM(CASE WHEN r.status = 'LEAVE' THEN 1 ELSE 0 END), 0) AS "leave"
+        FROM student_check_in_record r
+                 LEFT JOIN check_in_activity a ON a.check_in_id = r.check_in_id
+                 LEFT JOIN student_profile s ON s.id = r.student_id
+        WHERE r.check_date BETWEEN #{beginDate} AND #{endDate}
+          AND a.teacher_user_id = #{teacherUserId}
+        GROUP BY COALESCE(r.class_code, s.class_code)
+        ORDER BY COALESCE(r.class_code, s.class_code) ASC
     </select>
 
     <select id="selectCheckInSummaries"
@@ -96,6 +118,7 @@
             class_code,
             check_date,
             checked_in,
+            status,
             check_time,
             created_at,
             updated_at
@@ -105,6 +128,7 @@
             #{classCode},
             #{checkDate},
             #{checkedIn},
+            #{status},
             #{checkTime},
             #{createdAt},
             #{updatedAt}

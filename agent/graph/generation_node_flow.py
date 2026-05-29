@@ -68,8 +68,9 @@ async def run_generate_node(
                 user_query=user_query,
             )
             
-            # 只在没有明确工具匹配时才运行 fusion pipeline
-            if not matched_tools:
+            # 只在没有可用工具时才运行 fusion pipeline
+            # 如果有可用工具，应该让 LLM 自主决定是否调用
+            if not tools:
                 fusion_context = await run_fusion_pipeline(state, user_query, model_messages)
                 if fusion_context:
                     model_messages = inject_fusion_context(model_messages, fusion_context)

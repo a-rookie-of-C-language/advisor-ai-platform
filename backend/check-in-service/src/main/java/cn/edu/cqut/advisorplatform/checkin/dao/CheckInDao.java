@@ -35,7 +35,7 @@ public class CheckInDao {
 
   public Long countRecords(
       Long studentId, String checkInId, Long teacherUserId, LocalDate begin, LocalDate end) {
-    return mapper.countCheckInRecords(studentId, checkInId, teacherUserId, begin, end);
+    return mapper.countCheckInRecords(studentId, checkInId, teacherUserId, begin, end, null);
   }
 
   public List<StudentCheckInSummaryResponse> selectSummaries(List<Long> studentIds) {
@@ -87,25 +87,22 @@ public class CheckInDao {
 
   // 统计查询
   public long countRecordsByTeacher(Long teacherUserId, LocalDate begin, LocalDate end) {
-    return mapper.countCheckInRecords(null, null, teacherUserId, begin, end);
+    return mapper.countCheckInRecords(null, null, teacherUserId, begin, end, null);
   }
 
   public long countRecordsByStatus(
       Long teacherUserId, String status, LocalDate begin, LocalDate end) {
-    // TODO: 实现按状态统计
-    return 0;
+    return mapper.countCheckInRecords(null, null, teacherUserId, begin, end, status);
   }
 
   public List<Map<String, Object>> getClassAttendanceStatistics(
       Long teacherUserId, LocalDate begin, LocalDate end) {
-    // TODO: 实现班级考勤统计
-    return List.of();
+    return mapper.selectClassAttendanceStatistics(teacherUserId, begin, end);
   }
 
   public List<CheckInRecordVO> selectRecordsForExport(
       Long studentId, String checkInId, Long teacherUserId, LocalDate begin, LocalDate end) {
-    return mapper.selectCheckInRecords(
-        studentId, checkInId, teacherUserId, begin, end, null, 0);
+    return mapper.selectCheckInRecords(studentId, checkInId, teacherUserId, begin, end, null, 0);
   }
 
   public int updateRecordStatus(String checkInId, Long studentId, String status) {

@@ -96,7 +96,7 @@ class McpClientPool:
                 conn.client = await self._connect(config)
                 conn.last_used = asyncio.get_event_loop().time()
                 logger.info(f"MCP connection established: {server_name}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — MCP 连接可能因多种协议/网络原因失败
                 conn.error = str(e)
                 logger.error(f"MCP connection failed: {server_name}, error: {e}")
             finally:
@@ -132,7 +132,7 @@ class McpClientPool:
                     return self._parse_tool_result(result)
                 return {"ok": True, "content": str(result)}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — MCP 工具调用可能因协议/超时/服务端错误失败
                 error_msg = str(e)
                 if attempt < MAX_RETRIES and self._is_session_expired_error(e):
                     # 会话过期，清除缓存并重连
@@ -189,7 +189,7 @@ class McpClientPool:
             return
         try:
             result = close()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — 关闭操作不应阻断后续清理
             logger.debug("MCP client close failed: server=%s, error=%s", server_name, exc)
             return
         if inspect.isawaitable(result):
@@ -198,7 +198,7 @@ class McpClientPool:
     async def _await_client_close(self, server_name: str, close_result) -> None:
         try:
             await close_result
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — 异步关闭操作不应阻断后续清理
             logger.debug("MCP client async close failed: server=%s, error=%s", server_name, exc)
 
     async def cleanup_idle(self) -> None:

@@ -19,17 +19,12 @@ def select_generation_tools(
     route_categories = set(state.get("route_categories", set()))
     matched_tools = state.get("matched_tools", [])
 
-    if matched_tools:
-        tools = runtime.tools.specs_by_names(matched_tools)
-    elif route_categories:
-        tools = runtime.tools.specs_by_categories(route_categories)
-    else:
-        tools = runtime.tools.specs()
+    # 总是返回所有可用工具，让 LLM 自主决定
+    # 意图路由的预选结果只作为参考，不限制 LLM 的选择
+    tools = runtime.tools.specs()
 
     if task_plan and isinstance(task_plan, dict):
         tools = select_tools_for_plan(runtime.tools.specs(), task_plan)
-    else:
-        tools = select_tools_for_plan(tools, task_plan)
 
     if _prefer_rag_only(user_query) and not matched_tools:
         rag_tool = runtime.tools.get("rag_search")

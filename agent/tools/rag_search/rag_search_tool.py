@@ -109,10 +109,11 @@ class RAGSearchTool(BaseTool[RAGSearchInput, BaseModel]):
                 query[:80],
             )
             return ToolResult.error("rag_search_timeout")
-        except Exception:
+        except (RuntimeError, ValueError, OSError) as exc:
             logger.exception(
-                "rag_search tool failed: user_id=%s, session_id=%s",
+                "rag_search tool failed: user_id=%s, session_id=%s, error=%s",
                 user_id,
                 session_id,
+                exc,
             )
             return ToolResult.error("rag_search_exception")

@@ -57,7 +57,7 @@ class MemoryWorkerSubAgent(SubAgent):
         try:
             tasks = await self.fetch_pending_tasks(limit=self._batch_size)
             stats["fetched"] = len(tasks)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — 后台 worker 需要容忍网络/API 异常
             logger.error("memory_worker_fetch_failed err=%s", exc)
             return stats
 
@@ -110,7 +110,7 @@ class MemoryWorkerSubAgent(SubAgent):
                     session_id,
                     len(candidates),
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — 单个任务失败不应阻断批次
                 error_text = str(exc)
                 logger.warning(
                     "memory_worker_task_failed id=%s session=%s err=%s",
@@ -128,7 +128,7 @@ class MemoryWorkerSubAgent(SubAgent):
                         permission_error,
                     )
                     await self._mark_task_failed_direct(task_id, session_id, error_text)
-                except Exception as mark_error:
+                except Exception as mark_error:  # noqa: BLE001 — 标记失败是兜底逻辑
                     logger.warning(
                         "memory_worker_mark_failed_error id=%s session=%s err=%s",
                         task_id,
@@ -154,7 +154,7 @@ class MemoryWorkerSubAgent(SubAgent):
             return
         try:
             await self._memory_client.mark_task_failed(task_id, error_text)
-        except Exception as fallback_error:
+        except Exception as fallback_error:  # noqa: BLE001 — 兜底写入失败不应中断流程
             logger.warning(
                 "memory_worker_mark_failed_fallback_error id=%s session=%s err=%s",
                 task_id,
@@ -187,7 +187,7 @@ class MemoryWorkerSubAgent(SubAgent):
                     )
             except asyncio.CancelledError:
                 break
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — 主循环需要容忍未知异常并继续运行
                 logger.error("memory_worker_loop_error name=%s err=%s", self._name, exc)
                 await asyncio.sleep(self._poll_interval)
 
