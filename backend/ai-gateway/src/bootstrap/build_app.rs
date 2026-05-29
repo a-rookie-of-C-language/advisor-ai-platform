@@ -52,6 +52,10 @@ pub async fn build_app() -> Result<App> {
             crate::interfaces::http::middleware::auth::auth,
         ))
         .layer(middleware::from_fn_with_state(
+            middleware_state.clone(),
+            crate::interfaces::http::middleware::content_filter::content_filter,
+        ))
+        .layer(middleware::from_fn_with_state(
             middleware_state,
             crate::interfaces::http::middleware::rate_limit::rate_limit,
         ))
