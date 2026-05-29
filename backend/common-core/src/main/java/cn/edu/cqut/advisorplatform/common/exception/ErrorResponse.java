@@ -27,8 +27,7 @@ public class ErrorResponse {
   }
 
   public static ErrorResponse of(ErrorCode errorCode, String detail) {
-    return new ErrorResponse(
-        errorCode.getCode(), errorCode.name(), detail, LocalDateTime.now());
+    return new ErrorResponse(errorCode.getCode(), errorCode.name(), detail, LocalDateTime.now());
   }
 
   public static ErrorResponse of(int code, String message) {

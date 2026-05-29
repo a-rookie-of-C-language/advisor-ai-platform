@@ -15,10 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 流式响应客户端写入器
  *
- * <p>支持背压控制和客户端断开检测：
- * - 使用阻塞式写入，当输出缓冲区满时自动阻塞等待
- * - 检测客户端断开连接（Broken Pipe、Connection Reset 等）
- * - 记录传输指标用于监控
+ * <p>支持背压控制和客户端断开检测： - 使用阻塞式写入，当输出缓冲区满时自动阻塞等待 - 检测客户端断开连接（Broken Pipe、Connection Reset 等） -
+ * 记录传输指标用于监控
  */
 @Slf4j
 @RequiredArgsConstructor

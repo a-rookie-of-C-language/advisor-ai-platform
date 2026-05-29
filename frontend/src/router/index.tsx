@@ -29,6 +29,15 @@ function AdminRoute({ children }: { children: ReactNode }) {
   return role === 'ADMIN' ? <>{children}</> : <Navigate to="/dashboard" replace />
 }
 
+function AdvisorRoute({ children }: { children: ReactNode }) {
+  const role = useAuthStore((s) => s.role)
+  return role === 'ADMIN' || role === 'ADVISOR' ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/dashboard" replace />
+  )
+}
+
 export default function AppRouter() {
   return (
     <Routes>
@@ -44,7 +53,14 @@ export default function AppRouter() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<PageSuspense><Dashboard /></PageSuspense>} />
         <Route path="rag" element={<PageSuspense><RAGPage /></PageSuspense>} />
-        <Route path="chat" element={<PageSuspense><ChatPage /></PageSuspense>} />
+        <Route
+          path="chat"
+          element={
+            <AdvisorRoute>
+              <PageSuspense><ChatPage /></PageSuspense>
+            </AdvisorRoute>
+          }
+        />
         <Route
           path="audit"
           element={

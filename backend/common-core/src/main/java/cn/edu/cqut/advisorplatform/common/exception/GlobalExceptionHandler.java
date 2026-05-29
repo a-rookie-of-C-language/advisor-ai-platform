@@ -20,7 +20,8 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(BadRequestException.class)
   public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException e) {
     log.warn("BadRequest: {}", e.getMessage());
-    return ResponseEntity.badRequest().body(ErrorResponse.of(ErrorCode.BAD_REQUEST_400, e.getMessage()));
+    return ResponseEntity.badRequest()
+        .body(ErrorResponse.of(ErrorCode.BAD_REQUEST_400, e.getMessage()));
   }
 
   @ExceptionHandler(NotFoundException.class)
