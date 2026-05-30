@@ -3,7 +3,6 @@ package cn.edu.cqut.advisorplatform.checkin.controller;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityRequest;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException;
-import cn.edu.cqut.advisorplatform.checkin.record.vo.AvailableCheckInActivityVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInActivityVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.PageResultVO;
@@ -28,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 教师/管理员打卡控制器，提供打卡活动管理、记录查询、异常处理、统计导出等接口。 学生打卡相关接口已移至 {@link StudentCheckInController}。 */
 @RestController
 @RequestMapping("/api/check-in")
 @RequiredArgsConstructor
@@ -41,24 +41,6 @@ public class CheckInController {
       @AuthenticationPrincipal UserPrincipal userPrincipal,
       @Valid @RequestBody CreateCheckInActivityRequest request) {
     return ApiResponseDTO.success(checkInService.createActivity(userPrincipal, request));
-  }
-
-  @GetMapping("/activities/available")
-  public ApiResponseDTO<List<AvailableCheckInActivityVO>> listAvailableActivities(
-      @AuthenticationPrincipal UserPrincipal userPrincipal) {
-    return ApiResponseDTO.success(checkInService.listAvailableActivities(userPrincipal));
-  }
-
-  @PostMapping("/student/{checkInId}")
-  public ApiResponseDTO<String> studentCheckIn(
-      @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @PathVariable("checkInId") String checkInId) {
-    return ApiResponseDTO.success(checkInService.studentCheckIn(userPrincipal, checkInId));
-  }
-
-  @PostMapping("/student")
-  public ApiResponseDTO<String> studentCheckInWithoutActivity() {
-    return ApiResponseDTO.success(checkInService.studentCheckIn((Long) null));
   }
 
   @GetMapping("/records")

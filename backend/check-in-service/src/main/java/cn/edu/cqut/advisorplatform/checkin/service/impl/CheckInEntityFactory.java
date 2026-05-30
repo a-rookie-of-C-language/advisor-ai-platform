@@ -28,6 +28,7 @@ class CheckInEntityFactory {
     activity.setStartTime(request.getStartTime());
     activity.setEndTime(request.getEndTime());
     activity.setStatus(status);
+    activity.setLateThresholdMinutes(request.getLateThresholdMinutes());
     activity.setCreatedAt(now);
     activity.setUpdatedAt(now);
     return activity;

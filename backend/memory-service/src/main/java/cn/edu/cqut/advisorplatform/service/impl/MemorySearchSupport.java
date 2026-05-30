@@ -7,7 +7,10 @@ import cn.edu.cqut.advisorplatform.service.vector.EmbeddingService;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryServiceFactory;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryVectorService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +34,13 @@ public class MemorySearchSupport {
       String vectorStore,
       double hybridVectorWeight,
       double hybridTextWeight) {
+    // Type-weighted retrieval: search each type separately and fuse by weight
+    Map<String, Double> typeWeights = request.getTypeWeights();
+    if (typeWeights != null && !typeWeights.isEmpty()) {
+      return searchWithTypeWeights(
+          request, topK, query, mode, vectorStore, hybridVectorWeight, hybridTextWeight, typeWeights);
+    }
+
     boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
 
     if ("vector".equals(mode) && hasVectorService) {
@@ -109,6 +119,121 @@ public class MemorySearchSupport {
             request.getKbId(),
             query,
             LocalDateTime.now(),
+            PageRequest.of(0, recallK));
+
+    return hybridResultMerger.merge(
+        vectorResults, textResults, topK, hybridVectorWeight, hybridTextWeight);
+  }
+
+  /**
+   * Type-weighted retrieval: search each memory type separately, then fuse results by type weight.
+   */
+  private List<UserMemoryDO> searchWithTypeWeights(
+      MemorySearchRequestDTO request,
+      int topK,
+      String query,
+      String mode,
+      String vectorStore,
+      double hybridVectorWeight,
+      double hybridTextWeight,
+      Map<String, Double> typeWeights) {
+    Map<Long, UserMemoryDO> allItems = new LinkedHashMap<>();
+    Map<Long, Double> fusedScores = new LinkedHashMap<>();
+
+    for (Map.Entry<String, Double> entry : typeWeights.entrySet()) {
+      String memoryType = entry.getKey();
+      double typeWeight = entry.getValue();
+      if (typeWeight <= 0) {
+        continue;
+      }
+
+      // Create a scoped request for this memory type
+      MemorySearchRequestDTO scopedRequest = new MemorySearchRequestDTO();
+      scopedRequest.setUserId(request.getUserId());
+      scopedRequest.setKbId(request.getKbId());
+      scopedRequest.setQuery(request.getQuery());
+      scopedRequest.setTopK(request.getTopK());
+      scopedRequest.setMode(request.getMode());
+
+      List<UserMemoryDO> typeResults;
+      boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
+
+      if ("vector".equals(mode) && hasVectorService) {
+        typeResults = searchByVector(scopedRequest, vectorStore, topK);
+      } else if ("text".equals(mode)) {
+        typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
+      } else if (hasVectorService) {
+        typeResults =
+            searchHybridByType(
+                scopedRequest, query, vectorStore, topK, hybridVectorWeight, hybridTextWeight, memoryType);
+      } else {
+        typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
+      }
+
+      // Filter by memoryType and accumulate scores
+      for (int i = 0; i < typeResults.size(); i++) {
+        UserMemoryDO item = typeResults.get(i);
+        if (!memoryType.equals(item.getMemoryType())) {
+          continue;
+        }
+        allItems.putIfAbsent(item.getId(), item);
+        double rankScore = 1.0 - ((double) i / Math.max(typeResults.size(), 1));
+        double weightedScore = typeWeight * rankScore;
+        fusedScores.merge(item.getId(), weightedScore, Double::sum);
+      }
+    }
+
+    // Sort by fused score and return topK
+    return fusedScores.entrySet().stream()
+        .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+        .limit(topK)
+        .map(entry -> allItems.get(entry.getKey()))
+        .filter(item -> item != null)
+        .toList();
+  }
+
+  private List<UserMemoryDO> searchTextByType(
+      MemorySearchRequestDTO request, String query, int topK, String memoryType) {
+    return userMemoryDao.searchByScopeAndType(
+        request.getUserId(),
+        request.getKbId(),
+        query,
+        LocalDateTime.now(),
+        memoryType,
+        PageRequest.of(0, topK));
+  }
+
+  private List<UserMemoryDO> searchHybridByType(
+      MemorySearchRequestDTO request,
+      String query,
+      String vectorStore,
+      int topK,
+      double hybridVectorWeight,
+      double hybridTextWeight,
+      String memoryType) {
+    int recallK = Math.min(topK * 3, 50);
+
+    List<UserMemoryDO> vectorResults;
+    try {
+      MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
+      double[] queryEmbedding = embeddingService.embed(query);
+      vectorResults =
+          vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, recallK);
+    } catch (Exception exc) {
+      log.warn(
+          "memory_hybrid_vector_fallback userId={}, kbId={}",
+          request.getUserId(),
+          request.getKbId());
+      return searchTextByType(request, query, topK, memoryType);
+    }
+
+    List<UserMemoryDO> textResults =
+        userMemoryDao.searchByScopeAndType(
+            request.getUserId(),
+            request.getKbId(),
+            query,
+            LocalDateTime.now(),
+            memoryType,
             PageRequest.of(0, recallK));
 
     return hybridResultMerger.merge(

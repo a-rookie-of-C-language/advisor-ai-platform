@@ -148,6 +148,7 @@
             start_time,
             end_time,
             status,
+            late_threshold_minutes,
             created_at,
             updated_at
         ) VALUES (
@@ -160,6 +161,7 @@
             #{startTime},
             #{endTime},
             #{status},
+            #{lateThresholdMinutes},
             #{createdAt},
             #{updatedAt}
         )
@@ -183,6 +185,7 @@
                start_time AS startTime,
                end_time AS endTime,
                status,
+               late_threshold_minutes AS lateThresholdMinutes,
                created_at AS createdAt,
                updated_at AS updatedAt
         FROM check_in_activity

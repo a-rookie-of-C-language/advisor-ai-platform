@@ -30,6 +30,25 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       Pageable pageable);
 
   @Query(
+      """
+            SELECT m FROM UserMemoryDO m
+            WHERE m.userId = :userId
+              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND m.isDeleted = false
+              AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (:memoryType IS NULL OR m.memoryType = :memoryType)
+              AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
+            ORDER BY m.updatedAt DESC
+            """)
+  List<UserMemoryDO> searchByScopeAndType(
+      @Param("userId") Long userId,
+      @Param("kbId") Long kbId,
+      @Param("query") String query,
+      @Param("now") LocalDateTime now,
+      @Param("memoryType") String memoryType,
+      Pageable pageable);
+
+  @Query(
       value =
           """
                     SELECT *

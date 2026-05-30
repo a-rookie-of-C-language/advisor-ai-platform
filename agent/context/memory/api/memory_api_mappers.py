@@ -30,6 +30,7 @@ def to_memory_item(data: JsonObject) -> MemoryItem:
         updated_at=parse_datetime(data.get("updatedAt")),
         expires_at=parse_datetime(data.get("expiresAt")),
         tags=data.get("tags") or {},
+        memory_type=str(data.get("memoryType", "semantic")),
     )
 
 

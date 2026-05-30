@@ -40,3 +40,5 @@ advisor:
   jwt:
     secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:}}
     expiration: ${JWT_EXPIRE_MS:86400000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}

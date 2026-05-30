@@ -18,3 +18,4 @@ class MemoryItem:
     updated_at: datetime | None = None
     expires_at: datetime | None = None
     tags: JsonObject = field(default_factory=dict)
+    memory_type: str = "semantic"

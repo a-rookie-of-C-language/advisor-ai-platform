@@ -18,6 +18,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class CheckInDao {
+  private static final int MAX_EXPORT_LIMIT = 10000;
+
   private final StudentCheckInRecordMapper mapper;
   private final CheckInExceptionMapper exceptionMapper;
 
@@ -102,7 +104,8 @@ public class CheckInDao {
 
   public List<CheckInRecordVO> selectRecordsForExport(
       Long studentId, String checkInId, Long teacherUserId, LocalDate begin, LocalDate end) {
-    return mapper.selectCheckInRecords(studentId, checkInId, teacherUserId, begin, end, null, 0);
+    return mapper.selectCheckInRecords(
+        studentId, checkInId, teacherUserId, begin, end, MAX_EXPORT_LIMIT, 0);
   }
 
   public int updateRecordStatus(String checkInId, Long studentId, String status) {

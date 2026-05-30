@@ -45,6 +45,7 @@ public class MemoryCandidateEntityFactory {
     row.setMemoryKey(extractMemoryKey(candidate.getTags()));
     row.setSourceTurnId(candidate.getSourceTurnId());
     row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
+    row.setMemoryType(resolveMemoryType(candidate));
     row.setIsDeleted(false);
     row.setCreatedAt(LocalDateTime.now());
     row.setUpdatedAt(LocalDateTime.now());
@@ -61,6 +62,7 @@ public class MemoryCandidateEntityFactory {
     row.setMemoryKey(extractMemoryKey(candidate.getTags()));
     row.setSourceTurnId(candidate.getSourceTurnId());
     row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
+    row.setMemoryType(resolveMemoryType(candidate));
     row.setUpdatedAt(LocalDateTime.now());
   }
 
@@ -74,5 +76,16 @@ public class MemoryCandidateEntityFactory {
     }
     String value = String.valueOf(raw).trim();
     return value.isEmpty() ? null : value;
+  }
+
+  private String resolveMemoryType(MemoryCandidateItemDTO candidate) {
+    String raw = candidate.getMemoryType();
+    if (raw != null && !raw.trim().isEmpty()) {
+      String normalized = raw.trim().toLowerCase();
+      if ("episodic".equals(normalized)) {
+        return "episodic";
+      }
+    }
+    return "semantic";
   }
 }

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.edu.cqut.advisorplatform.checkin.mapper.CheckInExceptionMapper">
+    <insert id="insertException" parameterType="cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException">
+        INSERT INTO check_in_exception (
+            student_id,
+            check_in_id,
+            exception_type,
+            status,
+            handler_id,
+            handler_note,
+            handled_at,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{studentId},
+            #{checkInId},
+            #{exceptionType},
+            #{status},
+            #{handlerId},
+            #{handlerNote},
+            #{handledAt},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectExceptions" resultType="cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException">
+        SELECT id,
+               student_id AS studentId,
+               check_in_id AS checkInId,
+               exception_type AS exceptionType,
+               status,
+               handler_id AS handlerId,
+               handler_note AS handlerNote,
+               handled_at AS handledAt,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM check_in_exception
+        WHERE 1=1
+        <if test="studentId != null">
+            AND student_id = #{studentId}
+        </if>
+        <if test="checkInId != null and checkInId != ''">
+            AND check_in_id = #{checkInId}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="handlerId != null">
+            AND handler_id = #{handlerId}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectExceptionById" resultType="cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException">
+        SELECT id,
+               student_id AS studentId,
+               check_in_id AS checkInId,
+               exception_type AS exceptionType,
+               status,
+               handler_id AS handlerId,
+               handler_note AS handlerNote,
+               handled_at AS handledAt,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM check_in_exception
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateException">
+        UPDATE check_in_exception
+        SET status = #{status},
+            handler_id = #{handlerId},
+            handler_note = #{handlerNote},
+            handled_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="countExceptionsByStatus" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM check_in_exception
+        WHERE status = #{status}
+    </select>
+
+    <select id="selectPendingExceptions" resultType="cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException">
+        SELECT id,
+               student_id AS studentId,
+               check_in_id AS checkInId,
+               exception_type AS exceptionType,
+               status,
+               handler_id AS handlerId,
+               handler_note AS handlerNote,
+               handled_at AS handledAt,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM check_in_exception
+        WHERE status = 'PENDING'
+        ORDER BY created_at ASC
+    </select>
+</mapper>

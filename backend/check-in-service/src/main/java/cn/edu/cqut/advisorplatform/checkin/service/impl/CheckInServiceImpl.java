@@ -166,8 +166,20 @@ public class CheckInServiceImpl implements CheckInService {
 
     long totalRecords = (long) statistics.get("totalRecords");
     long normalCount = (long) statistics.get("normalCount");
-    double attendanceRate = totalRecords > 0 ? (double) normalCount / totalRecords * 100 : 0;
+    long lateCount = (long) statistics.get("lateCount");
+
+    // 正常出勤率（仅 NORMAL）
+    double normalRate = totalRecords > 0 ? (double) normalCount / totalRecords * 100 : 0;
+    statistics.put("normalRate", Math.round(normalRate * 100.0) / 100.0);
+
+    // 综合出勤率（NORMAL + LATE，即实际到课率）
+    double attendanceRate =
+        totalRecords > 0 ? (double) (normalCount + lateCount) / totalRecords * 100 : 0;
     statistics.put("attendanceRate", Math.round(attendanceRate * 100.0) / 100.0);
+
+    // 迟到率（LATE / 总数）
+    double lateRate = totalRecords > 0 ? (double) lateCount / totalRecords * 100 : 0;
+    statistics.put("lateRate", Math.round(lateRate * 100.0) / 100.0);
 
     return statistics;
   }

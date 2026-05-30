@@ -54,6 +54,9 @@ public class UserMemoryDO {
 
   private LocalDateTime updatedAt;
 
+  @Column(nullable = false, length = 20)
+  private String memoryType = "semantic";
+
   @Column(nullable = false)
   private Integer accessCount = 0;
 
