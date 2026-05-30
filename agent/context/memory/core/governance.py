@@ -55,7 +55,8 @@ class MemoryGovernance:
         return self._query_enable_normalization
 
     def should_write_candidate(self, candidate: MemoryCandidate) -> bool:
-        return bool(candidate.content.strip()) and candidate.confidence >= self._min_confidence
+        """Basic check: content must be non-empty. Confidence filtering is handled by DecisionEngine."""
+        return bool(candidate.content.strip())
 
     def deduplicate(self, candidates: list[MemoryCandidate]) -> list[MemoryCandidate]:
         seen: set[str] = set()

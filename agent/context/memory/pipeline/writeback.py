@@ -8,7 +8,9 @@ from typing import Awaitable, Callable
 
 from context.memory.core.governance import MemoryGovernance
 from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryDecision import DecisionType
 from context.memory.core.WritebackResult import WritebackResult
+from context.memory.pipeline.decision_engine import DecisionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +18,13 @@ Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCa
 
 
 class MemoryWriteback:
-    def __init__(self, governance: MemoryGovernance | None = None) -> None:
+    def __init__(
+        self,
+        governance: MemoryGovernance | None = None,
+        decision_engine: DecisionEngine | None = None,
+    ) -> None:
         self._governance = governance or MemoryGovernance()
+        self._decision_engine = decision_engine or DecisionEngine()
 
     async def extract_candidates(
         self,
@@ -53,17 +60,105 @@ class MemoryWriteback:
         candidates: list[MemoryCandidate],
     ) -> WritebackResult:
         t0 = time.monotonic()
-        filtered = [candidate for candidate in candidates if self._governance.should_write_candidate(candidate)]
+        # Basic content check (confidence filtering is now in DecisionEngine)
+        filtered = [c for c in candidates if self._governance.should_write_candidate(c)]
         if not filtered:
             logger.debug("Writeback skipped (no candidates): user=%d kb=%d", user_id, kb_id)
             return WritebackResult(accepted=0, rejected=0, message="no_candidates")
-        result = await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=filtered)
+
+        accepted = 0
+        ignored = 0
+        updated = 0
+        merged = 0
+        invalidated = 0
+
+        for candidate in filtered:
+            # Query similar memories for decision context
+            similar_memories = await self._find_similar(api_client, user_id, kb_id, candidate)
+
+            # Get decision from engine
+            decision = await self._decision_engine.decide(candidate, similar_memories)
+
+            # Execute decision
+            await self._execute_decision(decision, candidate, api_client, user_id, kb_id)
+
+            if decision.decision == DecisionType.IGNORE:
+                ignored += 1
+            elif decision.decision == DecisionType.ADD:
+                accepted += 1
+            elif decision.decision == DecisionType.UPDATE:
+                updated += 1
+                accepted += 1
+            elif decision.decision == DecisionType.MERGE:
+                merged += 1
+                accepted += 1
+            elif decision.decision == DecisionType.INVALIDATE:
+                invalidated += 1
+                accepted += 1
+
         elapsed_ms = (time.monotonic() - t0) * 1000
         logger.debug(
-            "Writeback done: user=%d kb=%d candidates=%d accepted=%d rejected=%d elapsed_ms=%.1f",
-            user_id, kb_id, len(filtered), result.accepted, result.rejected, elapsed_ms
+            "Writeback done: user=%d kb=%d total=%d accepted=%d ignored=%d updated=%d merged=%d invalidated=%d elapsed_ms=%.1f",
+            user_id, kb_id, len(filtered), accepted, ignored, updated, merged, invalidated, elapsed_ms
         )
-        return result
+        return WritebackResult(
+            accepted=accepted,
+            rejected=ignored,
+            message=f"add={accepted - updated - merged - invalidated}, update={updated}, merge={merged}, invalidate={invalidated}, ignore={ignored}",
+        )
+
+    async def _find_similar(self, api_client, user_id: int, kb_id: int, candidate: MemoryCandidate):
+        """Find similar memories for decision context."""
+        try:
+            items = await api_client.search_long_term(
+                user_id=user_id,
+                kb_id=kb_id,
+                query=candidate.content,
+                top_k=5,
+            )
+            # Filter by same memory_type for more relevant comparison
+            same_type = [m for m in items if m.memory_type == candidate.memory_type]
+            return same_type if same_type else items
+        except Exception as e:
+            logger.warning("Failed to find similar memories: %s", e)
+            return []
+
+    async def _execute_decision(
+        self,
+        decision,
+        candidate: MemoryCandidate,
+        api_client,
+        user_id: int,
+        kb_id: int,
+    ) -> None:
+        """Execute the decision by calling appropriate API."""
+        try:
+            if decision.decision == DecisionType.IGNORE:
+                return
+
+            if decision.decision == DecisionType.ADD:
+                await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
+
+            elif decision.decision == DecisionType.UPDATE:
+                if decision.target_memory_id:
+                    await api_client.update_memory_confidence(decision.target_memory_id, candidate.confidence)
+
+            elif decision.decision == DecisionType.MERGE:
+                if decision.target_memory_id and decision.merged_content:
+                    await api_client.update_memory_content(
+                        decision.target_memory_id,
+                        decision.merged_content,
+                        max(candidate.confidence, 0.8),
+                    )
+
+            elif decision.decision == DecisionType.INVALIDATE:
+                if decision.target_memory_id:
+                    await api_client.invalidate_memory(decision.target_memory_id)
+                # Add the new memory
+                await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
+
+        except Exception as e:
+            logger.warning("Failed to execute decision %s: %s", decision.decision.value, e)
 
     def _extract_rule_candidates(
         self,

@@ -8,8 +8,11 @@ import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO
 import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
+import cn.edu.cqut.advisorplatform.memoryservice.dao.UserMemoryDao;
 import cn.edu.cqut.advisorplatform.memoryservice.entity.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.service.MemoryService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,7 @@ public class MemoryServiceImpl implements MemoryService {
   private final MemoryCandidateUpsertSupport memoryCandidateUpsertSupport;
   private final MemoryTaskSupport memoryTaskSupport;
   private final MemoryCleanupSupport memoryCleanupSupport;
+  private final UserMemoryDao userMemoryDao;
 
   @Value("${advisor.memory.vector-store:pgvector}")
   private String vectorStore;
@@ -112,5 +116,55 @@ public class MemoryServiceImpl implements MemoryService {
   @Transactional
   public void markTaskFailed(Long taskId, String error) {
     memoryTaskSupport.markTaskFailed(taskId, error);
+  }
+
+  @Override
+  @Transactional
+  public void invalidateMemory(Long memoryId) {
+    Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
+    if (optional.isPresent()) {
+      UserMemoryDO row = optional.get();
+      row.setIsDeleted(true);
+      row.setUpdatedAt(LocalDateTime.now());
+      userMemoryDao.save(row);
+      log.info("memory_invalidated id={}", memoryId);
+    } else {
+      log.warn("memory_invalidate_not_found id={}", memoryId);
+    }
+  }
+
+  @Override
+  @Transactional
+  public void updateConfidence(Long memoryId, Double confidence) {
+    Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
+    if (optional.isPresent()) {
+      UserMemoryDO row = optional.get();
+      BigDecimal safeConfidence =
+          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence))).setScale(3);
+      row.setConfidence(safeConfidence);
+      row.setUpdatedAt(LocalDateTime.now());
+      userMemoryDao.save(row);
+      log.info("memory_confidence_updated id={}, confidence={}", memoryId, safeConfidence);
+    } else {
+      log.warn("memory_update_not_found id={}", memoryId);
+    }
+  }
+
+  @Override
+  @Transactional
+  public void updateContent(Long memoryId, String content, Double confidence) {
+    Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
+    if (optional.isPresent()) {
+      UserMemoryDO row = optional.get();
+      row.setContent(content);
+      BigDecimal safeConfidence =
+          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence))).setScale(3);
+      row.setConfidence(safeConfidence);
+      row.setUpdatedAt(LocalDateTime.now());
+      userMemoryDao.save(row);
+      log.info("memory_content_updated id={}", memoryId);
+    } else {
+      log.warn("memory_update_not_found id={}", memoryId);
+    }
   }
 }

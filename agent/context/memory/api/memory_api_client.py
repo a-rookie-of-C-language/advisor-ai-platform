@@ -149,6 +149,26 @@ class MemoryApiClient:
             params["error"] = error
         await self._request("POST", f"/api/memory/task/{task_id}/fail", json=params if params else None)
 
+    async def invalidate_memory(self, memory_id: int) -> None:
+        """Invalidate a memory (soft delete)."""
+        await self._request("POST", f"/api/memory/long-term/{memory_id}/invalidate")
+
+    async def update_memory_confidence(self, memory_id: int, confidence: float) -> None:
+        """Update confidence of an existing memory."""
+        await self._request(
+            "POST",
+            f"/api/memory/long-term/{memory_id}/confidence",
+            json={"confidence": confidence},
+        )
+
+    async def update_memory_content(self, memory_id: int, content: str, confidence: float) -> None:
+        """Update content and confidence of an existing memory (for merge)."""
+        await self._request(
+            "POST",
+            f"/api/memory/long-term/{memory_id}/content",
+            json={"content": content, "confidence": confidence},
+        )
+
     async def _request(self, method: str, path: str, json: JsonObject | None = None) -> JsonObject:
         return await request_memory_api(
             method=method,

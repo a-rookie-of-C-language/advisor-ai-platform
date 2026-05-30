@@ -32,4 +32,10 @@ public interface MemoryService {
   void markTaskDone(Long taskId);
 
   void markTaskFailed(Long taskId, String error);
+
+  void invalidateMemory(Long memoryId);
+
+  void updateConfidence(Long memoryId, Double confidence);
+
+  void updateContent(Long memoryId, String content, Double confidence);
 }
