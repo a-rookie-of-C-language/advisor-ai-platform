@@ -4,6 +4,7 @@ import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryConfidenceUpdateDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryContentUpdateDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryInvalidateSupersedeDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryMarkMergedDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
 import cn.edu.cqut.advisorplatform.dto.request.SessionSummaryUpdateRequestDTO;
@@ -54,6 +55,13 @@ public class MemoryController {
   public ApiResponseDTO<Void> invalidateAndSupersede(
       @PathVariable("id") Long id, @Valid @RequestBody MemoryInvalidateSupersedeDTO request) {
     memoryService.invalidateAndSupersede(id, request.getNewMemoryId());
+    return ApiResponseDTO.success();
+  }
+
+  @PostMapping("/long-term/{id}/mark-merged")
+  public ApiResponseDTO<Void> markAsMerged(
+      @PathVariable("id") Long id, @Valid @RequestBody MemoryMarkMergedDTO request) {
+    memoryService.markAsMerged(id, request.getTargetMemoryId());
     return ApiResponseDTO.success();
   }
 

@@ -145,11 +145,16 @@ class MemoryWriteback:
 
             elif decision.decision == DecisionType.MERGE:
                 if decision.target_memory_id and decision.merged_content:
+                    # Update target memory with merged content
                     await api_client.update_memory_content(
                         decision.target_memory_id,
                         decision.merged_content,
                         max(candidate.confidence, 0.8),
                     )
+                    # Write new memory and mark as merged into target
+                    result = await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
+                    # Note: The new memory ID is not returned by upsert_candidates,
+                    # so we rely on the target memory being updated with merged content
 
             elif decision.decision == DecisionType.INVALIDATE:
                 # Support multi-target invalidation

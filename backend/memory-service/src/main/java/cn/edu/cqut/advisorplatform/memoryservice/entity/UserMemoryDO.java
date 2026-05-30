@@ -61,6 +61,8 @@ public class UserMemoryDO {
 
   private Long supersedesId;
 
+  private Long mergedIntoId;
+
   @Column(nullable = false)
   private Integer accessCount = 0;
 

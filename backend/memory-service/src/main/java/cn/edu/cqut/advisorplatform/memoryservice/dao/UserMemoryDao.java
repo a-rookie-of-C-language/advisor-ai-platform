@@ -18,6 +18,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             WHERE m.userId = :userId
               AND (:kbId = 0 OR m.kbId = :kbId)
               AND m.isDeleted = false
+              AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
               AND (m.validUntil IS NULL OR m.validUntil > :now)
               AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
@@ -36,6 +37,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             WHERE m.userId = :userId
               AND (:kbId = 0 OR m.kbId = :kbId)
               AND m.isDeleted = false
+              AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
               AND (m.validUntil IS NULL OR m.validUntil > :now)
               AND (:memoryType IS NULL OR m.memoryType = :memoryType)
@@ -78,6 +80,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
                     WHERE user_id = :userId
                       AND (:kbId = 0 OR kb_id = :kbId)
                       AND is_deleted = false
+                      AND merged_into_id IS NULL
                       AND (valid_until IS NULL OR valid_until > NOW())
                       AND embedding IS NOT NULL
                     ORDER BY embedding <=> CAST(:embedding AS vector)
@@ -108,6 +111,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             WHERE m.userId = :userId
               AND m.kbId = :kbId
               AND m.isDeleted = false
+              AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
               AND (m.validUntil IS NULL OR m.validUntil > :now)
             """)

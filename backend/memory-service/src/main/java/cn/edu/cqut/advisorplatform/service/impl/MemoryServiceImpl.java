@@ -150,6 +150,21 @@ public class MemoryServiceImpl implements MemoryService {
 
   @Override
   @Transactional
+  public void markAsMerged(Long memoryId, Long targetMemoryId) {
+    Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
+    if (optional.isPresent()) {
+      UserMemoryDO row = optional.get();
+      row.setMergedIntoId(targetMemoryId);
+      row.setUpdatedAt(LocalDateTime.now());
+      userMemoryDao.save(row);
+      log.info("memory_merged id={}, targetId={}", memoryId, targetMemoryId);
+    } else {
+      log.warn("memory_merge_not_found id={}", memoryId);
+    }
+  }
+
+  @Override
+  @Transactional
   public void updateConfidence(Long memoryId, Double confidence) {
     Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
     if (optional.isPresent()) {

@@ -177,6 +177,14 @@ class MemoryApiClient:
             json={"newMemoryId": new_memory_id},
         )
 
+    async def mark_as_merged(self, memory_id: int, target_memory_id: int) -> None:
+        """Mark a memory as merged into target memory."""
+        await self._request(
+            "POST",
+            f"/api/memory/long-term/{memory_id}/mark-merged",
+            json={"targetMemoryId": target_memory_id},
+        )
+
     async def _request(self, method: str, path: str, json: JsonObject | None = None) -> JsonObject:
         return await request_memory_api(
             method=method,

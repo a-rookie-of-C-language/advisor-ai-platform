@@ -20,6 +20,7 @@ def parse_datetime(value: JsonValue) -> datetime | None:
 
 def to_memory_item(data: JsonObject) -> MemoryItem:
     supersedes_id = data.get("supersedesId")
+    merged_into_id = data.get("mergedIntoId")
     return MemoryItem(
         id=int(data.get("id", 0)),
         user_id=int(data.get("userId", 0)),
@@ -34,6 +35,7 @@ def to_memory_item(data: JsonObject) -> MemoryItem:
         memory_type=str(data.get("memoryType", "semantic")),
         valid_until=parse_datetime(data.get("validUntil")),
         supersedes_id=int(supersedes_id) if supersedes_id is not None else None,
+        merged_into_id=int(merged_into_id) if merged_into_id is not None else None,
     )
 
 

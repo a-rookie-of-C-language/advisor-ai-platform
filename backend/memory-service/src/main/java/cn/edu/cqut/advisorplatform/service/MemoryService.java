@@ -37,6 +37,8 @@ public interface MemoryService {
 
   void invalidateAndSupersede(Long oldMemoryId, Long newMemoryId);
 
+  void markAsMerged(Long memoryId, Long targetMemoryId);
+
   void updateConfidence(Long memoryId, Double confidence);
 
   void updateContent(Long memoryId, String content, Double confidence);
