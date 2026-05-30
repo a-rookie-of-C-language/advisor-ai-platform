@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.checkin.client.dto.StudentClassResponse;
 import cn.edu.cqut.advisorplatform.checkin.dao.CheckInDao;
 import cn.edu.cqut.advisorplatform.checkin.enums.ExceptionStatus;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityRequest;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.HandleExceptionRequest;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.CheckInExportRow;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDetailResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
@@ -31,9 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class CheckInServiceImpl implements CheckInService {
   private final CheckInDao checkInDao;
   private final CheckInServiceSupport checkInServiceSupport;
-  private final CheckInEntityFactory entityFactory = new CheckInEntityFactory();
-  private final CheckInDetailResponseFactory detailResponseFactory =
-      new CheckInDetailResponseFactory();
+  private final CheckInEntityFactory entityFactory;
+  private final CheckInDetailResponseFactory detailResponseFactory;
   private final CheckInActivityCreator activityCreator;
   private final StudentCheckInProcessor studentCheckInProcessor;
   private final CheckInRecordQuerySupport recordQuerySupport;
@@ -41,9 +41,13 @@ public class CheckInServiceImpl implements CheckInService {
   public CheckInServiceImpl(
       CheckInDao checkInDao,
       TeacherServiceClient teacherServiceClient,
-      CheckInServiceSupport checkInServiceSupport) {
+      CheckInServiceSupport checkInServiceSupport,
+      CheckInEntityFactory entityFactory,
+      CheckInDetailResponseFactory detailResponseFactory) {
     this.checkInDao = checkInDao;
     this.checkInServiceSupport = checkInServiceSupport;
+    this.entityFactory = entityFactory;
+    this.detailResponseFactory = detailResponseFactory;
     this.activityCreator =
         new CheckInActivityCreator(
             checkInDao, teacherServiceClient, checkInServiceSupport, entityFactory);
@@ -96,14 +100,7 @@ public class CheckInServiceImpl implements CheckInService {
             .findFirst()
             .orElseThrow(() -> new BadRequestException("学生不存在"));
     List<CheckInRecordVO> records =
-        checkInDao.selectRecords(
-            studentId,
-            null,
-            null,
-            LocalDate.now().minusDays(3650),
-            LocalDate.now(),
-            normalizedLimit,
-            0);
+        checkInDao.selectRecords(studentId, null, null, null, null, normalizedLimit, 0);
     return detailResponseFactory.create(summary, records);
   }
 
@@ -121,7 +118,7 @@ public class CheckInServiceImpl implements CheckInService {
   @Override
   @Transactional
   public CheckInException handleException(
-      UserPrincipal userPrincipal, Long exceptionId, String status, String handlerNote) {
+      UserPrincipal userPrincipal, Long exceptionId, HandleExceptionRequest request) {
     checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
 
     CheckInException exception = checkInDao.findExceptionById(exceptionId);
@@ -135,7 +132,8 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     Long handlerId = checkInServiceSupport.resolveUserId(userPrincipal);
-    checkInDao.updateException(exceptionId, status, handlerId, handlerNote);
+    checkInDao.updateException(
+        exceptionId, request.getStatus(), handlerId, request.getHandlerNote());
 
     return checkInDao.findExceptionById(exceptionId);
   }
@@ -151,18 +149,14 @@ public class CheckInServiceImpl implements CheckInService {
   @Override
   public Map<String, Object> getAttendanceStatistics(
       UserPrincipal userPrincipal, LocalDate begin, LocalDate end) {
-    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
-    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
+    checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
 
     Map<String, Object> statistics = new HashMap<>();
-    statistics.put("totalRecords", checkInDao.countRecordsByTeacher(teacherUserId, begin, end));
-    statistics.put(
-        "normalCount", checkInDao.countRecordsByStatus(teacherUserId, "NORMAL", begin, end));
-    statistics.put("lateCount", checkInDao.countRecordsByStatus(teacherUserId, "LATE", begin, end));
-    statistics.put(
-        "absentCount", checkInDao.countRecordsByStatus(teacherUserId, "ABSENT", begin, end));
-    statistics.put(
-        "leaveCount", checkInDao.countRecordsByStatus(teacherUserId, "LEAVE", begin, end));
+    statistics.put("totalRecords", checkInDao.countRecordsByTeacher(null, begin, end));
+    statistics.put("normalCount", checkInDao.countRecordsByStatus(null, "NORMAL", begin, end));
+    statistics.put("lateCount", checkInDao.countRecordsByStatus(null, "LATE", begin, end));
+    statistics.put("absentCount", checkInDao.countRecordsByStatus(null, "ABSENT", begin, end));
+    statistics.put("leaveCount", checkInDao.countRecordsByStatus(null, "LEAVE", begin, end));
 
     long totalRecords = (long) statistics.get("totalRecords");
     long normalCount = (long) statistics.get("normalCount");
@@ -187,9 +181,8 @@ public class CheckInServiceImpl implements CheckInService {
   @Override
   public List<Map<String, Object>> getClassAttendanceStatistics(
       UserPrincipal userPrincipal, LocalDate begin, LocalDate end) {
-    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
-    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
-    return checkInDao.getClassAttendanceStatistics(teacherUserId, begin, end);
+    checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
+    return checkInDao.getClassAttendanceStatistics(null, begin, end);
   }
 
   @Override
@@ -199,11 +192,10 @@ public class CheckInServiceImpl implements CheckInService {
       String checkInId,
       LocalDate begin,
       LocalDate end) {
-    checkInServiceSupport.requireRole(userPrincipal, UserRole.ADMIN);
-    Long teacherUserId = checkInServiceSupport.resolveUserId(userPrincipal);
+    checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
 
     List<CheckInRecordVO> records =
-        checkInDao.selectRecordsForExport(studentId, checkInId, teacherUserId, begin, end);
+        checkInDao.selectRecordsForExport(studentId, checkInId, null, begin, end);
 
     List<CheckInExportRow> rows =
         records.stream()

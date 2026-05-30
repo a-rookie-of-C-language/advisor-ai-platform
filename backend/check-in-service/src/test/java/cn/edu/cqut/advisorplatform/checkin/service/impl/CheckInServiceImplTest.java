@@ -43,7 +43,11 @@ class CheckInServiceImplTest {
   void setUp() {
     CheckInServiceSupport support =
         new CheckInServiceSupport(authServiceClient, studentServiceClient);
-    checkInService = new CheckInServiceImpl(checkInDao, teacherServiceClient, support);
+    CheckInEntityFactory entityFactory = new CheckInEntityFactory();
+    CheckInDetailResponseFactory detailResponseFactory = new CheckInDetailResponseFactory();
+    checkInService =
+        new CheckInServiceImpl(
+            checkInDao, teacherServiceClient, support, entityFactory, detailResponseFactory);
   }
 
   @Test
@@ -85,7 +89,6 @@ class CheckInServiceImplTest {
     when(studentServiceClient.getStudentClass("S001")).thenReturn(student());
     when(checkInDao.findActivity("cid")).thenReturn(activity());
     when(checkInDao.findActivityClassCodes("cid")).thenReturn(List.of("C1"));
-    when(checkInDao.existsRecord("cid", 100L)).thenReturn(false);
     when(checkInDao.insertRecord(any())).thenReturn(1);
 
     String result = checkInService.studentCheckIn(studentUser, "cid");

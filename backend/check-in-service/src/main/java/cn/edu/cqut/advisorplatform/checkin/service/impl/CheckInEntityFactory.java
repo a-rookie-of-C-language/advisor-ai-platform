@@ -6,7 +6,9 @@ import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityReque
 import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInActivity;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.StudentCheckInRecord;
 import java.time.LocalDateTime;
+import org.springframework.stereotype.Component;
 
+@Component
 class CheckInEntityFactory {
 
   CheckInActivity createActivity(

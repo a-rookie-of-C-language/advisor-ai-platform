@@ -44,10 +44,6 @@ class StudentCheckInProcessor {
     if (!checkInDao.findActivityClassCodes(checkInId).contains(student.getClassCode())) {
       throw new ForbiddenException("无权参与该班级打卡");
     }
-    if (checkInDao.existsRecord(checkInId, student.getStudentId())) {
-      return CheckInConstant.ALREADY_CHECKED_IN;
-    }
-
     // 判断考勤状态
     String status = determineAttendanceStatus(now, activity);
 

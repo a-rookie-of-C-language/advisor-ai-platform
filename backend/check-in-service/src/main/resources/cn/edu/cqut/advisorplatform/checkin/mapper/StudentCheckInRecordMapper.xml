@@ -18,7 +18,10 @@
         FROM student_check_in_record r
                  LEFT JOIN check_in_activity a ON a.check_in_id = r.check_in_id
                  LEFT JOIN student_profile s ON s.id = r.student_id
-        WHERE r.check_date BETWEEN #{beginDate} AND #{endDate}
+        <where>
+        <if test="beginDate != null and endDate != null">
+            AND r.check_date BETWEEN #{beginDate} AND #{endDate}
+        </if>
         <if test="studentId != null">
             AND r.student_id = #{studentId}
         </if>
@@ -28,6 +31,7 @@
         <if test="teacherUserId != null">
             AND a.teacher_user_id = #{teacherUserId}
         </if>
+        </where>
         ORDER BY r.check_time DESC, r.student_id ASC
         LIMIT #{pageSize}
         OFFSET #{offset}
@@ -37,7 +41,10 @@
         SELECT COUNT(*)
         FROM student_check_in_record r
                  LEFT JOIN check_in_activity a ON a.check_in_id = r.check_in_id
-        WHERE r.check_date BETWEEN #{beginDate} AND #{endDate}
+        <where>
+        <if test="beginDate != null and endDate != null">
+            AND r.check_date BETWEEN #{beginDate} AND #{endDate}
+        </if>
         <if test="studentId != null">
             AND r.student_id = #{studentId}
         </if>
@@ -50,6 +57,7 @@
         <if test="status != null and status != ''">
             AND r.status = #{status}
         </if>
+        </where>
     </select>
 
     <select id="selectClassAttendanceStatistics"
@@ -64,7 +72,9 @@
                  LEFT JOIN check_in_activity a ON a.check_in_id = r.check_in_id
                  LEFT JOIN student_profile s ON s.id = r.student_id
         WHERE r.check_date BETWEEN #{beginDate} AND #{endDate}
+        <if test="teacherUserId != null">
           AND a.teacher_user_id = #{teacherUserId}
+        </if>
         GROUP BY COALESCE(r.class_code, s.class_code)
         ORDER BY COALESCE(r.class_code, s.class_code) ASC
     </select>

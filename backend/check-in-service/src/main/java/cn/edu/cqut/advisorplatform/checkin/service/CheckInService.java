@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.checkin.service;
 
 import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityRequest;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.HandleExceptionRequest;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDetailResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException;
@@ -39,7 +40,7 @@ public interface CheckInService {
 
   // 异常处理
   CheckInException handleException(
-      UserPrincipal userPrincipal, Long exceptionId, String status, String handlerNote);
+      UserPrincipal userPrincipal, Long exceptionId, HandleExceptionRequest request);
 
   List<CheckInException> listExceptions(
       UserPrincipal userPrincipal, Long studentId, String checkInId, String status);

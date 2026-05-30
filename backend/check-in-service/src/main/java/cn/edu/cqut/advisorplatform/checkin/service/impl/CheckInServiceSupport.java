@@ -35,6 +35,18 @@ public class CheckInServiceSupport {
     }
   }
 
+  public void requireAnyRole(UserPrincipal userPrincipal, UserRole... roles) {
+    if (userPrincipal == null) {
+      throw new ForbiddenException("无权执行该操作");
+    }
+    for (UserRole role : roles) {
+      if (userPrincipal.getRole() == role) {
+        return;
+      }
+    }
+    throw new ForbiddenException("无权执行该操作");
+  }
+
   public StudentClassResponse requireCurrentStudent(UserPrincipal userPrincipal) {
     UserIdentityResponse identity = requireIdentity(userPrincipal.getId(), "STUDENT");
     StudentClassResponse student = studentServiceClient.getStudentClass(identity.getIdentityNo());
@@ -76,7 +88,7 @@ public class CheckInServiceSupport {
   }
 
   public LocalDate[] normalizeDateRange(LocalDate begin, LocalDate end) {
-    LocalDate normalizedBegin = begin == null ? LocalDate.now() : begin;
+    LocalDate normalizedBegin = begin == null ? LocalDate.now().minusDays(6) : begin;
     LocalDate normalizedEnd = end == null ? normalizedBegin : end;
     if (normalizedBegin.isAfter(normalizedEnd)) {
       throw new BadRequestException("开始日期不能晚于结束日期");

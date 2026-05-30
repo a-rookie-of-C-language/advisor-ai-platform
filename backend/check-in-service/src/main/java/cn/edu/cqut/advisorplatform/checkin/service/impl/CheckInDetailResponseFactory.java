@@ -5,7 +5,9 @@ import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDet
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInSummaryResponse;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import java.util.List;
+import org.springframework.stereotype.Component;
 
+@Component
 class CheckInDetailResponseFactory {
 
   StudentCheckInDetailResponse create(

@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.checkin.controller;
 
 import cn.edu.cqut.advisorplatform.checkin.record.dto.CreateCheckInActivityRequest;
+import cn.edu.cqut.advisorplatform.checkin.record.dto.HandleExceptionRequest;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.checkin.record.entity.CheckInException;
 import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInActivityVO;
@@ -64,10 +65,9 @@ public class CheckInController {
   public ApiResponseDTO<CheckInException> handleException(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
       @PathVariable("exceptionId") Long exceptionId,
-      @RequestBody Map<String, String> request) {
+      @Valid @RequestBody HandleExceptionRequest request) {
     return ApiResponseDTO.success(
-        checkInService.handleException(
-            userPrincipal, exceptionId, request.get("status"), request.get("handlerNote")));
+        checkInService.handleException(userPrincipal, exceptionId, request));
   }
 
   @GetMapping("/exceptions")
@@ -118,7 +118,9 @@ public class CheckInController {
 
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=attendance.xlsx")
-        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
         .body(data);
   }
 }
