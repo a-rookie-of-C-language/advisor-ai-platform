@@ -23,6 +23,18 @@ from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
 logger = logging.getLogger(__name__)
 
+# 指标名称中英文映射
+METRIC_NAME_MAP = {
+    "Faithfulness": "忠实度",
+    "Answer Relevancy": "答案相关性",
+    "Contextual Precision": "上下文精度",
+    "Contextual Recall": "上下文召回率",
+    "Hallucination": "幻觉检测",
+    "Bias": "偏见检测",
+    "Toxicity": "毒性检测",
+    # GEval 指标已经是中文名称
+}
+
 
 class DeepEvalMetrics:
     """DeepEval 指标集合。
@@ -75,17 +87,29 @@ class DeepEvalMetrics:
             threshold=self.threshold,
         )
 
-        # 自定义 G-Eval 指标
+        # 自定义 G-Eval 指标（使用中文评估步骤）
         self.relevance = GEval(
-            name="Relevance",
+            name="相关性",
             criteria="评估回答与问题的相关程度，是否准确回答了用户的问题",
+            evaluation_steps=[
+                "识别输入中的核心问题或意图",
+                "评估实际输出是否直接回应了输入中的核心问题",
+                "检查实际输出中是否存在与问题无关的内容",
+                "综合判断回答的相关程度"
+            ],
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
             model=self.model,
             threshold=self.threshold,
         )
         self.coherence = GEval(
-            name="Coherence",
+            name="连贯性",
             criteria="评估回答的连贯性和逻辑性，语句是否通顺、结构是否清晰",
+            evaluation_steps=[
+                "检查语句是否通顺，语法正确，无断句或生硬表达",
+                "评估逻辑连贯性，观点之间是否有合理的过渡和推理",
+                "审查结构清晰度，内容组织是否有序，如分段、层次分明",
+                "综合判断回答的整体连贯性"
+            ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             model=self.model,
             threshold=self.threshold,
@@ -213,12 +237,16 @@ class DeepEvalMetrics:
             results: DeepEval 评估结果
 
         Returns:
-            包含各指标评分、原因和通过状态的字典
+            包含各指标评分、原因和通过状态的字典（指标名称为中文）
         """
         scores: dict[str, Any] = {}
         for test_result in results.test_results:
             for metric_data in test_result.metrics_data:
-                scores[metric_data.name] = {
+                # 将指标名称转换为中文
+                metric_name = METRIC_NAME_MAP.get(metric_data.name, metric_data.name)
+                # 移除可能的 [GEval] 后缀
+                metric_name = metric_name.replace(" [GEval]", "")
+                scores[metric_name] = {
                     "score": metric_data.score,
                     "reason": metric_data.reason,
                     "success": metric_data.success,

@@ -95,20 +95,20 @@ class EvalReport:
             **{dim: round(sum(v) / len(v), 2) if v else 0.0 for dim, v in e2e_dims.items()},
         }
 
-        # DeepEval 指标汇总
+        # DeepEval 指标汇总（中文指标名称）
         deepeval_metric_names = [
             # RAG 质量
-            "Faithfulness",
-            "Answer Relevancy",
-            "Contextual Precision",
-            "Contextual Recall",
+            "忠实度",
+            "答案相关性",
+            "上下文精度",
+            "上下文召回率",
             # 安全性
-            "Hallucination",
-            "Bias",
-            "Toxicity",
+            "幻觉检测",
+            "偏见检测",
+            "毒性检测",
             # 回答质量
-            "Relevance",
-            "Coherence",
+            "相关性",
+            "连贯性",
         ]
         deepeval_metrics: dict[str, list[float]] = {name: [] for name in deepeval_metric_names}
         deepeval_avg_scores = []

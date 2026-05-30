@@ -94,34 +94,34 @@ class TestRAGQuality:
     def test_faithfulness(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试忠实度：答案是否基于检索到的上下文。"""
         scores = metrics.evaluate_rag(rag_test_case)
-        assert "Faithfulness" in scores
-        assert scores["Faithfulness"]["score"] >= 0.8, (
-            f"忠实度分数 {scores['Faithfulness']['score']} 低于阈值 0.8"
+        assert "忠实度" in scores
+        assert scores["忠实度"]["score"] >= 0.8, (
+            f"忠实度分数 {scores['忠实度']['score']} 低于阈值 0.8"
         )
 
     def test_answer_relevancy(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试答案相关性：答案与问题的相关程度。"""
         scores = metrics.evaluate_rag(rag_test_case)
-        assert "Answer Relevancy" in scores
-        assert scores["Answer Relevancy"]["score"] >= 0.8, (
-            f"答案相关性分数 {scores['Answer Relevancy']['score']} 低于阈值 0.8"
+        assert "答案相关性" in scores
+        assert scores["答案相关性"]["score"] >= 0.8, (
+            f"答案相关性分数 {scores['答案相关性']['score']} 低于阈值 0.8"
         )
 
     def test_contextual_precision(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试上下文精度：检索到的上下文是否与问题相关。"""
         scores = metrics.evaluate_rag(rag_test_case)
-        assert "Contextual Precision" in scores
-        assert scores["Contextual Precision"]["score"] >= 0.7, (
-            f"上下文精度分数 {scores['Contextual Precision']['score']} 低于阈值 0.7"
+        assert "上下文精度" in scores
+        assert scores["上下文精度"]["score"] >= 0.7, (
+            f"上下文精度分数 {scores['上下文精度']['score']} 低于阈值 0.7"
         )
 
     def test_contextual_recall(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试上下文召回：期望答案是否被检索到的上下文覆盖。"""
         scores = metrics.evaluate_rag(rag_test_case)
-        assert "Contextual Recall" in scores
+        assert "上下文召回率" in scores
         # 补充检索上下文后，提高阈值
-        assert scores["Contextual Recall"]["score"] >= 0.7, (
-            f"上下文召口分数 {scores['Contextual Recall']['score']} 低于阈值 0.7"
+        assert scores["上下文召回率"]["score"] >= 0.7, (
+            f"上下文召回率分数 {scores['上下文召回率']['score']} 低于阈值 0.7"
         )
 
 
@@ -131,37 +131,37 @@ class TestSafety:
     def test_no_hallucination(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无幻觉：答案不应包含未在上下文中出现的信息。
 
-        注意：Hallucination 指标越低越好，0.0 表示无幻觉。
+        注意：幻觉检测指标越低越好，0.0 表示无幻觉。
         """
         scores = metrics.evaluate_safety(sample_test_case)
-        assert "Hallucination" in scores
-        # Hallucination 越低越好，success=True 表示通过阈值
-        assert scores["Hallucination"]["success"], (
-            f"幻觉检测分数 {scores['Hallucination']['score']} 未通过阈值"
+        assert "幻觉检测" in scores
+        # 幻觉检测越低越好，success=True 表示通过阈值
+        assert scores["幻觉检测"]["success"], (
+            f"幻觉检测分数 {scores['幻觉检测']['score']} 未通过阈值"
         )
 
     def test_no_bias(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无偏见：答案不应包含歧视性或偏见内容。
 
-        注意：Bias 指标越低越好，0.0 表示无偏见。
+        注意：偏见检测指标越低越好，0.0 表示无偏见。
         """
         scores = metrics.evaluate_safety(sample_test_case)
-        assert "Bias" in scores
-        # Bias 越低越好，success=True 表示通过阈值
-        assert scores["Bias"]["success"], (
-            f"偏见检测分数 {scores['Bias']['score']} 未通过阈值"
+        assert "偏见检测" in scores
+        # 偏见检测越低越好，success=True 表示通过阈值
+        assert scores["偏见检测"]["success"], (
+            f"偏见检测分数 {scores['偏见检测']['score']} 未通过阈值"
         )
 
     def test_no_toxicity(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无毒性：答案不应包含有害或攻击性内容。
 
-        注意：Toxicity 指标越低越好，0.0 表示无毒性。
+        注意：毒性检测指标越低越好，0.0 表示无毒性。
         """
         scores = metrics.evaluate_safety(sample_test_case)
-        assert "Toxicity" in scores
-        # Toxicity 越低越好，success=True 表示通过阈值
-        assert scores["Toxicity"]["success"], (
-            f"毒性检测分数 {scores['Toxicity']['score']} 未通过阈值"
+        assert "毒性检测" in scores
+        # 毒性检测越低越好，success=True 表示通过阈值
+        assert scores["毒性检测"]["success"], (
+            f"毒性检测分数 {scores['毒性检测']['score']} 未通过阈值"
         )
 
 
@@ -171,22 +171,18 @@ class TestQuality:
     def test_relevance(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试相关性：回答是否与问题相关。"""
         scores = metrics.evaluate_quality(sample_test_case)
-        # DeepEval GEval 指标名称带有 [GEval] 后缀
-        relevance_key = next((k for k in scores if "Relevance" in k), None)
-        assert relevance_key is not None, f"缺少 Relevance 指标，当前指标: {list(scores.keys())}"
-        assert scores[relevance_key]["score"] >= 0.8, (
-            f"相关性分数 {scores[relevance_key]['score']} 低于阈值 0.8"
+        assert "相关性" in scores
+        assert scores["相关性"]["score"] >= 0.8, (
+            f"相关性分数 {scores['相关性']['score']} 低于阈值 0.8"
         )
 
     def test_coherence(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试连贯性：回答是否通顺、逻辑清晰。"""
         scores = metrics.evaluate_quality(sample_test_case)
-        # DeepEval GEval 指标名称带有 [GEval] 后缀
-        coherence_key = next((k for k in scores if "Coherence" in k), None)
-        assert coherence_key is not None, f"缺少 Coherence 指标，当前指标: {list(scores.keys())}"
+        assert "连贯性" in scores
         # 优化答案格式后，提高阈值
-        assert scores[coherence_key]["score"] >= 0.6, (
-            f"连贯性分数 {scores[coherence_key]['score']} 低于阈值 0.6"
+        assert scores["连贯性"]["score"] >= 0.6, (
+            f"连贯性分数 {scores['连贯性']['score']} 低于阈值 0.6"
         )
 
 
@@ -197,21 +193,20 @@ class TestIntegration:
         """测试全量评估。"""
         scores = metrics.evaluate_all(sample_test_case)
 
-        # 验证核心指标都已返回（使用模糊匹配处理 GEval 后缀）
-        expected_metric_keywords = [
-            "Faithfulness",
-            "Answer Relevancy",
-            "Contextual Precision",
-            "Contextual Recall",
-            "Hallucination",
-            "Bias",
-            "Toxicity",
-            "Relevance",
-            "Coherence",
+        # 验证核心指标都已返回（中文指标名称）
+        expected_metric_names = [
+            "忠实度",
+            "答案相关性",
+            "上下文精度",
+            "上下文召回率",
+            "幻觉检测",
+            "偏见检测",
+            "毒性检测",
+            "相关性",
+            "连贯性",
         ]
-        for keyword in expected_metric_keywords:
-            found = any(keyword in key for key in scores.keys())
-            assert found, f"缺少指标: {keyword}，当前指标: {list(scores.keys())}"
+        for metric_name in expected_metric_names:
+            assert metric_name in scores, f"缺少指标: {metric_name}，当前指标: {list(scores.keys())}"
 
         # 验证每个指标都有 score 和 reason
         for metric_name, metric_data in scores.items():
