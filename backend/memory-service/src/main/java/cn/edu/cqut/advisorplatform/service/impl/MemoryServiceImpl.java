@@ -124,12 +124,27 @@ public class MemoryServiceImpl implements MemoryService {
     Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
     if (optional.isPresent()) {
       UserMemoryDO row = optional.get();
-      row.setIsDeleted(true);
+      row.setValidUntil(LocalDateTime.now());
       row.setUpdatedAt(LocalDateTime.now());
       userMemoryDao.save(row);
       log.info("memory_invalidated id={}", memoryId);
     } else {
       log.warn("memory_invalidate_not_found id={}", memoryId);
+    }
+  }
+
+  @Override
+  @Transactional
+  public void invalidateAndSupersede(Long oldMemoryId, Long newMemoryId) {
+    // Set valid_until on old memory
+    invalidateMemory(oldMemoryId);
+    // Set supersedes_id on new memory
+    Optional<UserMemoryDO> newMemory = userMemoryDao.findById(newMemoryId);
+    if (newMemory.isPresent()) {
+      UserMemoryDO row = newMemory.get();
+      row.setSupersedesId(oldMemoryId);
+      userMemoryDao.save(row);
+      log.info("memory_supersede oldId={}, newId={}", oldMemoryId, newMemoryId);
     }
   }
 

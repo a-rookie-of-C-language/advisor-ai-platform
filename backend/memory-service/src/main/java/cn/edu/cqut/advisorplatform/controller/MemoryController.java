@@ -3,6 +3,7 @@ package cn.edu.cqut.advisorplatform.controller;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryConfidenceUpdateDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryContentUpdateDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryInvalidateSupersedeDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
 import cn.edu.cqut.advisorplatform.dto.request.SessionSummaryUpdateRequestDTO;
@@ -46,6 +47,13 @@ public class MemoryController {
   @PostMapping("/long-term/{id}/invalidate")
   public ApiResponseDTO<Void> invalidateMemory(@PathVariable("id") Long id) {
     memoryService.invalidateMemory(id);
+    return ApiResponseDTO.success();
+  }
+
+  @PostMapping("/long-term/{id}/invalidate-and-supersede")
+  public ApiResponseDTO<Void> invalidateAndSupersede(
+      @PathVariable("id") Long id, @Valid @RequestBody MemoryInvalidateSupersedeDTO request) {
+    memoryService.invalidateAndSupersede(id, request.getNewMemoryId());
     return ApiResponseDTO.success();
   }
 

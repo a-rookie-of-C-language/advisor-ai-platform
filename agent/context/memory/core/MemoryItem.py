@@ -19,3 +19,5 @@ class MemoryItem:
     expires_at: datetime | None = None
     tags: JsonObject = field(default_factory=dict)
     memory_type: str = "semantic"
+    valid_until: datetime | None = None
+    supersedes_id: int | None = None

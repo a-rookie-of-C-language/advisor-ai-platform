@@ -19,6 +19,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
               AND (:kbId = 0 OR m.kbId = :kbId)
               AND m.isDeleted = false
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
               AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
             ORDER BY m.updatedAt DESC
             """)
@@ -36,6 +37,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
               AND (:kbId = 0 OR m.kbId = :kbId)
               AND m.isDeleted = false
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
               AND (:memoryType IS NULL OR m.memoryType = :memoryType)
               AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
             ORDER BY m.updatedAt DESC
@@ -76,6 +78,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
                     WHERE user_id = :userId
                       AND (:kbId = 0 OR kb_id = :kbId)
                       AND is_deleted = false
+                      AND (valid_until IS NULL OR valid_until > NOW())
                       AND embedding IS NOT NULL
                     ORDER BY embedding <=> CAST(:embedding AS vector)
                     LIMIT :topK
@@ -106,6 +109,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
               AND m.kbId = :kbId
               AND m.isDeleted = false
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
             """)
   long countActiveByUserAndKb(
       @Param("userId") Long userId, @Param("kbId") Long kbId, @Param("now") LocalDateTime now);

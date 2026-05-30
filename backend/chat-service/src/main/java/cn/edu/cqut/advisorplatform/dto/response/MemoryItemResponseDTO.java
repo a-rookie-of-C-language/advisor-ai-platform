@@ -22,6 +22,8 @@ public class MemoryItemResponseDTO {
   private LocalDateTime expiresAt;
   private Map<String, Object> tags;
   private String memoryType;
+  private LocalDateTime validUntil;
+  private Long supersedesId;
 
   public static MemoryItemResponseDTO from(UserMemoryDO entity) {
     return new MemoryItemResponseDTO(
@@ -35,6 +37,8 @@ public class MemoryItemResponseDTO {
         entity.getUpdatedAt(),
         entity.getExpiresAt(),
         entity.getTags(),
-        entity.getMemoryType());
+        entity.getMemoryType(),
+        entity.getValidUntil(),
+        entity.getSupersedesId());
   }
 }

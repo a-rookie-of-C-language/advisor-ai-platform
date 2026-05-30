@@ -169,6 +169,14 @@ class MemoryApiClient:
             json={"content": content, "confidence": confidence},
         )
 
+    async def invalidate_and_supersede(self, old_memory_id: int, new_memory_id: int) -> None:
+        """Invalidate old memory and set supersedes_id on new memory."""
+        await self._request(
+            "POST",
+            f"/api/memory/long-term/{old_memory_id}/invalidate-and-supersede",
+            json={"newMemoryId": new_memory_id},
+        )
+
     async def _request(self, method: str, path: str, json: JsonObject | None = None) -> JsonObject:
         return await request_memory_api(
             method=method,

@@ -152,8 +152,12 @@ class MemoryWriteback:
                     )
 
             elif decision.decision == DecisionType.INVALIDATE:
-                if decision.target_memory_id:
-                    await api_client.invalidate_memory(decision.target_memory_id)
+                # Support multi-target invalidation
+                target_ids = decision.target_memory_ids or []
+                if decision.target_memory_id and decision.target_memory_id not in target_ids:
+                    target_ids.append(decision.target_memory_id)
+                for old_id in target_ids:
+                    await api_client.invalidate_memory(old_id)
                 # Add the new memory
                 await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
 

@@ -48,6 +48,7 @@ _DECISION_PROMPT = """你是一个记忆管理专家。根据候选记忆和已�
 3. 如果候选记忆和已有记忆矛盾 → invalidate（使旧记忆失效）+ add（添加新记忆）
 4. 如果候选记忆是全新的、有长期价值的 → add
 5. 如果候选记忆没有长期价值（闲聊、临时信息、问候）→ ignore
+6. invalidate 时，target_memory_ids 列出所有需要失效的旧记忆 ID
 
 输入：
 候选记忆: {candidate_content}
@@ -57,7 +58,7 @@ _DECISION_PROMPT = """你是一个记忆管理专家。根据候选记忆和已�
 {similar_memories_text}
 
 返回严格 JSON，不要有其他文字:
-{{"decision": "add|update|merge|invalidate|ignore", "reason": "决策原因", "target_memory_id": null或数字ID, "merged_content": null或"合并后的文本"}}
+{{"decision": "add|update|merge|invalidate|ignore", "reason": "决策原因", "target_memory_id": null或数字ID, "target_memory_ids": null或[ID数组], "merged_content": null或"合并后的文本"}}
 """
 
 
@@ -229,6 +230,16 @@ class DecisionEngine:
             except (ValueError, TypeError):
                 target_id = None
 
+        # Parse target_memory_ids (list of IDs for multi-target invalidation)
+        target_ids = data.get("target_memory_ids")
+        if target_ids is not None and isinstance(target_ids, list):
+            try:
+                target_ids = [int(tid) for tid in target_ids if tid is not None]
+            except (ValueError, TypeError):
+                target_ids = None
+        else:
+            target_ids = None
+
         merged_content = data.get("merged_content")
         if merged_content is not None:
             merged_content = str(merged_content).strip()
@@ -239,6 +250,7 @@ class DecisionEngine:
             decision=decision_type,
             reason=reason,
             target_memory_id=target_id,
+            target_memory_ids=target_ids,
             merged_content=merged_content,
         )
 

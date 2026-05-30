@@ -21,4 +21,5 @@ class MemoryDecision:
     decision: DecisionType
     reason: str
     target_memory_id: int | None = None
+    target_memory_ids: list[int] | None = None
     merged_content: str | None = None

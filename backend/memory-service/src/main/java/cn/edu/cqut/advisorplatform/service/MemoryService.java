@@ -35,6 +35,8 @@ public interface MemoryService {
 
   void invalidateMemory(Long memoryId);
 
+  void invalidateAndSupersede(Long oldMemoryId, Long newMemoryId);
+
   void updateConfidence(Long memoryId, Double confidence);
 
   void updateContent(Long memoryId, String content, Double confidence);
