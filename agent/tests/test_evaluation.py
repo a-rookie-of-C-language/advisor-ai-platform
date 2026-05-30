@@ -37,9 +37,13 @@ def sample_test_case(metrics: DeepEvalMetrics) -> LLMTestCase:
     return metrics.create_test_case(
         input_query="高校辅导员的主要职责是什么",
         actual_output=(
-            "辅导员主要职责包括思想理论教育和价值引领、党团和班级建设、"
-            "学风建设、学生日常事务管理、心理健康教育与咨询、"
-            "网络思想政治教育、校园危机事件应对、职业规划与就业创业指导。"
+            "辅导员的主要职责涵盖以下几个方面：\n\n"
+            "首先，在思想引领方面，辅导员承担思想理论教育和价值引领的核心任务；\n\n"
+            "其次，在组织建设方面，负责党团和班级建设工作；\n\n"
+            "此外，在学生发展方面，辅导员还需关注学风建设、心理健康教育、"
+            "职业规划与就业创业指导等；\n\n"
+            "最后，在日常管理方面，处理学生日常事务、应对校园危机事件，"
+            "并开展理论和实践研究。"
         ),
         expected_output=(
             "辅导员主要职责包括思想理论教育和价值引领、党团和班级建设、"
@@ -59,18 +63,27 @@ def rag_test_case(metrics: DeepEvalMetrics) -> LLMTestCase:
     return metrics.create_test_case(
         input_query="学生资助政策有哪些",
         actual_output=(
-            "学生资助政策包括：国家奖学金、国家励志奖学金、国家助学金、"
-            "国家助学贷款、勤工助学、学费减免、绿色通道等。"
+            "学生资助政策主要包括以下几类：\n\n"
+            "1. 国家奖学金：为了激励学生勤奋学习、努力进取；\n"
+            "2. 国家励志奖学金：用于奖励资助品学兼优的家庭经济困难学生；\n"
+            "3. 国家助学金：用于资助家庭经济困难学生的生活费用开支；\n"
+            "4. 国家助学贷款：由政府主导、财政贴息，帮助学生解决学费问题；\n"
+            "5. 勤工助学：学校组织学生参加校内的助教、助研、助管等工作；\n"
+            "6. 学费减免：对特殊困难学生实行减免学费政策；\n"
+            "7. 绿色通道：确保家庭经济困难新生顺利入学。"
         ),
         expected_output=(
-            "学生资助政策包括：国家奖学金、国家励志奖学金、国家助学金、"
+            "学生资助政策主要包括国家奖学金、国家励志奖学金、国家助学金、"
             "国家助学贷款、勤工助学、学费减免、绿色通道等。"
-            "不同资助项目有不同的申请条件和标准。"
         ),
         retrieval_context=[
             "国家奖学金是为了激励学生勤奋学习、努力进取，在德、智、体、美等方面全面发展。",
+            "国家励志奖学金用于奖励资助品学兼优的家庭经济困难学生。",
             "国家助学金用于资助家庭经济困难学生的生活费用开支。",
             "国家助学贷款是由政府主导、财政贴息、财政和高校共同给予银行一定风险补偿金。",
+            "勤工助学是学校组织学生参加校内的助教、助研、助管、后勤服务等工作。",
+            "学费减免是对特殊困难学生实行减免学费政策。",
+            "绿色通道是确保家庭经济困难新生顺利入学的资助措施。",
         ],
     )
 
@@ -106,9 +119,9 @@ class TestRAGQuality:
         """测试上下文召回：期望答案是否被检索到的上下文覆盖。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "Contextual Recall" in scores
-        # 降低阈值到 0.5，因为测试用例的期望答案包含检索上下文未完全覆盖的内容
-        assert scores["Contextual Recall"]["score"] >= 0.5, (
-            f"上下文召口分数 {scores['Contextual Recall']['score']} 低于阈值 0.5"
+        # 补充检索上下文后，提高阈值
+        assert scores["Contextual Recall"]["score"] >= 0.7, (
+            f"上下文召口分数 {scores['Contextual Recall']['score']} 低于阈值 0.7"
         )
 
 
@@ -171,9 +184,9 @@ class TestQuality:
         # DeepEval GEval 指标名称带有 [GEval] 后缀
         coherence_key = next((k for k in scores if "Coherence" in k), None)
         assert coherence_key is not None, f"缺少 Coherence 指标，当前指标: {list(scores.keys())}"
-        # Coherence 分数较低是正常的，降低阈值
-        assert scores[coherence_key]["score"] >= 0.3, (
-            f"连贯性分数 {scores[coherence_key]['score']} 低于阈值 0.3"
+        # 优化答案格式后，提高阈值
+        assert scores[coherence_key]["score"] >= 0.6, (
+            f"连贯性分数 {scores[coherence_key]['score']} 低于阈值 0.6"
         )
 
 
