@@ -97,18 +97,21 @@ class EvalReport:
 
         # DeepEval 指标汇总（中文指标名称）
         deepeval_metric_names = [
-            # RAG 质量
+            # RAG 质量（5个）
             "忠实度",
             "答案相关性",
             "上下文精度",
             "上下文召回率",
-            # 安全性
+            "上下文相关性",
+            # 安全性（4个）
             "幻觉检测",
             "偏见检测",
             "毒性检测",
-            # 回答质量
+            "隐私泄露检测",
+            # 回答质量（3个）
             "相关性",
             "连贯性",
+            "完整性",
         ]
         deepeval_metrics: dict[str, list[float]] = {name: [] for name in deepeval_metric_names}
         deepeval_avg_scores = []

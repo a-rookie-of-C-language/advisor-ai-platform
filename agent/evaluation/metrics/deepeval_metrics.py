@@ -14,9 +14,11 @@ from deepeval.metrics import (
     BiasMetric,
     ContextualPrecisionMetric,
     ContextualRecallMetric,
+    ContextualRelevancyMetric,
     FaithfulnessMetric,
     GEval,
     HallucinationMetric,
+    PIILeakageMetric,
     ToxicityMetric,
 )
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
@@ -25,13 +27,17 @@ logger = logging.getLogger(__name__)
 
 # 指标名称中英文映射
 METRIC_NAME_MAP = {
+    # RAG 质量指标
     "Faithfulness": "忠实度",
     "Answer Relevancy": "答案相关性",
     "Contextual Precision": "上下文精度",
     "Contextual Recall": "上下文召回率",
+    "Contextual Relevancy": "上下文相关性",
+    # 安全指标
     "Hallucination": "幻觉检测",
     "Bias": "偏见检测",
     "Toxicity": "毒性检测",
+    "PII Leakage": "隐私泄露检测",
     # GEval 指标已经是中文名称
 }
 
@@ -55,7 +61,7 @@ class DeepEvalMetrics:
 
     def _init_metrics(self) -> None:
         """初始化所有指标。"""
-        # RAG 质量指标
+        # RAG 质量指标（5个）
         self.faithfulness = FaithfulnessMetric(
             model=self.model,
             threshold=self.threshold,
@@ -72,8 +78,12 @@ class DeepEvalMetrics:
             model=self.model,
             threshold=self.threshold,
         )
+        self.contextual_relevancy = ContextualRelevancyMetric(
+            model=self.model,
+            threshold=self.threshold,
+        )
 
-        # 安全指标
+        # 安全指标（4个）
         self.hallucination = HallucinationMetric(
             model=self.model,
             threshold=self.threshold,
@@ -86,8 +96,12 @@ class DeepEvalMetrics:
             model=self.model,
             threshold=self.threshold,
         )
+        self.pii_leakage = PIILeakageMetric(
+            model=self.model,
+            threshold=self.threshold,
+        )
 
-        # 自定义 G-Eval 指标（使用中文评估步骤）
+        # 自定义 G-Eval 指标（使用中文评估步骤，3个）
         self.relevance = GEval(
             name="相关性",
             criteria="评估回答与问题的相关程度，是否准确回答了用户的问题",
@@ -111,6 +125,19 @@ class DeepEvalMetrics:
                 "综合判断回答的整体连贯性"
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            model=self.model,
+            threshold=self.threshold,
+        )
+        self.completeness = GEval(
+            name="完整性",
+            criteria="评估回答是否完整覆盖了问题的所有方面",
+            evaluation_steps=[
+                "识别问题涉及的所有方面",
+                "检查回答是否覆盖了每个方面",
+                "评估是否有遗漏的重要信息",
+                "综合判断回答的完整程度"
+            ],
+            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.EXPECTED_OUTPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
             model=self.model,
             threshold=self.threshold,
         )
@@ -207,6 +234,11 @@ class DeepEvalMetrics:
 
         包含 RAG 质量、安全性和回答质量的所有指标。
 
+        评估指标（共 12 个）：
+        - RAG 质量（5个）：忠实度、答案相关性、上下文精度、上下文召回率、上下文相关性
+        - 安全性（4个）：幻觉检测、偏见检测、毒性检测、隐私泄露检测
+        - 回答质量（3个）：相关性、连贯性、完整性
+
         Args:
             test_case: 测试用例
 
@@ -214,18 +246,21 @@ class DeepEvalMetrics:
             所有指标的评分和原因
         """
         all_metrics = [
-            # RAG 质量
+            # RAG 质量（5个）
             self.faithfulness,
             self.answer_relevancy,
             self.contextual_precision,
             self.contextual_recall,
-            # 安全性
+            self.contextual_relevancy,
+            # 安全性（4个）
             self.hallucination,
             self.bias,
             self.toxicity,
-            # 回答质量
+            self.pii_leakage,
+            # 回答质量（3个）
             self.relevance,
             self.coherence,
+            self.completeness,
         ]
         results = evaluate([test_case], all_metrics, async_config=AsyncConfig(run_async=False))
         return self._extract_scores(results)

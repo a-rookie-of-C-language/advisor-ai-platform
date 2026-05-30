@@ -193,20 +193,26 @@ class TestIntegration:
     """集成测试。"""
 
     def test_evaluate_all(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
-        """测试全量评估。"""
+        """测试全量评估（12 个指标）。"""
         scores = metrics.evaluate_all(sample_test_case)
 
         # 验证核心指标都已返回（中文指标名称）
         expected_metric_names = [
+            # RAG 质量（5个）
             "忠实度",
             "答案相关性",
             "上下文精度",
             "上下文召回率",
+            "上下文相关性",
+            # 安全性（4个）
             "幻觉检测",
             "偏见检测",
             "毒性检测",
+            "隐私泄露检测",
+            # 回答质量（3个）
             "相关性",
             "连贯性",
+            "完整性",
         ]
         for metric_name in expected_metric_names:
             assert metric_name in scores, f"缺少指标: {metric_name}，当前指标: {list(scores.keys())}"
