@@ -15,6 +15,8 @@ public interface MemoryService {
 
   List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request);
 
+  List<MemoryItemResponseDTO> getCoreMemories(Long userId, Long kbId);
+
   MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request);
 
   SessionSummaryResponseDTO getSessionSummary(Long sessionId);

@@ -36,6 +36,7 @@ def to_memory_item(data: JsonObject) -> MemoryItem:
         valid_until=parse_datetime(data.get("validUntil")),
         supersedes_id=int(supersedes_id) if supersedes_id is not None else None,
         merged_into_id=int(merged_into_id) if merged_into_id is not None else None,
+        is_core=bool(data.get("isCore", False)),
     )
 
 

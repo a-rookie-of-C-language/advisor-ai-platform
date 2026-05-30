@@ -64,6 +64,9 @@ public class UserMemoryDO {
   private Long mergedIntoId;
 
   @Column(nullable = false)
+  private Boolean isCore = false;
+
+  @Column(nullable = false)
   private Integer accessCount = 0;
 
   private LocalDateTime lastAccessedAt;

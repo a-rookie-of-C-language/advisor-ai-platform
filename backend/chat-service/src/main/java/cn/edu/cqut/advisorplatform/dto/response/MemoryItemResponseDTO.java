@@ -24,6 +24,7 @@ public class MemoryItemResponseDTO {
   private String memoryType;
   private LocalDateTime validUntil;
   private Long supersedesId;
+  private Boolean isCore;
 
   public static MemoryItemResponseDTO from(UserMemoryDO entity) {
     return new MemoryItemResponseDTO(
@@ -39,6 +40,7 @@ public class MemoryItemResponseDTO {
         entity.getTags(),
         entity.getMemoryType(),
         entity.getValidUntil(),
-        entity.getSupersedesId());
+        entity.getSupersedesId(),
+        entity.getIsCore());
   }
 }

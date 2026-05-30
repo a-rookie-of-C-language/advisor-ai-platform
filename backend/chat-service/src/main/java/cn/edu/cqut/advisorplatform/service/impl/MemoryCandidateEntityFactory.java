@@ -46,6 +46,7 @@ public class MemoryCandidateEntityFactory {
     row.setSourceTurnId(candidate.getSourceTurnId());
     row.setTags(candidate.getTags() == null ? new HashMap<>() : candidate.getTags());
     row.setMemoryType(resolveMemoryType(candidate));
+    row.setIsCore(candidate.getIsCore() != null && candidate.getIsCore());
     row.setIsDeleted(false);
     row.setCreatedAt(LocalDateTime.now());
     row.setUpdatedAt(LocalDateTime.now());

@@ -12,3 +12,4 @@ class MemoryCandidate:
     source_turn_id: str | None = None
     tags: JsonObject = field(default_factory=dict)
     memory_type: str = "semantic"
+    is_core: bool = False

@@ -43,18 +43,29 @@ class MemoryOrchestrator:
         recent_messages: list[dict[str, str]],
     ) -> MemoryContext:
         short_term = self._session_memory.load_recent(recent_messages)
-        long_term = await self._retrieval.retrieve(
+
+        # Parallel load: regular retrieval + core memories
+        import asyncio
+        long_term_task = self._retrieval.retrieve(
             api_client=self._api_client,
             user_id=user_id,
             kb_id=kb_id,
             query=query,
             top_k=6,
         )
+        core_task = self._retrieval.retrieve_core(
+            api_client=self._api_client,
+            user_id=user_id,
+            kb_id=kb_id,
+        )
+        long_term, core_memories = await asyncio.gather(long_term_task, core_task)
+
         summary = await self._api_client.get_session_summary(session_id)
 
         return self._work_memory.build_context(
             short_term=short_term,
             long_term=long_term,
+            core_memories=core_memories,
             summary=summary,
         )
 

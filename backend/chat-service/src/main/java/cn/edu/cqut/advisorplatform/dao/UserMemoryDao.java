@@ -121,6 +121,21 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
   @Query(
       """
             SELECT m FROM UserMemoryDO m
+            WHERE m.userId = :userId
+              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND m.isDeleted = false
+              AND m.isCore = true
+              AND m.mergedIntoId IS NULL
+              AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
+            ORDER BY m.confidence DESC, m.updatedAt DESC
+            """)
+  List<UserMemoryDO> findCoreMemories(
+      @Param("userId") Long userId, @Param("kbId") Long kbId, @Param("now") LocalDateTime now);
+
+  @Query(
+      """
+            SELECT m FROM UserMemoryDO m
             WHERE m.isDeleted = true AND m.updatedAt < :cutoff
             """)
   List<UserMemoryDO> findSoftDeletedBefore(@Param("cutoff") LocalDateTime cutoff);

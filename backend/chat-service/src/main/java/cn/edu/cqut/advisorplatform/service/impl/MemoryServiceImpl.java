@@ -73,6 +73,13 @@ public class MemoryServiceImpl implements MemoryService {
 
   @Override
   @Transactional
+  public List<MemoryItemResponseDTO> getCoreMemories(Long userId, Long kbId) {
+    List<UserMemoryDO> rows = userMemoryDao.findCoreMemories(userId, kbId, LocalDateTime.now());
+    return rows.stream().map(MemoryItemResponseDTO::from).toList();
+  }
+
+  @Override
+  @Transactional
   public MemoryCandidateUpsertResponseDTO upsertCandidates(
       MemoryCandidateUpsertRequestDTO request) {
     return memoryCandidateUpsertSupport.upsert(request, vectorStore);

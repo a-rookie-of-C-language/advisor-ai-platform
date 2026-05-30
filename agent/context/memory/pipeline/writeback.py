@@ -137,6 +137,7 @@ class MemoryWriteback:
                 return
 
             if decision.decision == DecisionType.ADD:
+                candidate.is_core = decision.is_core
                 await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
 
             elif decision.decision == DecisionType.UPDATE:

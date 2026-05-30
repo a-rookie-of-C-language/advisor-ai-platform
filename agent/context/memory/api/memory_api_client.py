@@ -59,6 +59,15 @@ class MemoryApiClient:
         raw_items = data.get("data", [])
         return [to_memory_item(item) for item in raw_items]
 
+    async def get_core_memories(self, user_id: int, kb_id: int) -> list[MemoryItem]:
+        """Get core memories that should always be injected."""
+        data = await self._request(
+            "GET",
+            f"/api/memory/long-term/core?userId={user_id}&kbId={kb_id}",
+        )
+        raw_items = data.get("data", [])
+        return [to_memory_item(item) for item in raw_items]
+
     async def upsert_candidates(
         self,
         user_id: int,
@@ -75,6 +84,7 @@ class MemoryApiClient:
                     "sourceTurnId": c.source_turn_id,
                     "tags": c.tags,
                     "memoryType": c.memory_type,
+                    "isCore": c.is_core,
                 }
                 for c in candidates
             ],

@@ -39,6 +39,12 @@ public class MemoryController {
     return ApiResponseDTO.success(memoryService.searchLongTerm(request));
   }
 
+  @GetMapping("/long-term/core")
+  public ApiResponseDTO<List<MemoryItemResponseDTO>> getCoreMemories(
+      @RequestParam("userId") Long userId, @RequestParam("kbId") Long kbId) {
+    return ApiResponseDTO.success(memoryService.getCoreMemories(userId, kbId));
+  }
+
   @PostMapping("/long-term/candidates")
   public ApiResponseDTO<MemoryCandidateUpsertResponseDTO> upsertCandidates(
       @Valid @RequestBody MemoryCandidateUpsertRequestDTO request) {

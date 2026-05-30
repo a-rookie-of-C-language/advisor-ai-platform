@@ -97,6 +97,21 @@ class MemoryRetrieval:
         )
         return result
 
+    async def retrieve_core(
+        self,
+        api_client,
+        user_id: int,
+        kb_id: int,
+    ) -> list[MemoryItem]:
+        """Retrieve core memories that should always be injected."""
+        try:
+            core_items = await api_client.get_core_memories(user_id, kb_id)
+            logger.debug("Core memories loaded: user=%d kb=%d count=%d", user_id, kb_id, len(core_items))
+            return core_items
+        except Exception as e:
+            logger.warning("Failed to load core memories: %s", e)
+            return []
+
     @staticmethod
     def _tokenize(text: str) -> set[str]:
         lowered = text.lower()

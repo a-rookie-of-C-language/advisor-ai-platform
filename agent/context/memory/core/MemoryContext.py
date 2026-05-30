@@ -10,4 +10,5 @@ from context.memory.core.SessionSummary import SessionSummary
 class MemoryContext:
     short_term: list[dict[str, str]] = field(default_factory=list)
     long_term: list[MemoryItem] = field(default_factory=list)
+    core_memories: list[MemoryItem] = field(default_factory=list)
     summary: SessionSummary | None = None

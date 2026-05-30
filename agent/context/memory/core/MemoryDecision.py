@@ -23,3 +23,4 @@ class MemoryDecision:
     target_memory_id: int | None = None
     target_memory_ids: list[int] | None = None
     merged_content: str | None = None
+    is_core: bool = False

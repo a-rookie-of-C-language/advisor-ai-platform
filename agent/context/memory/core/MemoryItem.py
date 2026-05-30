@@ -22,3 +22,4 @@ class MemoryItem:
     valid_until: datetime | None = None
     supersedes_id: int | None = None
     merged_into_id: int | None = None
+    is_core: bool = False

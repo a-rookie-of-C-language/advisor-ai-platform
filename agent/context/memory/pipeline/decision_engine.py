@@ -50,6 +50,12 @@ _DECISION_PROMPT = """你是一个记忆管理专家。根据候选记忆和已�
 5. 如果候选记忆没有长期价值（闲聊、临时信息、问候）→ ignore
 6. invalidate 时，target_memory_ids 列出所有需要失效的旧记忆 ID
 
+判断是否为核心记忆（is_core）：
+- 核心记忆 = 用户的核心偏好、身份、目标、约束，每次都注入上下文
+- 例如："用户是计科专业"、"偏好简洁回答"、"使用 Python"
+- 非核心记忆 = 一般事实、临时信息、具体事件
+- is_core 只在 decision=add 时有效
+
 输入：
 候选记忆: {candidate_content}
 候选置信度: {candidate_confidence}
@@ -58,7 +64,7 @@ _DECISION_PROMPT = """你是一个记忆管理专家。根据候选记忆和已�
 {similar_memories_text}
 
 返回严格 JSON，不要有其他文字:
-{{"decision": "add|update|merge|invalidate|ignore", "reason": "决策原因", "target_memory_id": null或数字ID, "target_memory_ids": null或[ID数组], "merged_content": null或"合并后的文本"}}
+{{"decision": "add|update|merge|invalidate|ignore", "reason": "决策原因", "target_memory_id": null或数字ID, "target_memory_ids": null或[ID数组], "merged_content": null或"合并后的文本", "is_core": false}}
 """
 
 
@@ -246,12 +252,15 @@ class DecisionEngine:
             if not merged_content:
                 merged_content = None
 
+        is_core = bool(data.get("is_core", False))
+
         return MemoryDecision(
             decision=decision_type,
             reason=reason,
             target_memory_id=target_id,
             target_memory_ids=target_ids,
             merged_content=merged_content,
+            is_core=is_core,
         )
 
     @staticmethod
