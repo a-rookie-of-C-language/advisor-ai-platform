@@ -77,9 +77,13 @@ class MemoryGovernance:
     def resolve_conflicts(self, items: list[MemoryItem]) -> list[MemoryItem]:
         grouped: dict[str, MemoryItem] = {}
         for item in items:
+            # Include memory_type in conflict key: different types can coexist
+            type_prefix = f"[{item.memory_type}]"
             key = str(item.tags.get("memory_key", "")).strip()
             if not key:
-                key = _normalize_text_cached(item.content)
+                key = f"{type_prefix}:{_normalize_text_cached(item.content)}"
+            else:
+                key = f"{type_prefix}:{key}"
             existing = grouped.get(key)
             if existing is None:
                 grouped[key] = item

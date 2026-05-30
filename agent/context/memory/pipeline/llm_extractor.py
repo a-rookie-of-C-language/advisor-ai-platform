@@ -28,10 +28,13 @@ class OpenAILLMExtractor:
             "2. Ignore temporary, one-off, or already-resolved issues.\n"
             "3. Each memory must include confidence in [0,1].\n"
             "4. Use tags.type in preference/goal/constraint/identity/other.\n"
-            "5. Return at most 8 items sorted by importance.\n"
+            "5. Classify each memory as one of:\n"
+            "   - semantic: facts, preferences, user profile, identity info\n"
+            "   - episodic: past events, experiences, specific cases that happened\n"
+            "6. Return at most 8 items sorted by importance.\n"
             "\n"
             "Return strict JSON array only, no extra text:\n"
-            "[{\"content\": \"memory text\", \"confidence\": 0.8, \"tags\": {\"type\": \"preference\"}}]\n"
+            "[{\"content\": \"memory text\", \"confidence\": 0.8, \"tags\": {\"type\": \"preference\"}, \"memoryType\": \"semantic\"}]\n"
             "\n"
             f"[User] {user_text}\n"
             f"[Assistant] {assistant_text}\n"
@@ -56,7 +59,10 @@ class OpenAILLMExtractor:
             confidence = max(0.0, min(confidence, 1.0))
             tags = item.get("tags") if isinstance(item.get("tags"), dict) else {}
             tags = {**tags, "source": "llm"}
-            candidates.append(MemoryCandidate(content=text, confidence=confidence, tags=tags))
+            memory_type = str(item.get("memoryType", "semantic")).strip().lower()
+            if memory_type not in ("semantic", "episodic"):
+                memory_type = "semantic"
+            candidates.append(MemoryCandidate(content=text, confidence=confidence, tags=tags, memory_type=memory_type))
         return candidates
 
     @staticmethod

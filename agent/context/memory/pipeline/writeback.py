@@ -38,6 +38,7 @@ class MemoryWriteback:
                     confidence=candidate.confidence,
                     source_turn_id=candidate.source_turn_id or source_turn_id,
                     tags={**candidate.tags, "source": candidate.tags.get("source", "llm")},
+                    memory_type=candidate.memory_type,
                 )
                 candidates.append(normalized)
 
@@ -76,12 +77,14 @@ class MemoryWriteback:
             confidence = self._estimate_confidence(sentence)
             if confidence <= 0:
                 continue
+            memory_type = self._infer_memory_type(sentence)
             candidates.append(
                 MemoryCandidate(
                     content=sentence,
                     confidence=confidence,
                     source_turn_id=source_turn_id,
                     tags={"source": "rule_user"},
+                    memory_type=memory_type,
                 )
             )
 
@@ -98,12 +101,14 @@ class MemoryWriteback:
             )
             if not is_memory_sentence:
                 continue
+            memory_type = self._infer_memory_type(sentence)
             candidates.append(
                 MemoryCandidate(
                     content=sentence,
                     confidence=0.70,
                     source_turn_id=source_turn_id,
                     tags={"source": "rule_assistant"},
+                    memory_type=memory_type,
                 )
             )
 
@@ -135,3 +140,23 @@ class MemoryWriteback:
         if len(sentence) >= 18:
             return 0.65
         return 0.0
+
+    @staticmethod
+    def _infer_memory_type(sentence: str) -> str:
+        """Infer memory type from sentence content.
+
+        Episodic indicators: past events, specific experiences, temporal references.
+        Semantic indicators (default): facts, preferences, identity, goals.
+        """
+        lowered = sentence.lower()
+        # Episodic markers: past tense references, specific events, temporal words
+        episodic_markers = [
+            "上次", "之前", "曾经", "那次", "昨天", "上周", "上个月",
+            "去年", "前天", "那天", "那次", "当时", "后来",
+            "last time", "previously", "once", "yesterday", "last week",
+            "last month", "last year", "ago", "then", "after that",
+        ]
+        for marker in episodic_markers:
+            if marker in lowered:
+                return "episodic"
+        return "semantic"

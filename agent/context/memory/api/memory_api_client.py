@@ -45,6 +45,7 @@ class MemoryApiClient:
         kb_id: int,
         query: str,
         top_k: int,
+        type_weights: dict[str, float] | None = None,
     ) -> list[MemoryItem]:
         payload = {
             "userId": user_id,
@@ -52,6 +53,8 @@ class MemoryApiClient:
             "query": query,
             "topK": top_k,
         }
+        if type_weights:
+            payload["typeWeights"] = type_weights
         data = await self._request("POST", "/api/memory/long-term/search", json=payload)
         raw_items = data.get("data", [])
         return [to_memory_item(item) for item in raw_items]
@@ -71,6 +74,7 @@ class MemoryApiClient:
                     "confidence": c.confidence,
                     "sourceTurnId": c.source_turn_id,
                     "tags": c.tags,
+                    "memoryType": c.memory_type,
                 }
                 for c in candidates
             ],

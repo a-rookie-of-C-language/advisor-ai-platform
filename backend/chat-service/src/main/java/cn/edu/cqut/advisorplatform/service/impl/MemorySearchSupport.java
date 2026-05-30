@@ -37,7 +37,14 @@ public class MemorySearchSupport {
     Map<String, Double> typeWeights = request.getTypeWeights();
     if (typeWeights != null && !typeWeights.isEmpty()) {
       return searchWithTypeWeights(
-          request, topK, query, mode, vectorStore, hybridVectorWeight, hybridTextWeight, typeWeights);
+          request,
+          topK,
+          query,
+          mode,
+          vectorStore,
+          hybridVectorWeight,
+          hybridTextWeight,
+          typeWeights);
     }
 
     boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
@@ -164,7 +171,13 @@ public class MemorySearchSupport {
       } else if (hasVectorService) {
         typeResults =
             searchHybridByType(
-                scopedRequest, query, vectorStore, topK, hybridVectorWeight, hybridTextWeight, memoryType);
+                scopedRequest,
+                query,
+                vectorStore,
+                topK,
+                hybridVectorWeight,
+                hybridTextWeight,
+                memoryType);
       } else {
         typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
       }

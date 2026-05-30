@@ -7,7 +7,6 @@ import cn.edu.cqut.advisorplatform.service.vector.EmbeddingService;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryServiceFactory;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryVectorService;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,14 @@ public class MemorySearchSupport {
     Map<String, Double> typeWeights = request.getTypeWeights();
     if (typeWeights != null && !typeWeights.isEmpty()) {
       return searchWithTypeWeights(
-          request, topK, query, mode, vectorStore, hybridVectorWeight, hybridTextWeight, typeWeights);
+          request,
+          topK,
+          query,
+          mode,
+          vectorStore,
+          hybridVectorWeight,
+          hybridTextWeight,
+          typeWeights);
     }
 
     boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
@@ -165,7 +171,13 @@ public class MemorySearchSupport {
       } else if (hasVectorService) {
         typeResults =
             searchHybridByType(
-                scopedRequest, query, vectorStore, topK, hybridVectorWeight, hybridTextWeight, memoryType);
+                scopedRequest,
+                query,
+                vectorStore,
+                topK,
+                hybridVectorWeight,
+                hybridTextWeight,
+                memoryType);
       } else {
         typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
       }
