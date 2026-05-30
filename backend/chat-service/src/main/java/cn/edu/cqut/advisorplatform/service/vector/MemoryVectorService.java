@@ -11,6 +11,9 @@ public interface MemoryVectorService {
 
   List<UserMemoryDO> search(Long userId, Long kbId, double[] queryEmbedding, int topK);
 
+  List<UserMemoryDO> searchByType(
+      Long userId, Long kbId, double[] queryEmbedding, int topK, String memoryType);
+
   void updateEmbedding(Long memoryId, double[] embedding);
 
   int getDimension();

@@ -93,6 +93,29 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       @Param("embedding") String embedding,
       @Param("topK") Integer topK);
 
+  @Query(
+      value =
+          """
+                    SELECT *
+                    FROM user_memory
+                    WHERE user_id = :userId
+                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND is_deleted = false
+                      AND merged_into_id IS NULL
+                      AND (valid_until IS NULL OR valid_until > NOW())
+                      AND memory_type = :memoryType
+                      AND embedding IS NOT NULL
+                    ORDER BY embedding <=> CAST(:embedding AS vector)
+                    LIMIT :topK
+                    """,
+      nativeQuery = true)
+  List<UserMemoryDO> searchByVectorAndType(
+      @Param("userId") Long userId,
+      @Param("kbId") Long kbId,
+      @Param("embedding") String embedding,
+      @Param("topK") Integer topK,
+      @Param("memoryType") String memoryType);
+
   @Modifying
   @Query(
       value =

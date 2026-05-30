@@ -165,7 +165,7 @@ public class MemorySearchSupport {
       boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
 
       if ("vector".equals(mode) && hasVectorService) {
-        typeResults = searchByVector(scopedRequest, vectorStore, topK);
+        typeResults = searchByVectorByType(scopedRequest, vectorStore, topK, memoryType);
       } else if ("text".equals(mode)) {
         typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
       } else if (hasVectorService) {
@@ -230,7 +230,8 @@ public class MemorySearchSupport {
       MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
       double[] queryEmbedding = embeddingService.embed(query);
       vectorResults =
-          vectorService.search(request.getUserId(), request.getKbId(), queryEmbedding, recallK);
+          vectorService.searchByType(
+              request.getUserId(), request.getKbId(), queryEmbedding, recallK, memoryType);
     } catch (Exception exc) {
       log.warn(
           "memory_hybrid_vector_fallback userId={}, kbId={}",
@@ -250,5 +251,23 @@ public class MemorySearchSupport {
 
     return hybridResultMerger.merge(
         vectorResults, textResults, topK, hybridVectorWeight, hybridTextWeight);
+  }
+
+  private List<UserMemoryDO> searchByVectorByType(
+      MemorySearchRequestDTO request, String vectorStore, int topK, String memoryType) {
+    try {
+      MemoryVectorService vectorService = memoryServiceFactory.getService(vectorStore);
+      double[] queryEmbedding = embeddingService.embed(request.getQuery());
+      return vectorService.searchByType(
+          request.getUserId(), request.getKbId(), queryEmbedding, topK, memoryType);
+    } catch (Exception exc) {
+      log.warn(
+          "memory_vector_search_by_type_failed userId={}, kbId={}, memoryType={}, err={}",
+          request.getUserId(),
+          request.getKbId(),
+          memoryType,
+          exc.getMessage());
+      return searchTextByType(request, request.getQuery(), topK, memoryType);
+    }
   }
 }

@@ -150,13 +150,20 @@ public class CheckInServiceImpl implements CheckInService {
   public Map<String, Object> getAttendanceStatistics(
       UserPrincipal userPrincipal, LocalDate begin, LocalDate end) {
     checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
+    Long teacherUserId =
+        userPrincipal.getRole() == UserRole.ADMIN
+            ? null
+            : checkInServiceSupport.resolveUserId(userPrincipal);
 
     Map<String, Object> statistics = new HashMap<>();
-    statistics.put("totalRecords", checkInDao.countRecordsByTeacher(null, begin, end));
-    statistics.put("normalCount", checkInDao.countRecordsByStatus(null, "NORMAL", begin, end));
-    statistics.put("lateCount", checkInDao.countRecordsByStatus(null, "LATE", begin, end));
-    statistics.put("absentCount", checkInDao.countRecordsByStatus(null, "ABSENT", begin, end));
-    statistics.put("leaveCount", checkInDao.countRecordsByStatus(null, "LEAVE", begin, end));
+    statistics.put("totalRecords", checkInDao.countRecordsByTeacher(teacherUserId, begin, end));
+    statistics.put(
+        "normalCount", checkInDao.countRecordsByStatus(teacherUserId, "NORMAL", begin, end));
+    statistics.put("lateCount", checkInDao.countRecordsByStatus(teacherUserId, "LATE", begin, end));
+    statistics.put(
+        "absentCount", checkInDao.countRecordsByStatus(teacherUserId, "ABSENT", begin, end));
+    statistics.put(
+        "leaveCount", checkInDao.countRecordsByStatus(teacherUserId, "LEAVE", begin, end));
 
     long totalRecords = (long) statistics.get("totalRecords");
     long normalCount = (long) statistics.get("normalCount");
@@ -182,7 +189,11 @@ public class CheckInServiceImpl implements CheckInService {
   public List<Map<String, Object>> getClassAttendanceStatistics(
       UserPrincipal userPrincipal, LocalDate begin, LocalDate end) {
     checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
-    return checkInDao.getClassAttendanceStatistics(null, begin, end);
+    Long teacherUserId =
+        userPrincipal.getRole() == UserRole.ADMIN
+            ? null
+            : checkInServiceSupport.resolveUserId(userPrincipal);
+    return checkInDao.getClassAttendanceStatistics(teacherUserId, begin, end);
   }
 
   @Override
@@ -193,9 +204,13 @@ public class CheckInServiceImpl implements CheckInService {
       LocalDate begin,
       LocalDate end) {
     checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
+    Long teacherUserId =
+        userPrincipal.getRole() == UserRole.ADMIN
+            ? null
+            : checkInServiceSupport.resolveUserId(userPrincipal);
 
     List<CheckInRecordVO> records =
-        checkInDao.selectRecordsForExport(studentId, checkInId, null, begin, end);
+        checkInDao.selectRecordsForExport(studentId, checkInId, teacherUserId, begin, end);
 
     List<CheckInExportRow> rows =
         records.stream()

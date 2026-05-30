@@ -54,6 +54,19 @@ public class PgVectorMemoryService implements MemoryVectorService {
   }
 
   @Override
+  public List<UserMemoryDO> searchByType(
+      Long userId, Long kbId, double[] queryEmbedding, int topK, String memoryType) {
+    if (queryEmbedding == null || queryEmbedding.length == 0) {
+      return List.of();
+    }
+    String embeddingStr = vectorToString(queryEmbedding);
+    log.debug(
+        "searchByType: userId={}, kbId={}, memoryType={}, topK={}", userId, kbId, memoryType, topK);
+    return userMemoryDao.searchByVectorAndType(
+        userId, kbId, embeddingStr, Math.max(1, topK), memoryType);
+  }
+
+  @Override
   public void updateEmbedding(Long memoryId, double[] embedding) {
     if (memoryId == null || embedding == null || embedding.length == 0) {
       return;

@@ -15,6 +15,7 @@ import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.service.MemoryService;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +183,8 @@ public class MemoryServiceImpl implements MemoryService {
     if (optional.isPresent()) {
       UserMemoryDO row = optional.get();
       BigDecimal safeConfidence =
-          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence))).setScale(3);
+          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence)))
+              .setScale(3, RoundingMode.HALF_UP);
       row.setConfidence(safeConfidence);
       row.setUpdatedAt(LocalDateTime.now());
       userMemoryDao.save(row);
@@ -200,7 +202,8 @@ public class MemoryServiceImpl implements MemoryService {
       UserMemoryDO row = optional.get();
       row.setContent(content);
       BigDecimal safeConfidence =
-          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence))).setScale(3);
+          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence)))
+              .setScale(3, RoundingMode.HALF_UP);
       row.setConfidence(safeConfidence);
       row.setUpdatedAt(LocalDateTime.now());
       userMemoryDao.save(row);

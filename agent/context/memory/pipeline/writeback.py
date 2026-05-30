@@ -142,7 +142,11 @@ class MemoryWriteback:
 
             elif decision.decision == DecisionType.UPDATE:
                 if decision.target_memory_id:
-                    await api_client.update_memory_confidence(decision.target_memory_id, candidate.confidence)
+                    await api_client.update_memory_content(
+                        decision.target_memory_id,
+                        candidate.content,
+                        candidate.confidence,
+                    )
 
             elif decision.decision == DecisionType.MERGE:
                 if decision.target_memory_id and decision.merged_content:
