@@ -90,6 +90,10 @@ class EvalRunner:
                 case_result["e2e"] = await self._eval_e2e(
                     case.query, case.expected_answer
                 )
+                # DeepEval 评估（RAG 质量 + 安全性 + 回答质量）
+                case_result["e2e_deepeval"] = await self._eval_e2e_deepeval(
+                    case.query, case.expected_answer
+                )
 
             report.add_case_result(case_result)
 
@@ -146,6 +150,51 @@ class EvalRunner:
             expected_answer=expected_answer,
             actual_answer=actual_answer,
             llm_provider=self._llm_provider,
+        )
+
+    async def _eval_e2e_deepeval(
+        self, query: str, expected_answer: str
+    ) -> JsonObject:
+        """使用 DeepEval 评估端到端回答质量。
+
+        评估维度包括：
+        - RAG 质量：忠实度、答案相关性、上下文精度、上下文召回
+        - 安全性：幻觉、偏见、毒性
+        - 回答质量：相关性、连贯性
+        """
+        from .metrics.e2e import e2e_deepeval_score
+
+        # 获取实际回答和检索上下文
+        actual_answer = await self._get_agent_answer(query)
+        retrieved_chunks = await self._rag_search(query)
+
+        # 获取检索到的文本内容
+        retrieval_context = []
+        if retrieved_chunks:
+            try:
+                from RAG.schema import RAGSearchRequest, SearchMode
+
+                rag = self._get_rag_service()
+                response = rag.rag_search(
+                    RAGSearchRequest(
+                        query=query,
+                        kb_id=self._kb_id,
+                        top_k=self._top_k,
+                        mode=SearchMode.dense,
+                        use_rerank=True,
+                        rewrite_query=False,
+                    )
+                )
+                if response.ok:
+                    retrieval_context = [hit.text for hit in response.items]
+            except Exception as exc:
+                logger.warning("获取检索上下文失败: %s", exc)
+
+        return e2e_deepeval_score(
+            query=query,
+            expected_answer=expected_answer,
+            actual_answer=actual_answer,
+            retrieval_context=retrieval_context,
         )
 
     async def _rag_search(self, query: str) -> list[str]:

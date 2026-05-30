@@ -95,6 +95,45 @@ class EvalReport:
             **{dim: round(sum(v) / len(v), 2) if v else 0.0 for dim, v in e2e_dims.items()},
         }
 
+        # DeepEval 指标汇总
+        deepeval_metric_names = [
+            # RAG 质量
+            "Faithfulness",
+            "Answer Relevancy",
+            "Contextual Precision",
+            "Contextual Recall",
+            # 安全性
+            "Hallucination",
+            "Bias",
+            "Toxicity",
+            # 回答质量
+            "Relevance",
+            "Coherence",
+        ]
+        deepeval_metrics: dict[str, list[float]] = {name: [] for name in deepeval_metric_names}
+        deepeval_avg_scores = []
+
+        for case in self.cases:
+            deepeval = case.get("e2e_deepeval", {})
+            if "error" in deepeval:
+                continue
+
+            metrics_data = deepeval.get("metrics", {})
+            for metric_name in deepeval_metric_names:
+                if metric_name in metrics_data:
+                    deepeval_metrics[metric_name].append(metrics_data[metric_name]["score"])
+
+            if "avg_score" in deepeval and deepeval["avg_score"] > 0:
+                deepeval_avg_scores.append(deepeval["avg_score"])
+
+        self.summary["deepeval"] = {
+            "avg_score": round(sum(deepeval_avg_scores) / len(deepeval_avg_scores), 4) if deepeval_avg_scores else 0.0,
+            **{
+                k: round(sum(v) / len(v), 4) if v else 0.0
+                for k, v in deepeval_metrics.items()
+            },
+        }
+
 
 def save_json(report: EvalReport, path: str | Path) -> None:
     """将评估报告保存为 JSON 文件。"""

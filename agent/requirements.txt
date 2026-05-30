@@ -23,5 +23,8 @@ hanlp>=2.1.0,<3.0
 # MCP SDK
 mcp>=1.0,<2.0
 
+# DeepEval 评估框架
+deepeval>=2.0,<3.0
+
 # 可选：敏感信息过滤（需要 PyTorch）
 # opf>=0.1.0
