@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from tools.base_tool import BaseTool
+from tools.core.base_tool import BaseTool
 from routing.intent_router_support import (
     apply_structured_student_query_boost,
     extract_first_url,

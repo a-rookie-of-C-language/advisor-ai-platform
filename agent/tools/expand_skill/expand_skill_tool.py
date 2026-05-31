@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from json_types import JsonObject
 from skills.skill_registry import SkillRegistry
-from tools.base_tool import BaseTool
+from tools.core.base_tool import BaseTool
 from tools.expand_skill.expand_skill_input import ExpandSkillInput
-from tools.tool_permission import ToolPermission
-from tools.tool_result import ToolResult
+from tools.permissions.tool_permission import ToolPermission
+from tools.core.tool_result import ToolResult
 
 
 class ExpandSkillTool(BaseTool[ExpandSkillInput, None]):

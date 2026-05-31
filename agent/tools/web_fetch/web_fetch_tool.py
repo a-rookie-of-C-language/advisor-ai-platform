@@ -7,9 +7,9 @@ import trafilatura
 from pydantic import BaseModel
 
 from json_types import JsonObject
-from tools.base_tool import BaseTool
-from tools.tool_permission import ToolPermission
-from tools.tool_result import ToolResult
+from tools.core.base_tool import BaseTool
+from tools.permissions.tool_permission import ToolPermission
+from tools.core.tool_result import ToolResult
 from tools.web_fetch.web_fetch_input import WebFetchInput
 
 logger = logging.getLogger(__name__)

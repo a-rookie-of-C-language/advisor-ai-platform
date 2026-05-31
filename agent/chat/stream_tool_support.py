@@ -12,8 +12,8 @@ from chat.stream_tool_payloads import (
 )
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
-from tools.tool_permission import PermissionConfig
-from tools.tool_registry import ToolRegistry
+from tools.permissions.tool_permission import PermissionConfig
+from tools.registry.tool_registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
 

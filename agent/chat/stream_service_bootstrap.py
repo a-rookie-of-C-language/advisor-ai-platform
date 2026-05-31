@@ -4,9 +4,9 @@ from typing import Any
 
 from skills.presets import build_default_registry
 from tools.expand_skill import ExpandSkillTool
-from tools.tool_assembly_pool import ToolAssemblyPool
-from tools.tool_permission import PermissionConfig, ToolPermission
-from tools.tool_registry import ToolRegistry
+from tools.registry.tool_assembly_pool import ToolAssemblyPool
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
+from tools.registry.tool_registry import ToolRegistry
 from tools.tool_search import ToolSearchTool
 
 

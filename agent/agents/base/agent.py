@@ -23,7 +23,7 @@ from context.memory.core.MemoryItem import MemoryItem
 from context.memory.core.WritebackResult import WritebackResult
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
-from tools.tool_permission import PermissionConfig, ToolPermission
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 

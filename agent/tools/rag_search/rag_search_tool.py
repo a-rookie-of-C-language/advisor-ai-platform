@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from json_types import JsonObject
 from RAG.RAG_service import RAG_service
 from RAG.schema import RAGSearchRequest, SearchMode
-from tools.base_tool import BaseTool
+from tools.core.base_tool import BaseTool
 from tools.rag_search.RAGSearchInput import RAGSearchInput
-from tools.tool_permission import ToolPermission
-from tools.tool_result import ToolResult
+from tools.permissions.tool_permission import ToolPermission
+from tools.core.tool_result import ToolResult
 
 logger = logging.getLogger(__name__)
 _RAG_TOOL_TIMEOUT_SEC = 12.0

@@ -19,8 +19,8 @@ from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder
-from tools.tool_permission import ToolPermission
-from tools.tool_registry import ToolRegistry
+from tools.permissions.tool_permission import ToolPermission
+from tools.registry.tool_registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
 

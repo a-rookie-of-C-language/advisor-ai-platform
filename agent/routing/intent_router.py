@@ -5,7 +5,7 @@ import re
 
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
-from tools.base_tool import BaseTool
+from tools.core.base_tool import BaseTool
 from routing.intent_router_fallback import build_fallback_decision
 from routing.intent_router_llm_flow import route_by_llm
 from routing.intent_router_registry import build_tool_route_metadata, compile_category_rules

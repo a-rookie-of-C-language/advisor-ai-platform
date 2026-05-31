@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 from agents.base.subagent import SubAgent
 from json_types import JsonObject, JsonValue, SupportsModelDump
 from llm.base_provider import BaseLLMProvider
-from tools.tool_permission import PermissionConfig, ToolPermission
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 if TYPE_CHECKING:
-    from tools.base_tool import BaseTool
-    from tools.tool_result import ToolResult
+    from tools.core.base_tool import BaseTool
+    from tools.core.tool_result import ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class WebToolSubAgent(SubAgent):
             return result
         except Exception as e:
             logger.error("%s tool execution failed: %s", self._name, e)
-            from tools.tool_result import ToolResult
+            from tools.core.tool_result import ToolResult
 
             return ToolResult(ok=False, status="error", message=str(e), items=[])
 

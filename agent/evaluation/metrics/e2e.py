@@ -64,7 +64,7 @@ async def e2e_judge_score(
 
     try:
         from agents.base.agent import Agent
-        from tools.tool_permission import PermissionConfig, ToolPermission
+        from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
         # 创建临时 agent 用于调用 LLM
         agent = Agent(

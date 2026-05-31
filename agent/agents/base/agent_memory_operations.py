@@ -6,7 +6,7 @@ from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.MemoryCandidate import MemoryCandidate
 from context.memory.core.WritebackResult import WritebackResult
 from json_types import JsonObject
-from tools.tool_permission import ToolPermission
+from tools.permissions.tool_permission import ToolPermission
 
 
 class AgentMemoryOperations:

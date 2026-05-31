@@ -4,7 +4,7 @@ from agents.search.WebSearchResult import WebSearchResult
 from agents.search.WebToolSubAgent import WebToolSubAgent
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
-from tools.base_tool import BaseTool
+from tools.core.base_tool import BaseTool
 
 _JUDGE_SYSTEM_PROMPT = (
     "你是一个搜索结果分析助手。请根据搜索结果完成两个任务：\n"

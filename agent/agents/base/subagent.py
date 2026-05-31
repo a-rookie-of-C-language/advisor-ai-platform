@@ -7,7 +7,7 @@ from agents.base.agent import Agent, AgentContext
 from context.memory.api.memory_api_client import MemoryApiClient
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
-from tools.tool_permission import PermissionConfig, ToolPermission
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 

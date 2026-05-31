@@ -17,8 +17,8 @@ from llm.chat_message import ChatMessage
 from safety.safety_pipeline import SafetyPipeline
 from skills.skill_registry import SkillRegistry
 from routing.intent_router import IntentRouter
-from tools.tool_permission import PermissionConfig
-from tools.tool_registry import ToolRegistry
+from tools.permissions.tool_permission import PermissionConfig
+from tools.registry.tool_registry import ToolRegistry
 
 from .runtime import GraphRuntime, reset_runtime, set_runtime
 from .workflow import build_chat_graph

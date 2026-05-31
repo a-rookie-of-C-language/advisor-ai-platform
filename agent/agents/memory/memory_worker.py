@@ -12,7 +12,7 @@ from context.memory.core.WritebackResult import WritebackResult
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
 from json_types import JsonObject, JsonValue
-from tools.tool_permission import PermissionConfig, ToolPermission
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 

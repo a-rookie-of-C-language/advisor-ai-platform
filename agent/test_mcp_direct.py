@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, "/app")
-from tools.mcp_client_pool import McpClientPool, McpServerConfig
+from tools.mcp.client.mcp_client_pool import McpClientPool, McpServerConfig
 
 
 async def test():

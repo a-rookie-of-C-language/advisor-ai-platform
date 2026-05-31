@@ -3,7 +3,7 @@ from __future__ import annotations
 from agents.base.subagent import SubAgent
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
-from tools.tool_permission import PermissionConfig, ToolPermission
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 
 class ContextCompactionSubAgent(SubAgent):

@@ -8,7 +8,7 @@ from typing import Optional
 from agents.base.agent import Agent
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
-from tools.tool_permission import PermissionConfig, ToolPermission
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 from .base_annotator import BaseChunkAnnotator
 from .ChunkAnnotation import ChunkAnnotation

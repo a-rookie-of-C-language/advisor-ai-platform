@@ -9,9 +9,9 @@ from pydantic import BaseModel
 from tavily import TavilyClient
 
 from json_types import JsonObject
-from tools.base_tool import BaseTool
-from tools.tool_permission import ToolPermission
-from tools.tool_result import ToolResult
+from tools.core.base_tool import BaseTool
+from tools.permissions.tool_permission import ToolPermission
+from tools.core.tool_result import ToolResult
 from tools.web_search.web_search_input import WebSearchInput
 
 logger = logging.getLogger(__name__)

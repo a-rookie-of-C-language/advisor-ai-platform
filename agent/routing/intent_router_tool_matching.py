@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from tools.base_tool import BaseTool
+from tools.core.base_tool import BaseTool
 
 
 def match_tools_by_patterns(query: str, tool_patterns: list[tuple[str, re.Pattern[str]]]) -> list[str]:
