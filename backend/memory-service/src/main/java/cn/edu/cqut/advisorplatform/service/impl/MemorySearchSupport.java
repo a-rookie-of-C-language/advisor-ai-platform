@@ -153,25 +153,17 @@ public class MemorySearchSupport {
         continue;
       }
 
-      // Create a scoped request for this memory type
-      MemorySearchRequestDTO scopedRequest = new MemorySearchRequestDTO();
-      scopedRequest.setUserId(request.getUserId());
-      scopedRequest.setKbId(request.getKbId());
-      scopedRequest.setQuery(request.getQuery());
-      scopedRequest.setTopK(request.getTopK());
-      scopedRequest.setMode(request.getMode());
-
       List<UserMemoryDO> typeResults;
       boolean hasVectorService = !query.isEmpty() && memoryServiceFactory.hasService(vectorStore);
 
       if ("vector".equals(mode) && hasVectorService) {
-        typeResults = searchByVectorByType(scopedRequest, vectorStore, topK, memoryType);
+        typeResults = searchByVectorByType(request, vectorStore, topK, memoryType);
       } else if ("text".equals(mode)) {
-        typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
+        typeResults = searchTextByType(request, query, topK, memoryType);
       } else if (hasVectorService) {
         typeResults =
             searchHybridByType(
-                scopedRequest,
+                request,
                 query,
                 vectorStore,
                 topK,
@@ -179,7 +171,7 @@ public class MemorySearchSupport {
                 hybridTextWeight,
                 memoryType);
       } else {
-        typeResults = searchTextByType(scopedRequest, query, topK, memoryType);
+        typeResults = searchTextByType(request, query, topK, memoryType);
       }
 
       // Filter by memoryType and accumulate scores

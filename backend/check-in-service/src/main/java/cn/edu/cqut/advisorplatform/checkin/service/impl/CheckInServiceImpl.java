@@ -150,10 +150,7 @@ public class CheckInServiceImpl implements CheckInService {
   public Map<String, Object> getAttendanceStatistics(
       UserPrincipal userPrincipal, LocalDate begin, LocalDate end) {
     checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
-    Long teacherUserId =
-        userPrincipal.getRole() == UserRole.ADMIN
-            ? null
-            : checkInServiceSupport.resolveUserId(userPrincipal);
+    Long teacherUserId = resolveScopedTeacherUserId(userPrincipal);
 
     Map<String, Object> statistics = new HashMap<>();
     statistics.put("totalRecords", checkInDao.countRecordsByTeacher(teacherUserId, begin, end));
@@ -189,11 +186,14 @@ public class CheckInServiceImpl implements CheckInService {
   public List<Map<String, Object>> getClassAttendanceStatistics(
       UserPrincipal userPrincipal, LocalDate begin, LocalDate end) {
     checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
-    Long teacherUserId =
-        userPrincipal.getRole() == UserRole.ADMIN
-            ? null
-            : checkInServiceSupport.resolveUserId(userPrincipal);
+    Long teacherUserId = resolveScopedTeacherUserId(userPrincipal);
     return checkInDao.getClassAttendanceStatistics(teacherUserId, begin, end);
+  }
+
+  private Long resolveScopedTeacherUserId(UserPrincipal userPrincipal) {
+    return userPrincipal.getRole() == UserRole.ADMIN
+        ? null
+        : checkInServiceSupport.resolveUserId(userPrincipal);
   }
 
   @Override
@@ -204,10 +204,7 @@ public class CheckInServiceImpl implements CheckInService {
       LocalDate begin,
       LocalDate end) {
     checkInServiceSupport.requireAnyRole(userPrincipal, UserRole.ADMIN, UserRole.ADVISOR);
-    Long teacherUserId =
-        userPrincipal.getRole() == UserRole.ADMIN
-            ? null
-            : checkInServiceSupport.resolveUserId(userPrincipal);
+    Long teacherUserId = resolveScopedTeacherUserId(userPrincipal);
 
     List<CheckInRecordVO> records =
         checkInDao.selectRecordsForExport(studentId, checkInId, teacherUserId, begin, end);

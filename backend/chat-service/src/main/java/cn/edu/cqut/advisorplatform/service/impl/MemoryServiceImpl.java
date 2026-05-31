@@ -182,9 +182,7 @@ public class MemoryServiceImpl implements MemoryService {
     Optional<UserMemoryDO> optional = userMemoryDao.findById(memoryId);
     if (optional.isPresent()) {
       UserMemoryDO row = optional.get();
-      BigDecimal safeConfidence =
-          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence)))
-              .setScale(3, RoundingMode.HALF_UP);
+      BigDecimal safeConfidence = safeConfidence(confidence);
       row.setConfidence(safeConfidence);
       row.setUpdatedAt(LocalDateTime.now());
       userMemoryDao.save(row);
@@ -201,9 +199,7 @@ public class MemoryServiceImpl implements MemoryService {
     if (optional.isPresent()) {
       UserMemoryDO row = optional.get();
       row.setContent(content);
-      BigDecimal safeConfidence =
-          BigDecimal.valueOf(Math.max(0, Math.min(1, confidence)))
-              .setScale(3, RoundingMode.HALF_UP);
+      BigDecimal safeConfidence = safeConfidence(confidence);
       row.setConfidence(safeConfidence);
       row.setUpdatedAt(LocalDateTime.now());
       userMemoryDao.save(row);
@@ -211,5 +207,10 @@ public class MemoryServiceImpl implements MemoryService {
     } else {
       log.warn("memory_update_not_found id={}", memoryId);
     }
+  }
+
+  private BigDecimal safeConfidence(Double confidence) {
+    return BigDecimal.valueOf(Math.max(0, Math.min(1, confidence)))
+        .setScale(3, RoundingMode.HALF_UP);
   }
 }
