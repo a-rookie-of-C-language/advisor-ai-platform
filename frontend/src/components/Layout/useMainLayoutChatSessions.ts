@@ -3,6 +3,7 @@ import type { NavigateFunction } from 'react-router-dom'
 import { chatApi, type ChatSessionDTO } from '../../api/chatApi'
 import { onChatSessionsRefresh } from '../../pages/Chat/chatSessionEvents'
 import { globalMessage } from '../../utils/globalMessage'
+import { useTimerRegistry } from '../../utils/useTimerRegistry'
 
 export function useMainLayoutChatSessions(
   pathname: string,
@@ -10,8 +11,8 @@ export function useMainLayoutChatSessions(
   navigate: NavigateFunction,
 ) {
   const [chatSessions, setChatSessions] = useState<ChatSessionDTO[]>([])
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadSeqRef = useRef(0)
+  const timers = useTimerRegistry()
   const isChatPage = pathname === '/chat'
   const activeSessionId = useMemo(() => {
     const value = new URLSearchParams(search).get('sessionId')
@@ -47,22 +48,16 @@ export function useMainLayoutChatSessions(
 
   useEffect(() => {
     const unsubscribe = onChatSessionsRefresh(() => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current)
-      }
-      refreshTimerRef.current = setTimeout(() => {
-        refreshTimerRef.current = null
+      timers.clearAll()
+      timers.setTimeout(() => {
         void loadChatSessions()
       }, 80)
     })
     return () => {
       unsubscribe()
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current)
-        refreshTimerRef.current = null
-      }
+      timers.clearAll()
     }
-  }, [loadChatSessions])
+  }, [loadChatSessions, timers])
 
   const createSession = useCallback(() => {
     void (async () => {

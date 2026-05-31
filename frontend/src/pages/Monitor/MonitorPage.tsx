@@ -8,6 +8,7 @@ import {
   MonitorMetricCards,
   MonitorSeriesCharts,
 } from './MonitorPanels'
+import { useTimerRegistry } from '../../utils/useTimerRegistry'
 import styles from './MonitorPage.module.css'
 
 const RECONNECT_DELAY_MS = 3000
@@ -17,13 +18,21 @@ export default function MonitorPage() {
   const [connected, setConnected] = useState(false)
   const [latestError, setLatestError] = useState<string | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closingRef = useRef(false)
+  const timers = useTimerRegistry()
   const token = useAuthStore((s) => s.token)
 
   const connect = useCallback(() => {
     if (!token) {
+      setConnected(false)
       setLatestError('未登录，无法连接监控')
       return
+    }
+    timers.clearAll()
+    closingRef.current = false
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.close()
     }
     const ws = createMonitorWebSocket(
       token,
@@ -45,24 +54,26 @@ export default function MonitorPage() {
 
     ws.onclose = () => {
       setConnected(false)
-      reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS)
+      if (!closingRef.current) {
+        timers.setTimeout(connect, RECONNECT_DELAY_MS)
+      }
     }
 
     wsRef.current = ws
-  }, [token])
+  }, [timers, token])
 
   useEffect(() => {
     connect()
     return () => {
-      if (reconnectTimer.current) {
-        clearTimeout(reconnectTimer.current)
-      }
+      closingRef.current = true
+      timers.clearAll()
       if (wsRef.current) {
         wsRef.current.onclose = null
         wsRef.current.close()
+        wsRef.current = null
       }
     }
-  }, [connect])
+  }, [connect, timers])
 
   const generatedAtText = useMemo(() => {
     if (!data) return '-'

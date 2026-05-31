@@ -1,4 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
+import { useTimerRegistry } from '../../utils/useTimerRegistry'
 
 export type BodyPosition = {
   faceX: number
@@ -24,58 +25,59 @@ export function useMousePosition() {
 
 export function useBlink(): boolean {
   const [isBlinking, setIsBlinking] = useState(false)
+  const timers = useTimerRegistry()
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>
     const scheduleBlink = () => {
-      timeoutId = setTimeout(() => {
+      timers.setTimeout(() => {
         setIsBlinking(true)
-        setTimeout(() => {
+        timers.setTimeout(() => {
           setIsBlinking(false)
           scheduleBlink()
         }, 150)
       }, Math.random() * 4000 + 3000)
     }
     scheduleBlink()
-    return () => clearTimeout(timeoutId)
-  }, [])
+    return timers.clearAll
+  }, [timers])
 
   return isBlinking
 }
 
 export function useFocusLook(isEmailFocused: boolean, isPasswordFocused: boolean): boolean {
   const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false)
+  const timers = useTimerRegistry()
 
   useEffect(() => {
     if (isEmailFocused || isPasswordFocused) {
       setIsLookingAtEachOther(true)
-      const timeoutId = setTimeout(() => setIsLookingAtEachOther(false), 800)
-      return () => clearTimeout(timeoutId)
+      timers.setTimeout(() => setIsLookingAtEachOther(false), 800)
+      return timers.clearAll
     }
     setIsLookingAtEachOther(false)
     return undefined
-  }, [isEmailFocused, isPasswordFocused])
+  }, [isEmailFocused, isPasswordFocused, timers])
 
   return isLookingAtEachOther
 }
 
 export function usePurplePeek(passwordLength: number, showPassword: boolean): boolean {
   const [isPurplePeeking, setIsPurplePeeking] = useState(false)
+  const timers = useTimerRegistry()
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>
     if (passwordLength > 0 && showPassword) {
-      intervalId = setInterval(() => {
+      timers.setInterval(() => {
         if (Math.random() > 0.5) {
           setIsPurplePeeking(true)
-          setTimeout(() => setIsPurplePeeking(false), 800)
+          timers.setTimeout(() => setIsPurplePeeking(false), 800)
         }
       }, 2500)
     } else {
       setIsPurplePeeking(false)
     }
-    return () => clearInterval(intervalId)
-  }, [passwordLength, showPassword])
+    return timers.clearAll
+  }, [passwordLength, showPassword, timers])
 
   return isPurplePeeking
 }

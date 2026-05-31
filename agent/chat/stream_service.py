@@ -19,13 +19,14 @@ from chat.stream_defaults import (
 )
 from chat.stream_failure_memory import ChatStreamFailureMemorySupport
 from chat.stream_memory_context import ChatStreamMemoryContextSupport
-from chat.stream_message_utils import (
-    last_user_message,
-    validate_messages,
-)
 from chat.stream_protocol import (
     build_stream_error_payload,
     serialize_protocol_event,
+)
+from chat.stream_request_context import (
+    evaluate_trace_action_score,
+    log_stream_request_context,
+    prepare_stream_request_context,
 )
 from chat.stream_runtime_config import ChatStreamRuntimeConfig
 from chat.stream_service_bootstrap import (
@@ -192,54 +193,28 @@ class ChatStreamService:
         trace_id: str | None = None,
         turn_id: str | None = None,
     ) -> AsyncIterator[str]:
-        _ = kb_id
-        validated_messages = validate_messages(messages)
-        user_query = last_user_message(validated_messages)
-        if self._feature_failure_memory_inject and user_query:
-            validated_messages = self._failure_memory_support.inject_avoidance_prompt(
-                validated_messages,
-                user_query=user_query,
-            )
-
-        compacted_messages, compact_stats = await self._compaction_support.compact(
-            validated_messages,
+        context = await prepare_stream_request_context(
+            messages,
             session_id=session_id,
+            failure_memory_enabled=self._feature_failure_memory_inject,
+            failure_memory_support=self._failure_memory_support,
+            compaction_support=self._compaction_support,
         )
-        logger.info(
-            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s",
-            trace_id,
-            turn_id,
-            session_id,
-            user_id,
+        log_stream_request_context(
+            logger,
+            context=context,
+            trace_id=trace_id,
+            turn_id=turn_id,
+            session_id=session_id,
+            user_id=user_id,
+            kb_id=kb_id,
         )
-        if compact_stats["tokens_released"] > 0:
-            logger.info(
-                "context_compaction_released session_id=%s released=%s before=%s after=%s",
-                session_id,
-                compact_stats["tokens_released"],
-                compact_stats["tokens_before"],
-                compact_stats["tokens_after"],
-            )
-        if compact_stats.get("auto_compacted"):
-            logger.info(
-                "context_autocompact_done session_id=%s transcript=%s",
-                session_id,
-                compact_stats.get("transcript_path", ""),
-            )
 
         trace_events: list[dict[str, object]] = []
-        logger.info(
-            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
-            trace_id,
-            turn_id,
-            session_id,
-            user_id,
-            kb_id,
-        )
         if self._use_langgraph:
             async for event in stream_with_progress_trace(
                 self._stream_events_graph(
-                    compacted_messages,
+                    context.compacted_messages,
                     user_id=user_id,
                     session_id=session_id,
                     kb_id=kb_id,
@@ -253,7 +228,7 @@ class ChatStreamService:
         else:
             async for event in stream_with_progress_trace(
                 self._stream_events_legacy(
-                    compacted_messages,
+                    context.compacted_messages,
                     user_id=user_id,
                     session_id=session_id,
                     trace_id=trace_id,
@@ -265,8 +240,10 @@ class ChatStreamService:
                 yield event
 
         if self._feature_action_scoring:
-            self._last_action_score = self._failure_memory_support.evaluate_trace_and_record(
-                user_query=user_query,
+            self._last_action_score = evaluate_trace_action_score(
+                enabled=True,
+                failure_memory_support=self._failure_memory_support,
+                user_query=context.user_query,
                 trace_events=trace_events,
                 session_id=session_id,
                 user_id=user_id,

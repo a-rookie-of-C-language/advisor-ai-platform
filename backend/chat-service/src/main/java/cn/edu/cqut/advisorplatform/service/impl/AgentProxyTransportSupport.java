@@ -6,8 +6,11 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 class AgentProxyTransportSupport {
+
+  private static final int MAX_ERROR_BODY_BYTES = 8192;
 
   HttpRequest buildRequest(
       String payload,
@@ -49,7 +52,11 @@ class AgentProxyTransportSupport {
 
   String readErrorBody(HttpResponse<InputStream> response) {
     try (InputStream err = response.body()) {
-      return new String(err.readAllBytes(), StandardCharsets.UTF_8);
+      byte[] body = err.readNBytes(MAX_ERROR_BODY_BYTES + 1);
+      boolean truncated = body.length > MAX_ERROR_BODY_BYTES;
+      byte[] preview = truncated ? Arrays.copyOf(body, MAX_ERROR_BODY_BYTES) : body;
+      String text = new String(preview, StandardCharsets.UTF_8);
+      return truncated ? text + "...[truncated]" : text;
     } catch (IOException e) {
       return "";
     }
