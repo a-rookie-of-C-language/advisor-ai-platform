@@ -16,7 +16,7 @@ from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from safety.safety_pipeline import SafetyPipeline
 from skills.skill_registry import SkillRegistry
-from tools.intent_router import IntentRouter
+from routing.intent_router import IntentRouter
 from tools.tool_permission import PermissionConfig
 from tools.tool_registry import ToolRegistry
 

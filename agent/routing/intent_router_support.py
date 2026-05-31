@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from json_types import JsonValue
-from tools.intent_router_rules import CATEGORY_ALIASES, CATEGORY_DESCRIPTIONS, URL_PATTERN
+from routing.intent_router_rules import CATEGORY_ALIASES, CATEGORY_DESCRIPTIONS, URL_PATTERN
 
 
 def extract_first_url(query: str) -> str | None:

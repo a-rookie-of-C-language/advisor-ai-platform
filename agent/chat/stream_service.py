@@ -51,7 +51,7 @@ from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_store import FailureMemoryStore
 from safety.safety_pipeline import SafetyPipeline
-from tools.intent_router import IntentRouter
+from routing.intent_router import IntentRouter
 
 logger = logging.getLogger(__name__)
 

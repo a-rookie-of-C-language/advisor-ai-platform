@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from tools.base_tool import BaseTool
-from tools.intent_router_support import (
+from routing.intent_router_support import (
     apply_structured_student_query_boost,
     extract_first_url,
     looks_like_student_list_or_count_query,
@@ -11,13 +11,13 @@ from tools.intent_router_support import (
     match_count,
     pick_top_categories,
 )
-from tools.intent_router_tool_matching import (
+from routing.intent_router_tool_matching import (
     apply_tool_semantic_boost,
     find_tools_by_base_names,
     match_tools_by_patterns,
     match_tools_by_semantics,
 )
-from tools.RouteDecision import RouteDecision
+from routing.RouteDecision import RouteDecision
 
 
 def route_by_rules_and_scores(

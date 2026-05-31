@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from tools.intent_router import IntentRouter
-from tools.RouteDecision import RouteDecision
+from routing.intent_router import IntentRouter
+from routing.RouteDecision import RouteDecision
 
 
 class _ProviderJson:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from tools.intent_router import emit_route_observation
+from routing.intent_router import emit_route_observation
 
 from .generation_node_flow import run_generate_node
 from .memory_flush_node_flow import run_flush_memory_node

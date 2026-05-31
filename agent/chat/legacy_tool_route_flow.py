@@ -20,7 +20,7 @@ from chat.stream_message_utils import looks_like_exploration_query
 from graph.helpers import _should_force_education_rag
 from json_types import JsonObject
 from llm.chat_message import ChatMessage
-from tools.intent_router import emit_route_observation
+from routing.intent_router import emit_route_observation
 
 
 @dataclass
