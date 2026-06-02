@@ -1,5 +1,6 @@
 package cn.edu.cqut.advisorplatform.riskcontrol.service;
 
+import cn.edu.cqut.advisorplatform.riskcontrol.dao.RateLimitDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import java.time.Duration;
@@ -7,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class RateLimitFilter implements RiskFilter {
 
-  private final StringRedisTemplate redisTemplate;
+  private static final Duration RATE_LIMIT_WINDOW = Duration.ofMinutes(1);
+
+  private final RateLimitDao rateLimitDao;
 
   @Value("${advisor.risk.rate-limit.requests-per-minute:10}")
   private int requestsPerMinute;
@@ -33,10 +35,9 @@ public class RateLimitFilter implements RiskFilter {
     }
 
     String key = "rate_limit:" + request.getUserId();
-    String countStr = redisTemplate.opsForValue().get(key);
-    int count = countStr != null ? Integer.parseInt(countStr) : 0;
+    long count = rateLimitDao.incrementAndExpireOnFirstHit(key, RATE_LIMIT_WINDOW);
 
-    if (count >= requestsPerMinute) {
+    if (count > requestsPerMinute) {
       log.warn("Rate limit exceeded: userId={}, count={}", request.getUserId(), count);
       return RiskCheckResponse.builder()
           .passed(false)
@@ -48,8 +49,6 @@ public class RateLimitFilter implements RiskFilter {
           .build();
     }
 
-    redisTemplate.opsForValue().increment(key);
-    redisTemplate.expire(key, Duration.ofMinutes(1));
     return passed();
   }
 

@@ -29,6 +29,7 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
   private final MonitorWebSocketAuthenticator authenticator;
 
   private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+  private final Object broadcastTaskLock = new Object();
   private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
   private ScheduledFuture<?> broadcastTask;
 
@@ -62,6 +63,9 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
   public void handleTransportError(WebSocketSession session, Throwable exception) {
     log.warn("monitor ws transport error: sessionId={}", session.getId(), exception);
     sessions.remove(session.getId());
+    if (sessions.isEmpty()) {
+      stopBroadcast();
+    }
   }
 
   private boolean authenticate(WebSocketSession session) {
@@ -69,16 +73,20 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
   }
 
   private void ensureBroadcastRunning() {
-    if (broadcastTask == null || broadcastTask.isCancelled()) {
-      broadcastTask =
-          scheduler.scheduleWithFixedDelay(
-              this::broadcast, 0, BROADCAST_INTERVAL_SEC, TimeUnit.SECONDS);
+    synchronized (broadcastTaskLock) {
+      if (broadcastTask == null || broadcastTask.isCancelled()) {
+        broadcastTask =
+            scheduler.scheduleWithFixedDelay(
+                this::broadcast, 0, BROADCAST_INTERVAL_SEC, TimeUnit.SECONDS);
+      }
     }
   }
 
   private void stopBroadcast() {
-    if (broadcastTask != null && !broadcastTask.isCancelled()) {
-      broadcastTask.cancel(false);
+    synchronized (broadcastTaskLock) {
+      if (broadcastTask != null && !broadcastTask.isCancelled()) {
+        broadcastTask.cancel(false);
+      }
       broadcastTask = null;
     }
   }

@@ -240,30 +240,16 @@ services:
       - "8084:8084"
 
   agent:
-    image: advisor-agent:local
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
     container_name: advisor-agent
     env_file:
       - ../agent/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/advisor_ai
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-      AGENT_MODE: all
-      AGENT_API_HOST: 0.0.0.0
-      AGENT_API_PORT: 8001
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
-      CLI_BACKEND_BASE_URL: http://gateway:8080
-      LLM_THINKING_PROVIDER: none
-      MCP_SERVERS: student:http:http://student-service:8091/mcp/message
       MCP_TOKEN_STUDENT: ${MCP_TOKEN_STUDENT:?MCP_TOKEN_STUDENT is required}
-      OPENAI_TEMPERATURE: 0.2
-      EMBEDDING_PROVIDER: ollama
-      EMBEDDING_MODEL: bge-m3
-      ENABLE_TOOL_USE: "true"
-      ENABLED_TOOLS: web_fetch,web_search,rag_search,mcp__student__list_students,mcp__student__get_student,mcp__student__get_student_checkin_summary,mcp__student__get_student_checkin_detail
-      MEMORY_API_BASE_URL: http://memory-service:8084
       MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
-      FEATURE_MCP_TOOLS: "true"
-      DEBUG_STREAM: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -273,8 +259,6 @@ services:
         condition: service_started
     ports:
       - "8001:8001"
-    volumes:
-      - rag_uploads:/app/uploads
 
   audit-service:
     build:
