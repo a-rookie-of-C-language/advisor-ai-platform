@@ -23,9 +23,13 @@ export default function MainNavigation({ role, selectedPath, onNavigate }: MainN
           { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
           { key: '/student', icon: <TeamOutlined />, label: '学生管理' },
           { key: '/student/check-in', icon: <CheckCircleOutlined />, label: '打卡管理' },
+          { key: '/attendance', icon: <CheckCircleOutlined />, label: '课堂考勤' },
           { key: '/rag', icon: <DatabaseOutlined />, label: '知识库管理' },
           { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
         ]
+      : []),
+    ...(role === 'MONITOR'
+      ? [{ key: '/attendance', icon: <CheckCircleOutlined />, label: '课堂考勤' }]
       : []),
     ...(role === 'ADMIN'
       ? [

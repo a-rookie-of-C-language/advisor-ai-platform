@@ -1,3 +1,7 @@
+param(
+  [string]$ContainerCli = "podman"
+)
+
 $ErrorActionPreference = "Stop"
 
 $containers = @(
@@ -7,10 +11,10 @@ $containers = @(
 )
 
 foreach ($name in $containers) {
-  $exists = docker ps -a --filter "name=^/${name}$" --format "{{.Names}}"
+  $exists = & $ContainerCli ps -a --filter "name=^/${name}$" --format "{{.Names}}"
   if ($exists -contains $name) {
     Write-Host "停止容器: $name"
-    docker stop $name | Out-Null
+    & $ContainerCli stop $name | Out-Null
   } else {
     Write-Host "容器不存在，跳过: $name"
   }

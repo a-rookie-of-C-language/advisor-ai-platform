@@ -1,28 +1,30 @@
 param(
   [string]$ComposeFile = "backend/docker-compose.yml",
+  [string]$ContainerCli = "podman",
   [int]$WaitSeconds = 90,
   [switch]$SkipHealthCheck
 )
 
 $ErrorActionPreference = "Stop"
 
-function Assert-DockerAvailable {
+function Assert-ContainerCliAvailable {
+  param([string]$Cli)
   try {
-    docker version | Out-Null
+    & $Cli version | Out-Null
   } catch {
-    throw "Docker 不可用，请先启动 Docker Desktop。"
+    throw "$Cli 不可用，请先启动 Podman Machine 或确认 $Cli 已加入 PATH。"
   }
 }
 
 function Test-ContainerRunning {
   param([string]$Name)
-  $running = docker ps --filter "name=^/${Name}$" --format "{{.Names}}"
+  $running = & $ContainerCli ps --filter "name=^/${Name}$" --format "{{.Names}}"
   return $running -contains $Name
 }
 
 function Test-ContainerExists {
   param([string]$Name)
-  $all = docker ps -a --filter "name=^/${Name}$" --format "{{.Names}}"
+  $all = & $ContainerCli ps -a --filter "name=^/${Name}$" --format "{{.Names}}"
   return $all -contains $Name
 }
 
@@ -36,7 +38,7 @@ function Ensure-ContainerRunning {
 
   if (Test-ContainerExists -Name $Name) {
     Write-Host "启动已有容器: $Name"
-    docker start $Name | Out-Null
+    & $ContainerCli start $Name | Out-Null
     return
   }
 }
@@ -51,7 +53,7 @@ function Test-PortReady {
   }
 }
 
-Assert-DockerAvailable
+Assert-ContainerCliAvailable -Cli $ContainerCli
 
 $root = Split-Path -Parent $PSScriptRoot
 $composePath = Join-Path $root $ComposeFile
@@ -78,8 +80,8 @@ foreach ($c in $containers) {
 }
 
 if (-not $allRunning) {
-  Write-Host "检测到仍有容器未运行，回退到 docker compose up -d"
-  docker compose -f $composePath up -d
+  Write-Host "检测到仍有容器未运行，回退到 $ContainerCli compose up -d"
+  & $ContainerCli compose -f $composePath up -d
 }
 
 if (-not $SkipHealthCheck) {
@@ -105,7 +107,7 @@ if (-not $SkipHealthCheck) {
     Start-Sleep -Seconds 2
   }
 
-  throw "容器启动超时：请执行 docker ps -a 与 docker logs <container> 排查。"
+  throw "容器启动超时：请执行 $ContainerCli ps -a 与 $ContainerCli logs <container> 排查。"
 }
 
 Write-Host "基础容器已启动（已跳过健康检查）。"

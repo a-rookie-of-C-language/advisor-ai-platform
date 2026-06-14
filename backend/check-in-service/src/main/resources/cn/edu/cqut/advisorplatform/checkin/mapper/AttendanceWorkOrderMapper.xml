@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.edu.cqut.advisorplatform.checkin.attendance.mapper.AttendanceWorkOrderMapper">
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.checkin.attendance.entity.AttendanceWorkOrder"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO attendance_work_order (
+            session_id,
+            class_code,
+            type,
+            status,
+            reason,
+            target_session_date,
+            target_start_time,
+            target_end_time,
+            target_location,
+            applicant_id,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{sessionId},
+            #{classCode},
+            #{type},
+            #{status},
+            #{reason},
+            #{targetSessionDate},
+            #{targetStartTime},
+            #{targetEndTime},
+            #{targetLocation},
+            #{applicantId},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultType="cn.edu.cqut.advisorplatform.checkin.attendance.entity.AttendanceWorkOrder">
+        SELECT id,
+               session_id AS sessionId,
+               class_code AS classCode,
+               type,
+               status,
+               reason,
+               target_session_date AS targetSessionDate,
+               target_start_time AS targetStartTime,
+               target_end_time AS targetEndTime,
+               target_location AS targetLocation,
+               applicant_id AS applicantId,
+               reviewer_id AS reviewerId,
+               review_note AS reviewNote,
+               reviewed_at AS reviewedAt,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM attendance_work_order
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectWorkOrders" resultType="cn.edu.cqut.advisorplatform.checkin.attendance.entity.AttendanceWorkOrder">
+        SELECT id,
+               session_id AS sessionId,
+               class_code AS classCode,
+               type,
+               status,
+               reason,
+               target_session_date AS targetSessionDate,
+               target_start_time AS targetStartTime,
+               target_end_time AS targetEndTime,
+               target_location AS targetLocation,
+               applicant_id AS applicantId,
+               reviewer_id AS reviewerId,
+               review_note AS reviewNote,
+               reviewed_at AS reviewedAt,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM attendance_work_order
+        WHERE 1=1
+        <if test="classCode != null and classCode != ''">
+            AND class_code = #{classCode}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="review">
+        UPDATE attendance_work_order
+        SET status = #{status},
+            reviewer_id = #{reviewerId},
+            review_note = #{reviewNote},
+            reviewed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

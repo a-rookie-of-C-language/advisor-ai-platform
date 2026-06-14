@@ -38,6 +38,15 @@ function AdvisorRoute({ children }: { children: ReactNode }) {
   )
 }
 
+function AttendanceRoute({ children }: { children: ReactNode }) {
+  const role = useAuthStore((s) => s.role)
+  return role === 'ADMIN' || role === 'ADVISOR' || role === 'MONITOR' ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/dashboard" replace />
+  )
+}
+
 export default function AppRouter() {
   return (
     <Routes>
@@ -83,9 +92,9 @@ export default function AppRouter() {
         <Route
           path="attendance"
           element={
-            <AdminRoute>
+            <AttendanceRoute>
               <PageSuspense><AttendanceManagementPage /></PageSuspense>
-            </AdminRoute>
+            </AttendanceRoute>
           }
         />
       </Route>

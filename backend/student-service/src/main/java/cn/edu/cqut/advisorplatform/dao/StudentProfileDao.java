@@ -16,6 +16,9 @@ public interface StudentProfileDao extends JpaRepository<StudentProfile, Long> {
 
   Optional<StudentProfile> findByStudentNo(String studentNo);
 
+  java.util.List<StudentProfile> findByClassCodeAndDeletedOrderByStudentNoAsc(
+      String classCode, Integer deleted);
+
   boolean existsByStudentNoAndDeleted(String studentNo, Integer deleted);
 
   @Query(

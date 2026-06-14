@@ -120,6 +120,11 @@ public class StudentServiceImpl implements StudentService, StudentCheckInService
   }
 
   @Override
+  public List<StudentProfile> listStudentEntitiesByClassCode(String classCode) {
+    return studentProfileDao.findByClassCodeAndDeletedOrderByStudentNoAsc(classCode, 0);
+  }
+
+  @Override
   public void calculateAndUpdateInfoCompleteness(StudentProfile profile) {
     InfoCompleteness completeness = profile.calculateInfoCompleteness();
     profile.setInfoCompleteness(completeness.getCode());

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.edu.cqut.advisorplatform.checkin.attendance.mapper.ClassSessionMapper">
+    <insert id="insert" parameterType="cn.edu.cqut.advisorplatform.checkin.attendance.entity.ClassSession"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO class_session (
+            schedule_id,
+            term,
+            class_code,
+            course_code,
+            course_name,
+            teacher_no,
+            teacher_name,
+            week_no,
+            weekday,
+            period_start,
+            period_end,
+            session_date,
+            start_time,
+            end_time,
+            location,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{scheduleId},
+            #{term},
+            #{classCode},
+            #{courseCode},
+            #{courseName},
+            #{teacherNo},
+            #{teacherName},
+            #{weekNo},
+            #{weekday},
+            #{periodStart},
+            #{periodEnd},
+            #{sessionDate},
+            #{startTime},
+            #{endTime},
+            #{location},
+            #{status},
+            #{createdAt},
+            #{updatedAt}
+        )
+        ON CONFLICT (schedule_id, week_no) DO NOTHING
+    </insert>
+
+    <select id="selectById" resultType="cn.edu.cqut.advisorplatform.checkin.attendance.entity.ClassSession">
+        SELECT id,
+               schedule_id AS scheduleId,
+               term,
+               class_code AS classCode,
+               course_code AS courseCode,
+               course_name AS courseName,
+               teacher_no AS teacherNo,
+               teacher_name AS teacherName,
+               week_no AS weekNo,
+               weekday,
+               period_start AS periodStart,
+               period_end AS periodEnd,
+               session_date AS sessionDate,
+               start_time AS startTime,
+               end_time AS endTime,
+               location,
+               status,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM class_session
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectSessions" resultType="cn.edu.cqut.advisorplatform.checkin.attendance.entity.ClassSession">
+        SELECT id,
+               schedule_id AS scheduleId,
+               term,
+               class_code AS classCode,
+               course_code AS courseCode,
+               course_name AS courseName,
+               teacher_no AS teacherNo,
+               teacher_name AS teacherName,
+               week_no AS weekNo,
+               weekday,
+               period_start AS periodStart,
+               period_end AS periodEnd,
+               session_date AS sessionDate,
+               start_time AS startTime,
+               end_time AS endTime,
+               location,
+               status,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM class_session
+        WHERE 1=1
+        <if test="term != null and term != ''">
+            AND term = #{term}
+        </if>
+        <if test="classCode != null and classCode != ''">
+            AND class_code = #{classCode}
+        </if>
+        ORDER BY week_no ASC, weekday ASC, period_start ASC
+    </select>
+
+    <update id="updateScheduleTime">
+        UPDATE class_session
+        SET session_date = #{sessionDate},
+            start_time = #{startTime},
+            end_time = #{endTime},
+            location = COALESCE(#{location}, location),
+            status = 'RESCHEDULED',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>
