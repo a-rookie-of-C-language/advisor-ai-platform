@@ -282,6 +282,8 @@ services:
         condition: service_started
     ports:
       - "8001:8001"
+    volumes:
+      - rag_uploads:/app/uploads
 
   audit-service:
     build:
