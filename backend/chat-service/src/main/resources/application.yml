@@ -33,7 +33,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    table: flyway_schema_history_chat
     baseline-on-migrate: true
+    baseline-version: 0
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
