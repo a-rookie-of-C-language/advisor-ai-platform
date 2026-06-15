@@ -3,12 +3,11 @@ use axum::{
     extract::State,
     http::{Request, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
     Json,
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde_json::json;
 
 use crate::interfaces::http::middleware::MiddlewareState::MiddlewareState;
 use crate::shared::response;
@@ -100,7 +99,8 @@ async fn extract_content_from_request(req: &mut Request<Body>) -> Option<String>
     }
 
     // 读取body
-    let body = axum::body::to_bytes(req.body_mut(), 64 * 1024).await.ok()?;
+    let request_body = std::mem::replace(req.body_mut(), Body::empty());
+    let body = axum::body::to_bytes(request_body, 64 * 1024).await.ok()?;
     let body_str = String::from_utf8_lossy(&body);
 
     // 尝试从JSON中提取content字段
