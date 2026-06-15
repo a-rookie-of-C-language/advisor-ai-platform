@@ -125,7 +125,7 @@ async def decide_graph_tools(
             task_plan = {}
     logger.info(
         "graph_node decide_tool: session_id=%s, rag_enabled=%s, web_search_enabled=%s, "
-        "use_tool=%s, route_categories=%s",
+        "use_tool=%s, route_categories=%s, matched_tools=%s",
         state.get("session_id"),
         rag_enabled,
         web_search_enabled,
