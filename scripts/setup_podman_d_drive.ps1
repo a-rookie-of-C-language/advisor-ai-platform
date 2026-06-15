@@ -22,6 +22,14 @@ function Get-PodmanMachineNames {
   return @($lines | Where-Object { $_ -and $_.Trim() -ne "" })
 }
 
+function Remove-PodmanConnectionIfExists {
+  param([string]$Name)
+  $connections = podman system connection list --format "{{.Name}}"
+  if ($connections -contains $Name) {
+    podman system connection rm $Name | Out-Null
+  }
+}
+
 Assert-PodmanAvailable
 
 $resolvedStoragePath = [System.IO.Path]::GetFullPath($StoragePath)
@@ -40,25 +48,52 @@ if (-not $Force) {
   exit 0
 }
 
-New-Item -ItemType Directory -Force -Path $resolvedStoragePath | Out-Null
+$wslStoragePath = Join-Path $resolvedStoragePath "wsl"
+$exportPath = Join-Path $resolvedStoragePath "$MachineName.tar"
+New-Item -ItemType Directory -Force -Path $wslStoragePath | Out-Null
 
 $machineNames = Get-PodmanMachineNames
 if ($machineNames -contains $MachineName) {
   Write-Host "停止 Podman Machine: $MachineName"
   podman machine stop $MachineName | Out-Null
   Write-Host "删除 Podman Machine: $MachineName"
-  podman machine rm --force $MachineName | Out-Null
+  try {
+    podman machine rm --force $MachineName | Out-Null
+  } catch {
+    Write-Host "podman machine rm 失败，回退到 WSL 注销和 metadata 清理。"
+    wsl --unregister $MachineName | Out-Null
+    Remove-Item -Force "$env:USERPROFILE\.config\containers\podman\machine\wsl\$MachineName.ign" -ErrorAction SilentlyContinue
+    Remove-Item -Force "$env:USERPROFILE\.config\containers\podman\machine\wsl\$MachineName.json" -ErrorAction SilentlyContinue
+    Remove-Item -Force "$env:USERPROFILE\.config\containers\podman\machine\wsl\$MachineName.lock" -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force "$env:USERPROFILE\.local\share\containers\podman\machine\wsl\$MachineName" -ErrorAction SilentlyContinue
+    Remove-Item -Force "$env:USERPROFILE\.local\share\containers\podman\machine\wsl\$MachineName-amd64" -ErrorAction SilentlyContinue
+  }
 }
 
-Write-Host "重建 Podman Machine，并将 /var/lib/containers 挂载到 D 盘目录。"
+Remove-PodmanConnectionIfExists -Name $MachineName
+Remove-PodmanConnectionIfExists -Name "$MachineName-root"
+
+Write-Host "重建 Podman Machine。"
 podman machine init `
   --cpus $Cpus `
   --memory $Memory `
   --disk-size $DiskSize `
-  --volume "${resolvedStoragePath}:/var/lib/containers" `
   --now `
   $MachineName | Out-Null
 
-Write-Host "Podman Machine 已启动。"
+Write-Host "导出 WSL 发行版并导入到 D 盘目录。"
+podman machine stop $MachineName | Out-Null
+if (Test-Path -LiteralPath $exportPath) {
+  Remove-Item -Force $exportPath
+}
+wsl --export $MachineName $exportPath | Out-Null
+wsl --unregister $MachineName | Out-Null
+Remove-Item -Recurse -Force $wslStoragePath -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $wslStoragePath | Out-Null
+wsl --import $MachineName $wslStoragePath $exportPath --version 2 | Out-Null
+Remove-Item -Force $exportPath
+podman machine start $MachineName | Out-Null
+
+Write-Host "Podman Machine 已迁移并启动。"
 podman machine list
 podman system connection list
