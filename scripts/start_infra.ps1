@@ -2,6 +2,7 @@ param(
   [string]$ComposeFile = "backend/docker-compose.yml",
   [string]$ContainerCli = "podman",
   [string]$ComposeCli = "podman-compose",
+  [string]$ProxyTunnelScript = "scripts/start_podman_proxy_tunnel.ps1",
   [int]$WaitSeconds = 90,
   [switch]$SkipHealthCheck
 )
@@ -40,6 +41,25 @@ function Assert-ComposeCliAvailable {
   } catch {
     throw "$CliPath 不可用。请先执行: agent\.venv\Scripts\python.exe -m pip install podman-compose"
   }
+}
+
+function Start-PodmanProxyTunnelIfNeeded {
+  param(
+    [string]$Root,
+    [string]$ScriptPath
+  )
+  $proxyUrl = $env:HTTPS_PROXY
+  if ([string]::IsNullOrWhiteSpace($proxyUrl)) {
+    $proxyUrl = $env:HTTP_PROXY
+  }
+  if ([string]::IsNullOrWhiteSpace($proxyUrl) -or $proxyUrl -notmatch "127\.0\.0\.1|localhost") {
+    return
+  }
+  $fullScriptPath = Join-Path $Root $ScriptPath
+  if (-not (Test-Path -LiteralPath $fullScriptPath)) {
+    return
+  }
+  & $fullScriptPath -ProxyUrl $proxyUrl | Out-Null
 }
 
 function Test-ContainerRunning {
@@ -81,6 +101,7 @@ function Test-PortReady {
 
 $root = Split-Path -Parent $PSScriptRoot
 $resolvedComposeCli = Resolve-ComposeCli -Cli $ComposeCli -Root $root
+Start-PodmanProxyTunnelIfNeeded -Root $root -ScriptPath $ProxyTunnelScript
 Assert-ContainerCliAvailable -Cli $ContainerCli
 Assert-ComposeCliAvailable -CliPath $resolvedComposeCli
 
@@ -109,7 +130,7 @@ foreach ($c in $containers) {
 
 if (-not $allRunning) {
   Write-Host "检测到仍有容器未运行，回退到 $resolvedComposeCli up -d"
-  & $resolvedComposeCli -f $composePath up -d
+  & $resolvedComposeCli -f $composePath up -d nacos postgres jaeger
 }
 
 if (-not $SkipHealthCheck) {
