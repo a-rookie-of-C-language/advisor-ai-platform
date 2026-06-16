@@ -411,6 +411,36 @@ services:
     ports:
       - "8091:8091"
 
+  feedback-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: feedback-service
+        SERVICE_PORT: 8092
+    container_name: advisor-feedback-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_OWNER: ${GITHUB_OWNER:-a-rookie-of-C-language}
+      GITHUB_REPO: ${GITHUB_REPO:-advisor-ai-platform}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8092:8092"
+
   gateway:
     build:
       context: .
@@ -444,6 +474,8 @@ services:
       risk-control-service:
         condition: service_started
       check-in-service:
+        condition: service_started
+      feedback-service:
         condition: service_started
     ports:
       - "8080:8080"

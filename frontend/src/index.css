@@ -9,3 +9,12 @@ body {
   background-color: #F8FAFC;
   color: #020617;
 }
+
+.link-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}

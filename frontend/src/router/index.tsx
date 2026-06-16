@@ -13,6 +13,8 @@ const StudentListPage = lazy(() => import('../pages/Student/StudentListPage'))
 const StudentDetailPage = lazy(() => import('../pages/Student/StudentDetailPage'))
 const CheckInManagementPage = lazy(() => import('../pages/Student/CheckInManagementPage'))
 const AttendanceManagementPage = lazy(() => import('../pages/CheckIn/AttendanceManagementPage'))
+const FeedbackIssueListPage = lazy(() => import('../pages/Feedback/FeedbackIssueListPage'))
+const FeedbackIssueDetailPage = lazy(() => import('../pages/Feedback/FeedbackIssueDetailPage'))
 const NotFound = lazy(() => import('../pages/NotFound'))
 
 function PageSuspense({ children }: { children: ReactNode }) {
@@ -89,6 +91,8 @@ export default function AppRouter() {
         <Route path="student" element={<AdvisorRoute><PageSuspense><StudentListPage /></PageSuspense></AdvisorRoute>} />
         <Route path="student/:id" element={<AdvisorRoute><PageSuspense><StudentDetailPage /></PageSuspense></AdvisorRoute>} />
         <Route path="student/check-in" element={<AdvisorRoute><PageSuspense><CheckInManagementPage /></PageSuspense></AdvisorRoute>} />
+        <Route path="issues" element={<PageSuspense><FeedbackIssueListPage /></PageSuspense>} />
+        <Route path="issues/:id" element={<PageSuspense><FeedbackIssueDetailPage /></PageSuspense>} />
         <Route
           path="attendance"
           element={

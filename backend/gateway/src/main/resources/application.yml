@@ -43,6 +43,10 @@ spring:
           uri: lb://check-in-service
           predicates:
             - Path=/api/check-in/**
+        - id: feedback-service
+          uri: lb://feedback-service
+          predicates:
+            - Path=/api/issues/**
         - id: risk-control-tracking
           uri: lb://risk-control-service
           predicates:

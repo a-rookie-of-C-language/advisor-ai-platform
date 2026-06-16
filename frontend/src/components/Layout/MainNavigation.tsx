@@ -4,6 +4,7 @@ import {
   CheckCircleOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  IssuesCloseOutlined,
   LineChartOutlined,
   MessageOutlined,
   TeamOutlined,
@@ -31,6 +32,7 @@ export default function MainNavigation({ role, selectedPath, onNavigate }: MainN
     ...(role === 'MONITOR'
       ? [{ key: '/attendance', icon: <CheckCircleOutlined />, label: '课堂考勤' }]
       : []),
+    ...(role ? [{ key: '/issues', icon: <IssuesCloseOutlined />, label: '反馈' }] : []),
     ...(role === 'ADMIN'
       ? [
           { key: '/audit', icon: <AuditOutlined />, label: '审计日志' },
