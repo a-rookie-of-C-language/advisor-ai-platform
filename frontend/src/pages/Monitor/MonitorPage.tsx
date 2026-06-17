@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
-import { createMonitorWebSocket, type MonitorRealtimeResponseDTO } from '../../api/monitorApi'
+import {
+  createMonitorSseStream,
+  type MonitorRealtimeResponseDTO,
+  type MonitorStreamSubscription,
+} from '../../api/monitorApi'
 import { useAuthStore } from '../../store/authStore'
 import {
   MonitorAlerts,
@@ -17,7 +21,7 @@ export default function MonitorPage() {
   const [data, setData] = useState<MonitorRealtimeResponseDTO | null>(null)
   const [connected, setConnected] = useState(false)
   const [latestError, setLatestError] = useState<string | null>(null)
-  const wsRef = useRef<WebSocket | null>(null)
+  const streamRef = useRef<MonitorStreamSubscription | null>(null)
   const closingRef = useRef(false)
   const timers = useTimerRegistry()
   const token = useAuthStore((s) => s.token)
@@ -30,11 +34,11 @@ export default function MonitorPage() {
     }
     timers.clearAll()
     closingRef.current = false
-    if (wsRef.current) {
-      wsRef.current.onclose = null
-      wsRef.current.close()
+    if (streamRef.current) {
+      streamRef.current.abort()
+      streamRef.current = null
     }
-    const ws = createMonitorWebSocket(
+    streamRef.current = createMonitorSseStream(
       token,
       (monitorData) => {
         setData(monitorData)
@@ -42,24 +46,17 @@ export default function MonitorPage() {
         setLatestError(null)
       },
       () => {
+        setConnected(true)
+        setLatestError(null)
+      },
+      (message) => {
         setConnected(false)
-        setLatestError('WebSocket 连接异常')
+        setLatestError(message || '监控流连接异常')
+        if (!closingRef.current) {
+          timers.setTimeout(connect, RECONNECT_DELAY_MS)
+        }
       },
     )
-
-    ws.onopen = () => {
-      setConnected(true)
-      setLatestError(null)
-    }
-
-    ws.onclose = () => {
-      setConnected(false)
-      if (!closingRef.current) {
-        timers.setTimeout(connect, RECONNECT_DELAY_MS)
-      }
-    }
-
-    wsRef.current = ws
   }, [timers, token])
 
   useEffect(() => {
@@ -67,10 +64,9 @@ export default function MonitorPage() {
     return () => {
       closingRef.current = true
       timers.clearAll()
-      if (wsRef.current) {
-        wsRef.current.onclose = null
-        wsRef.current.close()
-        wsRef.current = null
+      if (streamRef.current) {
+        streamRef.current.abort()
+        streamRef.current = null
       }
     }
   }, [connect, timers])
