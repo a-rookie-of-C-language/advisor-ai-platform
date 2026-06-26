@@ -20,6 +20,7 @@ from routing.intent_router import IntentRouter
 from tools.permissions.tool_permission import PermissionConfig
 from tools.registry.tool_registry import ToolRegistry
 
+from .permission_config_utils import permission_config_to_json
 from .state import GraphState
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ async def _execute_tool(
             "session_id": state.get("session_id"),
             "kb_id": 0,
             "user_query": state.get("user_query", ""),
-            "permission_config": runtime.tool_permission,
+            "permission_config": permission_config_to_json(runtime.tool_permission),
         },
     )
     if tool_name != "web_fetch" or runtime.tools.get("web_search") is None:
@@ -115,6 +116,6 @@ async def _execute_tool(
             "session_id": state.get("session_id"),
             "kb_id": 0,
             "user_query": state.get("user_query", ""),
-            "permission_config": runtime.tool_permission,
+            "permission_config": permission_config_to_json(runtime.tool_permission),
         },
     )

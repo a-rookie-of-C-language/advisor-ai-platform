@@ -8,6 +8,7 @@ from json_types import JsonObject
 from llm.chat_message import ChatMessage
 from safety.safety_pipeline import SafetyPipeline
 
+from .permission_config_utils import permission_config_to_json
 from .runtime import _runtime
 from .state import GraphState
 from .tool_result_mapper import (
@@ -38,7 +39,7 @@ async def _execute_tool(*, tool_name: str, tool_args: JsonObject, state: GraphSt
             "user_query": state.get("user_query", ""),
             "trace_id": state.get("trace_id"),
             "turn_id": state.get("turn_id"),
-            "permission_config": runtime.tool_permission,
+            "permission_config": permission_config_to_json(runtime.tool_permission),
         },
     )
 

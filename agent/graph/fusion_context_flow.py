@@ -8,6 +8,7 @@ from json_types import JsonObject
 from llm.chat_message import ChatMessage
 
 from .helpers import provider_stream
+from .permission_config_utils import permission_config_to_json
 from .runtime import _runtime
 from .state import GraphState
 
@@ -29,7 +30,7 @@ async def run_fusion_pipeline(
         "session_id": state.get("session_id"),
         "kb_id": state.get("kb_id"),
         "user_query": user_query,
-        "permission_config": runtime.tool_permission,
+        "permission_config": permission_config_to_json(runtime.tool_permission),
     }
 
     async def _exec_rag() -> list[SourceCandidate]:
@@ -141,14 +142,17 @@ async def run_fusion_pipeline(
 
 def inject_fusion_context(model_messages: list, fusion_context: JsonObject) -> list:
     from prompt.PromptBuilder import PromptBuilder
+    from fusion.source_candidate import SourceCandidate
 
     candidates = fusion_context.get("candidates", [])
-    if not candidates:
+    if not isinstance(candidates, list):
         return model_messages
 
     rag_parts = []
     web_parts = []
     for c in candidates:
+        if not isinstance(c, SourceCandidate):
+            continue
         entry = f"- {c.content}"
         meta = c.metadata
         if meta.get("authority") == "official":
@@ -172,7 +176,7 @@ def inject_fusion_context(model_messages: list, fusion_context: JsonObject) -> l
     fusion_prompt = "\n".join(lines)
 
     conflict_hint = fusion_context.get("conflict_hint")
-    if conflict_hint:
+    if conflict_hint and isinstance(conflict_hint, str):
         fusion_prompt += "\n\n" + PromptBuilder.build_conflict_hint_prompt(conflict_hint)
 
     system_msg = ChatMessage(role="system", content=fusion_prompt)
