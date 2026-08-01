@@ -13,6 +13,7 @@ import type { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
+import { AgentStreamEventWriter } from "./AgentStreamEventWriter.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
@@ -71,42 +72,23 @@ export class AgentRuntime {
     const traceId = this.resolveTraceId(chatRequest, request);
     const turnId = this.resolveTurnId(chatRequest, request);
     const writer = new SseWriter(response, this.core, traceId);
+    const eventWriter = new AgentStreamEventWriter(writer);
 
     await writer.start();
     try {
       const modelMessages = await this.contextPipeline.build(chatRequest);
       const tools = await this.loadOpenAiTools();
       const toolExecutor = tools.length > 0 ? (toolName: string, toolArgs: JsonObject) => this.executeOpenAiTool(chatRequest, toolName, toolArgs) : undefined;
-      let answer = "";
-      let emitted = false;
       for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
-        if (event.type === "delta") {
-          emitted = true;
-          answer += event.text;
-          await writer.write("llm_delta", "llm", { text: event.text });
-        } else if (event.type === "tool_call") {
-          await writer.write("tool_call", "tool", {
-            tool_call_id: event.toolCallId,
-            tool_name: event.toolName,
-            tool_args: event.toolArgs
-          });
-        } else {
-          await writer.write("tool_result", "tool", {
-            tool_call_id: event.toolCallId,
-            tool_name: event.toolName,
-            tool_output: event.toolOutput,
-            success: event.success
-          });
-        }
+        await eventWriter.write(event);
       }
 
-      if (!emitted && !this.config.openAiApiKey) {
-        answer = "TS agent 已启动，但当前未配置 OPENAI_API_KEY，无法调用模型。";
-        await writer.write("llm_delta", "llm", { text: answer });
+      if (!eventWriter.emitted && !this.config.openAiApiKey) {
+        await eventWriter.writeMissingOpenAiApiKeyFallback();
       }
 
       await writer.done("stream_finished");
-      await this.submitMemoryTask(chatRequest, turnId, answer);
+      await this.submitMemoryTask(chatRequest, turnId, eventWriter.answer);
     } catch (error) {
       await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
     }
