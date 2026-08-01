@@ -1,25 +1,22 @@
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
-import { AgentWorkspaceCleanupRouteHandler } from "./AgentWorkspaceCleanupRouteHandler.js";
-import { AgentWorkspaceStatsRouteHandler } from "./AgentWorkspaceStatsRouteHandler.js";
+import { AgentWorkspaceMaintenanceRouteComponents } from "./AgentWorkspaceMaintenanceRouteComponents.js";
 
 export class AgentWorkspaceMaintenanceRouteHandler {
-  private readonly cleanupRouteHandler: AgentWorkspaceCleanupRouteHandler;
-  private readonly statsRouteHandler: AgentWorkspaceStatsRouteHandler;
+  private readonly components: AgentWorkspaceMaintenanceRouteComponents;
 
   constructor(workspaceManager: WorkspaceManager, requestReader: AgentHttpRequestReader) {
-    this.cleanupRouteHandler = new AgentWorkspaceCleanupRouteHandler(workspaceManager, requestReader);
-    this.statsRouteHandler = new AgentWorkspaceStatsRouteHandler(workspaceManager, requestReader);
+    this.components = new AgentWorkspaceMaintenanceRouteComponents(workspaceManager, requestReader);
   }
 
   async handle(method: string | undefined, url: URL): Promise<HttpRouteResult | null> {
     if (method === "POST" && url.pathname === "/workspace/cleanup") {
-      return this.cleanupRouteHandler.handle(url);
+      return this.components.cleanupRouteHandler.handle(url);
     }
 
     if (method === "GET" && url.pathname === "/workspace/stats") {
-      return this.statsRouteHandler.handle(url);
+      return this.components.statsRouteHandler.handle(url);
     }
 
     return null;
