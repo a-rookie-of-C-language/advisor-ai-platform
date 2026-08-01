@@ -1,6 +1,7 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
+import { AgentMcpRouteHandler } from "./AgentMcpRouteHandler.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
 import { AgentWorkspaceRouteHandler } from "./AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "./McpToolService.js";
@@ -10,6 +11,7 @@ import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly requestReader = new AgentHttpRequestReader();
+  private readonly mcpRouteHandler: AgentMcpRouteHandler;
   private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler;
 
   constructor(
@@ -18,6 +20,7 @@ export class AgentHttpServer {
     private readonly workspaceManager = new WorkspaceManager(config.workspaceBasePath),
     private readonly mcpToolService?: McpToolService
   ) {
+    this.mcpRouteHandler = new AgentMcpRouteHandler(this.mcpToolService, this.requestReader);
     this.workspaceRouteHandler = new AgentWorkspaceRouteHandler(this.workspaceManager, this.requestReader);
   }
 
@@ -61,21 +64,9 @@ export class AgentHttpServer {
         return;
       }
 
-      if (request.method === "GET" && url.pathname === "/mcp/tools") {
-        const mcpToolService = this.requireMcpToolService();
-        this.writeJson(response, 200, { status: "ok", tools: await mcpToolService.listTools() });
-        return;
-      }
-
-      if (request.method === "POST" && url.pathname === "/mcp/call") {
-        const mcpToolService = this.requireMcpToolService();
-        const body = await this.requestReader.readJsonObject(request);
-        const result = await mcpToolService.callTool(
-          this.requestReader.readRequiredString(body, "server"),
-          this.requestReader.readRequiredString(body, "name"),
-          this.requestReader.readOptionalJsonObject(body, "arguments")
-        );
-        this.writeJson(response, 200, { status: "ok", result });
+      const mcpResult = await this.mcpRouteHandler.handle(request.method, url, request);
+      if (mcpResult) {
+        this.writeJson(response, mcpResult.statusCode, mcpResult.body);
         return;
       }
 
@@ -104,10 +95,4 @@ export class AgentHttpServer {
     return error instanceof WorkspaceError ? 400 : 500;
   }
 
-  private requireMcpToolService(): McpToolService {
-    if (!this.mcpToolService) {
-      throw new WorkspaceError("MCP tools 未启用");
-    }
-    return this.mcpToolService;
-  }
 }
