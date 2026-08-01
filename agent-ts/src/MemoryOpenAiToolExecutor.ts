@@ -1,19 +1,13 @@
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
+import { MemoryCandidateReader } from "./MemoryCandidateReader.js";
 import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 
-interface MemoryCandidateInput {
-  content: string;
-  confidence?: number;
-  sourceTurnId?: string | null;
-  tags?: JsonObject | null;
-  memoryType?: string | null;
-  isCore?: boolean | null;
-}
-
 export class MemoryOpenAiToolExecutor {
+  private readonly candidateReader = new MemoryCandidateReader();
+
   constructor(
     private readonly memoryClient: MemoryApiClient,
     private readonly topK: number
@@ -61,7 +55,7 @@ export class MemoryOpenAiToolExecutor {
 
   private async writeMemory(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     const userId = this.requireUserId(request);
-    const candidates = this.readCandidates(args);
+    const candidates = this.candidateReader.readCandidates(args);
     const result = await this.memoryClient.upsertCandidates({
       userId,
       kbId: request.kbId ?? 0,
@@ -80,23 +74,6 @@ export class MemoryOpenAiToolExecutor {
       }),
       success: true
     };
-  }
-
-  private readCandidates(args: JsonObject): MemoryCandidateInput[] {
-    const value = OpenAiToolArgumentReader.readAliasedValue(args, "candidates");
-    if (!Array.isArray(value) || value.length === 0) {
-      throw new Error("memory_write candidates empty");
-    }
-    return value
-      .map((item) => (item && typeof item === "object" && !Array.isArray(item) ? (item as JsonObject) : {}))
-      .map((item) => ({
-        content: OpenAiToolArgumentReader.readRequiredString(item, "content"),
-        confidence: OpenAiToolArgumentReader.readOptionalNumber(item, "confidence", 0.5),
-        sourceTurnId: OpenAiToolArgumentReader.readOptionalString(item, "source_turn_id", null),
-        tags: OpenAiToolArgumentReader.readOptionalJsonObject(item, "tags"),
-        memoryType: OpenAiToolArgumentReader.readOptionalString(item, "memory_type", null),
-        isCore: OpenAiToolArgumentReader.readOptionalBoolean(item, "is_core", null)
-      }));
   }
 
   private requireUserId(request: ChatStreamRequest): number {
