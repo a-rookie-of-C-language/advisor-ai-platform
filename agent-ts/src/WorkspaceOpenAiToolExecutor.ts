@@ -2,23 +2,20 @@ import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
+import { WorkspaceOpenAiReadToolExecutor } from "./WorkspaceOpenAiReadToolExecutor.js";
 
 export class WorkspaceOpenAiToolExecutor {
-  constructor(private readonly workspaceManager: WorkspaceManager) {}
+  private readonly readToolExecutor: WorkspaceOpenAiReadToolExecutor;
+
+  constructor(private readonly workspaceManager: WorkspaceManager) {
+    this.readToolExecutor = new WorkspaceOpenAiReadToolExecutor(workspaceManager);
+  }
 
   async execute(request: ChatStreamRequest, toolName: string, args: JsonObject): Promise<JsonObject> {
     const userId = request.userId ?? null;
     const sessionId = request.sessionId ?? null;
-    if (toolName === "workspace_read") {
-      return {
-        content: await this.workspaceManager.read(
-          userId,
-          sessionId,
-          OpenAiToolArgumentReader.readRequiredString(args, "path"),
-          OpenAiToolArgumentReader.readOptionalNumber(args, "offset", 0),
-          OpenAiToolArgumentReader.readOptionalNumber(args, "limit", 8192)
-        )
-      };
+    if (this.readToolExecutor.canExecute(toolName)) {
+      return this.readToolExecutor.execute(request, toolName, args);
     }
     if (toolName === "workspace_write") {
       return {
@@ -41,17 +38,6 @@ export class WorkspaceOpenAiToolExecutor {
           OpenAiToolArgumentReader.readRequiredString(args, "new_string"),
           OpenAiToolArgumentReader.readOptionalBoolean(args, "is_final", false)
         )
-      };
-    }
-    if (toolName === "workspace_list") {
-      const items = await this.workspaceManager.list(
-        userId,
-        sessionId,
-        OpenAiToolArgumentReader.readOptionalString(args, "path", "."),
-        OpenAiToolArgumentReader.readOptionalBoolean(args, "recursive", false)
-      );
-      return {
-        items: items.map((item) => ({ ...item }))
       };
     }
     if (toolName === "workspace_create_dir") {
