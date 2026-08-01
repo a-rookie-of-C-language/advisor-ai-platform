@@ -2,17 +2,18 @@ import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
 import { AgentHealthRouteHandler } from "./AgentHealthRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
+import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import { AgentMcpRouteHandler } from "./AgentMcpRouteHandler.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
 import { AgentWorkspaceRouteHandler } from "./AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "./McpToolService.js";
 import { parseJsonBody } from "./HttpBodyParser.js";
-import { WorkspaceError } from "./WorkspaceError.js";
 import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly authorizer: AgentRequestAuthorizer;
+  private readonly jsonResponseWriter = new AgentJsonResponseWriter();
   private readonly requestReader = new AgentHttpRequestReader();
   private readonly healthRouteHandler: AgentHealthRouteHandler;
   private readonly mcpRouteHandler: AgentMcpRouteHandler;
@@ -45,12 +46,12 @@ export class AgentHttpServer {
       const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
       const healthResult = await this.healthRouteHandler.handle(request.method, url);
       if (healthResult) {
-        this.writeJson(response, healthResult.statusCode, healthResult.body);
+        this.jsonResponseWriter.write(response, healthResult.statusCode, healthResult.body);
         return;
       }
 
       if (!this.authorizer.isAuthorized(request)) {
-        this.writeJson(response, 401, { detail: "invalid agent token" });
+        this.jsonResponseWriter.write(response, 401, { detail: "invalid agent token" });
         return;
       }
 
@@ -62,28 +63,19 @@ export class AgentHttpServer {
 
       const workspaceResult = await this.workspaceRouteHandler.handle(request.method, url, request);
       if (workspaceResult) {
-        this.writeJson(response, workspaceResult.statusCode, workspaceResult.body);
+        this.jsonResponseWriter.write(response, workspaceResult.statusCode, workspaceResult.body);
         return;
       }
 
       const mcpResult = await this.mcpRouteHandler.handle(request.method, url, request);
       if (mcpResult) {
-        this.writeJson(response, mcpResult.statusCode, mcpResult.body);
+        this.jsonResponseWriter.write(response, mcpResult.statusCode, mcpResult.body);
         return;
       }
 
-      this.writeJson(response, 404, { detail: "not found" });
+      this.jsonResponseWriter.write(response, 404, { detail: "not found" });
     } catch (error) {
-      this.writeJson(response, this.statusCodeForError(error), { detail: error instanceof Error ? error.message : "internal error" });
+      this.jsonResponseWriter.writeError(response, error);
     }
-  }
-
-  private writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
-    response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
-    response.end(JSON.stringify(body));
-  }
-
-  private statusCodeForError(error: unknown): number {
-    return error instanceof WorkspaceError ? 400 : 500;
   }
 }
