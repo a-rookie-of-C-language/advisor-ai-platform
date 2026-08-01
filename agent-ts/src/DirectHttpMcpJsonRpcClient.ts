@@ -1,4 +1,4 @@
-import type { JsonObject } from "./JsonTypes.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { JsonRpcResponse } from "./JsonRpcResponse.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 

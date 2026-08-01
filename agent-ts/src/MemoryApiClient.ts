@@ -1,8 +1,8 @@
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { MemoryApiHttpClient } from "./MemoryApiHttpClient.js";
-import type { JsonObject } from "./JsonTypes.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { MemoryItem } from "./MemoryItem.js";
-import type { SessionSummary } from "./SessionSummary.js";
+import type { SessionSummary } from "./common/SessionSummary.js";
 
 export class MemoryApiClient {
   private readonly httpClient: MemoryApiHttpClient;

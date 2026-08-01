@@ -1,4 +1,4 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "./ChatStreamRequest.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "./common/ChatStreamRequest.js";
 import type { WebSearchClient } from "./WebSearchClient.js";
 import type { WebSearchResult } from "./WebSearchResult.js";
 

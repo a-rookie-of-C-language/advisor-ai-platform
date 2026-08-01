@@ -1,5 +1,5 @@
-import type { ChatStreamRequest } from "./ChatStreamRequest.js";
-import type { JsonObject } from "./JsonTypes.js";
+import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryReadRequestReader } from "./MemoryReadRequestReader.js";
 import { MemoryToolResultFormatter } from "./MemoryToolResultFormatter.js";

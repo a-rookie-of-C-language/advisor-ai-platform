@@ -1,4 +1,4 @@
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { RagApiClient } from "./RagApiClient.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import { RagContextBuilder as RagContextBuilderClass } from "./RagContextBuilder.js";

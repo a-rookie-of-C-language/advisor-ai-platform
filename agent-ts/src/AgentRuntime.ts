@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { AgentContextPipeline } from "./AgentContextPipeline.js";
-import type { AgentCoreClient } from "./AgentCoreClient.js";
-import type { ChatStreamRequest } from "./ChatStreamRequest.js";
-import type { JsonObject } from "./JsonTypes.js";
+import type { AgentCoreClient } from "./core/AgentCoreClient.js";
+import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
@@ -13,10 +13,10 @@ import type { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
-import { AgentStreamEventWriter } from "./AgentStreamEventWriter.js";
+import { AgentStreamEventWriter } from "./protocol/AgentStreamEventWriter.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
-import { SseWriter } from "./SseWriter.js";
-import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
+import { SseWriter } from "./protocol/SseWriter.js";
+import { validateChatStreamRequest } from "./common/validateChatStreamRequest.js";
 
 export class AgentRuntime {
   private readonly contextPipeline: AgentContextPipeline;

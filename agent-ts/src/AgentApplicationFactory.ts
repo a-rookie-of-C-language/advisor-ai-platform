@@ -1,4 +1,4 @@
-import { AgentConfig } from "./AgentConfig.js";
+import { AgentConfig } from "./config/AgentConfig.js";
 import { AgentHttpServer } from "./AgentHttpServer.js";
 import { AgentMemoryComponents } from "./AgentMemoryComponents.js";
 import { AgentMcpComponents } from "./AgentMcpComponents.js";

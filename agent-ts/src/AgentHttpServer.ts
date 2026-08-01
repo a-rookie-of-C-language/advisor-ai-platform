@@ -1,6 +1,6 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { AgentChatStreamRouteHandler } from "./AgentChatStreamRouteHandler.js";
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { AgentHealthRouteHandler } from "./AgentHealthRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";

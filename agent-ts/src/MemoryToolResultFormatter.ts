@@ -1,4 +1,4 @@
-import type { JsonObject } from "./JsonTypes.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { MemoryItem } from "./MemoryItem.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 

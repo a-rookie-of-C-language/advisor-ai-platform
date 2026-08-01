@@ -1,4 +1,4 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "./ChatStreamRequest.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "./common/ChatStreamRequest.js";
 import type { RagApiClient } from "./RagApiClient.js";
 import type { RagDocument } from "./RagDocument.js";
 

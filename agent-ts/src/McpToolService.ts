@@ -1,4 +1,4 @@
-import type { JsonObject } from "./JsonTypes.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import { DirectHttpMcpClient } from "./DirectHttpMcpClient.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpServerConfig } from "./McpServerConfig.js";

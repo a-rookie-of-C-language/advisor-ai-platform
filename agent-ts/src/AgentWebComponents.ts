@@ -1,4 +1,4 @@
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { WebFetchClient } from "./WebFetchClient.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import { WebFetchContextBuilder as WebFetchContextBuilderClass } from "./WebFetchContextBuilder.js";

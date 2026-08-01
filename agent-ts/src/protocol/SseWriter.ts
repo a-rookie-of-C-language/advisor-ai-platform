@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
-import type { AgentCoreClient } from "./AgentCoreClient.js";
-import type { JsonObject } from "./JsonTypes.js";
+import type { AgentCoreClient } from "../core/AgentCoreClient.js";
+import type { JsonObject } from "../common/JsonTypes.js";
 
 export class SseWriter {
   constructor(

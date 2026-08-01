@@ -1,4 +1,4 @@
-import type { JsonObject } from "./JsonTypes.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WebFetchClient } from "./WebFetchClient.js";

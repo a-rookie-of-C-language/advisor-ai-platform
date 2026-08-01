@@ -1,4 +1,4 @@
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { MemoryApiClient } from "./MemoryApiClient.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import { MemoryContextBuilder as MemoryContextBuilderClass } from "./MemoryContextBuilder.js";

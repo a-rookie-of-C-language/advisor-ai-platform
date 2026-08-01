@@ -1,4 +1,4 @@
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { TavilySearchHttpClient } from "./TavilySearchHttpClient.js";
 import { TavilySearchResultMapper } from "./TavilySearchResultMapper.js";
 import type { WebSearchResult } from "./WebSearchResult.js";

@@ -1,5 +1,5 @@
-import type { ChatStreamRequest } from "./ChatStreamRequest.js";
-import type { JsonObject } from "./JsonTypes.js";
+import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
+import type { JsonObject } from "./common/JsonTypes.js";
 import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import { OpenAiToolCatalogAggregator } from "./OpenAiToolCatalogAggregator.js";

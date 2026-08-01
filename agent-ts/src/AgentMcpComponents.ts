@@ -1,4 +1,4 @@
-import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentConfig } from "./config/AgentConfig.js";
 import { McpConfigParser } from "./McpConfigParser.js";
 import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import { McpOpenAiToolBridge as McpOpenAiToolBridgeClass } from "./McpOpenAiToolBridge.js";

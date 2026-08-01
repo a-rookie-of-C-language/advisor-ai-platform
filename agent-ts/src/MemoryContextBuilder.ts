@@ -1,7 +1,7 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "./ChatStreamRequest.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "./common/ChatStreamRequest.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import type { MemoryItem } from "./MemoryItem.js";
-import type { SessionSummary } from "./SessionSummary.js";
+import type { SessionSummary } from "./common/SessionSummary.js";
 
 export class MemoryContextBuilder {
   constructor(
