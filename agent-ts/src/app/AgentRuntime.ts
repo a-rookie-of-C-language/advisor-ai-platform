@@ -1,7 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentConfig } from "../config/AgentConfig.js";
-import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
-import { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentCoreClient } from "../core/AgentCoreClient.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
@@ -12,21 +10,15 @@ import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
-import { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
-import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
+import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
-import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
 import { SseWriter } from "../protocol/SseWriter.js";
 import { validateChatStreamRequest } from "../common/validateChatStreamRequest.js";
 
 export class AgentRuntime {
-  private readonly contextPipeline: AgentContextPipeline;
+  private readonly components: AgentRuntimeComponents;
   private readonly graphHealthDescriptor = new AgentGraphHealthDescriptor();
-  private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter;
-  private readonly openAiToolFacade: AgentOpenAiToolFacade;
   private readonly requestIdResolver = new AgentRequestIdResolver();
-  private readonly streamSession: AgentChatStreamSession;
-  private readonly toolExecutorFactory: AgentToolExecutorFactory;
 
   constructor(
     config: AgentConfig,
@@ -39,22 +31,15 @@ export class AgentRuntime {
     webSearchContextBuilder?: WebSearchContextBuilder,
     openAiToolRegistry?: OpenAiToolRegistry
   ) {
-    this.contextPipeline = new AgentContextPipeline(
+    this.components = new AgentRuntimeComponents(
+      config,
+      this.openAiClient,
       memoryContextBuilder,
+      memoryTaskSubmitter,
       ragContextBuilder,
       webFetchContextBuilder,
-      webSearchContextBuilder
-    );
-    this.memoryTaskCompletionSubmitter = new AgentMemoryTaskCompletionSubmitter(memoryTaskSubmitter);
-    this.openAiToolFacade = new AgentOpenAiToolFacade(config.openAiApiKey, openAiToolRegistry);
-    this.toolExecutorFactory = new AgentToolExecutorFactory(this.openAiToolFacade);
-    this.streamSession = new AgentChatStreamSession(
-      config.openAiApiKey,
-      this.contextPipeline,
-      this.memoryTaskCompletionSubmitter,
-      this.openAiClient,
-      this.openAiToolFacade,
-      this.toolExecutorFactory
+      webSearchContextBuilder,
+      openAiToolRegistry
     );
   }
 
@@ -71,6 +56,6 @@ export class AgentRuntime {
     const traceId = this.requestIdResolver.resolveTraceId(chatRequest, request);
     const turnId = this.requestIdResolver.resolveTurnId(chatRequest, request);
     const writer = new SseWriter(response, this.core, traceId);
-    await this.streamSession.stream(chatRequest, turnId, writer);
+    await this.components.streamSession.stream(chatRequest, turnId, writer);
   }
 }
