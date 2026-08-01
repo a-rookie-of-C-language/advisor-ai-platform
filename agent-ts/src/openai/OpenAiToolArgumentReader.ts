@@ -1,6 +1,7 @@
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import { BooleanStringReader } from "../common/BooleanStringReader.js";
 import type { JsonObject, JsonValue } from "../common/JsonTypes.js";
+import { OpenAiToolNumberArgumentReader } from "./OpenAiToolNumberArgumentReader.js";
 import { OpenAiToolStringArgumentReader } from "./OpenAiToolStringArgumentReader.js";
 
 export class OpenAiToolArgumentReader {
@@ -20,14 +21,7 @@ export class OpenAiToolArgumentReader {
 
   static readOptionalNumber(args: JsonObject, key: string, fallback: number): number {
     const value = this.readAliasedValue(args, key);
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === "string" && value) {
-      const parsed = Number.parseFloat(value);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    }
-    return fallback;
+    return OpenAiToolNumberArgumentReader.readOptional(value, fallback);
   }
 
   static readOptionalBoolean(args: JsonObject, key: string, fallback: boolean): boolean;
