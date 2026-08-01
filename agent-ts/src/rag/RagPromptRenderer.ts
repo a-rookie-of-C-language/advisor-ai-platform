@@ -1,8 +1,11 @@
 import type { RagDocument } from "./RagDocument.js";
+import { RagReadyDocumentSelector } from "./RagReadyDocumentSelector.js";
 
 export class RagPromptRenderer {
+  private readonly readyDocumentSelector = new RagReadyDocumentSelector();
+
   render(kbId: number, documents: RagDocument[]): string {
-    const readyDocuments = documents.filter((document) => document.status === "READY" || document.status === "INDEXED");
+    const readyDocuments = this.readyDocumentSelector.select(documents);
     if (readyDocuments.length === 0) {
       return "";
     }
