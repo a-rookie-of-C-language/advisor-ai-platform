@@ -1,6 +1,9 @@
 import { McpServerConfig } from "./McpServerConfig.js";
+import { McpTokenEnvKeyFactory } from "./McpTokenEnvKeyFactory.js";
 
 export class McpConfigParser {
+  private readonly tokenEnvKeyFactory = new McpTokenEnvKeyFactory();
+
   parseServerConfigs(servers: string, env: NodeJS.ProcessEnv = process.env): McpServerConfig[] {
     if (!servers.trim()) {
       return [];
@@ -43,7 +46,7 @@ export class McpConfigParser {
       return undefined;
     }
 
-    const tokenKey = `MCP_TOKEN_${name.toUpperCase().replaceAll("-", "_")}`;
+    const tokenKey = this.tokenEnvKeyFactory.create(name);
     return new McpServerConfig(name, transportType, urlOrCommand, env[tokenKey]?.trim() || undefined);
   }
 }
