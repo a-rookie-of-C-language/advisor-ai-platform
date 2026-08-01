@@ -1,3 +1,5 @@
+import { AgentEnvReader } from "./AgentEnvReader.js";
+
 export class AgentConfig {
   readonly host: string;
   readonly port: number;
@@ -24,52 +26,33 @@ export class AgentConfig {
   readonly mcpServers: string;
 
   private constructor() {
-    this.host = process.env.AGENT_API_HOST?.trim() || "127.0.0.1";
-    this.port = Number.parseInt(process.env.AGENT_API_PORT || "8001", 10);
-    this.token = process.env.AGENT_API_TOKEN?.trim() || "";
-    this.openAiApiKey = process.env.OPENAI_API_KEY?.trim() || "";
-    this.openAiBaseUrl = (process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1").replace(/\/+$/, "");
-    this.openAiModel = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
-    this.openAiTemperature = Number.parseFloat(process.env.OPENAI_TEMPERATURE || "0.2");
-    this.requestTimeoutMs = this.readTimeoutMs();
-    this.rustCorePath = process.env.AGENT_CORE_PATH?.trim() || undefined;
-    this.workspaceBasePath = process.env.AGENT_WORKSPACE_PATH?.trim() || "workspace";
-    this.memoryApiBaseUrl = (process.env.MEMORY_API_BASE_URL?.trim() || "").replace(/\/+$/, "");
-    this.memoryApiToken = process.env.MEMORY_API_TOKEN?.trim() || "";
-    this.memoryTopK = Number.parseInt(process.env.MEMORY_TOP_K || "6", 10);
-    this.ragApiBaseUrl = (process.env.RAG_API_BASE_URL?.trim() || "").replace(/\/+$/, "");
-    this.ragApiToken = process.env.RAG_API_TOKEN?.trim() || "";
-    this.webFetchEnabled = this.readBool("WEB_FETCH_ENABLED", true);
-    this.webFetchMaxContentLength = Number.parseInt(process.env.WEB_FETCH_MAX_CONTENT_LENGTH || "2000", 10);
-    this.webSearchEnabled = this.readBool("WEB_SEARCH_ENABLED", true);
-    this.webSearchApiKey = process.env.TAVILY_API_KEY?.trim() || "";
-    this.webSearchUrl = process.env.TAVILY_SEARCH_URL?.trim() || "https://api.tavily.com/search";
-    this.webSearchMaxResults = Number.parseInt(process.env.WEB_SEARCH_MAX_RESULTS || "5", 10);
-    this.mcpToolsEnabled = this.readBool("MCP_TOOLS", false);
-    this.mcpServers = process.env.MCP_SERVERS?.trim() || "";
+    const envReader = new AgentEnvReader();
+    this.host = envReader.readString("AGENT_API_HOST", "127.0.0.1");
+    this.port = envReader.readInt("AGENT_API_PORT", 8001);
+    this.token = envReader.readString("AGENT_API_TOKEN", "");
+    this.openAiApiKey = envReader.readString("OPENAI_API_KEY", "");
+    this.openAiBaseUrl = envReader.readTrimmedUrl("OPENAI_BASE_URL", "https://api.openai.com/v1");
+    this.openAiModel = envReader.readString("OPENAI_MODEL", "gpt-4.1-mini");
+    this.openAiTemperature = envReader.readFloat("OPENAI_TEMPERATURE", 0.2);
+    this.requestTimeoutMs = envReader.readOpenAiTimeoutMs();
+    this.rustCorePath = envReader.readOptionalString("AGENT_CORE_PATH");
+    this.workspaceBasePath = envReader.readString("AGENT_WORKSPACE_PATH", "workspace");
+    this.memoryApiBaseUrl = envReader.readTrimmedUrl("MEMORY_API_BASE_URL", "");
+    this.memoryApiToken = envReader.readString("MEMORY_API_TOKEN", "");
+    this.memoryTopK = envReader.readInt("MEMORY_TOP_K", 6);
+    this.ragApiBaseUrl = envReader.readTrimmedUrl("RAG_API_BASE_URL", "");
+    this.ragApiToken = envReader.readString("RAG_API_TOKEN", "");
+    this.webFetchEnabled = envReader.readBool("WEB_FETCH_ENABLED", true);
+    this.webFetchMaxContentLength = envReader.readInt("WEB_FETCH_MAX_CONTENT_LENGTH", 2000);
+    this.webSearchEnabled = envReader.readBool("WEB_SEARCH_ENABLED", true);
+    this.webSearchApiKey = envReader.readString("TAVILY_API_KEY", "");
+    this.webSearchUrl = envReader.readString("TAVILY_SEARCH_URL", "https://api.tavily.com/search");
+    this.webSearchMaxResults = envReader.readInt("WEB_SEARCH_MAX_RESULTS", 5);
+    this.mcpToolsEnabled = envReader.readBool("MCP_TOOLS", false);
+    this.mcpServers = envReader.readString("MCP_SERVERS", "");
   }
 
   static fromEnv(): AgentConfig {
     return new AgentConfig();
-  }
-
-  private readTimeoutMs(): number {
-    const timeoutMs = process.env.OPENAI_TIMEOUT_MS?.trim();
-    if (timeoutMs) {
-      return Number.parseInt(timeoutMs, 10);
-    }
-    const timeoutSec = process.env.OPENAI_TIMEOUT_SEC?.trim();
-    if (timeoutSec) {
-      return Math.round(Number.parseFloat(timeoutSec) * 1000);
-    }
-    return 600_000;
-  }
-
-  private readBool(name: string, defaultValue: boolean): boolean {
-    const raw = process.env[name]?.trim().toLowerCase();
-    if (!raw) {
-      return defaultValue;
-    }
-    return ["1", "true", "yes", "on"].includes(raw);
   }
 }
