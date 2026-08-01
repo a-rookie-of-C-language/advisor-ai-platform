@@ -4,6 +4,7 @@ import { AgentHttpServer } from "./AgentHttpServer.js";
 import { AgentRuntime } from "./AgentRuntime.js";
 import { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryContextBuilder } from "./MemoryContextBuilder.js";
+import { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import { McpConfigParser } from "./McpConfigParser.js";
 import { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
@@ -26,6 +27,7 @@ const openAiClient = new OpenAIChatClient(config);
 const memoryClient = config.memoryApiBaseUrl ? new MemoryApiClient(config) : undefined;
 const memoryContextBuilder = memoryClient ? new MemoryContextBuilder(memoryClient, config.memoryTopK) : undefined;
 const memoryTaskSubmitter = memoryClient ? new MemoryTaskSubmitter(memoryClient) : undefined;
+const memoryOpenAiToolBridge = memoryClient ? new MemoryOpenAiToolBridge(memoryClient, config.memoryTopK) : undefined;
 const ragClient = config.ragApiBaseUrl ? new RagApiClient(config) : undefined;
 const ragContextBuilder = ragClient ? new RagContextBuilder(ragClient) : undefined;
 const ragOpenAiToolBridge = ragClient ? new RagOpenAiToolBridge(ragClient) : undefined;
@@ -51,7 +53,8 @@ const runtime = new AgentRuntime(
   mcpOpenAiToolBridge,
   workspaceOpenAiToolBridge,
   webOpenAiToolBridge,
-  ragOpenAiToolBridge
+  ragOpenAiToolBridge,
+  memoryOpenAiToolBridge
 );
 const server = new AgentHttpServer(config, runtime, workspaceManager, mcpToolService);
 

@@ -4,6 +4,7 @@ import type { AgentCoreClient } from "./AgentCoreClient.js";
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
+import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
@@ -30,7 +31,8 @@ export class AgentRuntime {
     private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge,
     private readonly workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
     private readonly webOpenAiToolBridge?: WebOpenAiToolBridge,
-    private readonly ragOpenAiToolBridge?: RagOpenAiToolBridge
+    private readonly ragOpenAiToolBridge?: RagOpenAiToolBridge,
+    private readonly memoryOpenAiToolBridge?: MemoryOpenAiToolBridge
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -51,6 +53,7 @@ export class AgentRuntime {
         "load_workspace_tools",
         "load_web_tools",
         "load_rag_tools",
+        "load_memory_tools",
         "generate",
         "finalize"
       ],
@@ -137,6 +140,7 @@ export class AgentRuntime {
     const tools = this.workspaceOpenAiToolBridge?.listTools() || [];
     tools.push(...(this.webOpenAiToolBridge?.listTools() || []));
     tools.push(...(this.ragOpenAiToolBridge?.listTools() || []));
+    tools.push(...(this.memoryOpenAiToolBridge?.listTools() || []));
     try {
       tools.push(...(this.mcpOpenAiToolBridge ? await this.mcpOpenAiToolBridge.listTools() : []));
     } catch {
@@ -158,6 +162,9 @@ export class AgentRuntime {
     }
     if (this.ragOpenAiToolBridge?.canExecute(toolName)) {
       return this.ragOpenAiToolBridge.executeTool(chatRequest, toolArgs);
+    }
+    if (this.memoryOpenAiToolBridge?.canExecute(toolName)) {
+      return this.memoryOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
     }
     if (this.mcpOpenAiToolBridge) {
       return this.mcpOpenAiToolBridge.executeTool(toolName, toolArgs);

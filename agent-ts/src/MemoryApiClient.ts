@@ -36,6 +36,24 @@ export class MemoryApiClient {
     return this.request<SessionSummary | null>(`/api/memory/session-summary/${sessionId}`);
   }
 
+  async upsertCandidates(params: {
+    userId: number;
+    kbId: number;
+    candidates: {
+      content: string;
+      confidence?: number;
+      sourceTurnId?: string | null;
+      tags?: JsonObject | null;
+      memoryType?: string | null;
+      isCore?: boolean | null;
+    }[];
+  }): Promise<JsonObject> {
+    return this.request<JsonObject>("/api/memory/long-term/candidates", {
+      method: "POST",
+      body: JSON.stringify(params)
+    });
+  }
+
   async submitMemoryTask(params: {
     userId: number;
     kbId: number;
