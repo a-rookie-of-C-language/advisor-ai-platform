@@ -1,6 +1,8 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
+import type { JsonObject } from "./JsonTypes.js";
+import type { McpToolService } from "./McpToolService.js";
 import { parseJsonBody } from "./HttpBodyParser.js";
 import { WorkspaceError } from "./WorkspaceError.js";
 import { WorkspaceManager } from "./WorkspaceManager.js";
@@ -9,7 +11,8 @@ export class AgentHttpServer {
   constructor(
     private readonly config: AgentConfig,
     private readonly runtime: AgentRuntime,
-    private readonly workspaceManager = new WorkspaceManager(config.workspaceBasePath)
+    private readonly workspaceManager = new WorkspaceManager(config.workspaceBasePath),
+    private readonly mcpToolService?: McpToolService
   ) {}
 
   start(): void {
@@ -132,6 +135,24 @@ export class AgentHttpServer {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/mcp/tools") {
+        const mcpToolService = this.requireMcpToolService();
+        this.writeJson(response, 200, { status: "ok", tools: await mcpToolService.listTools() });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/mcp/call") {
+        const mcpToolService = this.requireMcpToolService();
+        const body = await this.readJsonObject(request);
+        const result = await mcpToolService.callTool(
+          this.readRequiredString(body, "server"),
+          this.readRequiredString(body, "name"),
+          this.readOptionalJsonObject(body, "arguments")
+        );
+        this.writeJson(response, 200, { status: "ok", result });
+        return;
+      }
+
       this.writeJson(response, 404, { detail: "not found" });
     } catch (error) {
       this.writeJson(response, this.statusCodeForError(error), { detail: error instanceof Error ? error.message : "internal error" });
@@ -210,6 +231,17 @@ export class AgentHttpServer {
     throw new WorkspaceError(`字段必须是布尔值: ${key}`);
   }
 
+  private readOptionalJsonObject(body: Record<string, unknown>, key: string): JsonObject {
+    const value = this.readAliasedValue(body, key);
+    if (value === undefined || value === null) {
+      return {};
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new WorkspaceError(`字段必须是 JSON 对象: ${key}`);
+    }
+    return value as JsonObject;
+  }
+
   private readAliasedValue(body: Record<string, unknown>, snakeKey: string): unknown {
     const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
     return body[snakeKey] ?? body[camelKey];
@@ -224,5 +256,12 @@ export class AgentHttpServer {
 
   private statusCodeForError(error: unknown): number {
     return error instanceof WorkspaceError ? 400 : 500;
+  }
+
+  private requireMcpToolService(): McpToolService {
+    if (!this.mcpToolService) {
+      throw new WorkspaceError("MCP tools 未启用");
+    }
+    return this.mcpToolService;
   }
 }

@@ -5,6 +5,8 @@ import { AgentRuntime } from "./AgentRuntime.js";
 import { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
+import { McpConfigParser } from "./McpConfigParser.js";
+import { McpToolService } from "./McpToolService.js";
 import { OpenAIChatClient } from "./OpenAIChatClient.js";
 import { RagApiClient } from "./RagApiClient.js";
 import { RagContextBuilder } from "./RagContextBuilder.js";
@@ -25,6 +27,8 @@ const webFetchClient = config.webFetchEnabled ? new WebFetchClient(config) : und
 const webFetchContextBuilder = webFetchClient ? new WebFetchContextBuilder(webFetchClient) : undefined;
 const webSearchClient = config.webSearchEnabled && config.webSearchApiKey ? new WebSearchClient(config) : undefined;
 const webSearchContextBuilder = webSearchClient ? new WebSearchContextBuilder(webSearchClient) : undefined;
+const mcpConfigs = config.mcpToolsEnabled ? new McpConfigParser().parseServerConfigs(config.mcpServers) : [];
+const mcpToolService = mcpConfigs.length > 0 ? new McpToolService(mcpConfigs) : undefined;
 const runtime = new AgentRuntime(
   config,
   core,
@@ -35,6 +39,6 @@ const runtime = new AgentRuntime(
   webFetchContextBuilder,
   webSearchContextBuilder
 );
-const server = new AgentHttpServer(config, runtime);
+const server = new AgentHttpServer(config, runtime, undefined, mcpToolService);
 
 server.start();

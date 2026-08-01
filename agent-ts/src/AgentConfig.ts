@@ -20,6 +20,8 @@ export class AgentConfig {
   readonly webSearchApiKey: string;
   readonly webSearchUrl: string;
   readonly webSearchMaxResults: number;
+  readonly mcpToolsEnabled: boolean;
+  readonly mcpServers: string;
 
   private constructor() {
     this.host = process.env.AGENT_API_HOST?.trim() || "127.0.0.1";
@@ -43,6 +45,8 @@ export class AgentConfig {
     this.webSearchApiKey = process.env.TAVILY_API_KEY?.trim() || "";
     this.webSearchUrl = process.env.TAVILY_SEARCH_URL?.trim() || "https://api.tavily.com/search";
     this.webSearchMaxResults = Number.parseInt(process.env.WEB_SEARCH_MAX_RESULTS || "5", 10);
+    this.mcpToolsEnabled = this.readBool("MCP_TOOLS", false);
+    this.mcpServers = process.env.MCP_SERVERS?.trim() || "";
   }
 
   static fromEnv(): AgentConfig {
