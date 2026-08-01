@@ -1,6 +1,6 @@
 import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
-import type { MemoryOpenAiToolBridge } from "../MemoryOpenAiToolBridge.js";
+import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "../McpOpenAiToolBridge.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";

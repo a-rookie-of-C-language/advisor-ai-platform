@@ -1,5 +1,5 @@
 import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
-import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
+import type { MemoryContextBuilder } from "./memory/MemoryContextBuilder.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";

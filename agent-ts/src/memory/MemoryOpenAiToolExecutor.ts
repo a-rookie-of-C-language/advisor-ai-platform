@@ -1,10 +1,10 @@
-import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
-import type { JsonObject } from "./common/JsonTypes.js";
+import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
+import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryReadRequestReader } from "./MemoryReadRequestReader.js";
 import { MemoryToolResultFormatter } from "./MemoryToolResultFormatter.js";
 import { MemoryWriteRequestReader } from "./MemoryWriteRequestReader.js";
-import type { OpenAiToolExecutionResult } from "./openai/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
 
 export class MemoryOpenAiToolExecutor {
   private readonly readRequestReader: MemoryReadRequestReader;

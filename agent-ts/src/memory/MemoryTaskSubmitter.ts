@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 
 export class MemoryTaskSubmitter {

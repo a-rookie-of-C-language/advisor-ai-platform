@@ -1,11 +1,11 @@
 import type { AgentConfig } from "./config/AgentConfig.js";
-import { MemoryApiClient } from "./MemoryApiClient.js";
-import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
-import { MemoryContextBuilder as MemoryContextBuilderClass } from "./MemoryContextBuilder.js";
-import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
-import { MemoryOpenAiToolBridge as MemoryOpenAiToolBridgeClass } from "./MemoryOpenAiToolBridge.js";
-import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
-import { MemoryTaskSubmitter as MemoryTaskSubmitterClass } from "./MemoryTaskSubmitter.js";
+import { MemoryApiClient } from "./memory/MemoryApiClient.js";
+import type { MemoryContextBuilder } from "./memory/MemoryContextBuilder.js";
+import { MemoryContextBuilder as MemoryContextBuilderClass } from "./memory/MemoryContextBuilder.js";
+import type { MemoryOpenAiToolBridge } from "./memory/MemoryOpenAiToolBridge.js";
+import { MemoryOpenAiToolBridge as MemoryOpenAiToolBridgeClass } from "./memory/MemoryOpenAiToolBridge.js";
+import type { MemoryTaskSubmitter } from "./memory/MemoryTaskSubmitter.js";
+import { MemoryTaskSubmitter as MemoryTaskSubmitterClass } from "./memory/MemoryTaskSubmitter.js";
 
 export class AgentMemoryComponents {
   readonly contextBuilder?: MemoryContextBuilder;
