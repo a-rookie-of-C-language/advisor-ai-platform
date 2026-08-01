@@ -3,10 +3,12 @@ import type { JsonObject } from "../common/JsonTypes.js";
 import { WorkspaceFileReadOpenAiToolExecutor } from "./WorkspaceFileReadOpenAiToolExecutor.js";
 import { WorkspaceListOpenAiToolExecutor } from "./WorkspaceListOpenAiToolExecutor.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
+import { WorkspaceReadToolNameMatcher } from "./WorkspaceReadToolNameMatcher.js";
 
 export class WorkspaceOpenAiReadToolExecutor {
   private readonly fileReadToolExecutor: WorkspaceFileReadOpenAiToolExecutor;
   private readonly listToolExecutor: WorkspaceListOpenAiToolExecutor;
+  private readonly toolNameMatcher = new WorkspaceReadToolNameMatcher();
 
   constructor(workspaceManager: WorkspaceManager) {
     this.fileReadToolExecutor = new WorkspaceFileReadOpenAiToolExecutor(workspaceManager);
@@ -14,7 +16,7 @@ export class WorkspaceOpenAiReadToolExecutor {
   }
 
   canExecute(toolName: string): boolean {
-    return toolName === "workspace_read" || toolName === "workspace_list";
+    return this.toolNameMatcher.matches(toolName);
   }
 
   async execute(request: ChatStreamRequest, toolName: string, args: JsonObject): Promise<JsonObject> {
