@@ -3,6 +3,7 @@ import type { AgentConfig } from "./AgentConfig.js";
 import { AgentHealthRouteHandler } from "./AgentHealthRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentMcpRouteHandler } from "./AgentMcpRouteHandler.js";
+import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
 import { AgentWorkspaceRouteHandler } from "./AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "./McpToolService.js";
@@ -11,6 +12,7 @@ import { WorkspaceError } from "./WorkspaceError.js";
 import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
+  private readonly authorizer: AgentRequestAuthorizer;
   private readonly requestReader = new AgentHttpRequestReader();
   private readonly healthRouteHandler: AgentHealthRouteHandler;
   private readonly mcpRouteHandler: AgentMcpRouteHandler;
@@ -22,6 +24,7 @@ export class AgentHttpServer {
     private readonly workspaceManager = new WorkspaceManager(config.workspaceBasePath),
     private readonly mcpToolService?: McpToolService
   ) {
+    this.authorizer = new AgentRequestAuthorizer(this.config);
     this.healthRouteHandler = new AgentHealthRouteHandler(this.runtime);
     this.mcpRouteHandler = new AgentMcpRouteHandler(this.mcpToolService, this.requestReader);
     this.workspaceRouteHandler = new AgentWorkspaceRouteHandler(this.workspaceManager, this.requestReader);
@@ -46,7 +49,7 @@ export class AgentHttpServer {
         return;
       }
 
-      if (!this.isAuthorized(request)) {
+      if (!this.authorizer.isAuthorized(request)) {
         this.writeJson(response, 401, { detail: "invalid agent token" });
         return;
       }
@@ -73,16 +76,6 @@ export class AgentHttpServer {
     } catch (error) {
       this.writeJson(response, this.statusCodeForError(error), { detail: error instanceof Error ? error.message : "internal error" });
     }
-  }
-
-  private isAuthorized(request: IncomingMessage): boolean {
-    if (!this.config.token) {
-      return true;
-    }
-    const authorization = request.headers.authorization || "";
-    const bearer = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
-    const agentToken = String(request.headers["x-agent-token"] || "").trim();
-    return bearer === this.config.token || agentToken === this.config.token;
   }
 
   private writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
