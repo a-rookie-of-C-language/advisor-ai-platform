@@ -13,6 +13,7 @@ import { RagApiClient } from "./RagApiClient.js";
 import { RagContextBuilder } from "./RagContextBuilder.js";
 import { WebFetchClient } from "./WebFetchClient.js";
 import { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
+import { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
 import { WebSearchClient } from "./WebSearchClient.js";
 import { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
 import { WorkspaceManager } from "./WorkspaceManager.js";
@@ -35,6 +36,7 @@ const mcpToolService = mcpConfigs.length > 0 ? new McpToolService(mcpConfigs) : 
 const mcpOpenAiToolBridge = mcpToolService ? new McpOpenAiToolBridge(mcpToolService) : undefined;
 const workspaceManager = new WorkspaceManager(config.workspaceBasePath);
 const workspaceOpenAiToolBridge = new WorkspaceOpenAiToolBridge(workspaceManager);
+const webOpenAiToolBridge = new WebOpenAiToolBridge(webFetchClient, webSearchClient);
 const runtime = new AgentRuntime(
   config,
   core,
@@ -45,7 +47,8 @@ const runtime = new AgentRuntime(
   webFetchContextBuilder,
   webSearchContextBuilder,
   mcpOpenAiToolBridge,
-  workspaceOpenAiToolBridge
+  workspaceOpenAiToolBridge,
+  webOpenAiToolBridge
 );
 const server = new AgentHttpServer(config, runtime, workspaceManager, mcpToolService);
 
