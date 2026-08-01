@@ -6,6 +6,7 @@ import { OpenAIChatCompletionStreamer } from "./OpenAIChatCompletionStreamer.js"
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatStreamEvent } from "./OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
+import { OpenAIToolArgumentParser } from "./OpenAIToolArgumentParser.js";
 
 type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
 
@@ -45,7 +46,7 @@ export class OpenAIChatClient {
 
     conversation.push({ role: "assistant", content: null, tool_calls: firstRound.toolCalls });
     for (const toolCall of firstRound.toolCalls) {
-      const toolArgs = this.parseToolArguments(toolCall.function.arguments);
+      const toolArgs = OpenAIToolArgumentParser.parse(toolCall.function.arguments);
       yield {
         type: "tool_call",
         toolCallId: toolCall.id,
@@ -67,17 +68,5 @@ export class OpenAIChatClient {
     for (const text of finalRound.textParts) {
       yield { type: "delta", text };
     }
-  }
-
-  private parseToolArguments(rawArguments: string): JsonObject {
-    try {
-      const parsed = JSON.parse(rawArguments || "{}") as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as JsonObject;
-      }
-    } catch {
-      return {};
-    }
-    return {};
   }
 }
