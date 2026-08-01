@@ -1,6 +1,7 @@
 import type { JsonObject } from "./JsonTypes.js";
 import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { JsonObjectReader } from "./JsonObjectReader.js";
+import { McpCallToolResultMapper } from "./McpCallToolResultMapper.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import { McpToolDescriptorMapper } from "./McpToolDescriptorMapper.js";
@@ -8,6 +9,7 @@ import type { McpServerConfig } from "./McpServerConfig.js";
 
 export class DirectHttpMcpClient {
   private initialized = false;
+  private readonly callToolResultMapper = new McpCallToolResultMapper();
   private readonly jsonObjectReader = new JsonObjectReader();
   private readonly jsonRpcClient: DirectHttpMcpJsonRpcClient;
   private readonly toolDescriptorMapper = new McpToolDescriptorMapper();
@@ -32,13 +34,7 @@ export class DirectHttpMcpClient {
       params: { name, arguments: args }
     });
     const result = this.jsonObjectReader.asObject(response.result);
-    const content = Array.isArray(result.content) ? result.content : [];
-    return {
-      content: content
-        .filter((item): item is JsonObject => this.jsonObjectReader.isJsonObject(item))
-        .map((item) => ({ type: String(item.type || "text"), text: String(item.text || ""), data: item.data })),
-      isError: result.isError === true
-    };
+    return this.callToolResultMapper.mapResult(result);
   }
 
   private async ensureInitialized(): Promise<void> {
