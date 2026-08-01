@@ -1,49 +1,22 @@
 import type { JsonObject, JsonValue } from "./JsonTypes.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
+import { WebOpenAiToolCatalog } from "./WebOpenAiToolCatalog.js";
 import type { WebSearchClient } from "./WebSearchClient.js";
 
 export class WebOpenAiToolBridge {
+  private readonly catalog = new WebOpenAiToolCatalog();
+
   constructor(
     private readonly webFetchClient?: WebFetchClient,
     private readonly webSearchClient?: WebSearchClient
   ) {}
 
   listTools(): OpenAIChatTool[] {
-    const tools: OpenAIChatTool[] = [];
-    if (this.webFetchClient) {
-      tools.push({
-        type: "function",
-        function: {
-          name: "web_fetch",
-          description: "抓取指定 URL 的网页正文文本，用于读取用户给出的链接。",
-          parameters: {
-            type: "object",
-            properties: {
-              url: { type: "string", description: "需要抓取的 http/https URL" }
-            },
-            required: ["url"]
-          }
-        }
-      });
-    }
-    if (this.webSearchClient) {
-      tools.push({
-        type: "function",
-        function: {
-          name: "web_search",
-          description: "搜索实时网页信息，用于最新新闻、价格、政策、当前事实等问题。",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "搜索关键词或用户问题" }
-            },
-            required: ["query"]
-          }
-        }
-      });
-    }
-    return tools;
+    return this.catalog.listTools({
+      webFetchEnabled: Boolean(this.webFetchClient),
+      webSearchEnabled: Boolean(this.webSearchClient)
+    });
   }
 
   canExecute(toolName: string): boolean {
