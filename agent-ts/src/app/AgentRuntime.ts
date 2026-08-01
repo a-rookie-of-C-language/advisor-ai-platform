@@ -13,6 +13,7 @@ import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
+import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
 import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
 import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
@@ -21,6 +22,7 @@ import { validateChatStreamRequest } from "../common/validateChatStreamRequest.j
 
 export class AgentRuntime {
   private readonly contextPipeline: AgentContextPipeline;
+  private readonly graphHealthDescriptor = new AgentGraphHealthDescriptor();
   private readonly requestIdResolver = new AgentRequestIdResolver();
 
   constructor(
@@ -47,26 +49,7 @@ export class AgentRuntime {
   }
 
   graphHealth(): JsonObject {
-    return {
-      compiled: true,
-      checkpoint: "typescript-runtime",
-      nodes: [
-        "validate_request",
-        "load_memory",
-        "load_rag",
-        "load_web_fetch",
-        "load_web_search",
-        "load_mcp_tools",
-        "load_workspace_tools",
-        "load_web_tools",
-        "load_rag_tools",
-        "load_memory_tools",
-        "generate",
-        "finalize"
-      ],
-      runtime: "typescript",
-      core: "rust"
-    };
+    return this.graphHealthDescriptor.describe();
   }
 
   async streamChat(body: unknown, request: IncomingMessage, response: ServerResponse): Promise<void> {
