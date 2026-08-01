@@ -1,4 +1,5 @@
 import type { JsonObject } from "./JsonTypes.js";
+import { JsonObjectReader } from "./JsonObjectReader.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
@@ -11,6 +12,7 @@ interface JsonRpcResponse {
 export class DirectHttpMcpClient {
   private initialized = false;
   private readonly headers: Record<string, string>;
+  private readonly jsonObjectReader = new JsonObjectReader();
 
   constructor(private readonly config: McpServerConfig) {
     this.headers = { "Content-Type": "application/json" };
@@ -22,14 +24,14 @@ export class DirectHttpMcpClient {
   async listTools(): Promise<McpToolDescriptor[]> {
     await this.ensureInitialized();
     const response = await this.post({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
-    const result = this.asObject(response.result);
+    const result = this.jsonObjectReader.asObject(response.result);
     const tools = Array.isArray(result.tools) ? result.tools : [];
     return tools
-      .filter((tool): tool is JsonObject => this.isJsonObject(tool))
+      .filter((tool): tool is JsonObject => this.jsonObjectReader.isJsonObject(tool))
       .map((tool) => ({
         name: String(tool.name || ""),
         description: String(tool.description || ""),
-        inputSchema: this.asObject(tool.inputSchema),
+        inputSchema: this.jsonObjectReader.asObject(tool.inputSchema),
         server: this.config.name
       }))
       .filter((tool) => tool.name);
@@ -43,11 +45,11 @@ export class DirectHttpMcpClient {
       method: "tools/call",
       params: { name, arguments: args }
     });
-    const result = this.asObject(response.result);
+    const result = this.jsonObjectReader.asObject(response.result);
     const content = Array.isArray(result.content) ? result.content : [];
     return {
       content: content
-        .filter((item): item is JsonObject => this.isJsonObject(item))
+        .filter((item): item is JsonObject => this.jsonObjectReader.isJsonObject(item))
         .map((item) => ({ type: String(item.type || "text"), text: String(item.text || ""), data: item.data })),
       isError: result.isError === true
     };
@@ -76,13 +78,5 @@ export class DirectHttpMcpClient {
       throw new Error(`MCP JSON-RPC 错误: ${JSON.stringify(data.error)}`);
     }
     return data;
-  }
-
-  private asObject(value: unknown): JsonObject {
-    return this.isJsonObject(value) ? value : {};
-  }
-
-  private isJsonObject(value: unknown): value is JsonObject {
-    return Boolean(value && typeof value === "object" && !Array.isArray(value));
   }
 }
