@@ -1,16 +1,24 @@
 import type { WorkspaceFileReader } from "./WorkspaceFileReader.js";
+import { WorkspaceFileReadService } from "./WorkspaceFileReadService.js";
+import { WorkspaceListService } from "./WorkspaceListService.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
 import type { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import type { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
 
 export class WorkspaceReadService {
+  private readonly fileReadService: WorkspaceFileReadService;
+  private readonly listService: WorkspaceListService;
+
   constructor(
-    private readonly fileReader: WorkspaceFileReader,
-    private readonly listingBuilder: WorkspaceListingBuilder,
-    private readonly pathGuard: WorkspacePathGuard,
-    private readonly sessionPathProvider: WorkspaceSessionPathProvider
-  ) {}
+    fileReader: WorkspaceFileReader,
+    listingBuilder: WorkspaceListingBuilder,
+    pathGuard: WorkspacePathGuard,
+    sessionPathProvider: WorkspaceSessionPathProvider
+  ) {
+    this.fileReadService = new WorkspaceFileReadService(fileReader, pathGuard);
+    this.listService = new WorkspaceListService(listingBuilder, pathGuard, sessionPathProvider);
+  }
 
   async read(
     userId: number | null,
@@ -19,8 +27,7 @@ export class WorkspaceReadService {
     offset = 0,
     limit = 8192
   ): Promise<string> {
-    const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
-    return this.fileReader.read(targetPath, relativePath, offset, limit);
+    return this.fileReadService.read(userId, sessionId, relativePath, offset, limit);
   }
 
   async list(
@@ -29,8 +36,6 @@ export class WorkspaceReadService {
     relativePath = ".",
     recursive = false
   ): Promise<WorkspaceListing[]> {
-    await this.sessionPathProvider.ensureSessionPath(userId, sessionId);
-    const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
-    return this.listingBuilder.build(targetPath, recursive);
+    return this.listService.list(userId, sessionId, relativePath, recursive);
   }
 }
