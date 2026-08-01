@@ -7,7 +7,9 @@
 - `frontend`：用户交互入口，负责登录、聊天、知识库、学生管理、签到、审计与监控页面。
 - `backend/gateway`：统一业务 API 入口，负责路由转发、JWT 认证协同、输入风控前置和跨服务入口治理。
 - Java 业务微服务：负责各业务域的数据、流程、鉴权与审计协作。
-- `agent`：AI 编排层，负责聊天推理、RAG 检索编排、工具调用、记忆上下文和安全过滤。
+- `agent-ts`：AI 控制层，负责聊天 HTTP/SSE 接入、模型编排、工具编排入口和运行时胶水。
+- `agent-core`：Rust 执行核心，负责高性能协议封装、执行状态机和后续热点路径承载。
+- `agent`：旧版 Python Agent，迁移期间保留为兼容参考。
 - `backend/ai-gateway`：模型供应商网关，负责面向模型服务的 provider 抽象、模型路由、限流和调用治理。
 - 基础设施：PostgreSQL/pgvector、Redis、Kafka、Nacos、Jaeger、Prometheus、Grafana 等提供存储、注册配置、消息、追踪和监控能力。
 
@@ -51,21 +53,22 @@
 
 - 会话创建、删除、知识库绑定和消息查询。
 - 非流式与流式聊天接口。
-- 调用 `agent` 获取 AI 回复。
+- 调用 `agent-ts` 获取 AI 回复。
 - 保存用户和助手消息、来源引用、turnId 和 traceId。
 - 通过审计注解触发聊天相关审计。
 
-### agent
+### agent-ts / agent-core
 
-Python AI 编排服务，不作为普通业务数据服务使用。
+TypeScript + Rust AI 编排服务，不作为普通业务数据服务使用。`agent-ts` 负责 HTTP/SSE、模型编排和外部系统胶水，`agent-core` 负责可独立演进的高性能执行核心。
 
 主要职责：
 
 - 调用 LLM provider 生成回复。
-- 编排 RAG 检索、工具调用、记忆上下文和安全过滤。
+- 通过 `memory-service` API 读取会话摘要、核心记忆和长期记忆，并在回答后提交记忆任务。
+- 通过 workspace 管理能力提供会话级文件统计和缓存清理。
+- 编排 RAG 检索、工具调用、MCP 工具和安全过滤；这些能力在 TS/Rust 迁移中逐步替换旧 Python 实现。
 - 提供 `/chat/stream` 给 `chat-service` 调用。
-- 监听和处理 RAG 索引相关任务。
-- 通过 `memory-service` API 读写长期记忆和会话摘要。
+- 通过 `agent-core` 生成兼容旧协议的 SSE 事件封装。
 
 ### ai-gateway
 
@@ -156,11 +159,11 @@ Rust 实现的模型供应商网关，职责不同于业务网关 `gateway`。
 
 ### 聊天链路
 
-`frontend` -> `gateway` -> `chat-service` -> `agent` -> LLM/RAG/Memory/Tools -> `chat-service` 持久化消息 -> `frontend`
+`frontend` -> `gateway` -> `chat-service` -> `agent-ts` / `agent-core` -> LLM/RAG/Memory/Tools -> `chat-service` 持久化消息 -> `frontend`
 
 ### RAG 链路
 
-`frontend` -> `gateway` -> `rag-service` 保存知识库和文档元数据 -> `agent` 索引文档 -> 聊天时由 `agent` 检索并组装上下文。
+`frontend` -> `gateway` -> `rag-service` 保存知识库和文档元数据 -> `agent-ts` / `agent-core` 索引文档 -> 聊天时由 `agent-ts` 检索并组装上下文。
 
 ### 风控链路
 
@@ -184,7 +187,7 @@ Rust 实现的模型供应商网关，职责不同于业务网关 `gateway`。
 | check-in-service | 8087 |
 | teacher-service | 8089 |
 | student-service | 8091 |
-| agent | 8001 |
+| agent-ts | 8001 |
 | ai-gateway | 8090 |
 
 本地直接启动多个服务时，应以本表为准，避免服务端口冲突。

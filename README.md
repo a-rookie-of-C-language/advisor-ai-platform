@@ -3,7 +3,9 @@
 ## 项目结构
 - `frontend`：React + TypeScript 前端
 - `backend`：Spring Boot 后端 API
-- `agent`：Python RAG 索引与检索服务
+- `agent-ts`：TypeScript Agent 控制层，负责 HTTP/SSE 接入与模型编排
+- `agent-core`：Rust Agent 执行核心，负责高性能协议封装和执行能力
+- `agent`：旧版 Python Agent，迁移期间保留作兼容参考
 
 架构职责边界说明见 [docs/architecture.md](docs/architecture.md)。
 
@@ -11,7 +13,8 @@
 - Node.js 20+
 - JDK 17+
 - Maven 3.9+
-- Python 3.11+
+- Python 3.11+（旧版 Python Agent 使用）
+- Rust 1.80+
 - PostgreSQL 15+（需安装 pgvector 扩展）
 - Ollama（默认使用 `bge-m3` 向量模型）
 
@@ -25,8 +28,13 @@ copy application-local.yml.example application-local.yml
 - `DB_USERNAME`
 - `DB_PASSWORD`
 - `JWT_SECRET`
-3. Agent 环境变量（建议在 `agent/.env` 中配置）：
-- `DATABASE_URL`（PostgreSQL DSN）
+3. Agent 环境变量（建议在启动 `agent-ts` 前配置）：
+- `AGENT_API_TOKEN`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
+- `MEMORY_API_BASE_URL`（可选，启用记忆上下文读取与写回）
+- `MEMORY_API_TOKEN`（配置 `MEMORY_API_BASE_URL` 时建议同时配置）
 
 ## 启动顺序（推荐）
 1. 启动 PostgreSQL 并确认可连接。
@@ -39,13 +47,19 @@ ollama pull bge-m3
 cd backend
 mvn spring-boot:run
 ```
-4. 启动 Agent（监听 `rag_index` 通知并构建索引）：
+4. 启动 Agent（默认使用 TS 控制层 + Rust 执行核心）：
 ```bash
-cd agent
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
+cd agent-core
+cargo build
+
+cd ..\agent-ts
+npm install
+npm run build
+npm start
+```
+也可以使用本地脚本启动：
+```powershell
+.\scripts\start-local-agent-daemon.ps1 -Runtime ts
 ```
 5. 启动前端：
 ```bash

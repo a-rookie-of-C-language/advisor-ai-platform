@@ -253,14 +253,14 @@ services:
 
   agent:
     build:
-      context: ../agent
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: agent-ts/Dockerfile
     container_name: advisor-agent
-    env_file:
-      - ../agent/.env
     environment:
+      AGENT_API_HOST: 0.0.0.0
+      AGENT_API_PORT: 8001
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
-      MCP_TOKEN_STUDENT: ${MCP_TOKEN_STUDENT:?MCP_TOKEN_STUDENT is required}
+      MEMORY_API_BASE_URL: http://memory-service:8084
       MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://www.codexapis.com/v1}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
@@ -277,8 +277,6 @@ services:
       postgres:
         condition: service_healthy
       memory-service:
-        condition: service_started
-      student-service:
         condition: service_started
     ports:
       - "8001:8001"
