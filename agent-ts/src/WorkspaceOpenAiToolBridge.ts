@@ -1,5 +1,6 @@
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject, JsonValue } from "./JsonTypes.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
 import { WorkspaceOpenAiToolCatalog } from "./WorkspaceOpenAiToolCatalog.js";
@@ -22,7 +23,7 @@ export class WorkspaceOpenAiToolBridge {
     request: ChatStreamRequest,
     toolName: string,
     args: JsonObject
-  ): Promise<{ output: string; success: boolean }> {
+  ): Promise<OpenAiToolExecutionResult> {
     try {
       const output = await this.executeWorkspaceTool(request, toolName, args);
       return { output: JSON.stringify({ ok: true, status: "ok", ...output }), success: true };

@@ -1,6 +1,7 @@
 import type { JsonObject } from "./JsonTypes.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import type { McpToolService } from "./McpToolService.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 
 interface McpToolTarget {
@@ -19,7 +20,7 @@ export class McpOpenAiToolBridge {
     return descriptors.map((descriptor) => this.toOpenAiTool(descriptor));
   }
 
-  async executeTool(openAiToolName: string, args: JsonObject): Promise<{ output: string; success: boolean }> {
+  async executeTool(openAiToolName: string, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     const target = this.toolTargets.get(openAiToolName);
     if (!target) {
       return {

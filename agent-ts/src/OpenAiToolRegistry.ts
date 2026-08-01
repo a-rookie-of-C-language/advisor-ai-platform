@@ -2,6 +2,7 @@ import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
@@ -33,7 +34,7 @@ export class OpenAiToolRegistry {
     chatRequest: ChatStreamRequest,
     toolName: string,
     toolArgs: JsonObject
-  ): Promise<{ output: string; success: boolean }> {
+  ): Promise<OpenAiToolExecutionResult> {
     if (this.workspaceOpenAiToolBridge?.canExecute(toolName)) {
       return this.workspaceOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
     }

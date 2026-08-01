@@ -6,6 +6,7 @@ import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
@@ -136,7 +137,7 @@ export class AgentRuntime {
     chatRequest: ChatStreamRequest,
     toolName: string,
     toolArgs: JsonObject
-  ): Promise<{ output: string; success: boolean }> {
+  ): Promise<OpenAiToolExecutionResult> {
     return this.openAiToolRegistry
       ? this.openAiToolRegistry.executeTool(chatRequest, toolName, toolArgs)
       : {

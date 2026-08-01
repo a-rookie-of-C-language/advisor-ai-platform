@@ -1,6 +1,7 @@
 import type { AgentConfig } from "./AgentConfig.js";
 import type { ChatMessageDTO } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatStreamEvent } from "./OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 
@@ -11,7 +12,7 @@ type OpenAIChatMessage = {
   tool_calls?: OpenAIToolCall[];
 };
 
-type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<{ output: string; success: boolean }>;
+type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
 
 interface OpenAIStreamChoice {
   finish_reason?: string | null;

@@ -1,6 +1,7 @@
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject, JsonValue } from "./JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import { MemoryOpenAiToolCatalog } from "./MemoryOpenAiToolCatalog.js";
 
@@ -34,7 +35,7 @@ export class MemoryOpenAiToolBridge {
     request: ChatStreamRequest,
     toolName: string,
     args: JsonObject
-  ): Promise<{ output: string; success: boolean }> {
+  ): Promise<OpenAiToolExecutionResult> {
     try {
       if (toolName === "memory_read") {
         return await this.readMemory(request, args);
@@ -56,7 +57,7 @@ export class MemoryOpenAiToolBridge {
     }
   }
 
-  private async readMemory(request: ChatStreamRequest, args: JsonObject): Promise<{ output: string; success: boolean }> {
+  private async readMemory(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     const userId = this.requireUserId(request);
     const kbId = request.kbId ?? 0;
     const query = this.readOptionalString(args, "query", this.latestUserQuery(request)) || "";
@@ -82,7 +83,7 @@ export class MemoryOpenAiToolBridge {
     };
   }
 
-  private async writeMemory(request: ChatStreamRequest, args: JsonObject): Promise<{ output: string; success: boolean }> {
+  private async writeMemory(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     const userId = this.requireUserId(request);
     const candidates = this.readCandidates(args);
     const result = await this.memoryClient.upsertCandidates({

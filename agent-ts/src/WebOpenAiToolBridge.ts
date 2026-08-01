@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "./JsonTypes.js";
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
 import { WebOpenAiToolCatalog } from "./WebOpenAiToolCatalog.js";
@@ -23,7 +24,7 @@ export class WebOpenAiToolBridge {
     return (toolName === "web_fetch" && Boolean(this.webFetchClient)) || (toolName === "web_search" && Boolean(this.webSearchClient));
   }
 
-  async executeTool(toolName: string, args: JsonObject): Promise<{ output: string; success: boolean }> {
+  async executeTool(toolName: string, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     try {
       if (toolName === "web_fetch" && this.webFetchClient) {
         const page = await this.webFetchClient.fetchPage(this.readRequiredString(args, "url"));
