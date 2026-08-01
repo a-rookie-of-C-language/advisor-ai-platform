@@ -5,9 +5,11 @@ import type { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
 import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoundRunner.js";
+import { OpenAIToolRoundGate } from "./OpenAIToolRoundGate.js";
 
 export class OpenAIChatEventStreamer {
   private readonly deltaEventFactory = new OpenAIChatDeltaEventFactory();
+  private readonly toolRoundGate = new OpenAIToolRoundGate();
 
   constructor(
     private readonly openAiApiKey: string,
@@ -31,11 +33,11 @@ export class OpenAIChatEventStreamer {
       yield event;
     }
 
-    if (firstRound.toolCalls.length === 0 || tools.length === 0 || !toolExecutor) {
+    if (!this.toolRoundGate.shouldRun(firstRound.toolCalls, tools, toolExecutor)) {
       return;
     }
 
-    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor)) {
+    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor!)) {
       yield event;
     }
 
