@@ -8,6 +8,7 @@ import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
 import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
 
@@ -19,7 +20,8 @@ export class AgentRuntime {
     private readonly memoryContextBuilder?: MemoryContextBuilder,
     private readonly memoryTaskSubmitter?: MemoryTaskSubmitter,
     private readonly ragContextBuilder?: RagContextBuilder,
-    private readonly webFetchContextBuilder?: WebFetchContextBuilder
+    private readonly webFetchContextBuilder?: WebFetchContextBuilder,
+    private readonly webSearchContextBuilder?: WebSearchContextBuilder
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -30,7 +32,7 @@ export class AgentRuntime {
     return {
       compiled: true,
       checkpoint: "typescript-runtime",
-      nodes: ["validate_request", "load_memory", "load_rag", "load_web", "generate", "finalize"],
+      nodes: ["validate_request", "load_memory", "load_rag", "load_web_fetch", "load_web_search", "generate", "finalize"],
       runtime: "typescript",
       core: "rust"
     };
@@ -83,6 +85,9 @@ export class AgentRuntime {
     }
     if (this.webFetchContextBuilder) {
       messages = await this.webFetchContextBuilder.injectWebFetch({ ...chatRequest, messages });
+    }
+    if (this.webSearchContextBuilder) {
+      messages = await this.webSearchContextBuilder.injectWebSearch({ ...chatRequest, messages });
     }
     return messages;
   }
