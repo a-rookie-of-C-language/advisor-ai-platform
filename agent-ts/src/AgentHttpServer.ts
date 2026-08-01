@@ -1,4 +1,5 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
+import { AgentChatStreamRouteHandler } from "./AgentChatStreamRouteHandler.js";
 import type { AgentConfig } from "./AgentConfig.js";
 import { AgentHealthRouteHandler } from "./AgentHealthRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
@@ -8,13 +9,13 @@ import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
 import { AgentWorkspaceRouteHandler } from "./AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "./McpToolService.js";
-import { parseJsonBody } from "./HttpBodyParser.js";
 import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly authorizer: AgentRequestAuthorizer;
   private readonly jsonResponseWriter = new AgentJsonResponseWriter();
   private readonly requestReader = new AgentHttpRequestReader();
+  private readonly chatStreamRouteHandler: AgentChatStreamRouteHandler;
   private readonly healthRouteHandler: AgentHealthRouteHandler;
   private readonly mcpRouteHandler: AgentMcpRouteHandler;
   private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler;
@@ -26,6 +27,7 @@ export class AgentHttpServer {
     private readonly mcpToolService?: McpToolService
   ) {
     this.authorizer = new AgentRequestAuthorizer(this.config);
+    this.chatStreamRouteHandler = new AgentChatStreamRouteHandler(this.runtime);
     this.healthRouteHandler = new AgentHealthRouteHandler(this.runtime);
     this.mcpRouteHandler = new AgentMcpRouteHandler(this.mcpToolService, this.requestReader);
     this.workspaceRouteHandler = new AgentWorkspaceRouteHandler(this.workspaceManager, this.requestReader);
@@ -55,9 +57,7 @@ export class AgentHttpServer {
         return;
       }
 
-      if (request.method === "POST" && url.pathname === "/chat/stream") {
-        const body = await parseJsonBody(request);
-        await this.runtime.streamChat(body, request, response);
+      if (await this.chatStreamRouteHandler.handle(request.method, url, request, response)) {
         return;
       }
 
