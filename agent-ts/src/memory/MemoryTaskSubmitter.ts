@@ -1,9 +1,11 @@
 import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import { LastUserMessageFinder } from "./LastUserMessageFinder.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
+import { MemoryTaskRecentMessagesBuilder } from "./MemoryTaskRecentMessagesBuilder.js";
 
 export class MemoryTaskSubmitter {
   private readonly lastUserMessageFinder = new LastUserMessageFinder();
+  private readonly recentMessagesBuilder = new MemoryTaskRecentMessagesBuilder();
 
   constructor(private readonly memoryClient: MemoryApiClient) {}
 
@@ -24,10 +26,7 @@ export class MemoryTaskSubmitter {
         turnId,
         userText,
         assistantText,
-        recentMessages: [
-          ...request.messages.map((message) => ({ role: message.role, content: message.content })),
-          { role: "assistant", content: assistantText }
-        ]
+        recentMessages: this.recentMessagesBuilder.build(request, assistantText)
       });
     } catch {
       // 记忆写回失败不能影响聊天主链路。
