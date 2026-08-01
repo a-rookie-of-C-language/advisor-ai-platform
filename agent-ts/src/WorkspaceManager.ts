@@ -1,9 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { MAX_FILE_SIZE } from "./WorkspaceLimits.js";
 import { WorkspaceCacheCleaner } from "./WorkspaceCacheCleaner.js";
 import type { WorkspaceCacheCleanupResult } from "./WorkspaceCacheCleanupResult.js";
 import { WorkspaceFileReader } from "./WorkspaceFileReader.js";
+import { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
 import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
@@ -12,11 +12,13 @@ import { WorkspaceError } from "./WorkspaceError.js";
 import type { WorkspaceStats } from "./WorkspaceStats.js";
 import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
 import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
+import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
 
 export class WorkspaceManager {
   private readonly fileSystem = new WorkspaceFileSystem();
   private readonly cacheCleaner = new WorkspaceCacheCleaner(this.fileSystem);
   private readonly fileReader = new WorkspaceFileReader();
+  private readonly fileWriter = new WorkspaceFileWriter();
   private readonly listingBuilder = new WorkspaceListingBuilder(this.fileSystem);
   private readonly statsCollector = new WorkspaceStatsCollector(this.fileSystem);
   private readonly workingFileCounter = new WorkspaceWorkingFileCounter(this.fileSystem);
@@ -39,21 +41,14 @@ export class WorkspaceManager {
     relativePath: string,
     content: string,
     isFinal = false
-  ): Promise<{ path: string; size: number }> {
+  ): Promise<WorkspaceWriteResult> {
     const sessionPath = await this.ensureSessionPath(userId, sessionId);
     const normalPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
     const targetPath = isFinal ? this.pathGuard.finalPath(sessionPath, relativePath) : normalPath;
     this.pathGuard.checkDepth(sessionPath, targetPath);
-
-    const contentBytes = Buffer.byteLength(content, "utf8");
-    if (contentBytes > MAX_FILE_SIZE) {
-      throw new WorkspaceError(`内容过大（最大 ${MAX_FILE_SIZE} 字节）`);
-    }
     this.pathGuard.checkFileLimit(await this.workingFileCounter.count(sessionPath));
 
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.writeFile(targetPath, content, "utf8");
-    return { path: path.relative(sessionPath, targetPath), size: contentBytes };
+    return this.fileWriter.write(sessionPath, targetPath, content);
   }
 
   async edit(
