@@ -6,10 +6,12 @@ import type { WorkspaceManager } from "./WorkspaceManager.js";
 import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
 import { WorkspaceOpenAiToolCatalog } from "./WorkspaceOpenAiToolCatalog.js";
 import { WorkspaceOpenAiToolExecutor } from "./WorkspaceOpenAiToolExecutor.js";
+import { WorkspaceOpenAiToolResultFactory } from "./WorkspaceOpenAiToolResultFactory.js";
 
 export class WorkspaceOpenAiToolBridge {
   private readonly catalog = new WorkspaceOpenAiToolCatalog();
   private readonly executor: WorkspaceOpenAiToolExecutor;
+  private readonly resultFactory = new WorkspaceOpenAiToolResultFactory();
   private readonly toolNames = this.catalog.toolNames();
 
   constructor(workspaceManager: WorkspaceManager) {
@@ -31,7 +33,7 @@ export class WorkspaceOpenAiToolBridge {
   ): Promise<OpenAiToolExecutionResult> {
     try {
       const output = await this.executor.execute(request, toolName, args);
-      return { output: JSON.stringify({ ok: true, status: "ok", ...output }), success: true };
+      return this.resultFactory.createSuccess(output);
     } catch (error) {
       return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "workspace tool failed");
     }
