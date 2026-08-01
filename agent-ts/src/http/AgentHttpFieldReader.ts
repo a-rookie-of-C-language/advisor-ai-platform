@@ -1,10 +1,11 @@
 import type { JsonObject } from "../common/JsonTypes.js";
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
-import { BooleanStringReader } from "../common/BooleanStringReader.js";
+import { AgentHttpBooleanFieldReader } from "./AgentHttpBooleanFieldReader.js";
 import { AgentHttpNumberFieldReader } from "./AgentHttpNumberFieldReader.js";
 import { WorkspaceError } from "../workspace/WorkspaceError.js";
 
 export class AgentHttpFieldReader {
+  private readonly booleanFieldReader = new AgentHttpBooleanFieldReader();
   private readonly numberFieldReader = new AgentHttpNumberFieldReader();
 
   readRequiredString(body: Record<string, unknown>, key: string): string {
@@ -22,16 +23,7 @@ export class AgentHttpFieldReader {
 
   readOptionalBoolean(body: Record<string, unknown>, key: string, fallback: boolean): boolean {
     const value = this.readAliasedValue(body, key);
-    if (value === undefined || value === null || value === "") {
-      return fallback;
-    }
-    if (typeof value === "boolean") {
-      return value;
-    }
-    if (typeof value === "string") {
-      return this.readBooleanQuery(value, fallback);
-    }
-    throw new WorkspaceError(`字段必须是布尔值: ${key}`);
+    return this.booleanFieldReader.read(value, key, fallback);
   }
 
   readOptionalJsonObject(body: Record<string, unknown>, key: string): JsonObject {
@@ -46,10 +38,7 @@ export class AgentHttpFieldReader {
   }
 
   readBooleanQuery(value: string | null, fallback: boolean): boolean {
-    if (!value) {
-      return fallback;
-    }
-    return BooleanStringReader.readTruthy(value, ["1", "true", "yes", "y"]);
+    return this.booleanFieldReader.readQuery(value, fallback);
   }
 
   private readAliasedValue(body: Record<string, unknown>, snakeKey: string): unknown {
