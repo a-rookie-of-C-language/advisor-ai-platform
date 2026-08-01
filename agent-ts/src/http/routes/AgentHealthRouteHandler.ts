@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "../../AgentRuntime.js";
+import type { AgentRuntime } from "../../app/AgentRuntime.js";
 import type { HttpRouteResult } from "../HttpRouteResult.js";
 
 export class AgentHealthRouteHandler {

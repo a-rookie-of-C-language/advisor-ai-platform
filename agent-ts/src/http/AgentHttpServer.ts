@@ -6,7 +6,7 @@ import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
-import type { AgentRuntime } from "../AgentRuntime.js";
+import type { AgentRuntime } from "../app/AgentRuntime.js";
 import { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "../mcp/McpToolService.js";
 import { WorkspaceManager } from "../workspace/WorkspaceManager.js";
