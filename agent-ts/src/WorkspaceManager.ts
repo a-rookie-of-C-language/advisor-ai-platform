@@ -10,6 +10,7 @@ import type { WorkspaceListing } from "./WorkspaceListing.js";
 import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
 import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
+import { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
 import type { WorkspaceStats } from "./WorkspaceStats.js";
 import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
 import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
@@ -25,11 +26,13 @@ export class WorkspaceManager {
   private readonly statsCollector = new WorkspaceStatsCollector(this.fileSystem);
   private readonly workingFileCounter = new WorkspaceWorkingFileCounter(this.fileSystem);
   private readonly pathGuard: WorkspacePathGuard;
+  private readonly sessionPathProvider: WorkspaceSessionPathProvider;
   private readonly basePath: string;
 
   constructor(basePath: string) {
     this.basePath = path.resolve(basePath);
     this.pathGuard = new WorkspacePathGuard(this.basePath);
+    this.sessionPathProvider = new WorkspaceSessionPathProvider(this.pathGuard);
   }
 
   async read(userId: number | null, sessionId: number | null, relativePath: string, offset = 0, limit = 8192): Promise<string> {
@@ -44,7 +47,7 @@ export class WorkspaceManager {
     content: string,
     isFinal = false
   ): Promise<WorkspaceWriteResult> {
-    const sessionPath = await this.ensureSessionPath(userId, sessionId);
+    const sessionPath = await this.sessionPathProvider.ensureSessionPath(userId, sessionId);
     const normalPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
     const targetPath = isFinal ? this.pathGuard.finalPath(sessionPath, relativePath) : normalPath;
     this.pathGuard.checkDepth(sessionPath, targetPath);
@@ -61,14 +64,14 @@ export class WorkspaceManager {
     newString: string,
     isFinal = false
   ): Promise<WorkspaceEditResult> {
-    const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
+    const sessionPath = this.sessionPathProvider.getSessionPath(userId, sessionId);
     const normalPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
     const targetPath = isFinal ? this.pathGuard.finalPath(sessionPath, relativePath) : normalPath;
     return this.fileEditor.edit(sessionPath, normalPath, targetPath, oldString, newString);
   }
 
   async list(userId: number | null, sessionId: number | null, relativePath = ".", recursive = false): Promise<WorkspaceListing[]> {
-    await this.ensureSessionPath(userId, sessionId);
+    await this.sessionPathProvider.ensureSessionPath(userId, sessionId);
     const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
     return this.listingBuilder.build(targetPath, recursive);
   }
@@ -79,7 +82,7 @@ export class WorkspaceManager {
     relativePath: string,
     isFinal = false
   ): Promise<{ path: string; created: boolean }> {
-    const sessionPath = await this.ensureSessionPath(userId, sessionId);
+    const sessionPath = await this.sessionPathProvider.ensureSessionPath(userId, sessionId);
     const normalPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
     const targetPath = isFinal ? this.pathGuard.finalPath(sessionPath, relativePath) : normalPath;
     this.pathGuard.checkDepth(sessionPath, targetPath);
@@ -89,19 +92,12 @@ export class WorkspaceManager {
   }
 
   async cleanupCache(userId: number | null, sessionId: number | null): Promise<WorkspaceCacheCleanupResult> {
-    const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
+    const sessionPath = this.sessionPathProvider.getSessionPath(userId, sessionId);
     return this.cacheCleaner.clean(sessionPath);
   }
 
   async getStats(userId: number | null, sessionId: number | null): Promise<WorkspaceStats> {
-    const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
+    const sessionPath = this.sessionPathProvider.getSessionPath(userId, sessionId);
     return this.statsCollector.collect(sessionPath, userId, sessionId);
   }
-
-  private async ensureSessionPath(userId: number | null, sessionId: number | null): Promise<string> {
-    const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
-    await fs.mkdir(sessionPath, { recursive: true });
-    return sessionPath;
-  }
-
 }
