@@ -1,0 +1,85 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { AgentConfig } from "./AgentConfig.js";
+import type { AgentCoreClient } from "./AgentCoreClient.js";
+import type { ChatStreamRequest } from "./ChatStreamRequest.js";
+import type { JsonObject } from "./JsonTypes.js";
+import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
+import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
+import type { OpenAIChatClient } from "./OpenAIChatClient.js";
+import { SseWriter } from "./SseWriter.js";
+import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
+
+export class AgentRuntime {
+  constructor(
+    private readonly config: AgentConfig,
+    private readonly core: AgentCoreClient,
+    private readonly openAiClient: OpenAIChatClient,
+    private readonly memoryContextBuilder?: MemoryContextBuilder,
+    private readonly memoryTaskSubmitter?: MemoryTaskSubmitter
+  ) {}
+
+  async coreHealth(): Promise<JsonObject> {
+    return this.core.health();
+  }
+
+  graphHealth(): JsonObject {
+    return {
+      compiled: true,
+      checkpoint: "typescript-runtime",
+      nodes: ["validate_request", "load_memory", "generate", "finalize"],
+      runtime: "typescript",
+      core: "rust"
+    };
+  }
+
+  async streamChat(body: unknown, request: IncomingMessage, response: ServerResponse): Promise<void> {
+    const chatRequest = validateChatStreamRequest(body);
+    const traceId = this.resolveTraceId(chatRequest, request);
+    const turnId = this.resolveTurnId(chatRequest, request);
+    const writer = new SseWriter(response, this.core, traceId);
+
+    await writer.start();
+    try {
+      const modelMessages = await this.buildModelMessages(chatRequest);
+      let answer = "";
+      let emitted = false;
+      for await (const text of this.openAiClient.streamChat(modelMessages)) {
+        emitted = true;
+        answer += text;
+        await writer.write("llm_delta", "llm", { text });
+      }
+
+      if (!emitted && !this.config.openAiApiKey) {
+        answer = "TS agent 已启动，但当前未配置 OPENAI_API_KEY，无法调用模型。";
+        await writer.write("llm_delta", "llm", { text: answer });
+      }
+
+      await writer.done("stream_finished");
+      await this.submitMemoryTask(chatRequest, turnId, answer);
+    } catch (error) {
+      await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
+    }
+  }
+
+  private resolveTraceId(chatRequest: ChatStreamRequest, request: IncomingMessage): string {
+    return String(request.headers["x-trace-id"] || chatRequest.traceId || "");
+  }
+
+  private resolveTurnId(chatRequest: ChatStreamRequest, request: IncomingMessage): string {
+    return String(request.headers["x-turn-id"] || chatRequest.turnId || "");
+  }
+
+  private async buildModelMessages(chatRequest: ChatStreamRequest): Promise<ChatStreamRequest["messages"]> {
+    if (!this.memoryContextBuilder) {
+      return chatRequest.messages;
+    }
+    return this.memoryContextBuilder.injectMemory(chatRequest);
+  }
+
+  private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {
+    if (!this.memoryTaskSubmitter || !turnId || !answer.trim()) {
+      return;
+    }
+    await this.memoryTaskSubmitter.submit(chatRequest, turnId, answer);
+  }
+}
