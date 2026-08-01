@@ -3,11 +3,13 @@ import type { JsonObject } from "../common/JsonTypes.js";
 import { WorkspaceCreateDirOpenAiToolExecutor } from "./WorkspaceCreateDirOpenAiToolExecutor.js";
 import { WorkspaceEditOpenAiToolExecutor } from "./WorkspaceEditOpenAiToolExecutor.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
+import { WorkspaceMutationToolNameMatcher } from "./WorkspaceMutationToolNameMatcher.js";
 import { WorkspaceWriteOpenAiToolExecutor } from "./WorkspaceWriteOpenAiToolExecutor.js";
 
 export class WorkspaceOpenAiMutationToolExecutor {
   private readonly createDirToolExecutor: WorkspaceCreateDirOpenAiToolExecutor;
   private readonly editToolExecutor: WorkspaceEditOpenAiToolExecutor;
+  private readonly toolNameMatcher = new WorkspaceMutationToolNameMatcher();
   private readonly writeToolExecutor: WorkspaceWriteOpenAiToolExecutor;
 
   constructor(workspaceManager: WorkspaceManager) {
@@ -17,7 +19,7 @@ export class WorkspaceOpenAiMutationToolExecutor {
   }
 
   canExecute(toolName: string): boolean {
-    return toolName === "workspace_write" || toolName === "workspace_edit" || toolName === "workspace_create_dir";
+    return this.toolNameMatcher.matches(toolName);
   }
 
   async execute(request: ChatStreamRequest, toolName: string, args: JsonObject): Promise<JsonObject> {
