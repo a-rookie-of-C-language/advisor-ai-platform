@@ -1,6 +1,9 @@
 import { BooleanStringReader } from "../common/BooleanStringReader.js";
+import { OpenAiTimeoutEnvReader } from "./OpenAiTimeoutEnvReader.js";
 
 export class AgentEnvReader {
+  private readonly openAiTimeoutEnvReader = new OpenAiTimeoutEnvReader();
+
   readString(name: string, fallback: string): string {
     return process.env[name]?.trim() || fallback;
   }
@@ -30,14 +33,6 @@ export class AgentEnvReader {
   }
 
   readOpenAiTimeoutMs(): number {
-    const timeoutMs = process.env.OPENAI_TIMEOUT_MS?.trim();
-    if (timeoutMs) {
-      return Number.parseInt(timeoutMs, 10);
-    }
-    const timeoutSec = process.env.OPENAI_TIMEOUT_SEC?.trim();
-    if (timeoutSec) {
-      return Math.round(Number.parseFloat(timeoutSec) * 1000);
-    }
-    return 600_000;
+    return this.openAiTimeoutEnvReader.read();
   }
 }
