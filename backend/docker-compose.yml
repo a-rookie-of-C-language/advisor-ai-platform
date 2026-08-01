@@ -264,6 +264,9 @@ services:
       MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
       RAG_API_BASE_URL: http://rag-service:8083
       RAG_API_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MCP_TOOLS: ${MCP_TOOLS:-true}
+      MCP_SERVERS: ${MCP_SERVERS:-student:http:http://student-service:8091/mcp/message}
+      MCP_TOKEN_STUDENT: ${MCP_SERVER_TOKEN:?MCP_SERVER_TOKEN is required}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://www.codexapis.com/v1}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
@@ -281,6 +284,8 @@ services:
       memory-service:
         condition: service_started
       rag-service:
+        condition: service_started
+      student-service:
         condition: service_started
     ports:
       - "8001:8001"
