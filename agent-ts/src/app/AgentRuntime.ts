@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentConfig } from "../config/AgentConfig.js";
+import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
 import { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentCoreClient } from "../core/AgentCoreClient.js";
 import type { JsonObject } from "../common/JsonTypes.js";
@@ -14,7 +15,6 @@ import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
 import { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
 import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
-import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
 import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
 import { SseWriter } from "../protocol/SseWriter.js";
 import { validateChatStreamRequest } from "../common/validateChatStreamRequest.js";
@@ -25,10 +25,11 @@ export class AgentRuntime {
   private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter;
   private readonly openAiToolFacade: AgentOpenAiToolFacade;
   private readonly requestIdResolver = new AgentRequestIdResolver();
+  private readonly streamSession: AgentChatStreamSession;
   private readonly toolExecutorFactory: AgentToolExecutorFactory;
 
   constructor(
-    private readonly config: AgentConfig,
+    config: AgentConfig,
     private readonly core: AgentCoreClient,
     private readonly openAiClient: OpenAIChatClient,
     memoryContextBuilder?: MemoryContextBuilder,
@@ -47,6 +48,14 @@ export class AgentRuntime {
     this.memoryTaskCompletionSubmitter = new AgentMemoryTaskCompletionSubmitter(memoryTaskSubmitter);
     this.openAiToolFacade = new AgentOpenAiToolFacade(config.openAiApiKey, openAiToolRegistry);
     this.toolExecutorFactory = new AgentToolExecutorFactory(this.openAiToolFacade);
+    this.streamSession = new AgentChatStreamSession(
+      config.openAiApiKey,
+      this.contextPipeline,
+      this.memoryTaskCompletionSubmitter,
+      this.openAiClient,
+      this.openAiToolFacade,
+      this.toolExecutorFactory
+    );
   }
 
   async coreHealth(): Promise<JsonObject> {
@@ -62,25 +71,6 @@ export class AgentRuntime {
     const traceId = this.requestIdResolver.resolveTraceId(chatRequest, request);
     const turnId = this.requestIdResolver.resolveTurnId(chatRequest, request);
     const writer = new SseWriter(response, this.core, traceId);
-    const eventWriter = new AgentStreamEventWriter(writer);
-
-    await writer.start();
-    try {
-      const modelMessages = await this.contextPipeline.build(chatRequest);
-      const tools = await this.openAiToolFacade.listTools();
-      const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
-      for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
-        await eventWriter.write(event);
-      }
-
-      if (!eventWriter.emitted && !this.config.openAiApiKey) {
-        await eventWriter.writeMissingOpenAiApiKeyFallback();
-      }
-
-      await writer.done("stream_finished");
-      await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, eventWriter.answer);
-    } catch (error) {
-      await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
-    }
+    await this.streamSession.stream(chatRequest, turnId, writer);
   }
 }
