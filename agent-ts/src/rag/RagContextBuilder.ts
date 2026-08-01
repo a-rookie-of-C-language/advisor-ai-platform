@@ -1,9 +1,11 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { RagApiClient } from "./RagApiClient.js";
 import { RagPromptRenderer } from "./RagPromptRenderer.js";
+import { RagSystemMessageFactory } from "./RagSystemMessageFactory.js";
 
 export class RagContextBuilder {
   private readonly promptRenderer = new RagPromptRenderer();
+  private readonly systemMessageFactory = new RagSystemMessageFactory();
 
   constructor(private readonly ragClient: RagApiClient) {}
 
@@ -19,10 +21,7 @@ export class RagContextBuilder {
         return request.messages;
       }
       return [
-        {
-          role: "system",
-          content: `Knowledge-base context is available for this chat. Use it only when relevant.\n${prompt}`
-        },
+        this.systemMessageFactory.create(prompt),
         ...request.messages
       ];
     } catch {
