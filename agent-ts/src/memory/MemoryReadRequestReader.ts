@@ -1,15 +1,18 @@
 import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
+import { LatestUserQueryResolver } from "../common/LatestUserQueryResolver.js";
 import type { MemoryReadRequest } from "./MemoryReadRequest.js";
 import { OpenAiToolArgumentReader } from "../openai/OpenAiToolArgumentReader.js";
 import { OpenAiToolTopKArgumentReader } from "../openai/OpenAiToolTopKArgumentReader.js";
 
 export class MemoryReadRequestReader {
+  private readonly latestUserQueryResolver = new LatestUserQueryResolver();
+
   constructor(private readonly defaultTopK: number) {}
 
   read(request: ChatStreamRequest, args: JsonObject): MemoryReadRequest {
     const userId = this.requireUserId(request);
-    const query = OpenAiToolArgumentReader.readOptionalString(args, "query", this.latestUserQuery(request)) || "";
+    const query = OpenAiToolArgumentReader.readOptionalString(args, "query", this.latestUserQueryResolver.resolve(request)) || "";
     if (!query.trim()) {
       throw new Error("memory_read empty query");
     }
@@ -30,9 +33,5 @@ export class MemoryReadRequestReader {
       throw new Error("memory tool missing user_id");
     }
     return request.userId;
-  }
-
-  private latestUserQuery(request: ChatStreamRequest): string {
-    return request.messages.filter((message) => message.role === "user").at(-1)?.content || "";
   }
 }
