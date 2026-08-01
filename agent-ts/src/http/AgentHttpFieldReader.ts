@@ -1,9 +1,12 @@
 import type { JsonObject } from "../common/JsonTypes.js";
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import { BooleanStringReader } from "../common/BooleanStringReader.js";
+import { AgentHttpNumberFieldReader } from "./AgentHttpNumberFieldReader.js";
 import { WorkspaceError } from "../workspace/WorkspaceError.js";
 
 export class AgentHttpFieldReader {
+  private readonly numberFieldReader = new AgentHttpNumberFieldReader();
+
   readRequiredString(body: Record<string, unknown>, key: string): string {
     const value = this.readAliasedValue(body, key);
     if (typeof value !== "string" || !value) {
@@ -14,14 +17,7 @@ export class AgentHttpFieldReader {
 
   readOptionalNumber(body: Record<string, unknown>, key: string, fallback: number): number {
     const value = this.readAliasedValue(body, key);
-    if (value === undefined || value === null || value === "") {
-      return fallback;
-    }
-    const parsed = typeof value === "number" ? value : Number.parseInt(String(value), 10);
-    if (!Number.isFinite(parsed)) {
-      throw new WorkspaceError(`字段必须是数字: ${key}`);
-    }
-    return parsed;
+    return this.numberFieldReader.read(value, key, fallback);
   }
 
   readOptionalBoolean(body: Record<string, unknown>, key: string, fallback: boolean): boolean {
