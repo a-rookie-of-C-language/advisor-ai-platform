@@ -6,6 +6,7 @@ import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
+import { AgentRequestUrlFactory } from "./AgentRequestUrlFactory.js";
 import type { AgentRuntime } from "../app/AgentRuntime.js";
 import { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "../mcp/McpToolService.js";
@@ -15,6 +16,7 @@ export class AgentHttpServer {
   private readonly authorizer: AgentRequestAuthorizer;
   private readonly jsonResponseWriter = new AgentJsonResponseWriter();
   private readonly requestReader = new AgentHttpRequestReader();
+  private readonly requestUrlFactory = new AgentRequestUrlFactory();
   private readonly chatStreamRouteHandler: AgentChatStreamRouteHandler;
   private readonly healthRouteHandler: AgentHealthRouteHandler;
   private readonly mcpRouteHandler: AgentMcpRouteHandler;
@@ -45,7 +47,7 @@ export class AgentHttpServer {
 
   private async route(request: IncomingMessage, response: ServerResponse): Promise<void> {
     try {
-      const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
+      const url = this.requestUrlFactory.create(request);
       const healthResult = await this.healthRouteHandler.handle(request.method, url);
       if (healthResult) {
         this.jsonResponseWriter.write(response, healthResult.statusCode, healthResult.body);
