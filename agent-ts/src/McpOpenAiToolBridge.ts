@@ -1,5 +1,6 @@
 import type { JsonObject } from "./JsonTypes.js";
 import { McpOpenAiToolCatalog } from "./McpOpenAiToolCatalog.js";
+import { McpOpenAiToolResultFormatter } from "./McpOpenAiToolResultFormatter.js";
 import type { McpToolService } from "./McpToolService.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
@@ -7,6 +8,7 @@ import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 
 export class McpOpenAiToolBridge {
   private readonly catalog = new McpOpenAiToolCatalog();
+  private readonly resultFormatter = new McpOpenAiToolResultFormatter();
 
   constructor(private readonly mcpToolService: McpToolService) {}
 
@@ -22,10 +24,6 @@ export class McpOpenAiToolBridge {
     }
 
     const result = await this.mcpToolService.callTool(target.server, target.name, args);
-    const text = result.content.map((item) => item.text).filter(Boolean).join("\n");
-    return {
-      output: text || JSON.stringify(result),
-      success: !result.isError
-    };
+    return this.resultFormatter.format(result);
   }
 }
