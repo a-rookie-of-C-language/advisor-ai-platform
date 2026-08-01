@@ -1,16 +1,19 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import { LastUserMessageFinder } from "./LastUserMessageFinder.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
+import { MemoryContextLoader } from "./MemoryContextLoader.js";
 import { MemoryPromptRenderer } from "./MemoryPromptRenderer.js";
 
 export class MemoryContextBuilder {
   private readonly lastUserMessageFinder = new LastUserMessageFinder();
+  private readonly loader: MemoryContextLoader;
   private readonly promptRenderer: MemoryPromptRenderer;
 
   constructor(
     private readonly memoryClient: MemoryApiClient,
     private readonly topK: number
   ) {
+    this.loader = new MemoryContextLoader(this.memoryClient, this.topK);
     this.promptRenderer = new MemoryPromptRenderer(this.topK);
   }
 
@@ -21,11 +24,11 @@ export class MemoryContextBuilder {
     }
 
     try {
-      const [summary, coreMemories, longTermMemories] = await Promise.all([
-        this.memoryClient.getSessionSummary(request.sessionId),
-        this.memoryClient.getCoreMemories(request.userId, 0),
-        this.memoryClient.searchLongTerm(request.userId, 0, userQuery, this.topK)
-      ]);
+      const { summary, coreMemories, longTermMemories } = await this.loader.load(
+        request.userId,
+        request.sessionId,
+        userQuery
+      );
       const prompt = this.promptRenderer.render(summary, coreMemories, longTermMemories);
       if (!prompt) {
         return request.messages;
