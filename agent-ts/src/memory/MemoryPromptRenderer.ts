@@ -1,8 +1,13 @@
 import type { MemoryItem } from "./MemoryItem.js";
+import { MemoryItemListRenderer } from "./MemoryItemListRenderer.js";
 import type { SessionSummary } from "../common/SessionSummary.js";
 
 export class MemoryPromptRenderer {
-  constructor(private readonly topK: number) {}
+  private readonly itemListRenderer: MemoryItemListRenderer;
+
+  constructor(topK: number) {
+    this.itemListRenderer = new MemoryItemListRenderer(topK);
+  }
 
   render(summary: SessionSummary | null, coreMemories: MemoryItem[], longTermMemories: MemoryItem[]): string {
     const sections: string[] = [];
@@ -10,19 +15,11 @@ export class MemoryPromptRenderer {
       sections.push(`Session summary:\n${summary.summary}`);
     }
     if (coreMemories.length > 0) {
-      sections.push(`Core memories:\n${this.renderMemoryItems(coreMemories)}`);
+      sections.push(`Core memories:\n${this.itemListRenderer.render(coreMemories)}`);
     }
     if (longTermMemories.length > 0) {
-      sections.push(`Relevant memories:\n${this.renderMemoryItems(longTermMemories)}`);
+      sections.push(`Relevant memories:\n${this.itemListRenderer.render(longTermMemories)}`);
     }
     return sections.join("\n\n");
-  }
-
-  private renderMemoryItems(items: MemoryItem[]): string {
-    return items
-      .filter((item) => item.content?.trim())
-      .slice(0, this.topK)
-      .map((item, index) => `${index + 1}. ${item.content.trim()}`)
-      .join("\n");
   }
 }
