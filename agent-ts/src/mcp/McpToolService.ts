@@ -2,10 +2,12 @@ import type { JsonObject } from "../common/JsonTypes.js";
 import { DirectHttpMcpClient } from "./DirectHttpMcpClient.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
+import { McpSupportedConfigSelector } from "./McpSupportedConfigSelector.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 
 export class McpToolService {
   private readonly clients = new Map<string, DirectHttpMcpClient>();
+  private readonly supportedConfigSelector = new McpSupportedConfigSelector();
 
   constructor(private readonly configs: McpServerConfig[]) {}
 
@@ -26,7 +28,7 @@ export class McpToolService {
   }
 
   private supportedConfigs(): McpServerConfig[] {
-    return this.configs.filter((config) => ["http", "direct_http"].includes(config.transportType));
+    return this.supportedConfigSelector.select(this.configs);
   }
 
   private clientFor(config: McpServerConfig): DirectHttpMcpClient {
