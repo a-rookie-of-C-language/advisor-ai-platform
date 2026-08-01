@@ -1,10 +1,10 @@
 import type { AgentConfig } from "./AgentConfig.js";
+import { WebFetchedPageBuilder } from "./WebFetchedPageBuilder.js";
 import type { WebFetchedPage } from "./WebFetchedPage.js";
-import { WebHtmlParser } from "./WebHtmlParser.js";
 import { WebPageHttpClient } from "./WebPageHttpClient.js";
 
 export class WebFetchClient {
-  private readonly htmlParser = new WebHtmlParser();
+  private readonly pageBuilder = new WebFetchedPageBuilder();
   private readonly pageHttpClient: WebPageHttpClient;
 
   constructor(private readonly config: AgentConfig) {
@@ -21,16 +21,6 @@ export class WebFetchClient {
     if (!html) {
       return null;
     }
-    const title = this.htmlParser.extractTitle(html);
-    const content = this.htmlParser.extractText(html).slice(0, this.config.webFetchMaxContentLength);
-    if (!content.trim()) {
-      return null;
-    }
-    return {
-      url,
-      title,
-      content,
-      source: "web"
-    };
+    return this.pageBuilder.build(url, html, this.config.webFetchMaxContentLength);
   }
 }
