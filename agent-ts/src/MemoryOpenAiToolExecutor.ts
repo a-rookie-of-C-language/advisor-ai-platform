@@ -2,11 +2,13 @@ import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryCandidateReader } from "./MemoryCandidateReader.js";
+import { MemoryToolResultFormatter } from "./MemoryToolResultFormatter.js";
 import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 
 export class MemoryOpenAiToolExecutor {
   private readonly candidateReader = new MemoryCandidateReader();
+  private readonly resultFormatter = new MemoryToolResultFormatter();
 
   constructor(
     private readonly memoryClient: MemoryApiClient,
@@ -36,21 +38,7 @@ export class MemoryOpenAiToolExecutor {
     }
     const topK = Math.min(Math.max(OpenAiToolArgumentReader.readOptionalNumber(args, "top_k", this.topK), 1), 10);
     const items = await this.memoryClient.searchLongTerm(userId, kbId, query, topK);
-    return {
-      output: JSON.stringify({
-        ok: items.length > 0,
-        status: items.length > 0 ? "hit" : "miss",
-        message: items.length > 0 ? "hit" : "miss",
-        items: items.map((item) => ({
-          id: item.id,
-          content: item.content,
-          confidence: item.confidence,
-          score: item.score,
-          tags: item.tags || {}
-        }))
-      }),
-      success: true
-    };
+    return this.resultFormatter.formatRead(items);
   }
 
   private async writeMemory(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
@@ -61,19 +49,7 @@ export class MemoryOpenAiToolExecutor {
       kbId: request.kbId ?? 0,
       candidates
     });
-    return {
-      output: JSON.stringify({
-        ok: true,
-        status: "ok",
-        message: typeof result.message === "string" ? result.message : "memory_write_done",
-        items: [],
-        meta: {
-          accepted: typeof result.accepted === "number" ? result.accepted : 0,
-          rejected: typeof result.rejected === "number" ? result.rejected : 0
-        }
-      }),
-      success: true
-    };
+    return this.resultFormatter.formatWrite(result);
   }
 
   private requireUserId(request: ChatStreamRequest): number {
