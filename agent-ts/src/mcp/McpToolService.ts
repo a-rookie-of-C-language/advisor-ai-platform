@@ -1,5 +1,5 @@
 import type { JsonObject } from "../common/JsonTypes.js";
-import { DirectHttpMcpClient } from "./DirectHttpMcpClient.js";
+import { DirectHttpMcpClientRegistry } from "./DirectHttpMcpClientRegistry.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 import { McpSupportedConfigSelector } from "./McpSupportedConfigSelector.js";
@@ -7,7 +7,7 @@ import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import { McpToolDescriptorSorter } from "./McpToolDescriptorSorter.js";
 
 export class McpToolService {
-  private readonly clients = new Map<string, DirectHttpMcpClient>();
+  private readonly clientRegistry = new DirectHttpMcpClientRegistry();
   private readonly supportedConfigSelector = new McpSupportedConfigSelector();
   private readonly toolDescriptorSorter = new McpToolDescriptorSorter();
 
@@ -16,7 +16,7 @@ export class McpToolService {
   async listTools(): Promise<McpToolDescriptor[]> {
     const tools: McpToolDescriptor[] = [];
     for (const config of this.supportedConfigs()) {
-      tools.push(...(await this.clientFor(config).listTools()));
+      tools.push(...(await this.clientRegistry.clientFor(config).listTools()));
     }
     return this.toolDescriptorSorter.sort(tools);
   }
@@ -26,20 +26,11 @@ export class McpToolService {
     if (!config) {
       throw new Error(`未找到 MCP server: ${server}`);
     }
-    return this.clientFor(config).callTool(name, args);
+    return this.clientRegistry.clientFor(config).callTool(name, args);
   }
 
   private supportedConfigs(): McpServerConfig[] {
     return this.supportedConfigSelector.select(this.configs);
   }
 
-  private clientFor(config: McpServerConfig): DirectHttpMcpClient {
-    const existing = this.clients.get(config.name);
-    if (existing) {
-      return existing;
-    }
-    const client = new DirectHttpMcpClient(config);
-    this.clients.set(config.name, client);
-    return client;
-  }
 }
