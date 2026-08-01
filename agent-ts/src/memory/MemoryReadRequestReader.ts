@@ -2,6 +2,7 @@ import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryReadRequest } from "./MemoryReadRequest.js";
 import { OpenAiToolArgumentReader } from "../openai/OpenAiToolArgumentReader.js";
+import { OpenAiToolTopKArgumentReader } from "../openai/OpenAiToolTopKArgumentReader.js";
 
 export class MemoryReadRequestReader {
   constructor(private readonly defaultTopK: number) {}
@@ -21,7 +22,7 @@ export class MemoryReadRequestReader {
   }
 
   private readTopK(args: JsonObject): number {
-    return Math.min(Math.max(OpenAiToolArgumentReader.readOptionalNumber(args, "top_k", this.defaultTopK), 1), 10);
+    return OpenAiToolTopKArgumentReader.read(args, this.defaultTopK);
   }
 
   private requireUserId(request: ChatStreamRequest): number {
