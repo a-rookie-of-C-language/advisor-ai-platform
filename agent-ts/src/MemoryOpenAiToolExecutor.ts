@@ -2,18 +2,21 @@ import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryCandidateReader } from "./MemoryCandidateReader.js";
+import { MemoryReadRequestReader } from "./MemoryReadRequestReader.js";
 import { MemoryToolResultFormatter } from "./MemoryToolResultFormatter.js";
-import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 
 export class MemoryOpenAiToolExecutor {
   private readonly candidateReader = new MemoryCandidateReader();
+  private readonly readRequestReader: MemoryReadRequestReader;
   private readonly resultFormatter = new MemoryToolResultFormatter();
 
   constructor(
     private readonly memoryClient: MemoryApiClient,
-    private readonly topK: number
-  ) {}
+    topK: number
+  ) {
+    this.readRequestReader = new MemoryReadRequestReader(topK);
+  }
 
   async execute(
     request: ChatStreamRequest,
@@ -30,14 +33,13 @@ export class MemoryOpenAiToolExecutor {
   }
 
   private async readMemory(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
-    const userId = this.requireUserId(request);
-    const kbId = request.kbId ?? 0;
-    const query = OpenAiToolArgumentReader.readOptionalString(args, "query", this.latestUserQuery(request)) || "";
-    if (!query.trim()) {
-      throw new Error("memory_read empty query");
-    }
-    const topK = Math.min(Math.max(OpenAiToolArgumentReader.readOptionalNumber(args, "top_k", this.topK), 1), 10);
-    const items = await this.memoryClient.searchLongTerm(userId, kbId, query, topK);
+    const readRequest = this.readRequestReader.read(request, args);
+    const items = await this.memoryClient.searchLongTerm(
+      readRequest.userId,
+      readRequest.kbId,
+      readRequest.query,
+      readRequest.topK
+    );
     return this.resultFormatter.formatRead(items);
   }
 
@@ -57,9 +59,5 @@ export class MemoryOpenAiToolExecutor {
       throw new Error("memory tool missing user_id");
     }
     return request.userId;
-  }
-
-  private latestUserQuery(request: ChatStreamRequest): string {
-    return request.messages.filter((message) => message.role === "user").at(-1)?.content || "";
   }
 }
