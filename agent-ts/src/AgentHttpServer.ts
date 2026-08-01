@@ -1,5 +1,6 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
+import { AgentHealthRouteHandler } from "./AgentHealthRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentMcpRouteHandler } from "./AgentMcpRouteHandler.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
@@ -11,6 +12,7 @@ import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly requestReader = new AgentHttpRequestReader();
+  private readonly healthRouteHandler: AgentHealthRouteHandler;
   private readonly mcpRouteHandler: AgentMcpRouteHandler;
   private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler;
 
@@ -20,6 +22,7 @@ export class AgentHttpServer {
     private readonly workspaceManager = new WorkspaceManager(config.workspaceBasePath),
     private readonly mcpToolService?: McpToolService
   ) {
+    this.healthRouteHandler = new AgentHealthRouteHandler(this.runtime);
     this.mcpRouteHandler = new AgentMcpRouteHandler(this.mcpToolService, this.requestReader);
     this.workspaceRouteHandler = new AgentWorkspaceRouteHandler(this.workspaceManager, this.requestReader);
   }
@@ -37,13 +40,9 @@ export class AgentHttpServer {
   private async route(request: IncomingMessage, response: ServerResponse): Promise<void> {
     try {
       const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
-      if (request.method === "GET" && url.pathname === "/health") {
-        this.writeJson(response, 200, { status: "ok", runtime: "typescript", core: await this.runtime.coreHealth() });
-        return;
-      }
-
-      if (request.method === "GET" && url.pathname === "/graph/health") {
-        this.writeJson(response, 200, this.runtime.graphHealth());
+      const healthResult = await this.healthRouteHandler.handle(request.method, url);
+      if (healthResult) {
+        this.writeJson(response, healthResult.statusCode, healthResult.body);
         return;
       }
 
@@ -94,5 +93,4 @@ export class AgentHttpServer {
   private statusCodeForError(error: unknown): number {
     return error instanceof WorkspaceError ? 400 : 500;
   }
-
 }
