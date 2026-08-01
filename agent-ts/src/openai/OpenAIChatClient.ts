@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
 import type { ChatMessageDTO } from "../common/ChatStreamRequest.js";
-import type { OpenAIChatMessage } from "./OpenAIChatMessage.js";
+import { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
 import { OpenAIChatCompletionStreamer } from "./OpenAIChatCompletionStreamer.js";
 import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
@@ -8,6 +8,7 @@ import { type OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoun
 
 export class OpenAIChatClient {
   private readonly completionStreamer: OpenAIChatCompletionStreamer;
+  private readonly messageMapper = new OpenAIChatMessageMapper();
   private readonly toolRoundRunner = new OpenAIToolRoundRunner();
 
   constructor(private readonly config: AgentConfig) {
@@ -31,7 +32,7 @@ export class OpenAIChatClient {
       return;
     }
 
-    const conversation: OpenAIChatMessage[] = messages.map((message) => ({ role: message.role, content: message.content }));
+    const conversation = this.messageMapper.map(messages);
     const firstRound = await this.completionStreamer.collectStream(conversation, tools);
     for (const text of firstRound.textParts) {
       yield { type: "delta", text };
