@@ -1,5 +1,5 @@
 import type { McpCallToolResult } from "./McpCallToolResult.js";
-import type { OpenAiToolExecutionResult } from "./openai/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
 
 export class McpOpenAiToolResultFormatter {
   format(result: McpCallToolResult): OpenAiToolExecutionResult {

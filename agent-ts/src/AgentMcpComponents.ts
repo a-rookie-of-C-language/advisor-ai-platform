@@ -1,9 +1,9 @@
 import type { AgentConfig } from "./config/AgentConfig.js";
-import { McpConfigParser } from "./McpConfigParser.js";
-import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
-import { McpOpenAiToolBridge as McpOpenAiToolBridgeClass } from "./McpOpenAiToolBridge.js";
-import type { McpToolService } from "./McpToolService.js";
-import { McpToolService as McpToolServiceClass } from "./McpToolService.js";
+import { McpConfigParser } from "./mcp/McpConfigParser.js";
+import type { McpOpenAiToolBridge } from "./mcp/McpOpenAiToolBridge.js";
+import { McpOpenAiToolBridge as McpOpenAiToolBridgeClass } from "./mcp/McpOpenAiToolBridge.js";
+import type { McpToolService } from "./mcp/McpToolService.js";
+import { McpToolService as McpToolServiceClass } from "./mcp/McpToolService.js";
 
 export class AgentMcpComponents {
   readonly openAiToolBridge?: McpOpenAiToolBridge;

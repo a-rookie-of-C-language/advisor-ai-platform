@@ -1,5 +1,5 @@
-import type { JsonObject } from "./common/JsonTypes.js";
-import { JsonObjectReader } from "./common/JsonObjectReader.js";
+import type { JsonObject } from "../common/JsonTypes.js";
+import { JsonObjectReader } from "../common/JsonObjectReader.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 
 export class McpCallToolResultMapper {

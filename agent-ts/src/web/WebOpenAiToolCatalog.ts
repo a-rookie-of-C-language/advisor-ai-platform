@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "./openai/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
 
 export class WebOpenAiToolCatalog {
   listTools(options: { webFetchEnabled: boolean; webSearchEnabled: boolean }): OpenAIChatTool[] {

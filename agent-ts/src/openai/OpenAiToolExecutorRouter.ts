@@ -1,11 +1,11 @@
 import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
-import type { McpOpenAiToolBridge } from "../McpOpenAiToolBridge.js";
+import type { McpOpenAiToolBridge } from "../mcp/McpOpenAiToolBridge.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
-import type { RagOpenAiToolBridge } from "../RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../WebOpenAiToolBridge.js";
+import type { RagOpenAiToolBridge } from "../rag/RagOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../web/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../workspace/WorkspaceOpenAiToolBridge.js";
 
 export class OpenAiToolExecutorRouter {

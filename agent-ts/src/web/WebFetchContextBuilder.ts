@@ -1,4 +1,4 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "./common/ChatStreamRequest.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { WebFetchedPage } from "./WebFetchedPage.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
 

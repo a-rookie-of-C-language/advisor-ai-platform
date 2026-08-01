@@ -1,11 +1,11 @@
 import type { AgentConfig } from "./config/AgentConfig.js";
-import { WebFetchClient } from "./WebFetchClient.js";
-import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
-import { WebFetchContextBuilder as WebFetchContextBuilderClass } from "./WebFetchContextBuilder.js";
-import { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
-import { WebSearchClient } from "./WebSearchClient.js";
-import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
-import { WebSearchContextBuilder as WebSearchContextBuilderClass } from "./WebSearchContextBuilder.js";
+import { WebFetchClient } from "./web/WebFetchClient.js";
+import type { WebFetchContextBuilder } from "./web/WebFetchContextBuilder.js";
+import { WebFetchContextBuilder as WebFetchContextBuilderClass } from "./web/WebFetchContextBuilder.js";
+import { WebOpenAiToolBridge } from "./web/WebOpenAiToolBridge.js";
+import { WebSearchClient } from "./web/WebSearchClient.js";
+import type { WebSearchContextBuilder } from "./web/WebSearchContextBuilder.js";
+import { WebSearchContextBuilder as WebSearchContextBuilderClass } from "./web/WebSearchContextBuilder.js";
 
 export class AgentWebComponents {
   readonly fetchContextBuilder?: WebFetchContextBuilder;
