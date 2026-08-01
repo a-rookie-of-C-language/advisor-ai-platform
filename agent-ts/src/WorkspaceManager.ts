@@ -6,10 +6,13 @@ import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
 import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceError } from "./WorkspaceError.js";
+import type { WorkspaceStats } from "./WorkspaceStats.js";
+import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
 
 export class WorkspaceManager {
   private readonly fileSystem = new WorkspaceFileSystem();
   private readonly listingBuilder = new WorkspaceListingBuilder(this.fileSystem);
+  private readonly statsCollector = new WorkspaceStatsCollector(this.fileSystem);
   private readonly pathGuard: WorkspacePathGuard;
   private readonly basePath: string;
 
@@ -118,42 +121,9 @@ export class WorkspaceManager {
     return stats;
   }
 
-  async getStats(userId: number | null, sessionId: number | null): Promise<Record<string, string | number | null>> {
+  async getStats(userId: number | null, sessionId: number | null): Promise<WorkspaceStats> {
     const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
-    const stats = {
-      user_id: userId,
-      session_id: sessionId,
-      total_files: 0,
-      total_size: 0,
-      cache_files: 0,
-      cache_size: 0,
-      final_files: 0,
-      final_size: 0,
-      cache_dir: path.join(sessionPath, CACHE_DIR),
-      final_dir: path.join(sessionPath, FINAL_DIR)
-    };
-
-    if (!(await this.fileSystem.exists(sessionPath))) {
-      return stats;
-    }
-
-    for (const filePath of await this.fileSystem.walk(sessionPath)) {
-      const stat = await fs.stat(filePath);
-      if (!stat.isFile()) {
-        continue;
-      }
-      if (filePath.split(path.sep).includes(CACHE_DIR)) {
-        stats.cache_files += 1;
-        stats.cache_size += stat.size;
-      } else if (filePath.split(path.sep).includes(FINAL_DIR)) {
-        stats.final_files += 1;
-        stats.final_size += stat.size;
-      } else {
-        stats.total_files += 1;
-        stats.total_size += stat.size;
-      }
-    }
-    return stats;
+    return this.statsCollector.collect(sessionPath, userId, sessionId);
   }
 
   private async ensureSessionPath(userId: number | null, sessionId: number | null): Promise<string> {
