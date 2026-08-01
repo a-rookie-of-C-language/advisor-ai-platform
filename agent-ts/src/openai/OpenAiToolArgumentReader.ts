@@ -1,6 +1,7 @@
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import type { JsonObject, JsonValue } from "../common/JsonTypes.js";
 import { OpenAiToolBooleanArgumentReader } from "./OpenAiToolBooleanArgumentReader.js";
+import { OpenAiToolJsonObjectArgumentReader } from "./OpenAiToolJsonObjectArgumentReader.js";
 import { OpenAiToolNumberArgumentReader } from "./OpenAiToolNumberArgumentReader.js";
 import { OpenAiToolStringArgumentReader } from "./OpenAiToolStringArgumentReader.js";
 
@@ -35,7 +36,7 @@ export class OpenAiToolArgumentReader {
 
   static readOptionalJsonObject(args: JsonObject, key: string): JsonObject | null {
     const value = this.readAliasedValue(args, key);
-    return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : null;
+    return OpenAiToolJsonObjectArgumentReader.readOptional(value);
   }
 
   static readAliasedValue(args: JsonObject, snakeKey: string): JsonValue | undefined {
