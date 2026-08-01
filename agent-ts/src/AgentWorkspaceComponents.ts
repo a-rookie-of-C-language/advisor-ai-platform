@@ -1,6 +1,6 @@
 import type { AgentConfig } from "./config/AgentConfig.js";
-import { WorkspaceManager } from "./WorkspaceManager.js";
-import { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
+import { WorkspaceManager } from "./workspace/WorkspaceManager.js";
+import { WorkspaceOpenAiToolBridge } from "./workspace/WorkspaceOpenAiToolBridge.js";
 
 export class AgentWorkspaceComponents {
   readonly manager: WorkspaceManager;

@@ -7,9 +7,9 @@ import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRuntime } from "../AgentRuntime.js";
-import { AgentWorkspaceRouteHandler } from "../AgentWorkspaceRouteHandler.js";
+import { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "../McpToolService.js";
-import { WorkspaceManager } from "../WorkspaceManager.js";
+import { WorkspaceManager } from "../workspace/WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly authorizer: AgentRequestAuthorizer;

@@ -8,7 +8,7 @@ import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagOpenAiToolBridge } from "../RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "../WorkspaceOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../workspace/WorkspaceOpenAiToolBridge.js";
 
 export class OpenAiToolRegistry {
   private readonly toolCatalogAggregator: OpenAiToolCatalogAggregator;
