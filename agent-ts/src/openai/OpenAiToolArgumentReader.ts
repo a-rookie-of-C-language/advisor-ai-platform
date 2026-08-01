@@ -1,14 +1,12 @@
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import { BooleanStringReader } from "../common/BooleanStringReader.js";
 import type { JsonObject, JsonValue } from "../common/JsonTypes.js";
+import { OpenAiToolStringArgumentReader } from "./OpenAiToolStringArgumentReader.js";
 
 export class OpenAiToolArgumentReader {
   static readRequiredString(args: JsonObject, key: string): string {
     const value = this.readAliasedValue(args, key);
-    if (typeof value !== "string" || !value.trim()) {
-      throw new Error(`缺少必填字段: ${key}`);
-    }
-    return value.trim();
+    return OpenAiToolStringArgumentReader.readRequired(value, key);
   }
 
   static readOptionalString(args: JsonObject, key: string, fallback: string): string;
@@ -17,7 +15,7 @@ export class OpenAiToolArgumentReader {
 
   static readOptionalString(args: JsonObject, key: string, fallback: string | null): string | null {
     const value = this.readAliasedValue(args, key);
-    return typeof value === "string" && value.trim() ? value.trim() : fallback;
+    return OpenAiToolStringArgumentReader.readOptional(value, fallback);
   }
 
   static readOptionalNumber(args: JsonObject, key: string, fallback: number): number {
