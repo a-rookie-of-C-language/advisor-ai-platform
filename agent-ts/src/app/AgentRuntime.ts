@@ -2,7 +2,6 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentConfig } from "../config/AgentConfig.js";
 import { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentCoreClient } from "../core/AgentCoreClient.js";
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
@@ -12,6 +11,7 @@ import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
+import { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
 import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
 import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
@@ -21,6 +21,7 @@ import { validateChatStreamRequest } from "../common/validateChatStreamRequest.j
 export class AgentRuntime {
   private readonly contextPipeline: AgentContextPipeline;
   private readonly graphHealthDescriptor = new AgentGraphHealthDescriptor();
+  private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter;
   private readonly openAiToolFacade: AgentOpenAiToolFacade;
   private readonly requestIdResolver = new AgentRequestIdResolver();
 
@@ -29,7 +30,7 @@ export class AgentRuntime {
     private readonly core: AgentCoreClient,
     private readonly openAiClient: OpenAIChatClient,
     memoryContextBuilder?: MemoryContextBuilder,
-    private readonly memoryTaskSubmitter?: MemoryTaskSubmitter,
+    memoryTaskSubmitter?: MemoryTaskSubmitter,
     ragContextBuilder?: RagContextBuilder,
     webFetchContextBuilder?: WebFetchContextBuilder,
     webSearchContextBuilder?: WebSearchContextBuilder,
@@ -41,6 +42,7 @@ export class AgentRuntime {
       webFetchContextBuilder,
       webSearchContextBuilder
     );
+    this.memoryTaskCompletionSubmitter = new AgentMemoryTaskCompletionSubmitter(memoryTaskSubmitter);
     this.openAiToolFacade = new AgentOpenAiToolFacade(config.openAiApiKey, openAiToolRegistry);
   }
 
@@ -73,16 +75,9 @@ export class AgentRuntime {
       }
 
       await writer.done("stream_finished");
-      await this.submitMemoryTask(chatRequest, turnId, eventWriter.answer);
+      await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, eventWriter.answer);
     } catch (error) {
       await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
     }
-  }
-
-  private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {
-    if (!this.memoryTaskSubmitter || !turnId || !answer.trim()) {
-      return;
-    }
-    await this.memoryTaskSubmitter.submit(chatRequest, turnId, answer);
   }
 }
