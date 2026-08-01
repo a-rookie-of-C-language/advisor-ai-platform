@@ -1,5 +1,5 @@
 import type { OpenAIToolCall } from "./OpenAIToolCall.js";
-import type { OpenAIStreamToolCallDelta } from "./OpenAIStreamParser.js";
+import type { OpenAIStreamToolCallDelta } from "./OpenAIStreamToolCallDelta.js";
 
 export class OpenAIToolCallDeltaMerger {
   merge(toolCalls: Map<number, OpenAIToolCall>, deltas: OpenAIStreamToolCallDelta[]): void {
