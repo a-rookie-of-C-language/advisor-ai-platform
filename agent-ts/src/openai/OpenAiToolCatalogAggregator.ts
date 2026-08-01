@@ -1,24 +1,31 @@
 import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "../mcp/McpOpenAiToolBridge.js";
+import { OpenAiLocalToolCatalogCollector } from "./OpenAiLocalToolCatalogCollector.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagOpenAiToolBridge } from "../rag/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../web/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../workspace/WorkspaceOpenAiToolBridge.js";
 
 export class OpenAiToolCatalogAggregator {
+  private readonly localToolCatalogCollector: OpenAiLocalToolCatalogCollector;
+
   constructor(
-    private readonly workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
-    private readonly webOpenAiToolBridge?: WebOpenAiToolBridge,
-    private readonly ragOpenAiToolBridge?: RagOpenAiToolBridge,
-    private readonly memoryOpenAiToolBridge?: MemoryOpenAiToolBridge,
+    workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
+    webOpenAiToolBridge?: WebOpenAiToolBridge,
+    ragOpenAiToolBridge?: RagOpenAiToolBridge,
+    memoryOpenAiToolBridge?: MemoryOpenAiToolBridge,
     private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge
-  ) {}
+  ) {
+    this.localToolCatalogCollector = new OpenAiLocalToolCatalogCollector(
+      workspaceOpenAiToolBridge,
+      webOpenAiToolBridge,
+      ragOpenAiToolBridge,
+      memoryOpenAiToolBridge
+    );
+  }
 
   async listTools(): Promise<OpenAIChatTool[]> {
-    const tools = this.workspaceOpenAiToolBridge?.listTools() || [];
-    tools.push(...(this.webOpenAiToolBridge?.listTools() || []));
-    tools.push(...(this.ragOpenAiToolBridge?.listTools() || []));
-    tools.push(...(this.memoryOpenAiToolBridge?.listTools() || []));
+    const tools = this.localToolCatalogCollector.listTools();
 
     try {
       tools.push(...(this.mcpOpenAiToolBridge ? await this.mcpOpenAiToolBridge.listTools() : []));
