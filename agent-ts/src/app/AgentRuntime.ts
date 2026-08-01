@@ -7,22 +7,21 @@ import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
-import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
 import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
+import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
 import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
-import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
 import { SseWriter } from "../protocol/SseWriter.js";
 import { validateChatStreamRequest } from "../common/validateChatStreamRequest.js";
 
 export class AgentRuntime {
   private readonly contextPipeline: AgentContextPipeline;
   private readonly graphHealthDescriptor = new AgentGraphHealthDescriptor();
+  private readonly openAiToolFacade: AgentOpenAiToolFacade;
   private readonly requestIdResolver = new AgentRequestIdResolver();
 
   constructor(
@@ -34,7 +33,7 @@ export class AgentRuntime {
     ragContextBuilder?: RagContextBuilder,
     webFetchContextBuilder?: WebFetchContextBuilder,
     webSearchContextBuilder?: WebSearchContextBuilder,
-    private readonly openAiToolRegistry?: OpenAiToolRegistry
+    openAiToolRegistry?: OpenAiToolRegistry
   ) {
     this.contextPipeline = new AgentContextPipeline(
       memoryContextBuilder,
@@ -42,6 +41,7 @@ export class AgentRuntime {
       webFetchContextBuilder,
       webSearchContextBuilder
     );
+    this.openAiToolFacade = new AgentOpenAiToolFacade(config.openAiApiKey, openAiToolRegistry);
   }
 
   async coreHealth(): Promise<JsonObject> {
@@ -62,8 +62,8 @@ export class AgentRuntime {
     await writer.start();
     try {
       const modelMessages = await this.contextPipeline.build(chatRequest);
-      const tools = await this.loadOpenAiTools();
-      const toolExecutor = tools.length > 0 ? (toolName: string, toolArgs: JsonObject) => this.executeOpenAiTool(chatRequest, toolName, toolArgs) : undefined;
+      const tools = await this.openAiToolFacade.listTools();
+      const toolExecutor = tools.length > 0 ? (toolName: string, toolArgs: JsonObject) => this.openAiToolFacade.executeTool(chatRequest, toolName, toolArgs) : undefined;
       for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
         await eventWriter.write(event);
       }
@@ -77,23 +77,6 @@ export class AgentRuntime {
     } catch (error) {
       await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
     }
-  }
-
-  private async loadOpenAiTools(): Promise<OpenAIChatTool[]> {
-    if (!this.config.openAiApiKey || !this.openAiToolRegistry) {
-      return [];
-    }
-    return this.openAiToolRegistry.listTools();
-  }
-
-  private async executeOpenAiTool(
-    chatRequest: ChatStreamRequest,
-    toolName: string,
-    toolArgs: JsonObject
-  ): Promise<OpenAiToolExecutionResult> {
-    return this.openAiToolRegistry
-      ? this.openAiToolRegistry.executeTool(chatRequest, toolName, toolArgs)
-      : OpenAiToolResultFactory.error(`未知工具: ${toolName}`);
   }
 
   private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {
