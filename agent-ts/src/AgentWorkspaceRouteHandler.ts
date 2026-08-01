@@ -1,19 +1,22 @@
 import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentWorkspaceMaintenanceRouteHandler } from "./AgentWorkspaceMaintenanceRouteHandler.js";
+import { AgentWorkspaceMutationRouteHandler } from "./AgentWorkspaceMutationRouteHandler.js";
 import { AgentWorkspaceReadRouteHandler } from "./AgentWorkspaceReadRouteHandler.js";
 import type { HttpRouteResult } from "./HttpRouteResult.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentWorkspaceRouteHandler {
   private readonly maintenanceRouteHandler: AgentWorkspaceMaintenanceRouteHandler;
+  private readonly mutationRouteHandler: AgentWorkspaceMutationRouteHandler;
   private readonly readRouteHandler: AgentWorkspaceReadRouteHandler;
 
   constructor(
-    private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
+    workspaceManager: WorkspaceManager,
+    requestReader: AgentHttpRequestReader
   ) {
     this.maintenanceRouteHandler = new AgentWorkspaceMaintenanceRouteHandler(workspaceManager, requestReader);
+    this.mutationRouteHandler = new AgentWorkspaceMutationRouteHandler(workspaceManager, requestReader);
     this.readRouteHandler = new AgentWorkspaceReadRouteHandler(workspaceManager, requestReader);
   }
 
@@ -28,43 +31,9 @@ export class AgentWorkspaceRouteHandler {
       return readResult;
     }
 
-    if (method === "POST" && url.pathname === "/workspace/write") {
-      const scope = this.requestReader.readWorkspaceScope(url);
-      const body = await this.requestReader.readJsonObject(request);
-      const result = await this.workspaceManager.write(
-        scope.userId,
-        scope.sessionId,
-        this.requestReader.readRequiredString(body, "path"),
-        this.requestReader.readRequiredString(body, "content"),
-        this.requestReader.readOptionalBoolean(body, "is_final", false)
-      );
-      return { statusCode: 200, body: { status: "ok", result } };
-    }
-
-    if (method === "POST" && url.pathname === "/workspace/edit") {
-      const scope = this.requestReader.readWorkspaceScope(url);
-      const body = await this.requestReader.readJsonObject(request);
-      const result = await this.workspaceManager.edit(
-        scope.userId,
-        scope.sessionId,
-        this.requestReader.readRequiredString(body, "path"),
-        this.requestReader.readRequiredString(body, "old_string"),
-        this.requestReader.readRequiredString(body, "new_string"),
-        this.requestReader.readOptionalBoolean(body, "is_final", false)
-      );
-      return { statusCode: 200, body: { status: "ok", result } };
-    }
-
-    if (method === "POST" && url.pathname === "/workspace/create-dir") {
-      const scope = this.requestReader.readWorkspaceScope(url);
-      const body = await this.requestReader.readJsonObject(request);
-      const result = await this.workspaceManager.createDir(
-        scope.userId,
-        scope.sessionId,
-        this.requestReader.readRequiredString(body, "path"),
-        this.requestReader.readOptionalBoolean(body, "is_final", false)
-      );
-      return { statusCode: 200, body: { status: "ok", result } };
+    const mutationResult = await this.mutationRouteHandler.handle(method, url, request);
+    if (mutationResult) {
+      return mutationResult;
     }
 
     return null;
