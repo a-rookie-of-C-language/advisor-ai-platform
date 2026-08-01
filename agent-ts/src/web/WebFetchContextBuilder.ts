@@ -2,10 +2,12 @@ import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequ
 import type { WebFetchedPage } from "./WebFetchedPage.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
 import { WebFetchedPageRenderer } from "./WebFetchedPageRenderer.js";
+import { WebFetchSystemMessageFactory } from "./WebFetchSystemMessageFactory.js";
 import { WebFetchUrlExtractor } from "./WebFetchUrlExtractor.js";
 
 export class WebFetchContextBuilder {
   private readonly pageRenderer = new WebFetchedPageRenderer();
+  private readonly systemMessageFactory = new WebFetchSystemMessageFactory();
   private readonly urlExtractor = new WebFetchUrlExtractor();
 
   constructor(private readonly webFetchClient: WebFetchClient) {}
@@ -24,10 +26,7 @@ export class WebFetchContextBuilder {
         return request.messages;
       }
       return [
-        {
-          role: "system",
-          content: `Fetched web context is available. Use it only when relevant and cite the page URL when using it.\n${this.pageRenderer.render(pages)}`
-        },
+        this.systemMessageFactory.create(this.pageRenderer.render(pages)),
         ...request.messages
       ];
     } catch {
