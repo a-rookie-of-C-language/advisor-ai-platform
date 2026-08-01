@@ -13,6 +13,7 @@ import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
+import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
 import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
 import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
 import { SseWriter } from "../protocol/SseWriter.js";
@@ -20,6 +21,7 @@ import { validateChatStreamRequest } from "../common/validateChatStreamRequest.j
 
 export class AgentRuntime {
   private readonly contextPipeline: AgentContextPipeline;
+  private readonly requestIdResolver = new AgentRequestIdResolver();
 
   constructor(
     private readonly config: AgentConfig,
@@ -69,8 +71,8 @@ export class AgentRuntime {
 
   async streamChat(body: unknown, request: IncomingMessage, response: ServerResponse): Promise<void> {
     const chatRequest = validateChatStreamRequest(body);
-    const traceId = this.resolveTraceId(chatRequest, request);
-    const turnId = this.resolveTurnId(chatRequest, request);
+    const traceId = this.requestIdResolver.resolveTraceId(chatRequest, request);
+    const turnId = this.requestIdResolver.resolveTurnId(chatRequest, request);
     const writer = new SseWriter(response, this.core, traceId);
     const eventWriter = new AgentStreamEventWriter(writer);
 
@@ -92,14 +94,6 @@ export class AgentRuntime {
     } catch (error) {
       await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
     }
-  }
-
-  private resolveTraceId(chatRequest: ChatStreamRequest, request: IncomingMessage): string {
-    return String(request.headers["x-trace-id"] || chatRequest.traceId || "");
-  }
-
-  private resolveTurnId(chatRequest: ChatStreamRequest, request: IncomingMessage): string {
-    return String(request.headers["x-turn-id"] || chatRequest.turnId || "");
   }
 
   private async loadOpenAiTools(): Promise<OpenAIChatTool[]> {
