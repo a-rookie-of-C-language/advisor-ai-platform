@@ -1,11 +1,12 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { WebFetchedPage } from "./WebFetchedPage.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
+import { WebFetchedPageLoader } from "./WebFetchedPageLoader.js";
 import { WebFetchedPageRenderer } from "./WebFetchedPageRenderer.js";
 import { WebFetchSystemMessageFactory } from "./WebFetchSystemMessageFactory.js";
 import { WebFetchUrlExtractor } from "./WebFetchUrlExtractor.js";
 
 export class WebFetchContextBuilder {
+  private readonly pageLoader = new WebFetchedPageLoader();
   private readonly pageRenderer = new WebFetchedPageRenderer();
   private readonly systemMessageFactory = new WebFetchSystemMessageFactory();
   private readonly urlExtractor = new WebFetchUrlExtractor();
@@ -19,9 +20,7 @@ export class WebFetchContextBuilder {
     }
 
     try {
-      const pages = (await Promise.all(urls.slice(0, 3).map((url) => this.webFetchClient.fetchPage(url)))).filter(
-        (page): page is WebFetchedPage => page !== null
-      );
+      const pages = await this.pageLoader.load(this.webFetchClient, urls);
       if (pages.length === 0) {
         return request.messages;
       }
