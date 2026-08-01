@@ -11,6 +11,7 @@ import { McpToolService } from "./McpToolService.js";
 import { OpenAIChatClient } from "./OpenAIChatClient.js";
 import { RagApiClient } from "./RagApiClient.js";
 import { RagContextBuilder } from "./RagContextBuilder.js";
+import { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
 import { WebFetchClient } from "./WebFetchClient.js";
 import { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
@@ -27,6 +28,7 @@ const memoryContextBuilder = memoryClient ? new MemoryContextBuilder(memoryClien
 const memoryTaskSubmitter = memoryClient ? new MemoryTaskSubmitter(memoryClient) : undefined;
 const ragClient = config.ragApiBaseUrl ? new RagApiClient(config) : undefined;
 const ragContextBuilder = ragClient ? new RagContextBuilder(ragClient) : undefined;
+const ragOpenAiToolBridge = ragClient ? new RagOpenAiToolBridge(ragClient) : undefined;
 const webFetchClient = config.webFetchEnabled ? new WebFetchClient(config) : undefined;
 const webFetchContextBuilder = webFetchClient ? new WebFetchContextBuilder(webFetchClient) : undefined;
 const webSearchClient = config.webSearchEnabled && config.webSearchApiKey ? new WebSearchClient(config) : undefined;
@@ -48,7 +50,8 @@ const runtime = new AgentRuntime(
   webSearchContextBuilder,
   mcpOpenAiToolBridge,
   workspaceOpenAiToolBridge,
-  webOpenAiToolBridge
+  webOpenAiToolBridge,
+  ragOpenAiToolBridge
 );
 const server = new AgentHttpServer(config, runtime, workspaceManager, mcpToolService);
 

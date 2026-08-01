@@ -9,6 +9,7 @@ import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
+import type { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
@@ -28,7 +29,8 @@ export class AgentRuntime {
     private readonly webSearchContextBuilder?: WebSearchContextBuilder,
     private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge,
     private readonly workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
-    private readonly webOpenAiToolBridge?: WebOpenAiToolBridge
+    private readonly webOpenAiToolBridge?: WebOpenAiToolBridge,
+    private readonly ragOpenAiToolBridge?: RagOpenAiToolBridge
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -48,6 +50,7 @@ export class AgentRuntime {
         "load_mcp_tools",
         "load_workspace_tools",
         "load_web_tools",
+        "load_rag_tools",
         "generate",
         "finalize"
       ],
@@ -133,6 +136,7 @@ export class AgentRuntime {
     }
     const tools = this.workspaceOpenAiToolBridge?.listTools() || [];
     tools.push(...(this.webOpenAiToolBridge?.listTools() || []));
+    tools.push(...(this.ragOpenAiToolBridge?.listTools() || []));
     try {
       tools.push(...(this.mcpOpenAiToolBridge ? await this.mcpOpenAiToolBridge.listTools() : []));
     } catch {
@@ -151,6 +155,9 @@ export class AgentRuntime {
     }
     if (this.webOpenAiToolBridge?.canExecute(toolName)) {
       return this.webOpenAiToolBridge.executeTool(toolName, toolArgs);
+    }
+    if (this.ragOpenAiToolBridge?.canExecute(toolName)) {
+      return this.ragOpenAiToolBridge.executeTool(chatRequest, toolArgs);
     }
     if (this.mcpOpenAiToolBridge) {
       return this.mcpOpenAiToolBridge.executeTool(toolName, toolArgs);
