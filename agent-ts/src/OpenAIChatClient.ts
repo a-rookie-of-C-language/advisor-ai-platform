@@ -1,17 +1,14 @@
 import type { AgentConfig } from "./AgentConfig.js";
 import type { ChatMessageDTO } from "./ChatStreamRequest.js";
-import type { JsonObject } from "./JsonTypes.js";
 import type { OpenAIChatMessage } from "./OpenAIChatMessage.js";
 import { OpenAIChatCompletionStreamer } from "./OpenAIChatCompletionStreamer.js";
-import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatStreamEvent } from "./OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import { OpenAIToolArgumentParser } from "./OpenAIToolArgumentParser.js";
-
-type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
+import { type OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoundRunner.js";
 
 export class OpenAIChatClient {
   private readonly completionStreamer: OpenAIChatCompletionStreamer;
+  private readonly toolRoundRunner = new OpenAIToolRoundRunner();
 
   constructor(private readonly config: AgentConfig) {
     this.completionStreamer = new OpenAIChatCompletionStreamer(config);
@@ -44,24 +41,8 @@ export class OpenAIChatClient {
       return;
     }
 
-    conversation.push({ role: "assistant", content: null, tool_calls: firstRound.toolCalls });
-    for (const toolCall of firstRound.toolCalls) {
-      const toolArgs = OpenAIToolArgumentParser.parse(toolCall.function.arguments);
-      yield {
-        type: "tool_call",
-        toolCallId: toolCall.id,
-        toolName: toolCall.function.name,
-        toolArgs
-      };
-      const toolResult = await toolExecutor(toolCall.function.name, toolArgs);
-      yield {
-        type: "tool_result",
-        toolCallId: toolCall.id,
-        toolName: toolCall.function.name,
-        toolOutput: toolResult.output,
-        success: toolResult.success
-      };
-      conversation.push({ role: "tool", tool_call_id: toolCall.id, content: toolResult.output });
+    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor)) {
+      yield event;
     }
 
     const finalRound = await this.completionStreamer.collectStream(conversation);
