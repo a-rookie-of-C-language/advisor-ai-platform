@@ -8,6 +8,8 @@ import { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import { OpenAIChatClient } from "./OpenAIChatClient.js";
 import { RagApiClient } from "./RagApiClient.js";
 import { RagContextBuilder } from "./RagContextBuilder.js";
+import { WebFetchClient } from "./WebFetchClient.js";
+import { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 
 const config = AgentConfig.fromEnv();
 const core = new AgentCoreClient(config.rustCorePath);
@@ -17,7 +19,17 @@ const memoryContextBuilder = memoryClient ? new MemoryContextBuilder(memoryClien
 const memoryTaskSubmitter = memoryClient ? new MemoryTaskSubmitter(memoryClient) : undefined;
 const ragClient = config.ragApiBaseUrl ? new RagApiClient(config) : undefined;
 const ragContextBuilder = ragClient ? new RagContextBuilder(ragClient) : undefined;
-const runtime = new AgentRuntime(config, core, openAiClient, memoryContextBuilder, memoryTaskSubmitter, ragContextBuilder);
+const webFetchClient = config.webFetchEnabled ? new WebFetchClient(config) : undefined;
+const webFetchContextBuilder = webFetchClient ? new WebFetchContextBuilder(webFetchClient) : undefined;
+const runtime = new AgentRuntime(
+  config,
+  core,
+  openAiClient,
+  memoryContextBuilder,
+  memoryTaskSubmitter,
+  ragContextBuilder,
+  webFetchContextBuilder
+);
 const server = new AgentHttpServer(config, runtime);
 
 server.start();

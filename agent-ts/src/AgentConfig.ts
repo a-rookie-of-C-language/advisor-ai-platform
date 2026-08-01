@@ -14,6 +14,8 @@ export class AgentConfig {
   readonly memoryTopK: number;
   readonly ragApiBaseUrl: string;
   readonly ragApiToken: string;
+  readonly webFetchEnabled: boolean;
+  readonly webFetchMaxContentLength: number;
 
   private constructor() {
     this.host = process.env.AGENT_API_HOST?.trim() || "127.0.0.1";
@@ -31,6 +33,8 @@ export class AgentConfig {
     this.memoryTopK = Number.parseInt(process.env.MEMORY_TOP_K || "6", 10);
     this.ragApiBaseUrl = (process.env.RAG_API_BASE_URL?.trim() || "").replace(/\/+$/, "");
     this.ragApiToken = process.env.RAG_API_TOKEN?.trim() || "";
+    this.webFetchEnabled = this.readBool("WEB_FETCH_ENABLED", true);
+    this.webFetchMaxContentLength = Number.parseInt(process.env.WEB_FETCH_MAX_CONTENT_LENGTH || "2000", 10);
   }
 
   static fromEnv(): AgentConfig {
@@ -47,5 +51,13 @@ export class AgentConfig {
       return Math.round(Number.parseFloat(timeoutSec) * 1000);
     }
     return 600_000;
+  }
+
+  private readBool(name: string, defaultValue: boolean): boolean {
+    const raw = process.env[name]?.trim().toLowerCase();
+    if (!raw) {
+      return defaultValue;
+    }
+    return ["1", "true", "yes", "on"].includes(raw);
   }
 }
