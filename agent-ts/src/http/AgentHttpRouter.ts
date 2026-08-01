@@ -3,11 +3,14 @@ import type { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorksp
 import type { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import type { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRequestUrlFactory } from "./AgentRequestUrlFactory.js";
+import { AgentHttpRouteResultWriter } from "./AgentHttpRouteResultWriter.js";
 import type { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";
 import type { AgentHealthRouteHandler } from "./routes/AgentHealthRouteHandler.js";
 import type { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 
 export class AgentHttpRouter {
+  private readonly routeResultWriter: AgentHttpRouteResultWriter;
+
   constructor(
     private readonly authorizer: AgentRequestAuthorizer,
     private readonly chatStreamRouteHandler: AgentChatStreamRouteHandler,
@@ -16,14 +19,15 @@ export class AgentHttpRouter {
     private readonly mcpRouteHandler: AgentMcpRouteHandler,
     private readonly requestUrlFactory: AgentRequestUrlFactory,
     private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler
-  ) {}
+  ) {
+    this.routeResultWriter = new AgentHttpRouteResultWriter(this.jsonResponseWriter);
+  }
 
   async route(request: IncomingMessage, response: ServerResponse): Promise<void> {
     try {
       const url = this.requestUrlFactory.create(request);
       const healthResult = await this.healthRouteHandler.handle(request.method, url);
-      if (healthResult) {
-        this.jsonResponseWriter.write(response, healthResult.statusCode, healthResult.body);
+      if (this.routeResultWriter.writeIfPresent(response, healthResult)) {
         return;
       }
 
@@ -37,14 +41,12 @@ export class AgentHttpRouter {
       }
 
       const workspaceResult = await this.workspaceRouteHandler.handle(request.method, url, request);
-      if (workspaceResult) {
-        this.jsonResponseWriter.write(response, workspaceResult.statusCode, workspaceResult.body);
+      if (this.routeResultWriter.writeIfPresent(response, workspaceResult)) {
         return;
       }
 
       const mcpResult = await this.mcpRouteHandler.handle(request.method, url, request);
-      if (mcpResult) {
-        this.jsonResponseWriter.write(response, mcpResult.statusCode, mcpResult.body);
+      if (this.routeResultWriter.writeIfPresent(response, mcpResult)) {
         return;
       }
 
