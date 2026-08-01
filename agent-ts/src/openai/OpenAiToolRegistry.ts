@@ -2,17 +2,15 @@ import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "../mcp/McpOpenAiToolBridge.js";
-import { OpenAiToolCatalogAggregator } from "./OpenAiToolCatalogAggregator.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
-import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
+import { OpenAiToolRegistryComponents } from "./OpenAiToolRegistryComponents.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagOpenAiToolBridge } from "../rag/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../web/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../workspace/WorkspaceOpenAiToolBridge.js";
 
 export class OpenAiToolRegistry {
-  private readonly toolCatalogAggregator: OpenAiToolCatalogAggregator;
-  private readonly toolExecutorRouter: OpenAiToolExecutorRouter;
+  private readonly components: OpenAiToolRegistryComponents;
 
   constructor(
     workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
@@ -21,14 +19,7 @@ export class OpenAiToolRegistry {
     memoryOpenAiToolBridge?: MemoryOpenAiToolBridge,
     mcpOpenAiToolBridge?: McpOpenAiToolBridge
   ) {
-    this.toolCatalogAggregator = new OpenAiToolCatalogAggregator(
-      workspaceOpenAiToolBridge,
-      webOpenAiToolBridge,
-      ragOpenAiToolBridge,
-      memoryOpenAiToolBridge,
-      mcpOpenAiToolBridge
-    );
-    this.toolExecutorRouter = new OpenAiToolExecutorRouter(
+    this.components = new OpenAiToolRegistryComponents(
       workspaceOpenAiToolBridge,
       webOpenAiToolBridge,
       ragOpenAiToolBridge,
@@ -38,7 +29,7 @@ export class OpenAiToolRegistry {
   }
 
   async listTools(): Promise<OpenAIChatTool[]> {
-    return this.toolCatalogAggregator.listTools();
+    return this.components.toolCatalogAggregator.listTools();
   }
 
   async executeTool(
@@ -46,6 +37,6 @@ export class OpenAiToolRegistry {
     toolName: string,
     toolArgs: JsonObject
   ): Promise<OpenAiToolExecutionResult> {
-    return this.toolExecutorRouter.executeTool(chatRequest, toolName, toolArgs);
+    return this.components.toolExecutorRouter.executeTool(chatRequest, toolName, toolArgs);
   }
 }
