@@ -1,8 +1,8 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "./HttpRouteResult.js";
-import type { McpToolService } from "./McpToolService.js";
-import { WorkspaceError } from "./WorkspaceError.js";
+import type { AgentHttpRequestReader } from "../AgentHttpRequestReader.js";
+import type { HttpRouteResult } from "../HttpRouteResult.js";
+import type { McpToolService } from "../../McpToolService.js";
+import { WorkspaceError } from "../../WorkspaceError.js";
 
 export class AgentMcpRouteHandler {
   constructor(

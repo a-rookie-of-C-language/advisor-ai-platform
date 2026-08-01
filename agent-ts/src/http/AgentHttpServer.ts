@@ -1,15 +1,15 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
-import { AgentChatStreamRouteHandler } from "./AgentChatStreamRouteHandler.js";
-import type { AgentConfig } from "./config/AgentConfig.js";
-import { AgentHealthRouteHandler } from "./AgentHealthRouteHandler.js";
+import { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";
+import type { AgentConfig } from "../config/AgentConfig.js";
+import { AgentHealthRouteHandler } from "./routes/AgentHealthRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
-import { AgentMcpRouteHandler } from "./AgentMcpRouteHandler.js";
+import { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
-import type { AgentRuntime } from "./AgentRuntime.js";
-import { AgentWorkspaceRouteHandler } from "./AgentWorkspaceRouteHandler.js";
-import type { McpToolService } from "./McpToolService.js";
-import { WorkspaceManager } from "./WorkspaceManager.js";
+import type { AgentRuntime } from "../AgentRuntime.js";
+import { AgentWorkspaceRouteHandler } from "../AgentWorkspaceRouteHandler.js";
+import type { McpToolService } from "../McpToolService.js";
+import { WorkspaceManager } from "../WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly authorizer: AgentRequestAuthorizer;

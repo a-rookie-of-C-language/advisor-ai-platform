@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { WorkspaceError } from "./WorkspaceError.js";
+import { WorkspaceError } from "../WorkspaceError.js";
 
 export class AgentJsonResponseWriter {
   write(response: ServerResponse, statusCode: number, body: unknown): void {
