@@ -1,29 +1,15 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "./ChatStreamRequest.js";
+import { ChatMessageListValidator } from "./ChatMessageListValidator.js";
+import type { ChatStreamRequest } from "./ChatStreamRequest.js";
+
+const messageListValidator = new ChatMessageListValidator();
 
 export function validateChatStreamRequest(body: unknown): ChatStreamRequest {
   if (!isRecord(body)) {
     throw new Error("request body must be an object");
   }
-  const messages = body.messages;
-  if (!Array.isArray(messages) || messages.length === 0) {
-    throw new Error("messages must be a non-empty array");
-  }
-
-  const validMessages = messages
-    .filter(isRecord)
-    .map((message) => ({
-      role: String(message.role || "").trim(),
-      content: String(message.content || "").trim(),
-      attachments: Array.isArray(message.attachments) ? message.attachments : null
-    }))
-    .filter((message) => Boolean(message.role && message.content)) as ChatMessageDTO[];
-
-  if (validMessages.length === 0) {
-    throw new Error("no valid messages");
-  }
 
   return {
-    messages: validMessages,
+    messages: messageListValidator.validate(body.messages),
     userId: readOptionalNumber(body.userId),
     sessionId: readOptionalNumber(body.sessionId),
     kbId: readOptionalNumber(body.kbId),
