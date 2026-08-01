@@ -2,6 +2,7 @@ import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
 import { parseJsonBody } from "./HttpBodyParser.js";
+import { WorkspaceError } from "./WorkspaceError.js";
 import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
@@ -63,9 +64,77 @@ export class AgentHttpServer {
         return;
       }
 
+      if (request.method === "POST" && url.pathname === "/workspace/read") {
+        const scope = this.readWorkspaceScope(url);
+        const body = await this.readJsonObject(request);
+        const content = await this.workspaceManager.read(
+          scope.userId,
+          scope.sessionId,
+          this.readRequiredString(body, "path"),
+          this.readOptionalNumber(body, "offset", 0),
+          this.readOptionalNumber(body, "limit", 8192)
+        );
+        this.writeJson(response, 200, { status: "ok", content });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/workspace/write") {
+        const scope = this.readWorkspaceScope(url);
+        const body = await this.readJsonObject(request);
+        const result = await this.workspaceManager.write(
+          scope.userId,
+          scope.sessionId,
+          this.readRequiredString(body, "path"),
+          this.readRequiredString(body, "content"),
+          this.readOptionalBoolean(body, "is_final", false)
+        );
+        this.writeJson(response, 200, { status: "ok", result });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/workspace/edit") {
+        const scope = this.readWorkspaceScope(url);
+        const body = await this.readJsonObject(request);
+        const result = await this.workspaceManager.edit(
+          scope.userId,
+          scope.sessionId,
+          this.readRequiredString(body, "path"),
+          this.readRequiredString(body, "old_string"),
+          this.readRequiredString(body, "new_string"),
+          this.readOptionalBoolean(body, "is_final", false)
+        );
+        this.writeJson(response, 200, { status: "ok", result });
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/workspace/list") {
+        const scope = this.readWorkspaceScope(url);
+        const items = await this.workspaceManager.list(
+          scope.userId,
+          scope.sessionId,
+          url.searchParams.get("path") || ".",
+          this.readBooleanQuery(url.searchParams.get("recursive"), false)
+        );
+        this.writeJson(response, 200, { status: "ok", items });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/workspace/create-dir") {
+        const scope = this.readWorkspaceScope(url);
+        const body = await this.readJsonObject(request);
+        const result = await this.workspaceManager.createDir(
+          scope.userId,
+          scope.sessionId,
+          this.readRequiredString(body, "path"),
+          this.readOptionalBoolean(body, "is_final", false)
+        );
+        this.writeJson(response, 200, { status: "ok", result });
+        return;
+      }
+
       this.writeJson(response, 404, { detail: "not found" });
     } catch (error) {
-      this.writeJson(response, 500, { detail: error instanceof Error ? error.message : "internal error" });
+      this.writeJson(response, this.statusCodeForError(error), { detail: error instanceof Error ? error.message : "internal error" });
     }
   }
 
@@ -97,5 +166,63 @@ export class AgentHttpServer {
     }
     const parsed = Number.parseInt(value, 10);
     return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private async readJsonObject(request: IncomingMessage): Promise<Record<string, unknown>> {
+    const body = await parseJsonBody(request);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw new WorkspaceError("请求体必须是 JSON 对象");
+    }
+    return body as Record<string, unknown>;
+  }
+
+  private readRequiredString(body: Record<string, unknown>, key: string): string {
+    const value = this.readAliasedValue(body, key);
+    if (typeof value !== "string" || !value) {
+      throw new WorkspaceError(`缺少必填字段: ${key}`);
+    }
+    return value;
+  }
+
+  private readOptionalNumber(body: Record<string, unknown>, key: string, fallback: number): number {
+    const value = this.readAliasedValue(body, key);
+    if (value === undefined || value === null || value === "") {
+      return fallback;
+    }
+    const parsed = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+    if (!Number.isFinite(parsed)) {
+      throw new WorkspaceError(`字段必须是数字: ${key}`);
+    }
+    return parsed;
+  }
+
+  private readOptionalBoolean(body: Record<string, unknown>, key: string, fallback: boolean): boolean {
+    const value = this.readAliasedValue(body, key);
+    if (value === undefined || value === null || value === "") {
+      return fallback;
+    }
+    if (typeof value === "boolean") {
+      return value;
+    }
+    if (typeof value === "string") {
+      return this.readBooleanQuery(value, fallback);
+    }
+    throw new WorkspaceError(`字段必须是布尔值: ${key}`);
+  }
+
+  private readAliasedValue(body: Record<string, unknown>, snakeKey: string): unknown {
+    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+    return body[snakeKey] ?? body[camelKey];
+  }
+
+  private readBooleanQuery(value: string | null, fallback: boolean): boolean {
+    if (!value) {
+      return fallback;
+    }
+    return ["1", "true", "yes", "y"].includes(value.toLowerCase());
+  }
+
+  private statusCodeForError(error: unknown): number {
+    return error instanceof WorkspaceError ? 400 : 500;
   }
 }
