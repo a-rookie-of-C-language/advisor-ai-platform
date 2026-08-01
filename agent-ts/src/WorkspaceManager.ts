@@ -1,7 +1,8 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { WorkspaceCacheCleaner } from "./WorkspaceCacheCleaner.js";
 import type { WorkspaceCacheCleanupResult } from "./WorkspaceCacheCleanupResult.js";
+import type { WorkspaceCreateDirResult } from "./WorkspaceCreateDirResult.js";
+import { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
 import type { WorkspaceEditResult } from "./WorkspaceEditResult.js";
 import { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
 import { WorkspaceFileReader } from "./WorkspaceFileReader.js";
@@ -19,6 +20,7 @@ import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
 export class WorkspaceManager {
   private readonly fileSystem = new WorkspaceFileSystem();
   private readonly cacheCleaner = new WorkspaceCacheCleaner(this.fileSystem);
+  private readonly directoryCreator = new WorkspaceDirectoryCreator();
   private readonly fileEditor = new WorkspaceFileEditor();
   private readonly fileReader = new WorkspaceFileReader();
   private readonly fileWriter = new WorkspaceFileWriter();
@@ -81,14 +83,13 @@ export class WorkspaceManager {
     sessionId: number | null,
     relativePath: string,
     isFinal = false
-  ): Promise<{ path: string; created: boolean }> {
+  ): Promise<WorkspaceCreateDirResult> {
     const sessionPath = await this.sessionPathProvider.ensureSessionPath(userId, sessionId);
     const normalPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
     const targetPath = isFinal ? this.pathGuard.finalPath(sessionPath, relativePath) : normalPath;
     this.pathGuard.checkDepth(sessionPath, targetPath);
 
-    await fs.mkdir(targetPath, { recursive: true });
-    return { path: path.relative(sessionPath, targetPath), created: true };
+    return this.directoryCreator.create(sessionPath, targetPath);
   }
 
   async cleanupCache(userId: number | null, sessionId: number | null): Promise<WorkspaceCacheCleanupResult> {
