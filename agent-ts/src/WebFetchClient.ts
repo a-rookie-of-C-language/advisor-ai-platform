@@ -1,7 +1,10 @@
 import type { AgentConfig } from "./AgentConfig.js";
 import type { WebFetchedPage } from "./WebFetchedPage.js";
+import { WebHtmlParser } from "./WebHtmlParser.js";
 
 export class WebFetchClient {
+  private readonly htmlParser = new WebHtmlParser();
+
   constructor(private readonly config: AgentConfig) {}
 
   async fetchPage(url: string): Promise<WebFetchedPage | null> {
@@ -23,8 +26,8 @@ export class WebFetchClient {
         return null;
       }
       const html = await response.text();
-      const title = this.extractTitle(html);
-      const content = this.extractText(html).slice(0, this.config.webFetchMaxContentLength);
+      const title = this.htmlParser.extractTitle(html);
+      const content = this.htmlParser.extractText(html).slice(0, this.config.webFetchMaxContentLength);
       if (!content.trim()) {
         return null;
       }
@@ -37,29 +40,5 @@ export class WebFetchClient {
     } finally {
       clearTimeout(timeout);
     }
-  }
-
-  private extractTitle(html: string): string {
-    return this.decodeHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || "");
-  }
-
-  private extractText(html: string): string {
-    const stripped = html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return this.decodeHtml(stripped);
-  }
-
-  private decodeHtml(text: string): string {
-    return text
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, "\"")
-      .replace(/&#39;/g, "'");
   }
 }
