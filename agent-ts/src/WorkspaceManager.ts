@@ -3,11 +3,13 @@ import path from "node:path";
 import { CACHE_DIR, FINAL_DIR, MAX_FILE_SIZE } from "./WorkspaceLimits.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
 import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
+import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
 import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceError } from "./WorkspaceError.js";
 
 export class WorkspaceManager {
   private readonly fileSystem = new WorkspaceFileSystem();
+  private readonly listingBuilder = new WorkspaceListingBuilder(this.fileSystem);
   private readonly pathGuard: WorkspacePathGuard;
   private readonly basePath: string;
 
@@ -77,7 +79,7 @@ export class WorkspaceManager {
   async list(userId: number | null, sessionId: number | null, relativePath = ".", recursive = false): Promise<WorkspaceListing[]> {
     await this.ensureSessionPath(userId, sessionId);
     const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
-    return this.buildListing(targetPath, recursive);
+    return this.listingBuilder.build(targetPath, recursive);
   }
 
   async createDir(
@@ -158,30 +160,6 @@ export class WorkspaceManager {
     const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
     await fs.mkdir(sessionPath, { recursive: true });
     return sessionPath;
-  }
-
-  private async buildListing(targetPath: string, recursive: boolean): Promise<WorkspaceListing[]> {
-    if (!(await this.fileSystem.exists(targetPath))) {
-      return [];
-    }
-    const stat = await fs.stat(targetPath);
-    if (stat.isFile()) {
-      return [{ name: path.basename(targetPath), type: "file", size: stat.size }];
-    }
-
-    const listing: WorkspaceListing[] = [];
-    const children = recursive
-      ? await this.fileSystem.walk(targetPath, true)
-      : (await fs.readdir(targetPath)).map((name) => path.join(targetPath, name));
-    for (const child of children.sort()) {
-      if (child.split(path.sep).includes(CACHE_DIR)) {
-        continue;
-      }
-      const childStat = await fs.stat(child);
-      const name = path.relative(targetPath, child) || path.basename(child);
-      listing.push(childStat.isFile() ? { name, type: "file", size: childStat.size } : { name, type: "dir" });
-    }
-    return listing;
   }
 
   private async countWorkingFiles(sessionPath: string): Promise<number> {
