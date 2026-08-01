@@ -12,6 +12,7 @@ import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
 import { WorkspaceMaintenanceService } from "./WorkspaceMaintenanceService.js";
 import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
+import { WorkspaceReadService } from "./WorkspaceReadService.js";
 import { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
 import type { WorkspaceStats } from "./WorkspaceStats.js";
 import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
@@ -24,12 +25,11 @@ export class WorkspaceManager {
   private readonly cacheCleaner = new WorkspaceCacheCleaner(this.fileSystem);
   private readonly directoryCreator = new WorkspaceDirectoryCreator();
   private readonly fileEditor = new WorkspaceFileEditor();
-  private readonly fileReader = new WorkspaceFileReader();
   private readonly fileWriter = new WorkspaceFileWriter();
-  private readonly listingBuilder = new WorkspaceListingBuilder(this.fileSystem);
   private readonly workingFileCounter = new WorkspaceWorkingFileCounter(this.fileSystem);
   private readonly maintenanceService: WorkspaceMaintenanceService;
   private readonly pathGuard: WorkspacePathGuard;
+  private readonly readService: WorkspaceReadService;
   private readonly sessionPathProvider: WorkspaceSessionPathProvider;
   private readonly targetPathResolver: WorkspaceTargetPathResolver;
   private readonly basePath: string;
@@ -39,6 +39,12 @@ export class WorkspaceManager {
     this.pathGuard = new WorkspacePathGuard(this.basePath);
     this.sessionPathProvider = new WorkspaceSessionPathProvider(this.pathGuard);
     this.targetPathResolver = new WorkspaceTargetPathResolver(this.pathGuard, this.sessionPathProvider);
+    this.readService = new WorkspaceReadService(
+      new WorkspaceFileReader(),
+      new WorkspaceListingBuilder(this.fileSystem),
+      this.pathGuard,
+      this.sessionPathProvider
+    );
     this.maintenanceService = new WorkspaceMaintenanceService(
       this.cacheCleaner,
       this.sessionPathProvider,
@@ -47,8 +53,7 @@ export class WorkspaceManager {
   }
 
   async read(userId: number | null, sessionId: number | null, relativePath: string, offset = 0, limit = 8192): Promise<string> {
-    const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
-    return this.fileReader.read(targetPath, relativePath, offset, limit);
+    return this.readService.read(userId, sessionId, relativePath, offset, limit);
   }
 
   async write(
@@ -77,9 +82,7 @@ export class WorkspaceManager {
   }
 
   async list(userId: number | null, sessionId: number | null, relativePath = ".", recursive = false): Promise<WorkspaceListing[]> {
-    await this.sessionPathProvider.ensureSessionPath(userId, sessionId);
-    const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
-    return this.listingBuilder.build(targetPath, recursive);
+    return this.readService.list(userId, sessionId, relativePath, recursive);
   }
 
   async createDir(
