@@ -1,5 +1,6 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
 import type { ChatMessageDTO } from "../common/ChatStreamRequest.js";
+import { OpenAIChatEventStreamer } from "./OpenAIChatEventStreamer.js";
 import { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
 import { OpenAIChatCompletionStreamer } from "./OpenAIChatCompletionStreamer.js";
 import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
@@ -8,11 +9,18 @@ import { type OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoun
 
 export class OpenAIChatClient {
   private readonly completionStreamer: OpenAIChatCompletionStreamer;
+  private readonly eventStreamer: OpenAIChatEventStreamer;
   private readonly messageMapper = new OpenAIChatMessageMapper();
   private readonly toolRoundRunner = new OpenAIToolRoundRunner();
 
-  constructor(private readonly config: AgentConfig) {
+  constructor(config: AgentConfig) {
     this.completionStreamer = new OpenAIChatCompletionStreamer(config);
+    this.eventStreamer = new OpenAIChatEventStreamer(
+      config.openAiApiKey,
+      this.completionStreamer,
+      this.messageMapper,
+      this.toolRoundRunner
+    );
   }
 
   async *streamChat(messages: ChatMessageDTO[]): AsyncGenerator<string> {
@@ -28,27 +36,8 @@ export class OpenAIChatClient {
     tools: OpenAIChatTool[] = [],
     toolExecutor?: OpenAIToolExecutor
   ): AsyncGenerator<OpenAIChatStreamEvent> {
-    if (!this.config.openAiApiKey) {
-      return;
-    }
-
-    const conversation = this.messageMapper.map(messages);
-    const firstRound = await this.completionStreamer.collectStream(conversation, tools);
-    for (const text of firstRound.textParts) {
-      yield { type: "delta", text };
-    }
-
-    if (firstRound.toolCalls.length === 0 || tools.length === 0 || !toolExecutor) {
-      return;
-    }
-
-    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor)) {
+    for await (const event of this.eventStreamer.stream(messages, tools, toolExecutor)) {
       yield event;
-    }
-
-    const finalRound = await this.completionStreamer.collectStream(conversation);
-    for (const text of finalRound.textParts) {
-      yield { type: "delta", text };
     }
   }
 }
