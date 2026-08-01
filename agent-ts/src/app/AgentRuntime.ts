@@ -15,6 +15,7 @@ import { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionS
 import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
 import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
+import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
 import { SseWriter } from "../protocol/SseWriter.js";
 import { validateChatStreamRequest } from "../common/validateChatStreamRequest.js";
 
@@ -24,6 +25,7 @@ export class AgentRuntime {
   private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter;
   private readonly openAiToolFacade: AgentOpenAiToolFacade;
   private readonly requestIdResolver = new AgentRequestIdResolver();
+  private readonly toolExecutorFactory: AgentToolExecutorFactory;
 
   constructor(
     private readonly config: AgentConfig,
@@ -44,6 +46,7 @@ export class AgentRuntime {
     );
     this.memoryTaskCompletionSubmitter = new AgentMemoryTaskCompletionSubmitter(memoryTaskSubmitter);
     this.openAiToolFacade = new AgentOpenAiToolFacade(config.openAiApiKey, openAiToolRegistry);
+    this.toolExecutorFactory = new AgentToolExecutorFactory(this.openAiToolFacade);
   }
 
   async coreHealth(): Promise<JsonObject> {
@@ -65,7 +68,7 @@ export class AgentRuntime {
     try {
       const modelMessages = await this.contextPipeline.build(chatRequest);
       const tools = await this.openAiToolFacade.listTools();
-      const toolExecutor = tools.length > 0 ? (toolName: string, toolArgs: JsonObject) => this.openAiToolFacade.executeTool(chatRequest, toolName, toolArgs) : undefined;
+      const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
       for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
         await eventWriter.write(event);
       }
