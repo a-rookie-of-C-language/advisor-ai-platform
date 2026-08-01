@@ -1,8 +1,10 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { RagApiClient } from "./RagApiClient.js";
-import type { RagDocument } from "./RagDocument.js";
+import { RagPromptRenderer } from "./RagPromptRenderer.js";
 
 export class RagContextBuilder {
+  private readonly promptRenderer = new RagPromptRenderer();
+
   constructor(private readonly ragClient: RagApiClient) {}
 
   async injectRag(request: ChatStreamRequest): Promise<ChatMessageDTO[]> {
@@ -12,7 +14,7 @@ export class RagContextBuilder {
 
     try {
       const documents = await this.ragClient.listDocuments(request.kbId);
-      const prompt = this.renderPrompt(request.kbId, documents);
+      const prompt = this.promptRenderer.render(request.kbId, documents);
       if (!prompt) {
         return request.messages;
       }
@@ -26,17 +28,5 @@ export class RagContextBuilder {
     } catch {
       return request.messages;
     }
-  }
-
-  private renderPrompt(kbId: number, documents: RagDocument[]): string {
-    const readyDocuments = documents.filter((document) => document.status === "READY" || document.status === "INDEXED");
-    if (readyDocuments.length === 0) {
-      return "";
-    }
-    const renderedDocuments = readyDocuments
-      .slice(0, 10)
-      .map((document, index) => `${index + 1}. ${document.fileName} (${document.fileType || "unknown"}, ${document.fileSize || 0} bytes)`)
-      .join("\n");
-    return `Knowledge base id: ${kbId}\nAvailable documents:\n${renderedDocuments}`;
   }
 }
