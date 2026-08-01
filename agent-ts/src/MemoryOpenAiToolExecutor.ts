@@ -1,15 +1,15 @@
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
-import { MemoryCandidateReader } from "./MemoryCandidateReader.js";
 import { MemoryReadRequestReader } from "./MemoryReadRequestReader.js";
 import { MemoryToolResultFormatter } from "./MemoryToolResultFormatter.js";
+import { MemoryWriteRequestReader } from "./MemoryWriteRequestReader.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 
 export class MemoryOpenAiToolExecutor {
-  private readonly candidateReader = new MemoryCandidateReader();
   private readonly readRequestReader: MemoryReadRequestReader;
   private readonly resultFormatter = new MemoryToolResultFormatter();
+  private readonly writeRequestReader = new MemoryWriteRequestReader();
 
   constructor(
     private readonly memoryClient: MemoryApiClient,
@@ -44,20 +44,8 @@ export class MemoryOpenAiToolExecutor {
   }
 
   private async writeMemory(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
-    const userId = this.requireUserId(request);
-    const candidates = this.candidateReader.readCandidates(args);
-    const result = await this.memoryClient.upsertCandidates({
-      userId,
-      kbId: request.kbId ?? 0,
-      candidates
-    });
+    const writeRequest = this.writeRequestReader.read(request, args);
+    const result = await this.memoryClient.upsertCandidates(writeRequest);
     return this.resultFormatter.formatWrite(result);
-  }
-
-  private requireUserId(request: ChatStreamRequest): number {
-    if (!request.userId) {
-      throw new Error("memory tool missing user_id");
-    }
-    return request.userId;
   }
 }
