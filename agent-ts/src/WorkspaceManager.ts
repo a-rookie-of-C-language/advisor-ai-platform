@@ -2,10 +2,12 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { CACHE_DIR, FINAL_DIR, MAX_FILE_SIZE } from "./WorkspaceLimits.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
+import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceError } from "./WorkspaceError.js";
 
 export class WorkspaceManager {
+  private readonly fileSystem = new WorkspaceFileSystem();
   private readonly pathGuard: WorkspacePathGuard;
   private readonly basePath: string;
 
@@ -97,11 +99,11 @@ export class WorkspaceManager {
     const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
     const cachePath = path.join(sessionPath, CACHE_DIR);
     const stats = { cleaned_files: 0, cleaned_size: 0 };
-    if (!(await this.exists(cachePath))) {
+    if (!(await this.fileSystem.exists(cachePath))) {
       return stats;
     }
 
-    for (const filePath of await this.walk(cachePath)) {
+    for (const filePath of await this.fileSystem.walk(cachePath)) {
       const stat = await fs.stat(filePath);
       if (!stat.isFile()) {
         continue;
@@ -129,11 +131,11 @@ export class WorkspaceManager {
       final_dir: path.join(sessionPath, FINAL_DIR)
     };
 
-    if (!(await this.exists(sessionPath))) {
+    if (!(await this.fileSystem.exists(sessionPath))) {
       return stats;
     }
 
-    for (const filePath of await this.walk(sessionPath)) {
+    for (const filePath of await this.fileSystem.walk(sessionPath)) {
       const stat = await fs.stat(filePath);
       if (!stat.isFile()) {
         continue;
@@ -159,7 +161,7 @@ export class WorkspaceManager {
   }
 
   private async buildListing(targetPath: string, recursive: boolean): Promise<WorkspaceListing[]> {
-    if (!(await this.exists(targetPath))) {
+    if (!(await this.fileSystem.exists(targetPath))) {
       return [];
     }
     const stat = await fs.stat(targetPath);
@@ -168,7 +170,9 @@ export class WorkspaceManager {
     }
 
     const listing: WorkspaceListing[] = [];
-    const children = recursive ? await this.walk(targetPath, true) : (await fs.readdir(targetPath)).map((name) => path.join(targetPath, name));
+    const children = recursive
+      ? await this.fileSystem.walk(targetPath, true)
+      : (await fs.readdir(targetPath)).map((name) => path.join(targetPath, name));
     for (const child of children.sort()) {
       if (child.split(path.sep).includes(CACHE_DIR)) {
         continue;
@@ -181,11 +185,11 @@ export class WorkspaceManager {
   }
 
   private async countWorkingFiles(sessionPath: string): Promise<number> {
-    if (!(await this.exists(sessionPath))) {
+    if (!(await this.fileSystem.exists(sessionPath))) {
       return 0;
     }
     let count = 0;
-    for (const filePath of await this.walk(sessionPath)) {
+    for (const filePath of await this.fileSystem.walk(sessionPath)) {
       const parts = filePath.split(path.sep);
       if (!parts.includes(CACHE_DIR) && !parts.includes(FINAL_DIR) && (await fs.stat(filePath)).isFile()) {
         count += 1;
@@ -194,29 +198,4 @@ export class WorkspaceManager {
     return count;
   }
 
-  private async walk(rootPath: string, includeDirs = false): Promise<string[]> {
-    const entries = await fs.readdir(rootPath, { withFileTypes: true });
-    const results: string[] = [];
-    for (const entry of entries) {
-      const entryPath = path.join(rootPath, entry.name);
-      if (entry.isDirectory()) {
-        if (includeDirs) {
-          results.push(entryPath);
-        }
-        results.push(...(await this.walk(entryPath, includeDirs)));
-      } else {
-        results.push(entryPath);
-      }
-    }
-    return results;
-  }
-
-  private async exists(targetPath: string): Promise<boolean> {
-    try {
-      await fs.access(targetPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }
