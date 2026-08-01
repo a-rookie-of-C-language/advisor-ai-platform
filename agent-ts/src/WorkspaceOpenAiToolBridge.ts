@@ -1,8 +1,9 @@
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
-import type { JsonObject, JsonValue } from "./JsonTypes.js";
+import type { JsonObject } from "./JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
+import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { WorkspaceOpenAiToolCatalog } from "./WorkspaceOpenAiToolCatalog.js";
 
@@ -41,9 +42,9 @@ export class WorkspaceOpenAiToolBridge {
         content: await this.workspaceManager.read(
           userId,
           sessionId,
-          this.readRequiredString(args, "path"),
-          this.readOptionalNumber(args, "offset", 0),
-          this.readOptionalNumber(args, "limit", 8192)
+          OpenAiToolArgumentReader.readRequiredString(args, "path"),
+          OpenAiToolArgumentReader.readOptionalNumber(args, "offset", 0),
+          OpenAiToolArgumentReader.readOptionalNumber(args, "limit", 8192)
         )
       };
     }
@@ -52,9 +53,9 @@ export class WorkspaceOpenAiToolBridge {
         result: await this.workspaceManager.write(
           userId,
           sessionId,
-          this.readRequiredString(args, "path"),
-          this.readRequiredString(args, "content"),
-          this.readOptionalBoolean(args, "is_final", false)
+          OpenAiToolArgumentReader.readRequiredString(args, "path"),
+          OpenAiToolArgumentReader.readRequiredString(args, "content"),
+          OpenAiToolArgumentReader.readOptionalBoolean(args, "is_final", false)
         )
       };
     }
@@ -63,10 +64,10 @@ export class WorkspaceOpenAiToolBridge {
         result: await this.workspaceManager.edit(
           userId,
           sessionId,
-          this.readRequiredString(args, "path"),
-          this.readRequiredString(args, "old_string"),
-          this.readRequiredString(args, "new_string"),
-          this.readOptionalBoolean(args, "is_final", false)
+          OpenAiToolArgumentReader.readRequiredString(args, "path"),
+          OpenAiToolArgumentReader.readRequiredString(args, "old_string"),
+          OpenAiToolArgumentReader.readRequiredString(args, "new_string"),
+          OpenAiToolArgumentReader.readOptionalBoolean(args, "is_final", false)
         )
       };
     }
@@ -74,8 +75,8 @@ export class WorkspaceOpenAiToolBridge {
       const items = await this.workspaceManager.list(
         userId,
         sessionId,
-        this.readOptionalString(args, "path", "."),
-        this.readOptionalBoolean(args, "recursive", false)
+        OpenAiToolArgumentReader.readOptionalString(args, "path", "."),
+        OpenAiToolArgumentReader.readOptionalBoolean(args, "recursive", false)
       );
       return {
         items: items.map((item) => ({ ...item }))
@@ -86,52 +87,11 @@ export class WorkspaceOpenAiToolBridge {
         result: await this.workspaceManager.createDir(
           userId,
           sessionId,
-          this.readRequiredString(args, "path"),
-          this.readOptionalBoolean(args, "is_final", false)
+          OpenAiToolArgumentReader.readRequiredString(args, "path"),
+          OpenAiToolArgumentReader.readOptionalBoolean(args, "is_final", false)
         )
       };
     }
     throw new Error(`未知 workspace 工具: ${toolName}`);
-  }
-
-  private readRequiredString(args: JsonObject, key: string): string {
-    const value = this.readAliasedValue(args, key);
-    if (typeof value !== "string" || !value) {
-      throw new Error(`缺少必填字段: ${key}`);
-    }
-    return value;
-  }
-
-  private readOptionalString(args: JsonObject, key: string, fallback: string): string {
-    const value = this.readAliasedValue(args, key);
-    return typeof value === "string" && value ? value : fallback;
-  }
-
-  private readOptionalNumber(args: JsonObject, key: string, fallback: number): number {
-    const value = this.readAliasedValue(args, key);
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === "string" && value) {
-      const parsed = Number.parseInt(value, 10);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    }
-    return fallback;
-  }
-
-  private readOptionalBoolean(args: JsonObject, key: string, fallback: boolean): boolean {
-    const value = this.readAliasedValue(args, key);
-    if (typeof value === "boolean") {
-      return value;
-    }
-    if (typeof value === "string" && value) {
-      return ["1", "true", "yes", "y"].includes(value.toLowerCase());
-    }
-    return fallback;
-  }
-
-  private readAliasedValue(args: JsonObject, snakeKey: string): JsonValue | undefined {
-    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    return args[snakeKey] ?? args[camelKey];
   }
 }

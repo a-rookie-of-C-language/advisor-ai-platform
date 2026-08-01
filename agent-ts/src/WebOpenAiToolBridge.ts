@@ -1,7 +1,8 @@
-import type { JsonObject, JsonValue } from "./JsonTypes.js";
+import type { JsonObject } from "./JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
+import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { WebOpenAiToolCatalog } from "./WebOpenAiToolCatalog.js";
 import type { WebSearchClient } from "./WebSearchClient.js";
@@ -28,7 +29,7 @@ export class WebOpenAiToolBridge {
   async executeTool(toolName: string, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     try {
       if (toolName === "web_fetch" && this.webFetchClient) {
-        const page = await this.webFetchClient.fetchPage(this.readRequiredString(args, "url"));
+        const page = await this.webFetchClient.fetchPage(OpenAiToolArgumentReader.readRequiredString(args, "url"));
         return {
           output: JSON.stringify({
             ok: Boolean(page),
@@ -39,7 +40,7 @@ export class WebOpenAiToolBridge {
         };
       }
       if (toolName === "web_search" && this.webSearchClient) {
-        const results = await this.webSearchClient.search(this.readRequiredString(args, "query"));
+        const results = await this.webSearchClient.search(OpenAiToolArgumentReader.readRequiredString(args, "query"));
         return {
           output: JSON.stringify({
             ok: results.length > 0,
@@ -53,18 +54,5 @@ export class WebOpenAiToolBridge {
     } catch (error) {
       return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "web tool failed");
     }
-  }
-
-  private readRequiredString(args: JsonObject, key: string): string {
-    const value = this.readAliasedValue(args, key);
-    if (typeof value !== "string" || !value) {
-      throw new Error(`缺少必填字段: ${key}`);
-    }
-    return value;
-  }
-
-  private readAliasedValue(args: JsonObject, snakeKey: string): JsonValue | undefined {
-    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    return args[snakeKey] ?? args[camelKey];
   }
 }

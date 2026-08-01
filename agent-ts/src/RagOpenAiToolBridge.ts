@@ -1,8 +1,9 @@
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
-import type { JsonObject, JsonValue } from "./JsonTypes.js";
+import type { JsonObject } from "./JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagApiClient } from "./RagApiClient.js";
+import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { RagOpenAiToolCatalog } from "./RagOpenAiToolCatalog.js";
 
@@ -26,8 +27,8 @@ export class RagOpenAiToolBridge {
     }
 
     try {
-      const query = this.readOptionalString(args, "query", this.latestUserQuery(request));
-      const topK = Math.min(Math.max(this.readOptionalNumber(args, "top_k", 5), 1), 10);
+      const query = OpenAiToolArgumentReader.readOptionalString(args, "query", this.latestUserQuery(request));
+      const topK = Math.min(Math.max(OpenAiToolArgumentReader.readOptionalNumber(args, "top_k", 5), 1), 10);
       const documents = await this.ragClient.listDocuments(request.kbId);
       const readyDocuments = documents.filter((document) => document.status === "READY" || document.status === "INDEXED");
       const matchedDocuments = this.rankDocuments(readyDocuments, query).slice(0, topK);
@@ -68,27 +69,5 @@ export class RagOpenAiToolBridge {
 
   private latestUserQuery(request: ChatStreamRequest): string {
     return request.messages.filter((message) => message.role === "user").at(-1)?.content || "";
-  }
-
-  private readOptionalString(args: JsonObject, key: string, fallback: string): string {
-    const value = this.readAliasedValue(args, key);
-    return typeof value === "string" && value.trim() ? value.trim() : fallback;
-  }
-
-  private readOptionalNumber(args: JsonObject, key: string, fallback: number): number {
-    const value = this.readAliasedValue(args, key);
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === "string" && value) {
-      const parsed = Number.parseInt(value, 10);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    }
-    return fallback;
-  }
-
-  private readAliasedValue(args: JsonObject, snakeKey: string): JsonValue | undefined {
-    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    return args[snakeKey] ?? args[camelKey];
   }
 }
