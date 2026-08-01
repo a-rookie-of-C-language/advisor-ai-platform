@@ -1,29 +1,22 @@
 import type { JsonObject } from "./JsonTypes.js";
+import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { JsonObjectReader } from "./JsonObjectReader.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 
-interface JsonRpcResponse {
-  result?: unknown;
-  error?: unknown;
-}
-
 export class DirectHttpMcpClient {
   private initialized = false;
-  private readonly headers: Record<string, string>;
   private readonly jsonObjectReader = new JsonObjectReader();
+  private readonly jsonRpcClient: DirectHttpMcpJsonRpcClient;
 
   constructor(private readonly config: McpServerConfig) {
-    this.headers = { "Content-Type": "application/json" };
-    if (config.token) {
-      this.headers.Authorization = `Bearer ${config.token}`;
-    }
+    this.jsonRpcClient = new DirectHttpMcpJsonRpcClient(config);
   }
 
   async listTools(): Promise<McpToolDescriptor[]> {
     await this.ensureInitialized();
-    const response = await this.post({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
+    const response = await this.jsonRpcClient.post({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     const result = this.jsonObjectReader.asObject(response.result);
     const tools = Array.isArray(result.tools) ? result.tools : [];
     return tools
@@ -39,7 +32,7 @@ export class DirectHttpMcpClient {
 
   async callTool(name: string, args: JsonObject): Promise<McpCallToolResult> {
     await this.ensureInitialized();
-    const response = await this.post({
+    const response = await this.jsonRpcClient.post({
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",
@@ -59,24 +52,7 @@ export class DirectHttpMcpClient {
     if (this.initialized) {
       return;
     }
-    await this.post({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
+    await this.jsonRpcClient.post({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     this.initialized = true;
-  }
-
-  private async post(payload: JsonObject): Promise<JsonRpcResponse> {
-    const response = await fetch(this.config.urlOrCommand, {
-      method: "POST",
-      headers: this.headers,
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      throw new Error(`MCP HTTP 请求失败: ${response.status}`);
-    }
-
-    const data = (await response.json()) as JsonRpcResponse;
-    if (data.error) {
-      throw new Error(`MCP JSON-RPC 错误: ${JSON.stringify(data.error)}`);
-    }
-    return data;
   }
 }
