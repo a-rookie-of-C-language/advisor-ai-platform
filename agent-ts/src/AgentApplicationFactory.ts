@@ -1,11 +1,8 @@
 import { AgentConfig } from "./AgentConfig.js";
 import { AgentCoreClient } from "./AgentCoreClient.js";
 import { AgentHttpServer } from "./AgentHttpServer.js";
+import { AgentMemoryComponents } from "./AgentMemoryComponents.js";
 import { AgentRuntime } from "./AgentRuntime.js";
-import { MemoryApiClient } from "./MemoryApiClient.js";
-import { MemoryContextBuilder } from "./MemoryContextBuilder.js";
-import { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
-import { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import { McpConfigParser } from "./McpConfigParser.js";
 import { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import { McpToolService } from "./McpToolService.js";
@@ -27,10 +24,7 @@ export class AgentApplicationFactory {
     const config = AgentConfig.fromEnv();
     const core = new AgentCoreClient(config.rustCorePath);
     const openAiClient = new OpenAIChatClient(config);
-    const memoryClient = config.memoryApiBaseUrl ? new MemoryApiClient(config) : undefined;
-    const memoryContextBuilder = memoryClient ? new MemoryContextBuilder(memoryClient, config.memoryTopK) : undefined;
-    const memoryTaskSubmitter = memoryClient ? new MemoryTaskSubmitter(memoryClient) : undefined;
-    const memoryOpenAiToolBridge = memoryClient ? new MemoryOpenAiToolBridge(memoryClient, config.memoryTopK) : undefined;
+    const memoryComponents = new AgentMemoryComponents(config);
     const ragClient = config.ragApiBaseUrl ? new RagApiClient(config) : undefined;
     const ragContextBuilder = ragClient ? new RagContextBuilder(ragClient) : undefined;
     const ragOpenAiToolBridge = ragClient ? new RagOpenAiToolBridge(ragClient) : undefined;
@@ -48,15 +42,15 @@ export class AgentApplicationFactory {
       workspaceOpenAiToolBridge,
       webOpenAiToolBridge,
       ragOpenAiToolBridge,
-      memoryOpenAiToolBridge,
+      memoryComponents.openAiToolBridge,
       mcpOpenAiToolBridge
     );
     const runtime = new AgentRuntime(
       config,
       core,
       openAiClient,
-      memoryContextBuilder,
-      memoryTaskSubmitter,
+      memoryComponents.contextBuilder,
+      memoryComponents.taskSubmitter,
       ragContextBuilder,
       webFetchContextBuilder,
       webSearchContextBuilder,
