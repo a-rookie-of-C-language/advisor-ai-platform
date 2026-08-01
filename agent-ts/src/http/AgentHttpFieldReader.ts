@@ -3,19 +3,17 @@ import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import { AgentHttpBooleanFieldReader } from "./AgentHttpBooleanFieldReader.js";
 import { AgentHttpJsonObjectFieldReader } from "./AgentHttpJsonObjectFieldReader.js";
 import { AgentHttpNumberFieldReader } from "./AgentHttpNumberFieldReader.js";
-import { WorkspaceError } from "../workspace/WorkspaceError.js";
+import { AgentHttpStringFieldReader } from "./AgentHttpStringFieldReader.js";
 
 export class AgentHttpFieldReader {
   private readonly booleanFieldReader = new AgentHttpBooleanFieldReader();
   private readonly jsonObjectFieldReader = new AgentHttpJsonObjectFieldReader();
   private readonly numberFieldReader = new AgentHttpNumberFieldReader();
+  private readonly stringFieldReader = new AgentHttpStringFieldReader();
 
   readRequiredString(body: Record<string, unknown>, key: string): string {
     const value = this.readAliasedValue(body, key);
-    if (typeof value !== "string" || !value) {
-      throw new WorkspaceError(`缺少必填字段: ${key}`);
-    }
-    return value;
+    return this.stringFieldReader.readRequired(value, key);
   }
 
   readOptionalNumber(body: Record<string, unknown>, key: string, fallback: number): number {
