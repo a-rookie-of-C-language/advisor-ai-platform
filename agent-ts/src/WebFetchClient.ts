@@ -1,11 +1,15 @@
 import type { AgentConfig } from "./AgentConfig.js";
 import type { WebFetchedPage } from "./WebFetchedPage.js";
 import { WebHtmlParser } from "./WebHtmlParser.js";
+import { WebPageHttpClient } from "./WebPageHttpClient.js";
 
 export class WebFetchClient {
   private readonly htmlParser = new WebHtmlParser();
+  private readonly pageHttpClient: WebPageHttpClient;
 
-  constructor(private readonly config: AgentConfig) {}
+  constructor(private readonly config: AgentConfig) {
+    this.pageHttpClient = new WebPageHttpClient(config);
+  }
 
   async fetchPage(url: string): Promise<WebFetchedPage | null> {
     const parsedUrl = new URL(url);
@@ -13,32 +17,20 @@ export class WebFetchClient {
       return null;
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), Math.min(this.config.requestTimeoutMs, 10_000));
-    try {
-      const response = await fetch(parsedUrl, {
-        headers: {
-          "User-Agent": "advisor-ai-agent-ts/0.1"
-        },
-        signal: controller.signal
-      });
-      if (!response.ok) {
-        return null;
-      }
-      const html = await response.text();
-      const title = this.htmlParser.extractTitle(html);
-      const content = this.htmlParser.extractText(html).slice(0, this.config.webFetchMaxContentLength);
-      if (!content.trim()) {
-        return null;
-      }
-      return {
-        url,
-        title,
-        content,
-        source: "web"
-      };
-    } finally {
-      clearTimeout(timeout);
+    const html = await this.pageHttpClient.fetchHtml(parsedUrl);
+    if (!html) {
+      return null;
     }
+    const title = this.htmlParser.extractTitle(html);
+    const content = this.htmlParser.extractText(html).slice(0, this.config.webFetchMaxContentLength);
+    if (!content.trim()) {
+      return null;
+    }
+    return {
+      url,
+      title,
+      content,
+      source: "web"
+    };
   }
 }
