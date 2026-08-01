@@ -1,28 +1,22 @@
 import type { JsonObject } from "./JsonTypes.js";
-import type { McpToolDescriptor } from "./McpToolDescriptor.js";
+import { McpOpenAiToolCatalog } from "./McpOpenAiToolCatalog.js";
 import type { McpToolService } from "./McpToolService.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 
-interface McpToolTarget {
-  server: string;
-  name: string;
-}
-
 export class McpOpenAiToolBridge {
-  private readonly toolTargets = new Map<string, McpToolTarget>();
+  private readonly catalog = new McpOpenAiToolCatalog();
 
   constructor(private readonly mcpToolService: McpToolService) {}
 
   async listTools(): Promise<OpenAIChatTool[]> {
     const descriptors = await this.mcpToolService.listTools();
-    this.toolTargets.clear();
-    return descriptors.map((descriptor) => this.toOpenAiTool(descriptor));
+    return this.catalog.listTools(descriptors);
   }
 
   async executeTool(openAiToolName: string, args: JsonObject): Promise<OpenAiToolExecutionResult> {
-    const target = this.toolTargets.get(openAiToolName);
+    const target = this.catalog.resolveTarget(openAiToolName);
     if (!target) {
       return OpenAiToolResultFactory.error(`未知 MCP 工具: ${openAiToolName}`);
     }
@@ -33,23 +27,5 @@ export class McpOpenAiToolBridge {
       output: text || JSON.stringify(result),
       success: !result.isError
     };
-  }
-
-  private toOpenAiTool(descriptor: McpToolDescriptor): OpenAIChatTool {
-    const openAiName = this.toOpenAiName(descriptor.server, descriptor.name);
-    this.toolTargets.set(openAiName, { server: descriptor.server, name: descriptor.name });
-    return {
-      type: "function",
-      function: {
-        name: openAiName,
-        description: descriptor.description || `${descriptor.server}:${descriptor.name}`,
-        parameters: descriptor.inputSchema
-      }
-    };
-  }
-
-  private toOpenAiName(server: string, name: string): string {
-    const sanitized = `mcp_${server}_${name}`.replace(/[^a-zA-Z0-9_-]/g, "_");
-    return sanitized.slice(0, 64);
   }
 }
