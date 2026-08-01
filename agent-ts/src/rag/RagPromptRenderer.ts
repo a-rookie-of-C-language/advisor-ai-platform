@@ -1,7 +1,9 @@
 import type { RagDocument } from "./RagDocument.js";
+import { RagDocumentListRenderer } from "./RagDocumentListRenderer.js";
 import { RagReadyDocumentSelector } from "./RagReadyDocumentSelector.js";
 
 export class RagPromptRenderer {
+  private readonly documentListRenderer = new RagDocumentListRenderer();
   private readonly readyDocumentSelector = new RagReadyDocumentSelector();
 
   render(kbId: number, documents: RagDocument[]): string {
@@ -9,10 +11,7 @@ export class RagPromptRenderer {
     if (readyDocuments.length === 0) {
       return "";
     }
-    const renderedDocuments = readyDocuments
-      .slice(0, 10)
-      .map((document, index) => `${index + 1}. ${document.fileName} (${document.fileType || "unknown"}, ${document.fileSize || 0} bytes)`)
-      .join("\n");
+    const renderedDocuments = this.documentListRenderer.render(readyDocuments);
     return `Knowledge base id: ${kbId}\nAvailable documents:\n${renderedDocuments}`;
   }
 }
