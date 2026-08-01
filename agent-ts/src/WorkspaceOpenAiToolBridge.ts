@@ -3,6 +3,7 @@ import type { JsonObject, JsonValue } from "./JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
+import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { WorkspaceOpenAiToolCatalog } from "./WorkspaceOpenAiToolCatalog.js";
 
 export class WorkspaceOpenAiToolBridge {
@@ -28,15 +29,7 @@ export class WorkspaceOpenAiToolBridge {
       const output = await this.executeWorkspaceTool(request, toolName, args);
       return { output: JSON.stringify({ ok: true, status: "ok", ...output }), success: true };
     } catch (error) {
-      return {
-        output: JSON.stringify({
-          ok: false,
-          status: "error",
-          message: error instanceof Error ? error.message : "workspace tool failed",
-          items: []
-        }),
-        success: false
-      };
+      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "workspace tool failed");
     }
   }
 

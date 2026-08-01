@@ -3,6 +3,7 @@ import type { JsonObject, JsonValue } from "./JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagApiClient } from "./RagApiClient.js";
+import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { RagOpenAiToolCatalog } from "./RagOpenAiToolCatalog.js";
 
 export class RagOpenAiToolBridge {
@@ -21,10 +22,7 @@ export class RagOpenAiToolBridge {
 
   async executeTool(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
     if (!request.kbId || request.kbId <= 0) {
-      return {
-        output: JSON.stringify({ ok: false, status: "error", message: "未选择知识库，无法执行 rag_search", items: [] }),
-        success: false
-      };
+      return OpenAiToolResultFactory.error("未选择知识库，无法执行 rag_search");
     }
 
     try {
@@ -50,15 +48,7 @@ export class RagOpenAiToolBridge {
         success: true
       };
     } catch (error) {
-      return {
-        output: JSON.stringify({
-          ok: false,
-          status: "error",
-          message: error instanceof Error ? error.message : "rag_search failed",
-          items: []
-        }),
-        success: false
-      };
+      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "rag_search failed");
     }
   }
 

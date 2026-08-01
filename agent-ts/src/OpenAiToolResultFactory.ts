@@ -1,0 +1,10 @@
+import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
+
+export class OpenAiToolResultFactory {
+  static error(message: string): OpenAiToolExecutionResult {
+    return {
+      output: JSON.stringify({ ok: false, status: "error", message, items: [] }),
+      success: false
+    };
+  }
+}

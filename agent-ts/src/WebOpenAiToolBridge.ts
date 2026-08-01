@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "./JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { WebFetchClient } from "./WebFetchClient.js";
+import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { WebOpenAiToolCatalog } from "./WebOpenAiToolCatalog.js";
 import type { WebSearchClient } from "./WebSearchClient.js";
 
@@ -50,15 +51,7 @@ export class WebOpenAiToolBridge {
       }
       throw new Error(`未知 web 工具: ${toolName}`);
     } catch (error) {
-      return {
-        output: JSON.stringify({
-          ok: false,
-          status: "error",
-          message: error instanceof Error ? error.message : "web tool failed",
-          items: []
-        }),
-        success: false
-      };
+      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "web tool failed");
     }
   }
 

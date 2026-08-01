@@ -12,6 +12,7 @@ import type { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
+import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
 
@@ -140,10 +141,7 @@ export class AgentRuntime {
   ): Promise<OpenAiToolExecutionResult> {
     return this.openAiToolRegistry
       ? this.openAiToolRegistry.executeTool(chatRequest, toolName, toolArgs)
-      : {
-          output: JSON.stringify({ ok: false, status: "error", message: `未知工具: ${toolName}`, items: [] }),
-          success: false
-        };
+      : OpenAiToolResultFactory.error(`未知工具: ${toolName}`);
   }
 
   private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {

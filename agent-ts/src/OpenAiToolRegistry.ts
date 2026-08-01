@@ -4,6 +4,7 @@ import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
+import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import type { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
@@ -50,9 +51,6 @@ export class OpenAiToolRegistry {
     if (this.mcpOpenAiToolBridge) {
       return this.mcpOpenAiToolBridge.executeTool(toolName, toolArgs);
     }
-    return {
-      output: JSON.stringify({ ok: false, status: "error", message: `未知工具: ${toolName}`, items: [] }),
-      success: false
-    };
+    return OpenAiToolResultFactory.error(`未知工具: ${toolName}`);
   }
 }

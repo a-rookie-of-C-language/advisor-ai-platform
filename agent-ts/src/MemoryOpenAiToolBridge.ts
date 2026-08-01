@@ -4,6 +4,7 @@ import type { MemoryApiClient } from "./MemoryApiClient.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import { MemoryOpenAiToolCatalog } from "./MemoryOpenAiToolCatalog.js";
+import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 
 interface MemoryCandidateInput {
   content: string;
@@ -45,15 +46,7 @@ export class MemoryOpenAiToolBridge {
       }
       throw new Error(`未知 memory 工具: ${toolName}`);
     } catch (error) {
-      return {
-        output: JSON.stringify({
-          ok: false,
-          status: "error",
-          message: error instanceof Error ? error.message : "memory tool failed",
-          items: []
-        }),
-        success: false
-      };
+      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "memory tool failed");
     }
   }
 
