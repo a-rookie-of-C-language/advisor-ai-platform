@@ -3,6 +3,7 @@ import path from "node:path";
 import { MAX_FILE_SIZE } from "./WorkspaceLimits.js";
 import { WorkspaceCacheCleaner } from "./WorkspaceCacheCleaner.js";
 import type { WorkspaceCacheCleanupResult } from "./WorkspaceCacheCleanupResult.js";
+import { WorkspaceFileReader } from "./WorkspaceFileReader.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
 import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
@@ -15,6 +16,7 @@ import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 export class WorkspaceManager {
   private readonly fileSystem = new WorkspaceFileSystem();
   private readonly cacheCleaner = new WorkspaceCacheCleaner(this.fileSystem);
+  private readonly fileReader = new WorkspaceFileReader();
   private readonly listingBuilder = new WorkspaceListingBuilder(this.fileSystem);
   private readonly statsCollector = new WorkspaceStatsCollector(this.fileSystem);
   private readonly workingFileCounter = new WorkspaceWorkingFileCounter(this.fileSystem);
@@ -28,16 +30,7 @@ export class WorkspaceManager {
 
   async read(userId: number | null, sessionId: number | null, relativePath: string, offset = 0, limit = 8192): Promise<string> {
     const targetPath = this.pathGuard.validatePath(userId, sessionId, relativePath);
-    const stat = await fs.stat(targetPath);
-    if (!stat.isFile()) {
-      throw new WorkspaceError(`文件不存在: ${relativePath}`);
-    }
-    if (stat.size > MAX_FILE_SIZE) {
-      throw new WorkspaceError(`文件过大（最大 ${MAX_FILE_SIZE} 字节）: ${stat.size}`);
-    }
-
-    const content = await fs.readFile(targetPath, "utf8");
-    return content.slice(offset, offset + Math.min(limit, MAX_FILE_SIZE));
+    return this.fileReader.read(targetPath, relativePath, offset, limit);
   }
 
   async write(
