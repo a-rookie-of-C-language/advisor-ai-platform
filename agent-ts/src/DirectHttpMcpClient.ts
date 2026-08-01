@@ -3,12 +3,14 @@ import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { JsonObjectReader } from "./JsonObjectReader.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
+import { McpToolDescriptorMapper } from "./McpToolDescriptorMapper.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 
 export class DirectHttpMcpClient {
   private initialized = false;
   private readonly jsonObjectReader = new JsonObjectReader();
   private readonly jsonRpcClient: DirectHttpMcpJsonRpcClient;
+  private readonly toolDescriptorMapper = new McpToolDescriptorMapper();
 
   constructor(private readonly config: McpServerConfig) {
     this.jsonRpcClient = new DirectHttpMcpJsonRpcClient(config);
@@ -18,16 +20,7 @@ export class DirectHttpMcpClient {
     await this.ensureInitialized();
     const response = await this.jsonRpcClient.post({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     const result = this.jsonObjectReader.asObject(response.result);
-    const tools = Array.isArray(result.tools) ? result.tools : [];
-    return tools
-      .filter((tool): tool is JsonObject => this.jsonObjectReader.isJsonObject(tool))
-      .map((tool) => ({
-        name: String(tool.name || ""),
-        description: String(tool.description || ""),
-        inputSchema: this.jsonObjectReader.asObject(tool.inputSchema),
-        server: this.config.name
-      }))
-      .filter((tool) => tool.name);
+    return this.toolDescriptorMapper.mapTools(result, this.config.name);
   }
 
   async callTool(name: string, args: JsonObject): Promise<McpCallToolResult> {
