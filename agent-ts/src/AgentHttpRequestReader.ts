@@ -1,17 +1,17 @@
 import type { IncomingMessage } from "node:http";
 import { AgentHttpFieldReader } from "./AgentHttpFieldReader.js";
+import type { AgentWorkspaceScope } from "./AgentWorkspaceScope.js";
+import { AgentWorkspaceScopeReader } from "./AgentWorkspaceScopeReader.js";
 import type { JsonObject } from "./JsonTypes.js";
 import { parseJsonBody } from "./HttpBodyParser.js";
 import { WorkspaceError } from "./WorkspaceError.js";
 
 export class AgentHttpRequestReader {
   private readonly fieldReader = new AgentHttpFieldReader();
+  private readonly workspaceScopeReader = new AgentWorkspaceScopeReader();
 
-  readWorkspaceScope(url: URL): { userId: number | null; sessionId: number | null } {
-    return {
-      userId: this.readNullableInt(url.searchParams.get("userId")),
-      sessionId: this.readNullableInt(url.searchParams.get("sessionId"))
-    };
+  readWorkspaceScope(url: URL): AgentWorkspaceScope {
+    return this.workspaceScopeReader.read(url);
   }
 
   async readJsonObject(request: IncomingMessage): Promise<Record<string, unknown>> {
@@ -41,13 +41,4 @@ export class AgentHttpRequestReader {
   readBooleanQuery(value: string | null, fallback: boolean): boolean {
     return this.fieldReader.readBooleanQuery(value, fallback);
   }
-
-  private readNullableInt(value: string | null): number | null {
-    if (!value) {
-      return null;
-    }
-    const parsed = Number.parseInt(value, 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
 }
