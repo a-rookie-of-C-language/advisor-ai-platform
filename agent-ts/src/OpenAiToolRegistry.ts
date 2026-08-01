@@ -4,23 +4,31 @@ import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import { OpenAiToolCatalogAggregator } from "./OpenAiToolCatalogAggregator.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
+import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
 import type { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
 
 export class OpenAiToolRegistry {
   private readonly toolCatalogAggregator: OpenAiToolCatalogAggregator;
+  private readonly toolExecutorRouter: OpenAiToolExecutorRouter;
 
   constructor(
-    private readonly workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
-    private readonly webOpenAiToolBridge?: WebOpenAiToolBridge,
-    private readonly ragOpenAiToolBridge?: RagOpenAiToolBridge,
-    private readonly memoryOpenAiToolBridge?: MemoryOpenAiToolBridge,
-    private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge
+    workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
+    webOpenAiToolBridge?: WebOpenAiToolBridge,
+    ragOpenAiToolBridge?: RagOpenAiToolBridge,
+    memoryOpenAiToolBridge?: MemoryOpenAiToolBridge,
+    mcpOpenAiToolBridge?: McpOpenAiToolBridge
   ) {
     this.toolCatalogAggregator = new OpenAiToolCatalogAggregator(
+      workspaceOpenAiToolBridge,
+      webOpenAiToolBridge,
+      ragOpenAiToolBridge,
+      memoryOpenAiToolBridge,
+      mcpOpenAiToolBridge
+    );
+    this.toolExecutorRouter = new OpenAiToolExecutorRouter(
       workspaceOpenAiToolBridge,
       webOpenAiToolBridge,
       ragOpenAiToolBridge,
@@ -38,21 +46,6 @@ export class OpenAiToolRegistry {
     toolName: string,
     toolArgs: JsonObject
   ): Promise<OpenAiToolExecutionResult> {
-    if (this.workspaceOpenAiToolBridge?.canExecute(toolName)) {
-      return this.workspaceOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
-    }
-    if (this.webOpenAiToolBridge?.canExecute(toolName)) {
-      return this.webOpenAiToolBridge.executeTool(toolName, toolArgs);
-    }
-    if (this.ragOpenAiToolBridge?.canExecute(toolName)) {
-      return this.ragOpenAiToolBridge.executeTool(chatRequest, toolArgs);
-    }
-    if (this.memoryOpenAiToolBridge?.canExecute(toolName)) {
-      return this.memoryOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
-    }
-    if (this.mcpOpenAiToolBridge) {
-      return this.mcpOpenAiToolBridge.executeTool(toolName, toolArgs);
-    }
-    return OpenAiToolResultFactory.error(`未知工具: ${toolName}`);
+    return this.toolExecutorRouter.executeTool(chatRequest, toolName, toolArgs);
   }
 }
