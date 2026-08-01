@@ -1,56 +1,18 @@
 import type { AgentConfig } from "./AgentConfig.js";
 import type { ChatMessageDTO } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
+import type { OpenAIChatMessage } from "./OpenAIChatMessage.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIChatStreamEvent } from "./OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-
-type OpenAIChatMessage = {
-  role: string;
-  content?: string | null;
-  tool_call_id?: string;
-  tool_calls?: OpenAIToolCall[];
-};
+import { OpenAIStreamParser } from "./OpenAIStreamParser.js";
+import type { OpenAIToolCall } from "./OpenAIToolCall.js";
 
 type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
 
-interface OpenAIStreamChoice {
-  finish_reason?: string | null;
-  delta?: {
-    content?: string;
-    tool_calls?: OpenAIStreamToolCallDelta[];
-  };
-}
-
-interface OpenAIStreamChunk {
-  choices?: OpenAIStreamChoice[];
-}
-
-interface OpenAIStreamToolCallDelta {
-  index?: number;
-  id?: string;
-  type?: "function";
-  function?: {
-    name?: string;
-    arguments?: string;
-  };
-}
-
-interface OpenAIToolCall {
-  id: string;
-  type: "function";
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-interface ParsedStreamLine {
-  text: string;
-  toolCalls: OpenAIStreamToolCallDelta[];
-}
-
 export class OpenAIChatClient {
+  private readonly streamParser = new OpenAIStreamParser();
+
   constructor(private readonly config: AgentConfig) {}
 
   async *streamChat(messages: ChatMessageDTO[]): AsyncGenerator<string> {
@@ -142,46 +104,14 @@ export class OpenAIChatClient {
         const lines = buffer.split(/\r?\n/);
         buffer = lines.pop() || "";
         for (const line of lines) {
-          const parsed = this.parseDataLine(line);
+          const parsed = this.streamParser.parseDataLine(line);
           textParts.push(...(parsed.text ? [parsed.text] : []));
-          this.mergeToolCallDeltas(toolCalls, parsed.toolCalls);
+          this.streamParser.mergeToolCallDeltas(toolCalls, parsed.toolCalls);
         }
       }
       return { textParts, toolCalls: [...toolCalls.entries()].sort(([left], [right]) => left - right).map(([, value]) => value) };
     } finally {
       clearTimeout(timeout);
-    }
-  }
-
-  private parseDataLine(line: string): ParsedStreamLine {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("data:")) {
-      return { text: "", toolCalls: [] };
-    }
-    const data = trimmed.slice(5).trim();
-    if (!data || data === "[DONE]") {
-      return { text: "", toolCalls: [] };
-    }
-    const chunk = JSON.parse(data) as OpenAIStreamChunk;
-    const delta = chunk.choices?.[0]?.delta;
-    return {
-      text: delta?.content || "",
-      toolCalls: delta?.tool_calls || []
-    };
-  }
-
-  private mergeToolCallDeltas(toolCalls: Map<number, OpenAIToolCall>, deltas: OpenAIStreamToolCallDelta[]): void {
-    for (const delta of deltas) {
-      const index = delta.index ?? 0;
-      const current = toolCalls.get(index) || {
-        id: "",
-        type: "function" as const,
-        function: { name: "", arguments: "" }
-      };
-      current.id += delta.id || "";
-      current.function.name += delta.function?.name || "";
-      current.function.arguments += delta.function?.arguments || "";
-      toolCalls.set(index, current);
     }
   }
 
