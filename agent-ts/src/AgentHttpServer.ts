@@ -2,6 +2,7 @@ import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import type { AgentRuntime } from "./AgentRuntime.js";
+import { AgentWorkspaceRouteHandler } from "./AgentWorkspaceRouteHandler.js";
 import type { McpToolService } from "./McpToolService.js";
 import { parseJsonBody } from "./HttpBodyParser.js";
 import { WorkspaceError } from "./WorkspaceError.js";
@@ -9,13 +10,16 @@ import { WorkspaceManager } from "./WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly requestReader = new AgentHttpRequestReader();
+  private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler;
 
   constructor(
     private readonly config: AgentConfig,
     private readonly runtime: AgentRuntime,
     private readonly workspaceManager = new WorkspaceManager(config.workspaceBasePath),
     private readonly mcpToolService?: McpToolService
-  ) {}
+  ) {
+    this.workspaceRouteHandler = new AgentWorkspaceRouteHandler(this.workspaceManager, this.requestReader);
+  }
 
   start(): void {
     const server = http.createServer((request, response) => {
@@ -51,89 +55,9 @@ export class AgentHttpServer {
         return;
       }
 
-      if (request.method === "POST" && url.pathname === "/workspace/cleanup") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        this.writeJson(response, 200, {
-          status: "ok",
-          cleaned: await this.workspaceManager.cleanupCache(scope.userId, scope.sessionId)
-        });
-        return;
-      }
-
-      if (request.method === "GET" && url.pathname === "/workspace/stats") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        this.writeJson(response, 200, {
-          status: "ok",
-          stats: await this.workspaceManager.getStats(scope.userId, scope.sessionId)
-        });
-        return;
-      }
-
-      if (request.method === "POST" && url.pathname === "/workspace/read") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        const body = await this.requestReader.readJsonObject(request);
-        const content = await this.workspaceManager.read(
-          scope.userId,
-          scope.sessionId,
-          this.requestReader.readRequiredString(body, "path"),
-          this.requestReader.readOptionalNumber(body, "offset", 0),
-          this.requestReader.readOptionalNumber(body, "limit", 8192)
-        );
-        this.writeJson(response, 200, { status: "ok", content });
-        return;
-      }
-
-      if (request.method === "POST" && url.pathname === "/workspace/write") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        const body = await this.requestReader.readJsonObject(request);
-        const result = await this.workspaceManager.write(
-          scope.userId,
-          scope.sessionId,
-          this.requestReader.readRequiredString(body, "path"),
-          this.requestReader.readRequiredString(body, "content"),
-          this.requestReader.readOptionalBoolean(body, "is_final", false)
-        );
-        this.writeJson(response, 200, { status: "ok", result });
-        return;
-      }
-
-      if (request.method === "POST" && url.pathname === "/workspace/edit") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        const body = await this.requestReader.readJsonObject(request);
-        const result = await this.workspaceManager.edit(
-          scope.userId,
-          scope.sessionId,
-          this.requestReader.readRequiredString(body, "path"),
-          this.requestReader.readRequiredString(body, "old_string"),
-          this.requestReader.readRequiredString(body, "new_string"),
-          this.requestReader.readOptionalBoolean(body, "is_final", false)
-        );
-        this.writeJson(response, 200, { status: "ok", result });
-        return;
-      }
-
-      if (request.method === "GET" && url.pathname === "/workspace/list") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        const items = await this.workspaceManager.list(
-          scope.userId,
-          scope.sessionId,
-          url.searchParams.get("path") || ".",
-          this.requestReader.readBooleanQuery(url.searchParams.get("recursive"), false)
-        );
-        this.writeJson(response, 200, { status: "ok", items });
-        return;
-      }
-
-      if (request.method === "POST" && url.pathname === "/workspace/create-dir") {
-        const scope = this.requestReader.readWorkspaceScope(url);
-        const body = await this.requestReader.readJsonObject(request);
-        const result = await this.workspaceManager.createDir(
-          scope.userId,
-          scope.sessionId,
-          this.requestReader.readRequiredString(body, "path"),
-          this.requestReader.readOptionalBoolean(body, "is_final", false)
-        );
-        this.writeJson(response, 200, { status: "ok", result });
+      const workspaceResult = await this.workspaceRouteHandler.handle(request.method, url, request);
+      if (workspaceResult) {
+        this.writeJson(response, workspaceResult.statusCode, workspaceResult.body);
         return;
       }
 
