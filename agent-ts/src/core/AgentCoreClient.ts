@@ -1,5 +1,6 @@
 import { AgentCoreExecutableLocator } from "./AgentCoreExecutableLocator.js";
 import { AgentCoreFallbackSerializer } from "./AgentCoreFallbackSerializer.js";
+import { AgentCoreHealthReporter } from "./AgentCoreHealthReporter.js";
 import { AgentCoreProcessRunner } from "./AgentCoreProcessRunner.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { ProtocolEvent } from "../protocol/ProtocolEvent.js";
@@ -7,11 +8,13 @@ import type { ProtocolEvent } from "../protocol/ProtocolEvent.js";
 export class AgentCoreClient {
   private readonly executablePath: string | undefined;
   private readonly fallbackSerializer = new AgentCoreFallbackSerializer();
+  private readonly healthReporter: AgentCoreHealthReporter;
   private readonly processRunner: AgentCoreProcessRunner | undefined;
 
   constructor(explicitPath?: string) {
     this.executablePath = explicitPath || new AgentCoreExecutableLocator().findDefaultExecutable();
     this.processRunner = this.executablePath ? new AgentCoreProcessRunner(this.executablePath) : undefined;
+    this.healthReporter = new AgentCoreHealthReporter(this.processRunner);
   }
 
   async serializeEvent(event: ProtocolEvent): Promise<string> {
@@ -27,16 +30,7 @@ export class AgentCoreClient {
   }
 
   async health(): Promise<JsonObject> {
-    if (!this.executablePath) {
-      return { status: "ok", core: "typescript-fallback" };
-    }
-
-    try {
-      const output = await this.runCore("health", "");
-      return JSON.parse(output) as JsonObject;
-    } catch {
-      return { status: "degraded", core: "typescript-fallback" };
-    }
+    return this.healthReporter.report();
   }
 
   private runCore(command: string, input: string): Promise<string> {
