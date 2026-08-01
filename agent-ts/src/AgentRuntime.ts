@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentConfig } from "./AgentConfig.js";
+import { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentCoreClient } from "./AgentCoreClient.js";
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
@@ -17,17 +18,26 @@ import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
 
 export class AgentRuntime {
+  private readonly contextPipeline: AgentContextPipeline;
+
   constructor(
     private readonly config: AgentConfig,
     private readonly core: AgentCoreClient,
     private readonly openAiClient: OpenAIChatClient,
-    private readonly memoryContextBuilder?: MemoryContextBuilder,
+    memoryContextBuilder?: MemoryContextBuilder,
     private readonly memoryTaskSubmitter?: MemoryTaskSubmitter,
-    private readonly ragContextBuilder?: RagContextBuilder,
-    private readonly webFetchContextBuilder?: WebFetchContextBuilder,
-    private readonly webSearchContextBuilder?: WebSearchContextBuilder,
+    ragContextBuilder?: RagContextBuilder,
+    webFetchContextBuilder?: WebFetchContextBuilder,
+    webSearchContextBuilder?: WebSearchContextBuilder,
     private readonly openAiToolRegistry?: OpenAiToolRegistry
-  ) {}
+  ) {
+    this.contextPipeline = new AgentContextPipeline(
+      memoryContextBuilder,
+      ragContextBuilder,
+      webFetchContextBuilder,
+      webSearchContextBuilder
+    );
+  }
 
   async coreHealth(): Promise<JsonObject> {
     return this.core.health();
@@ -64,7 +74,7 @@ export class AgentRuntime {
 
     await writer.start();
     try {
-      const modelMessages = await this.buildModelMessages(chatRequest);
+      const modelMessages = await this.contextPipeline.build(chatRequest);
       const tools = await this.loadOpenAiTools();
       const toolExecutor = tools.length > 0 ? (toolName: string, toolArgs: JsonObject) => this.executeOpenAiTool(chatRequest, toolName, toolArgs) : undefined;
       let answer = "";
@@ -108,23 +118,6 @@ export class AgentRuntime {
 
   private resolveTurnId(chatRequest: ChatStreamRequest, request: IncomingMessage): string {
     return String(request.headers["x-turn-id"] || chatRequest.turnId || "");
-  }
-
-  private async buildModelMessages(chatRequest: ChatStreamRequest): Promise<ChatStreamRequest["messages"]> {
-    let messages = chatRequest.messages;
-    if (this.memoryContextBuilder) {
-      messages = await this.memoryContextBuilder.injectMemory({ ...chatRequest, messages });
-    }
-    if (this.ragContextBuilder) {
-      messages = await this.ragContextBuilder.injectRag({ ...chatRequest, messages });
-    }
-    if (this.webFetchContextBuilder) {
-      messages = await this.webFetchContextBuilder.injectWebFetch({ ...chatRequest, messages });
-    }
-    if (this.webSearchContextBuilder) {
-      messages = await this.webSearchContextBuilder.injectWebSearch({ ...chatRequest, messages });
-    }
-    return messages;
   }
 
   private async loadOpenAiTools(): Promise<OpenAIChatTool[]> {
