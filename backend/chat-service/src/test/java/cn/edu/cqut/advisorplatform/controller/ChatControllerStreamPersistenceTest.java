@@ -41,6 +41,7 @@ class ChatControllerStreamPersistenceTest {
   void streamChat_shouldPersistAssistantOnSuccess() throws Exception {
     ChatStreamRequestDTO request = buildRequest();
     UserPrincipal user = buildUser();
+    when(chatService.getSessionKbId(1001L, user)).thenReturn(2002L);
     when(agentProxyService.proxyChatStream(
             any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class)))
         .thenReturn(new ChatStreamProxyResult("\u4f60\u597d\uff0c\u6d4b\u8bd5\u56de\u590d", null));
@@ -57,6 +58,7 @@ class ChatControllerStreamPersistenceTest {
         ArgumentCaptor.forClass(ChatStreamRequestDTO.class);
     verify(agentProxyService)
         .proxyChatStream(reqCaptor.capture(), anyLong(), any(OutputStream.class));
+    assertThat(reqCaptor.getValue().getKbId()).isEqualTo(2002L);
 
     ArgumentCaptor<String> assistantCaptor = ArgumentCaptor.forClass(String.class);
     verify(chatMessageService)
@@ -69,6 +71,7 @@ class ChatControllerStreamPersistenceTest {
   void streamChat_shouldPersistErrorPlaceholderOnFailure() throws Exception {
     ChatStreamRequestDTO request = buildRequest();
     UserPrincipal user = buildUser();
+    when(chatService.getSessionKbId(1001L, user)).thenReturn(2002L);
     doThrow(new RuntimeException("agent boom"))
         .when(agentProxyService)
         .proxyChatStream(any(ChatStreamRequestDTO.class), anyLong(), any(OutputStream.class));

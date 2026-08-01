@@ -15,6 +15,7 @@ export interface ChatStreamRequest {
   messages: ChatMessageDTO[];
   userId?: number | null;
   sessionId?: number | null;
+  kbId?: number | null;
   turnId?: string | null;
   traceId?: string | null;
   attachments?: AttachmentDTO[] | null;

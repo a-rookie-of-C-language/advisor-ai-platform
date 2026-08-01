@@ -5,7 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.service.RagService;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,5 +38,23 @@ class RagInternalControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(200))
         .andExpect(jsonPath("$.data.exists").value(true));
+  }
+
+  @Test
+  void listDocuments_shouldReturnInternalDocuments() throws Exception {
+    RagDocumentResponseDTO doc = new RagDocumentResponseDTO();
+    doc.setId(10L);
+    doc.setFileName("policy.pdf");
+    doc.setFileType("pdf");
+    doc.setFileSize(100L);
+    doc.setStatus("READY");
+    when(ragService.listDocuments(100L, null)).thenReturn(List.of(doc));
+
+    mockMvc
+        .perform(get("/internal/rag/knowledge-bases/100/documents"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value(200))
+        .andExpect(jsonPath("$.data[0].id").value(10))
+        .andExpect(jsonPath("$.data[0].fileName").value("policy.pdf"));
   }
 }

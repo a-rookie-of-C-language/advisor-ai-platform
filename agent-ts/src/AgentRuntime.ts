@@ -6,6 +6,7 @@ import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
+import type { RagContextBuilder } from "./RagContextBuilder.js";
 import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
 
@@ -15,7 +16,8 @@ export class AgentRuntime {
     private readonly core: AgentCoreClient,
     private readonly openAiClient: OpenAIChatClient,
     private readonly memoryContextBuilder?: MemoryContextBuilder,
-    private readonly memoryTaskSubmitter?: MemoryTaskSubmitter
+    private readonly memoryTaskSubmitter?: MemoryTaskSubmitter,
+    private readonly ragContextBuilder?: RagContextBuilder
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -26,7 +28,7 @@ export class AgentRuntime {
     return {
       compiled: true,
       checkpoint: "typescript-runtime",
-      nodes: ["validate_request", "load_memory", "generate", "finalize"],
+      nodes: ["validate_request", "load_memory", "load_rag", "generate", "finalize"],
       runtime: "typescript",
       core: "rust"
     };
@@ -70,10 +72,14 @@ export class AgentRuntime {
   }
 
   private async buildModelMessages(chatRequest: ChatStreamRequest): Promise<ChatStreamRequest["messages"]> {
-    if (!this.memoryContextBuilder) {
-      return chatRequest.messages;
+    let messages = chatRequest.messages;
+    if (this.memoryContextBuilder) {
+      messages = await this.memoryContextBuilder.injectMemory({ ...chatRequest, messages });
     }
-    return this.memoryContextBuilder.injectMemory(chatRequest);
+    if (this.ragContextBuilder) {
+      messages = await this.ragContextBuilder.injectRag({ ...chatRequest, messages });
+    }
+    return messages;
   }
 
   private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {

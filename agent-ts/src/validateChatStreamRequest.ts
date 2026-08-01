@@ -26,6 +26,7 @@ export function validateChatStreamRequest(body: unknown): ChatStreamRequest {
     messages: validMessages,
     userId: readOptionalNumber(body.userId),
     sessionId: readOptionalNumber(body.sessionId),
+    kbId: readOptionalNumber(body.kbId),
     turnId: readOptionalString(body.turnId),
     traceId: readOptionalString(body.traceId),
     attachments: Array.isArray(body.attachments) ? body.attachments : null

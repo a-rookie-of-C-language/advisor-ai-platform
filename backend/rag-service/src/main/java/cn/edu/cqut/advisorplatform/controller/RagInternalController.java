@@ -1,7 +1,9 @@
 package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.service.RagService;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,5 +21,10 @@ public class RagInternalController {
   @GetMapping("/knowledge-bases/{id}/exists")
   public ApiResponseDTO<Map<String, Boolean>> existsKnowledgeBase(@PathVariable("id") Long id) {
     return ApiResponseDTO.success(Map.of("exists", ragService.existsKnowledgeBase(id)));
+  }
+
+  @GetMapping("/knowledge-bases/{id}/documents")
+  public ApiResponseDTO<List<RagDocumentResponseDTO>> listDocuments(@PathVariable("id") Long id) {
+    return ApiResponseDTO.success(ragService.listDocuments(id, null));
   }
 }

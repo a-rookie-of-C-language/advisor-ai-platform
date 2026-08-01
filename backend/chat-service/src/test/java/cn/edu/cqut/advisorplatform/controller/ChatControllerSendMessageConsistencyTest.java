@@ -65,6 +65,7 @@ class ChatControllerSendMessageConsistencyTest {
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
     when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString()))
         .thenReturn(Optional.empty());
+    when(chatService.getSessionKbId(1001L, user)).thenReturn(2002L);
     when(agentProxyService.proxyChatOnce(any(ChatStreamRequestDTO.class), eq(1L)))
         .thenReturn(new ChatStreamProxyResult("assistant reply"));
 
@@ -77,6 +78,7 @@ class ChatControllerSendMessageConsistencyTest {
     ArgumentCaptor<ChatStreamRequestDTO> requestCaptor =
         ArgumentCaptor.forClass(ChatStreamRequestDTO.class);
     verify(agentProxyService).proxyChatOnce(requestCaptor.capture(), eq(1L));
+    assertThat(requestCaptor.getValue().getKbId()).isEqualTo(2002L);
 
     ArgumentCaptor<String> userContent = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> assistantContent = ArgumentCaptor.forClass(String.class);
@@ -95,6 +97,7 @@ class ChatControllerSendMessageConsistencyTest {
         .thenReturn(List.of(Map.of("role", "user", "content", "history")));
     when(chatMessageService.findAssistantContent(eq(1001L), eq(1L), anyString()))
         .thenReturn(Optional.empty());
+    when(chatService.getSessionKbId(1001L, user)).thenReturn(2002L);
     when(agentProxyService.proxyChatOnce(any(ChatStreamRequestDTO.class), eq(1L)))
         .thenThrow(new RuntimeException("agent boom"));
 

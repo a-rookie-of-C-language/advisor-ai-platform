@@ -12,4 +12,6 @@ public class ChatStreamRequestDTO {
   @Valid @NotEmpty private List<ChatStreamMessageDTO> messages;
 
   @NotNull private Long sessionId;
+
+  private Long kbId = 0L;
 }

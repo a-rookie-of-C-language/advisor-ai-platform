@@ -24,6 +24,7 @@ class AgentPayloadBuilder {
     payload.put("messages", messages);
     payload.put("userId", userId);
     payload.put("sessionId", request.getSessionId());
+    payload.put("kbId", request.getKbId() == null ? 0L : request.getKbId());
     payload.put("turnId", LogTraceUtil.get(LogTraceUtil.TURN_ID));
     payload.put("traceId", LogTraceUtil.get(LogTraceUtil.TRACE_ID));
     return objectMapper.writeValueAsString(payload);

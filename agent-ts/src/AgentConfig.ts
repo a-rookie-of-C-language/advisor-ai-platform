@@ -12,6 +12,8 @@ export class AgentConfig {
   readonly memoryApiBaseUrl: string;
   readonly memoryApiToken: string;
   readonly memoryTopK: number;
+  readonly ragApiBaseUrl: string;
+  readonly ragApiToken: string;
 
   private constructor() {
     this.host = process.env.AGENT_API_HOST?.trim() || "127.0.0.1";
@@ -27,6 +29,8 @@ export class AgentConfig {
     this.memoryApiBaseUrl = (process.env.MEMORY_API_BASE_URL?.trim() || "").replace(/\/+$/, "");
     this.memoryApiToken = process.env.MEMORY_API_TOKEN?.trim() || "";
     this.memoryTopK = Number.parseInt(process.env.MEMORY_TOP_K || "6", 10);
+    this.ragApiBaseUrl = (process.env.RAG_API_BASE_URL?.trim() || "").replace(/\/+$/, "");
+    this.ragApiToken = process.env.RAG_API_TOKEN?.trim() || "";
   }
 
   static fromEnv(): AgentConfig {

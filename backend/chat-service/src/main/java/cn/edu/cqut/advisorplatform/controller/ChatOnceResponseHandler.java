@@ -69,6 +69,7 @@ class ChatOnceResponseHandler {
         return support.buildAssistantResponse(assistantText, List.of(), List.of());
       }
 
+      request.setKbId(chatService.getSessionKbId(sessionId, currentUser));
       ChatOnceProxyResult proxyResult =
           proxyOnce(agentProxyService, request, userId, assistantErrorPlaceholder);
       String assistantText = proxyResult.assistantText();

@@ -262,6 +262,8 @@ services:
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       MEMORY_API_BASE_URL: http://memory-service:8084
       MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      RAG_API_BASE_URL: http://rag-service:8083
+      RAG_API_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://www.codexapis.com/v1}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
@@ -277,6 +279,8 @@ services:
       postgres:
         condition: service_healthy
       memory-service:
+        condition: service_started
+      rag-service:
         condition: service_started
     ports:
       - "8001:8001"

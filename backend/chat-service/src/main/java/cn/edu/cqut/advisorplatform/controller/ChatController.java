@@ -88,6 +88,7 @@ public class ChatController {
       @Valid @RequestBody ChatStreamRequestDTO request,
       @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     requireLogin(currentUser);
+    request.setKbId(chatService.getSessionKbId(request.getSessionId(), currentUser));
 
     String userText = extractLastUserMessage(request);
     String turnId = buildTurnId(request, currentUser.getId());
