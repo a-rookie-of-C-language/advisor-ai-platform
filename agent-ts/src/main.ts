@@ -10,6 +10,7 @@ import { McpConfigParser } from "./McpConfigParser.js";
 import { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import { McpToolService } from "./McpToolService.js";
 import { OpenAIChatClient } from "./OpenAIChatClient.js";
+import { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
 import { RagApiClient } from "./RagApiClient.js";
 import { RagContextBuilder } from "./RagContextBuilder.js";
 import { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
@@ -41,6 +42,13 @@ const mcpOpenAiToolBridge = mcpToolService ? new McpOpenAiToolBridge(mcpToolServ
 const workspaceManager = new WorkspaceManager(config.workspaceBasePath);
 const workspaceOpenAiToolBridge = new WorkspaceOpenAiToolBridge(workspaceManager);
 const webOpenAiToolBridge = new WebOpenAiToolBridge(webFetchClient, webSearchClient);
+const openAiToolRegistry = new OpenAiToolRegistry(
+  workspaceOpenAiToolBridge,
+  webOpenAiToolBridge,
+  ragOpenAiToolBridge,
+  memoryOpenAiToolBridge,
+  mcpOpenAiToolBridge
+);
 const runtime = new AgentRuntime(
   config,
   core,
@@ -50,11 +58,7 @@ const runtime = new AgentRuntime(
   ragContextBuilder,
   webFetchContextBuilder,
   webSearchContextBuilder,
-  mcpOpenAiToolBridge,
-  workspaceOpenAiToolBridge,
-  webOpenAiToolBridge,
-  ragOpenAiToolBridge,
-  memoryOpenAiToolBridge
+  openAiToolRegistry
 );
 const server = new AgentHttpServer(config, runtime, workspaceManager, mcpToolService);
 

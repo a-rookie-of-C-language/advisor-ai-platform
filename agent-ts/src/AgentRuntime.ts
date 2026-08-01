@@ -4,17 +4,13 @@ import type { AgentCoreClient } from "./AgentCoreClient.js";
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
-import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
 import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
-import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
+import type { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
-import type { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
-import type { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
-import type { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
 import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
 
@@ -28,11 +24,7 @@ export class AgentRuntime {
     private readonly ragContextBuilder?: RagContextBuilder,
     private readonly webFetchContextBuilder?: WebFetchContextBuilder,
     private readonly webSearchContextBuilder?: WebSearchContextBuilder,
-    private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge,
-    private readonly workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
-    private readonly webOpenAiToolBridge?: WebOpenAiToolBridge,
-    private readonly ragOpenAiToolBridge?: RagOpenAiToolBridge,
-    private readonly memoryOpenAiToolBridge?: MemoryOpenAiToolBridge
+    private readonly openAiToolRegistry?: OpenAiToolRegistry
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -134,19 +126,10 @@ export class AgentRuntime {
   }
 
   private async loadOpenAiTools(): Promise<OpenAIChatTool[]> {
-    if (!this.config.openAiApiKey) {
+    if (!this.config.openAiApiKey || !this.openAiToolRegistry) {
       return [];
     }
-    const tools = this.workspaceOpenAiToolBridge?.listTools() || [];
-    tools.push(...(this.webOpenAiToolBridge?.listTools() || []));
-    tools.push(...(this.ragOpenAiToolBridge?.listTools() || []));
-    tools.push(...(this.memoryOpenAiToolBridge?.listTools() || []));
-    try {
-      tools.push(...(this.mcpOpenAiToolBridge ? await this.mcpOpenAiToolBridge.listTools() : []));
-    } catch {
-      return tools;
-    }
-    return tools;
+    return this.openAiToolRegistry.listTools();
   }
 
   private async executeOpenAiTool(
@@ -154,25 +137,12 @@ export class AgentRuntime {
     toolName: string,
     toolArgs: JsonObject
   ): Promise<{ output: string; success: boolean }> {
-    if (this.workspaceOpenAiToolBridge?.canExecute(toolName)) {
-      return this.workspaceOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
-    }
-    if (this.webOpenAiToolBridge?.canExecute(toolName)) {
-      return this.webOpenAiToolBridge.executeTool(toolName, toolArgs);
-    }
-    if (this.ragOpenAiToolBridge?.canExecute(toolName)) {
-      return this.ragOpenAiToolBridge.executeTool(chatRequest, toolArgs);
-    }
-    if (this.memoryOpenAiToolBridge?.canExecute(toolName)) {
-      return this.memoryOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
-    }
-    if (this.mcpOpenAiToolBridge) {
-      return this.mcpOpenAiToolBridge.executeTool(toolName, toolArgs);
-    }
-    return {
-      output: JSON.stringify({ ok: false, status: "error", message: `未知工具: ${toolName}`, items: [] }),
-      success: false
-    };
+    return this.openAiToolRegistry
+      ? this.openAiToolRegistry.executeTool(chatRequest, toolName, toolArgs)
+      : {
+          output: JSON.stringify({ ok: false, status: "error", message: `未知工具: ${toolName}`, items: [] }),
+          success: false
+        };
   }
 
   private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {
