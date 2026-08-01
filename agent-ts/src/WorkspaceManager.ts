@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { CACHE_DIR, FINAL_DIR, MAX_FILE_SIZE } from "./WorkspaceLimits.js";
+import { WorkspaceCacheCleaner } from "./WorkspaceCacheCleaner.js";
+import type { WorkspaceCacheCleanupResult } from "./WorkspaceCacheCleanupResult.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
 import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
@@ -11,6 +13,7 @@ import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
 
 export class WorkspaceManager {
   private readonly fileSystem = new WorkspaceFileSystem();
+  private readonly cacheCleaner = new WorkspaceCacheCleaner(this.fileSystem);
   private readonly listingBuilder = new WorkspaceListingBuilder(this.fileSystem);
   private readonly statsCollector = new WorkspaceStatsCollector(this.fileSystem);
   private readonly pathGuard: WorkspacePathGuard;
@@ -100,25 +103,9 @@ export class WorkspaceManager {
     return { path: path.relative(sessionPath, targetPath), created: true };
   }
 
-  async cleanupCache(userId: number | null, sessionId: number | null): Promise<{ cleaned_files: number; cleaned_size: number }> {
+  async cleanupCache(userId: number | null, sessionId: number | null): Promise<WorkspaceCacheCleanupResult> {
     const sessionPath = this.pathGuard.getSessionPath(userId, sessionId);
-    const cachePath = path.join(sessionPath, CACHE_DIR);
-    const stats = { cleaned_files: 0, cleaned_size: 0 };
-    if (!(await this.fileSystem.exists(cachePath))) {
-      return stats;
-    }
-
-    for (const filePath of await this.fileSystem.walk(cachePath)) {
-      const stat = await fs.stat(filePath);
-      if (!stat.isFile()) {
-        continue;
-      }
-      stats.cleaned_files += 1;
-      stats.cleaned_size += stat.size;
-      await fs.unlink(filePath);
-    }
-    await fs.rm(cachePath, { recursive: true, force: true });
-    return stats;
+    return this.cacheCleaner.clean(sessionPath);
   }
 
   async getStats(userId: number | null, sessionId: number | null): Promise<WorkspaceStats> {
