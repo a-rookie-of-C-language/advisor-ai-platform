@@ -1,3 +1,5 @@
+import { BooleanStringReader } from "../common/BooleanStringReader.js";
+
 export class AgentEnvReader {
   readString(name: string, fallback: string): string {
     return process.env[name]?.trim() || fallback;
@@ -24,7 +26,7 @@ export class AgentEnvReader {
     if (!raw) {
       return defaultValue;
     }
-    return ["1", "true", "yes", "on"].includes(raw);
+    return BooleanStringReader.readTruthy(raw, ["1", "true", "yes", "on"]);
   }
 
   readOpenAiTimeoutMs(): number {

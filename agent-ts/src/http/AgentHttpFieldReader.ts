@@ -1,5 +1,6 @@
 import type { JsonObject } from "../common/JsonTypes.js";
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
+import { BooleanStringReader } from "../common/BooleanStringReader.js";
 import { WorkspaceError } from "../workspace/WorkspaceError.js";
 
 export class AgentHttpFieldReader {
@@ -52,7 +53,7 @@ export class AgentHttpFieldReader {
     if (!value) {
       return fallback;
     }
-    return ["1", "true", "yes", "y"].includes(value.toLowerCase());
+    return BooleanStringReader.readTruthy(value, ["1", "true", "yes", "y"]);
   }
 
   private readAliasedValue(body: Record<string, unknown>, snakeKey: string): unknown {

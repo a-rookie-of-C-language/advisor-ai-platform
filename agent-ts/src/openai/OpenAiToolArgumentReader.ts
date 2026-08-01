@@ -1,4 +1,5 @@
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
+import { BooleanStringReader } from "../common/BooleanStringReader.js";
 import type { JsonObject, JsonValue } from "../common/JsonTypes.js";
 
 export class OpenAiToolArgumentReader {
@@ -41,7 +42,7 @@ export class OpenAiToolArgumentReader {
       return value;
     }
     if (typeof value === "string" && value) {
-      return ["1", "true", "yes", "y"].includes(value.toLowerCase());
+      return BooleanStringReader.readTruthy(value, ["1", "true", "yes", "y"]);
     }
     return fallback;
   }
