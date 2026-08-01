@@ -1,7 +1,8 @@
-import { BooleanStringReader } from "../common/BooleanStringReader.js";
+import { AgentBooleanEnvReader } from "./AgentBooleanEnvReader.js";
 import { OpenAiTimeoutEnvReader } from "./OpenAiTimeoutEnvReader.js";
 
 export class AgentEnvReader {
+  private readonly booleanEnvReader = new AgentBooleanEnvReader();
   private readonly openAiTimeoutEnvReader = new OpenAiTimeoutEnvReader();
 
   readString(name: string, fallback: string): string {
@@ -25,11 +26,7 @@ export class AgentEnvReader {
   }
 
   readBool(name: string, defaultValue: boolean): boolean {
-    const raw = process.env[name]?.trim().toLowerCase();
-    if (!raw) {
-      return defaultValue;
-    }
-    return BooleanStringReader.readTruthy(raw, ["1", "true", "yes", "on"]);
+    return this.booleanEnvReader.read(name, defaultValue);
   }
 
   readOpenAiTimeoutMs(): number {
