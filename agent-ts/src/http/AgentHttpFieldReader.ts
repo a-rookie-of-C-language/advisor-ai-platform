@@ -1,11 +1,13 @@
 import type { JsonObject } from "../common/JsonTypes.js";
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import { AgentHttpBooleanFieldReader } from "./AgentHttpBooleanFieldReader.js";
+import { AgentHttpJsonObjectFieldReader } from "./AgentHttpJsonObjectFieldReader.js";
 import { AgentHttpNumberFieldReader } from "./AgentHttpNumberFieldReader.js";
 import { WorkspaceError } from "../workspace/WorkspaceError.js";
 
 export class AgentHttpFieldReader {
   private readonly booleanFieldReader = new AgentHttpBooleanFieldReader();
+  private readonly jsonObjectFieldReader = new AgentHttpJsonObjectFieldReader();
   private readonly numberFieldReader = new AgentHttpNumberFieldReader();
 
   readRequiredString(body: Record<string, unknown>, key: string): string {
@@ -28,13 +30,7 @@ export class AgentHttpFieldReader {
 
   readOptionalJsonObject(body: Record<string, unknown>, key: string): JsonObject {
     const value = this.readAliasedValue(body, key);
-    if (value === undefined || value === null) {
-      return {};
-    }
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw new WorkspaceError(`字段必须是 JSON 对象: ${key}`);
-    }
-    return value as JsonObject;
+    return this.jsonObjectFieldReader.read(value, key);
   }
 
   readBooleanQuery(value: string | null, fallback: boolean): boolean {
