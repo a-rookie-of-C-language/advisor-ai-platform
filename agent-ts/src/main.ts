@@ -6,6 +6,7 @@ import { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
 import { McpConfigParser } from "./McpConfigParser.js";
+import { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import { McpToolService } from "./McpToolService.js";
 import { OpenAIChatClient } from "./OpenAIChatClient.js";
 import { RagApiClient } from "./RagApiClient.js";
@@ -29,6 +30,7 @@ const webSearchClient = config.webSearchEnabled && config.webSearchApiKey ? new 
 const webSearchContextBuilder = webSearchClient ? new WebSearchContextBuilder(webSearchClient) : undefined;
 const mcpConfigs = config.mcpToolsEnabled ? new McpConfigParser().parseServerConfigs(config.mcpServers) : [];
 const mcpToolService = mcpConfigs.length > 0 ? new McpToolService(mcpConfigs) : undefined;
+const mcpOpenAiToolBridge = mcpToolService ? new McpOpenAiToolBridge(mcpToolService) : undefined;
 const runtime = new AgentRuntime(
   config,
   core,
@@ -37,7 +39,8 @@ const runtime = new AgentRuntime(
   memoryTaskSubmitter,
   ragContextBuilder,
   webFetchContextBuilder,
-  webSearchContextBuilder
+  webSearchContextBuilder,
+  mcpOpenAiToolBridge
 );
 const server = new AgentHttpServer(config, runtime, undefined, mcpToolService);
 

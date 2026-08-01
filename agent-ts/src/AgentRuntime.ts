@@ -5,7 +5,9 @@ import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { MemoryContextBuilder } from "./MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "./MemoryTaskSubmitter.js";
+import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
 import type { OpenAIChatClient } from "./OpenAIChatClient.js";
+import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
@@ -21,7 +23,8 @@ export class AgentRuntime {
     private readonly memoryTaskSubmitter?: MemoryTaskSubmitter,
     private readonly ragContextBuilder?: RagContextBuilder,
     private readonly webFetchContextBuilder?: WebFetchContextBuilder,
-    private readonly webSearchContextBuilder?: WebSearchContextBuilder
+    private readonly webSearchContextBuilder?: WebSearchContextBuilder,
+    private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -32,7 +35,16 @@ export class AgentRuntime {
     return {
       compiled: true,
       checkpoint: "typescript-runtime",
-      nodes: ["validate_request", "load_memory", "load_rag", "load_web_fetch", "load_web_search", "generate", "finalize"],
+      nodes: [
+        "validate_request",
+        "load_memory",
+        "load_rag",
+        "load_web_fetch",
+        "load_web_search",
+        "load_mcp_tools",
+        "generate",
+        "finalize"
+      ],
       runtime: "typescript",
       core: "rust"
     };
@@ -47,12 +59,32 @@ export class AgentRuntime {
     await writer.start();
     try {
       const modelMessages = await this.buildModelMessages(chatRequest);
+      const tools = await this.loadOpenAiTools();
+      const mcpOpenAiToolBridge = this.mcpOpenAiToolBridge;
+      const toolExecutor = mcpOpenAiToolBridge
+        ? (toolName: string, toolArgs: JsonObject) => mcpOpenAiToolBridge.executeTool(toolName, toolArgs)
+        : undefined;
       let answer = "";
       let emitted = false;
-      for await (const text of this.openAiClient.streamChat(modelMessages)) {
-        emitted = true;
-        answer += text;
-        await writer.write("llm_delta", "llm", { text });
+      for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
+        if (event.type === "delta") {
+          emitted = true;
+          answer += event.text;
+          await writer.write("llm_delta", "llm", { text: event.text });
+        } else if (event.type === "tool_call") {
+          await writer.write("tool_call", "tool", {
+            tool_call_id: event.toolCallId,
+            tool_name: event.toolName,
+            tool_args: event.toolArgs
+          });
+        } else {
+          await writer.write("tool_result", "tool", {
+            tool_call_id: event.toolCallId,
+            tool_name: event.toolName,
+            tool_output: event.toolOutput,
+            success: event.success
+          });
+        }
       }
 
       if (!emitted && !this.config.openAiApiKey) {
@@ -90,6 +122,17 @@ export class AgentRuntime {
       messages = await this.webSearchContextBuilder.injectWebSearch({ ...chatRequest, messages });
     }
     return messages;
+  }
+
+  private async loadOpenAiTools(): Promise<OpenAIChatTool[]> {
+    if (!this.mcpOpenAiToolBridge || !this.config.openAiApiKey) {
+      return [];
+    }
+    try {
+      return await this.mcpOpenAiToolBridge.listTools();
+    } catch {
+      return [];
+    }
   }
 
   private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {
