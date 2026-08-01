@@ -1,6 +1,8 @@
 import { ChatMessageListValidator } from "./ChatMessageListValidator.js";
+import { ChatStreamRequestFieldReader } from "./ChatStreamRequestFieldReader.js";
 import type { ChatStreamRequest } from "./ChatStreamRequest.js";
 
+const fieldReader = new ChatStreamRequestFieldReader();
 const messageListValidator = new ChatMessageListValidator();
 
 export function validateChatStreamRequest(body: unknown): ChatStreamRequest {
@@ -10,23 +12,15 @@ export function validateChatStreamRequest(body: unknown): ChatStreamRequest {
 
   return {
     messages: messageListValidator.validate(body.messages),
-    userId: readOptionalNumber(body.userId),
-    sessionId: readOptionalNumber(body.sessionId),
-    kbId: readOptionalNumber(body.kbId),
-    turnId: readOptionalString(body.turnId),
-    traceId: readOptionalString(body.traceId),
-    attachments: Array.isArray(body.attachments) ? body.attachments : null
+    userId: fieldReader.readOptionalNumber(body.userId),
+    sessionId: fieldReader.readOptionalNumber(body.sessionId),
+    kbId: fieldReader.readOptionalNumber(body.kbId),
+    turnId: fieldReader.readOptionalString(body.turnId),
+    traceId: fieldReader.readOptionalString(body.traceId),
+    attachments: fieldReader.readOptionalAttachments(body.attachments)
   };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function readOptionalNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function readOptionalString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
