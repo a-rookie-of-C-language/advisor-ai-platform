@@ -6,8 +6,8 @@ import type { AgentRagComponents } from "./AgentRagComponents.js";
 import { AgentRuntime } from "./AgentRuntime.js";
 import type { AgentWebComponents } from "./AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "./AgentWorkspaceComponents.js";
-import { OpenAIChatClient } from "./OpenAIChatClient.js";
-import { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
+import { OpenAIChatClient } from "./openai/OpenAIChatClient.js";
+import { OpenAiToolRegistry } from "./openai/OpenAiToolRegistry.js";
 
 export class AgentRuntimeFactory {
   create(

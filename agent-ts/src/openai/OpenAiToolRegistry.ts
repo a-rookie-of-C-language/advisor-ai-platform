@@ -1,14 +1,14 @@
-import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
-import type { JsonObject } from "./common/JsonTypes.js";
-import type { MemoryOpenAiToolBridge } from "./MemoryOpenAiToolBridge.js";
-import type { McpOpenAiToolBridge } from "./McpOpenAiToolBridge.js";
+import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
+import type { JsonObject } from "../common/JsonTypes.js";
+import type { MemoryOpenAiToolBridge } from "../MemoryOpenAiToolBridge.js";
+import type { McpOpenAiToolBridge } from "../McpOpenAiToolBridge.js";
 import { OpenAiToolCatalogAggregator } from "./OpenAiToolCatalogAggregator.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import type { RagOpenAiToolBridge } from "./RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "./WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
+import type { RagOpenAiToolBridge } from "../RagOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../WebOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../WorkspaceOpenAiToolBridge.js";
 
 export class OpenAiToolRegistry {
   private readonly toolCatalogAggregator: OpenAiToolCatalogAggregator;

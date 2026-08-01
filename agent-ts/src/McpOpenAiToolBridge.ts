@@ -2,9 +2,9 @@ import type { JsonObject } from "./common/JsonTypes.js";
 import { McpOpenAiToolCatalog } from "./McpOpenAiToolCatalog.js";
 import { McpOpenAiToolResultFormatter } from "./McpOpenAiToolResultFormatter.js";
 import type { McpToolService } from "./McpToolService.js";
-import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
+import type { OpenAiToolExecutionResult } from "./openai/OpenAiToolExecutionResult.js";
+import type { OpenAIChatTool } from "./openai/OpenAIChatTool.js";
+import { OpenAiToolResultFactory } from "./openai/OpenAiToolResultFactory.js";
 
 export class McpOpenAiToolBridge {
   private readonly catalog = new McpOpenAiToolCatalog();

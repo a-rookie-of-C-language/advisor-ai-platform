@@ -1,9 +1,9 @@
 import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
 import type { JsonObject } from "./common/JsonTypes.js";
-import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "./OpenAIChatTool.js";
+import type { OpenAiToolExecutionResult } from "./openai/OpenAiToolExecutionResult.js";
+import type { OpenAIChatTool } from "./openai/OpenAIChatTool.js";
 import type { RagApiClient } from "./RagApiClient.js";
-import { OpenAiToolResultFactory } from "./OpenAiToolResultFactory.js";
+import { OpenAiToolResultFactory } from "./openai/OpenAiToolResultFactory.js";
 import { RagOpenAiToolCatalog } from "./RagOpenAiToolCatalog.js";
 import { RagOpenAiToolExecutor } from "./RagOpenAiToolExecutor.js";
 

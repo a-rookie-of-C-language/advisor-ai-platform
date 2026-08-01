@@ -1,7 +1,7 @@
 import type { ChatStreamRequest } from "./common/ChatStreamRequest.js";
 import type { JsonObject } from "./common/JsonTypes.js";
 import type { MemoryReadRequest } from "./MemoryReadRequest.js";
-import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
+import { OpenAiToolArgumentReader } from "./openai/OpenAiToolArgumentReader.js";
 
 export class MemoryReadRequestReader {
   constructor(private readonly defaultTopK: number) {}
