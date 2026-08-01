@@ -1,6 +1,6 @@
 import { AliasedValueReader } from "../common/AliasedValueReader.js";
-import { BooleanStringReader } from "../common/BooleanStringReader.js";
 import type { JsonObject, JsonValue } from "../common/JsonTypes.js";
+import { OpenAiToolBooleanArgumentReader } from "./OpenAiToolBooleanArgumentReader.js";
 import { OpenAiToolNumberArgumentReader } from "./OpenAiToolNumberArgumentReader.js";
 import { OpenAiToolStringArgumentReader } from "./OpenAiToolStringArgumentReader.js";
 
@@ -30,13 +30,7 @@ export class OpenAiToolArgumentReader {
 
   static readOptionalBoolean(args: JsonObject, key: string, fallback: boolean | null): boolean | null {
     const value = this.readAliasedValue(args, key);
-    if (typeof value === "boolean") {
-      return value;
-    }
-    if (typeof value === "string" && value) {
-      return BooleanStringReader.readTruthy(value, ["1", "true", "yes", "y"]);
-    }
-    return fallback;
+    return OpenAiToolBooleanArgumentReader.readOptional(value, fallback);
   }
 
   static readOptionalJsonObject(args: JsonObject, key: string): JsonObject | null {
