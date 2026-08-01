@@ -4,10 +4,12 @@ import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 import { McpSupportedConfigSelector } from "./McpSupportedConfigSelector.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
+import { McpToolDescriptorSorter } from "./McpToolDescriptorSorter.js";
 
 export class McpToolService {
   private readonly clients = new Map<string, DirectHttpMcpClient>();
   private readonly supportedConfigSelector = new McpSupportedConfigSelector();
+  private readonly toolDescriptorSorter = new McpToolDescriptorSorter();
 
   constructor(private readonly configs: McpServerConfig[]) {}
 
@@ -16,7 +18,7 @@ export class McpToolService {
     for (const config of this.supportedConfigs()) {
       tools.push(...(await this.clientFor(config).listTools()));
     }
-    return tools.sort((left, right) => `${left.server}:${left.name}`.localeCompare(`${right.server}:${right.name}`));
+    return this.toolDescriptorSorter.sort(tools);
   }
 
   async callTool(server: string, name: string, args: JsonObject): Promise<McpCallToolResult> {
