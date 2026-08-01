@@ -11,6 +11,7 @@ import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagContextBuilder } from "./RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
+import type { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
 import { SseWriter } from "./SseWriter.js";
 import { validateChatStreamRequest } from "./validateChatStreamRequest.js";
 
@@ -24,7 +25,8 @@ export class AgentRuntime {
     private readonly ragContextBuilder?: RagContextBuilder,
     private readonly webFetchContextBuilder?: WebFetchContextBuilder,
     private readonly webSearchContextBuilder?: WebSearchContextBuilder,
-    private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge
+    private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge,
+    private readonly workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge
   ) {}
 
   async coreHealth(): Promise<JsonObject> {
@@ -42,6 +44,7 @@ export class AgentRuntime {
         "load_web_fetch",
         "load_web_search",
         "load_mcp_tools",
+        "load_workspace_tools",
         "generate",
         "finalize"
       ],
@@ -61,8 +64,16 @@ export class AgentRuntime {
       const modelMessages = await this.buildModelMessages(chatRequest);
       const tools = await this.loadOpenAiTools();
       const mcpOpenAiToolBridge = this.mcpOpenAiToolBridge;
+      const workspaceOpenAiToolBridge = this.workspaceOpenAiToolBridge;
       const toolExecutor = mcpOpenAiToolBridge
-        ? (toolName: string, toolArgs: JsonObject) => mcpOpenAiToolBridge.executeTool(toolName, toolArgs)
+        ? (toolName: string, toolArgs: JsonObject) => {
+            if (workspaceOpenAiToolBridge?.canExecute(toolName)) {
+              return workspaceOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs);
+            }
+            return mcpOpenAiToolBridge.executeTool(toolName, toolArgs);
+          }
+        : workspaceOpenAiToolBridge
+          ? (toolName: string, toolArgs: JsonObject) => workspaceOpenAiToolBridge.executeTool(chatRequest, toolName, toolArgs)
         : undefined;
       let answer = "";
       let emitted = false;
@@ -125,14 +136,16 @@ export class AgentRuntime {
   }
 
   private async loadOpenAiTools(): Promise<OpenAIChatTool[]> {
-    if (!this.mcpOpenAiToolBridge || !this.config.openAiApiKey) {
+    if (!this.config.openAiApiKey) {
       return [];
     }
+    const tools = this.workspaceOpenAiToolBridge?.listTools() || [];
     try {
-      return await this.mcpOpenAiToolBridge.listTools();
+      tools.push(...(this.mcpOpenAiToolBridge ? await this.mcpOpenAiToolBridge.listTools() : []));
     } catch {
-      return [];
+      return tools;
     }
+    return tools;
   }
 
   private async submitMemoryTask(chatRequest: ChatStreamRequest, turnId: string, answer: string): Promise<void> {

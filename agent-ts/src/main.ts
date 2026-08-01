@@ -15,6 +15,8 @@ import { WebFetchClient } from "./WebFetchClient.js";
 import { WebFetchContextBuilder } from "./WebFetchContextBuilder.js";
 import { WebSearchClient } from "./WebSearchClient.js";
 import { WebSearchContextBuilder } from "./WebSearchContextBuilder.js";
+import { WorkspaceManager } from "./WorkspaceManager.js";
+import { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
 
 const config = AgentConfig.fromEnv();
 const core = new AgentCoreClient(config.rustCorePath);
@@ -31,6 +33,8 @@ const webSearchContextBuilder = webSearchClient ? new WebSearchContextBuilder(we
 const mcpConfigs = config.mcpToolsEnabled ? new McpConfigParser().parseServerConfigs(config.mcpServers) : [];
 const mcpToolService = mcpConfigs.length > 0 ? new McpToolService(mcpConfigs) : undefined;
 const mcpOpenAiToolBridge = mcpToolService ? new McpOpenAiToolBridge(mcpToolService) : undefined;
+const workspaceManager = new WorkspaceManager(config.workspaceBasePath);
+const workspaceOpenAiToolBridge = new WorkspaceOpenAiToolBridge(workspaceManager);
 const runtime = new AgentRuntime(
   config,
   core,
@@ -40,8 +44,9 @@ const runtime = new AgentRuntime(
   ragContextBuilder,
   webFetchContextBuilder,
   webSearchContextBuilder,
-  mcpOpenAiToolBridge
+  mcpOpenAiToolBridge,
+  workspaceOpenAiToolBridge
 );
-const server = new AgentHttpServer(config, runtime, undefined, mcpToolService);
+const server = new AgentHttpServer(config, runtime, workspaceManager, mcpToolService);
 
 server.start();
