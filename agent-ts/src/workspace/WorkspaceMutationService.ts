@@ -1,22 +1,33 @@
 import type { WorkspaceCreateDirResult } from "./WorkspaceCreateDirResult.js";
+import { WorkspaceCreateDirService } from "./WorkspaceCreateDirService.js";
 import type { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
 import type { WorkspaceEditResult } from "./WorkspaceEditResult.js";
+import { WorkspaceEditService } from "./WorkspaceEditService.js";
 import type { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
 import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
+import { WorkspaceWriteService } from "./WorkspaceWriteService.js";
 
 export class WorkspaceMutationService {
+  private readonly createDirService: WorkspaceCreateDirService;
+  private readonly editService: WorkspaceEditService;
+  private readonly writeService: WorkspaceWriteService;
+
   constructor(
-    private readonly directoryCreator: WorkspaceDirectoryCreator,
-    private readonly fileEditor: WorkspaceFileEditor,
-    private readonly fileWriter: WorkspaceFileWriter,
-    private readonly pathGuard: WorkspacePathGuard,
-    private readonly targetPathResolver: WorkspaceTargetPathResolver,
-    private readonly workingFileCounter: WorkspaceWorkingFileCounter
-  ) {}
+    directoryCreator: WorkspaceDirectoryCreator,
+    fileEditor: WorkspaceFileEditor,
+    fileWriter: WorkspaceFileWriter,
+    pathGuard: WorkspacePathGuard,
+    targetPathResolver: WorkspaceTargetPathResolver,
+    workingFileCounter: WorkspaceWorkingFileCounter
+  ) {
+    this.createDirService = new WorkspaceCreateDirService(directoryCreator, targetPathResolver);
+    this.editService = new WorkspaceEditService(fileEditor, targetPathResolver);
+    this.writeService = new WorkspaceWriteService(fileWriter, pathGuard, targetPathResolver, workingFileCounter);
+  }
 
   async write(
     userId: number | null,
@@ -25,9 +36,7 @@ export class WorkspaceMutationService {
     content: string,
     isFinal = false
   ): Promise<WorkspaceWriteResult> {
-    const target = await this.targetPathResolver.resolveEnsuredTarget(userId, sessionId, relativePath, isFinal);
-    this.pathGuard.checkFileLimit(await this.workingFileCounter.count(target.sessionPath));
-    return this.fileWriter.write(target.sessionPath, target.targetPath, content);
+    return this.writeService.write(userId, sessionId, relativePath, content, isFinal);
   }
 
   async edit(
@@ -38,8 +47,7 @@ export class WorkspaceMutationService {
     newString: string,
     isFinal = false
   ): Promise<WorkspaceEditResult> {
-    const target = this.targetPathResolver.resolveExistingTarget(userId, sessionId, relativePath, isFinal);
-    return this.fileEditor.edit(target.sessionPath, target.normalPath, target.targetPath, oldString, newString);
+    return this.editService.edit(userId, sessionId, relativePath, oldString, newString, isFinal);
   }
 
   async createDir(
@@ -48,7 +56,6 @@ export class WorkspaceMutationService {
     relativePath: string,
     isFinal = false
   ): Promise<WorkspaceCreateDirResult> {
-    const target = await this.targetPathResolver.resolveEnsuredTarget(userId, sessionId, relativePath, isFinal);
-    return this.directoryCreator.create(target.sessionPath, target.targetPath);
+    return this.createDirService.createDir(userId, sessionId, relativePath, isFinal);
   }
 }

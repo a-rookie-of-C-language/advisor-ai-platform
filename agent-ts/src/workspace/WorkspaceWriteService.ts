@@ -1,0 +1,26 @@
+import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
+import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
+import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
+import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
+import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
+
+export class WorkspaceWriteService {
+  constructor(
+    private readonly fileWriter: WorkspaceFileWriter,
+    private readonly pathGuard: WorkspacePathGuard,
+    private readonly targetPathResolver: WorkspaceTargetPathResolver,
+    private readonly workingFileCounter: WorkspaceWorkingFileCounter
+  ) {}
+
+  async write(
+    userId: number | null,
+    sessionId: number | null,
+    relativePath: string,
+    content: string,
+    isFinal = false
+  ): Promise<WorkspaceWriteResult> {
+    const target = await this.targetPathResolver.resolveEnsuredTarget(userId, sessionId, relativePath, isFinal);
+    this.pathGuard.checkFileLimit(await this.workingFileCounter.count(target.sessionPath));
+    return this.fileWriter.write(target.sessionPath, target.targetPath, content);
+  }
+}

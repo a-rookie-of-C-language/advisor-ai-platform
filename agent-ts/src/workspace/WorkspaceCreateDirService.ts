@@ -1,0 +1,20 @@
+import type { WorkspaceCreateDirResult } from "./WorkspaceCreateDirResult.js";
+import type { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
+import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
+
+export class WorkspaceCreateDirService {
+  constructor(
+    private readonly directoryCreator: WorkspaceDirectoryCreator,
+    private readonly targetPathResolver: WorkspaceTargetPathResolver
+  ) {}
+
+  async createDir(
+    userId: number | null,
+    sessionId: number | null,
+    relativePath: string,
+    isFinal = false
+  ): Promise<WorkspaceCreateDirResult> {
+    const target = await this.targetPathResolver.resolveEnsuredTarget(userId, sessionId, relativePath, isFinal);
+    return this.directoryCreator.create(target.sessionPath, target.targetPath);
+  }
+}
