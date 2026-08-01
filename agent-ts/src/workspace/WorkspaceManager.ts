@@ -1,61 +1,24 @@
-import path from "node:path";
-import { WorkspaceCacheCleaner } from "./WorkspaceCacheCleaner.js";
 import type { WorkspaceCacheCleanupResult } from "./WorkspaceCacheCleanupResult.js";
 import type { WorkspaceCreateDirResult } from "./WorkspaceCreateDirResult.js";
-import { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
 import type { WorkspaceEditResult } from "./WorkspaceEditResult.js";
-import { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
-import { WorkspaceFileReader } from "./WorkspaceFileReader.js";
-import { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import type { WorkspaceListing } from "./WorkspaceListing.js";
-import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
-import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
 import { WorkspaceMaintenanceService } from "./WorkspaceMaintenanceService.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
-import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceReadService } from "./WorkspaceReadService.js";
-import { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
+import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
 import type { WorkspaceStats } from "./WorkspaceStats.js";
-import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
-import { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
-import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
 
 export class WorkspaceManager {
-  private readonly fileSystem = new WorkspaceFileSystem();
-  private readonly cacheCleaner = new WorkspaceCacheCleaner(this.fileSystem);
   private readonly maintenanceService: WorkspaceMaintenanceService;
   private readonly mutationService: WorkspaceMutationService;
-  private readonly pathGuard: WorkspacePathGuard;
   private readonly readService: WorkspaceReadService;
-  private readonly sessionPathProvider: WorkspaceSessionPathProvider;
-  private readonly targetPathResolver: WorkspaceTargetPathResolver;
-  private readonly basePath: string;
 
   constructor(basePath: string) {
-    this.basePath = path.resolve(basePath);
-    this.pathGuard = new WorkspacePathGuard(this.basePath);
-    this.sessionPathProvider = new WorkspaceSessionPathProvider(this.pathGuard);
-    this.targetPathResolver = new WorkspaceTargetPathResolver(this.pathGuard, this.sessionPathProvider);
-    this.mutationService = new WorkspaceMutationService(
-      new WorkspaceDirectoryCreator(),
-      new WorkspaceFileEditor(),
-      new WorkspaceFileWriter(),
-      this.pathGuard,
-      this.targetPathResolver,
-      new WorkspaceWorkingFileCounter(this.fileSystem)
-    );
-    this.readService = new WorkspaceReadService(
-      new WorkspaceFileReader(),
-      new WorkspaceListingBuilder(this.fileSystem),
-      this.pathGuard,
-      this.sessionPathProvider
-    );
-    this.maintenanceService = new WorkspaceMaintenanceService(
-      this.cacheCleaner,
-      this.sessionPathProvider,
-      new WorkspaceStatsCollector(this.fileSystem)
-    );
+    const serviceFactory = new WorkspaceServiceFactory(basePath);
+    this.mutationService = serviceFactory.createMutationService();
+    this.readService = serviceFactory.createReadService();
+    this.maintenanceService = serviceFactory.createMaintenanceService();
   }
 
   async read(userId: number | null, sessionId: number | null, relativePath: string, offset = 0, limit = 8192): Promise<string> {
