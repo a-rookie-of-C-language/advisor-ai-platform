@@ -1,4 +1,5 @@
 import type { OpenAIToolCall } from "./OpenAIToolCall.js";
+import { OpenAIToolCallDeltaMerger } from "./OpenAIToolCallDeltaMerger.js";
 
 interface OpenAIStreamChoice {
   delta?: {
@@ -11,7 +12,7 @@ interface OpenAIStreamChunk {
   choices?: OpenAIStreamChoice[];
 }
 
-interface OpenAIStreamToolCallDelta {
+export interface OpenAIStreamToolCallDelta {
   index?: number;
   id?: string;
   type?: "function";
@@ -27,6 +28,8 @@ interface ParsedStreamLine {
 }
 
 export class OpenAIStreamParser {
+  private readonly toolCallDeltaMerger = new OpenAIToolCallDeltaMerger();
+
   parseDataLine(line: string): ParsedStreamLine {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) {
@@ -45,17 +48,6 @@ export class OpenAIStreamParser {
   }
 
   mergeToolCallDeltas(toolCalls: Map<number, OpenAIToolCall>, deltas: OpenAIStreamToolCallDelta[]): void {
-    for (const delta of deltas) {
-      const index = delta.index ?? 0;
-      const current = toolCalls.get(index) || {
-        id: "",
-        type: "function" as const,
-        function: { name: "", arguments: "" }
-      };
-      current.id += delta.id || "";
-      current.function.name += delta.function?.name || "";
-      current.function.arguments += delta.function?.arguments || "";
-      toolCalls.set(index, current);
-    }
+    this.toolCallDeltaMerger.merge(toolCalls, deltas);
   }
 }
