@@ -2,14 +2,18 @@ import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import { OpenAiToolArgumentReader } from "../openai/OpenAiToolArgumentReader.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
+import { WorkspaceRequestIdentityResolver } from "./WorkspaceRequestIdentityResolver.js";
 
 export class WorkspaceListOpenAiToolExecutor {
+  private readonly identityResolver = new WorkspaceRequestIdentityResolver();
+
   constructor(private readonly workspaceManager: WorkspaceManager) {}
 
   async execute(request: ChatStreamRequest, args: JsonObject): Promise<JsonObject> {
+    const identity = this.identityResolver.resolve(request);
     const items = await this.workspaceManager.list(
-      request.userId ?? null,
-      request.sessionId ?? null,
+      identity.userId,
+      identity.sessionId,
       OpenAiToolArgumentReader.readOptionalString(args, "path", "."),
       OpenAiToolArgumentReader.readOptionalBoolean(args, "recursive", false)
     );
