@@ -2,10 +2,12 @@ import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequ
 import type { WebSearchClient } from "./WebSearchClient.js";
 import { WebSearchQueryFinder } from "./WebSearchQueryFinder.js";
 import { WebSearchResultRenderer } from "./WebSearchResultRenderer.js";
+import { WebSearchSystemMessageFactory } from "./WebSearchSystemMessageFactory.js";
 
 export class WebSearchContextBuilder {
   private readonly queryFinder = new WebSearchQueryFinder();
   private readonly resultRenderer = new WebSearchResultRenderer();
+  private readonly systemMessageFactory = new WebSearchSystemMessageFactory();
 
   constructor(private readonly webSearchClient: WebSearchClient) {}
 
@@ -21,10 +23,7 @@ export class WebSearchContextBuilder {
         return request.messages;
       }
       return [
-        {
-          role: "system",
-          content: `Fresh web search context is available. Use it only when relevant and cite source URLs when using it.\n${this.resultRenderer.render(results)}`
-        },
+        this.systemMessageFactory.create(this.resultRenderer.render(results)),
         ...request.messages
       ];
     } catch {
