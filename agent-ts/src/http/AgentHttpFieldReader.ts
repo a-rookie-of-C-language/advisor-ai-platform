@@ -1,4 +1,5 @@
 import type { JsonObject } from "../common/JsonTypes.js";
+import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import { WorkspaceError } from "../workspace/WorkspaceError.js";
 
 export class AgentHttpFieldReader {
@@ -55,7 +56,6 @@ export class AgentHttpFieldReader {
   }
 
   private readAliasedValue(body: Record<string, unknown>, snakeKey: string): unknown {
-    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    return body[snakeKey] ?? body[camelKey];
+    return AliasedValueReader.read(body, snakeKey);
   }
 }

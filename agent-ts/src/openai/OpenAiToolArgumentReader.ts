@@ -1,3 +1,4 @@
+import { AliasedValueReader } from "../common/AliasedValueReader.js";
 import type { JsonObject, JsonValue } from "../common/JsonTypes.js";
 
 export class OpenAiToolArgumentReader {
@@ -51,7 +52,6 @@ export class OpenAiToolArgumentReader {
   }
 
   static readAliasedValue(args: JsonObject, snakeKey: string): JsonValue | undefined {
-    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    return args[snakeKey] ?? args[camelKey];
+    return AliasedValueReader.read(args, snakeKey) as JsonValue | undefined;
   }
 }
