@@ -6,10 +6,9 @@ import { AgentMcpComponents } from "./AgentMcpComponents.js";
 import { AgentRagComponents } from "./AgentRagComponents.js";
 import { AgentRuntime } from "./AgentRuntime.js";
 import { AgentWebComponents } from "./AgentWebComponents.js";
+import { AgentWorkspaceComponents } from "./AgentWorkspaceComponents.js";
 import { OpenAIChatClient } from "./OpenAIChatClient.js";
 import { OpenAiToolRegistry } from "./OpenAiToolRegistry.js";
-import { WorkspaceManager } from "./WorkspaceManager.js";
-import { WorkspaceOpenAiToolBridge } from "./WorkspaceOpenAiToolBridge.js";
 
 export class AgentApplicationFactory {
   createServer(): AgentHttpServer {
@@ -20,10 +19,9 @@ export class AgentApplicationFactory {
     const ragComponents = new AgentRagComponents(config);
     const webComponents = new AgentWebComponents(config);
     const mcpComponents = new AgentMcpComponents(config);
-    const workspaceManager = new WorkspaceManager(config.workspaceBasePath);
-    const workspaceOpenAiToolBridge = new WorkspaceOpenAiToolBridge(workspaceManager);
+    const workspaceComponents = new AgentWorkspaceComponents(config);
     const openAiToolRegistry = new OpenAiToolRegistry(
-      workspaceOpenAiToolBridge,
+      workspaceComponents.openAiToolBridge,
       webComponents.openAiToolBridge,
       ragComponents.openAiToolBridge,
       memoryComponents.openAiToolBridge,
@@ -40,6 +38,6 @@ export class AgentApplicationFactory {
       webComponents.searchContextBuilder,
       openAiToolRegistry
     );
-    return new AgentHttpServer(config, runtime, workspaceManager, mcpComponents.toolService);
+    return new AgentHttpServer(config, runtime, workspaceComponents.manager, mcpComponents.toolService);
   }
 }
