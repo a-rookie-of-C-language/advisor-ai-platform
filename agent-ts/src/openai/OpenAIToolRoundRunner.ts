@@ -4,11 +4,13 @@ import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIToolCall } from "./OpenAIToolCall.js";
 import { OpenAIToolCallEventFactory } from "./OpenAIToolCallEventFactory.js";
+import { OpenAIToolResultEventFactory } from "./OpenAIToolResultEventFactory.js";
 
 export type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
 
 export class OpenAIToolRoundRunner {
   private readonly toolCallEventFactory = new OpenAIToolCallEventFactory();
+  private readonly toolResultEventFactory = new OpenAIToolResultEventFactory();
 
   async *run(
     conversation: OpenAIChatMessage[],
@@ -21,13 +23,7 @@ export class OpenAIToolRoundRunner {
       yield toolCallEvent;
       const toolArgs = toolCallEvent.toolArgs;
       const toolResult = await toolExecutor(toolCall.function.name, toolArgs);
-      yield {
-        type: "tool_result",
-        toolCallId: toolCall.id,
-        toolName: toolCall.function.name,
-        toolOutput: toolResult.output,
-        success: toolResult.success
-      };
+      yield this.toolResultEventFactory.create(toolCall, toolResult);
       conversation.push({ role: "tool", tool_call_id: toolCall.id, content: toolResult.output });
     }
   }
