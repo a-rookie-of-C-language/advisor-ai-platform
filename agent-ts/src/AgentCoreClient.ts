@@ -1,7 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { AgentCoreExecutableLocator } from "./AgentCoreExecutableLocator.js";
 import type { JsonObject } from "./JsonTypes.js";
 import type { ProtocolEvent } from "./ProtocolEvent.js";
 
@@ -9,7 +7,7 @@ export class AgentCoreClient {
   private readonly executablePath: string | undefined;
 
   constructor(explicitPath?: string) {
-    this.executablePath = explicitPath || this.findDefaultExecutable();
+    this.executablePath = explicitPath || new AgentCoreExecutableLocator().findDefaultExecutable();
   }
 
   async serializeEvent(event: ProtocolEvent): Promise<string> {
@@ -35,20 +33,6 @@ export class AgentCoreClient {
     } catch {
       return { status: "degraded", core: "typescript-fallback" };
     }
-  }
-
-  private findDefaultExecutable(): string | undefined {
-    const currentFile = fileURLToPath(import.meta.url);
-    const repoRoot = path.resolve(path.dirname(currentFile), "..", "..");
-    const candidates = [
-      path.join(repoRoot, "agent-core", "target", "release", this.binaryName()),
-      path.join(repoRoot, "agent-core", "target", "debug", this.binaryName())
-    ];
-    return candidates.find((candidate) => existsSync(candidate));
-  }
-
-  private binaryName(): string {
-    return process.platform === "win32" ? "agent-core.exe" : "agent-core";
   }
 
   private runCore(command: string, input: string): Promise<string> {
