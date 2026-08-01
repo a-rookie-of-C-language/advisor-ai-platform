@@ -1,7 +1,9 @@
 import { McpServerConfig } from "./McpServerConfig.js";
+import { McpStdioEnvParser } from "./McpStdioEnvParser.js";
 import { McpTokenEnvKeyFactory } from "./McpTokenEnvKeyFactory.js";
 
 export class McpConfigParser {
+  private readonly stdioEnvParser = new McpStdioEnvParser();
   private readonly tokenEnvKeyFactory = new McpTokenEnvKeyFactory();
 
   parseServerConfigs(servers: string, env: NodeJS.ProcessEnv = process.env): McpServerConfig[] {
@@ -18,19 +20,7 @@ export class McpConfigParser {
   }
 
   parseStdioEnv(rawEnv: string | undefined = process.env.MCP_STDIO_ENV): Record<string, string> | undefined {
-    if (!rawEnv?.trim()) {
-      return undefined;
-    }
-
-    const env: Record<string, string> = {};
-    for (const item of rawEnv.trim().split(/\s+/)) {
-      const separatorIndex = item.indexOf("=");
-      if (separatorIndex <= 0) {
-        continue;
-      }
-      env[item.slice(0, separatorIndex)] = item.slice(separatorIndex + 1);
-    }
-    return Object.keys(env).length > 0 ? env : undefined;
+    return this.stdioEnvParser.parse(rawEnv);
   }
 
   private parseServerConfig(server: string, env: NodeJS.ProcessEnv): McpServerConfig | undefined {
