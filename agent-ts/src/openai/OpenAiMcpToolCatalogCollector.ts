@@ -1,0 +1,14 @@
+import type { McpOpenAiToolBridge } from "../mcp/McpOpenAiToolBridge.js";
+import type { OpenAIChatTool } from "./OpenAIChatTool.js";
+
+export class OpenAiMcpToolCatalogCollector {
+  constructor(private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge) {}
+
+  async listTools(): Promise<OpenAIChatTool[]> {
+    try {
+      return this.mcpOpenAiToolBridge ? await this.mcpOpenAiToolBridge.listTools() : [];
+    } catch {
+      return [];
+    }
+  }
+}
