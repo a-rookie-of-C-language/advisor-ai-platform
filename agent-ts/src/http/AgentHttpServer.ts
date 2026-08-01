@@ -1,7 +1,8 @@
-import http, { type IncomingMessage, type ServerResponse } from "node:http";
+import http from "node:http";
 import { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";
 import type { AgentConfig } from "../config/AgentConfig.js";
 import { AgentHealthRouteHandler } from "./routes/AgentHealthRouteHandler.js";
+import { AgentHttpRouter } from "./AgentHttpRouter.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
@@ -20,6 +21,7 @@ export class AgentHttpServer {
   private readonly chatStreamRouteHandler: AgentChatStreamRouteHandler;
   private readonly healthRouteHandler: AgentHealthRouteHandler;
   private readonly mcpRouteHandler: AgentMcpRouteHandler;
+  private readonly router: AgentHttpRouter;
   private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler;
 
   constructor(
@@ -33,51 +35,24 @@ export class AgentHttpServer {
     this.healthRouteHandler = new AgentHealthRouteHandler(this.runtime);
     this.mcpRouteHandler = new AgentMcpRouteHandler(this.mcpToolService, this.requestReader);
     this.workspaceRouteHandler = new AgentWorkspaceRouteHandler(this.workspaceManager, this.requestReader);
+    this.router = new AgentHttpRouter(
+      this.authorizer,
+      this.chatStreamRouteHandler,
+      this.healthRouteHandler,
+      this.jsonResponseWriter,
+      this.mcpRouteHandler,
+      this.requestUrlFactory,
+      this.workspaceRouteHandler
+    );
   }
 
   start(): void {
     const server = http.createServer((request, response) => {
-      void this.route(request, response);
+      void this.router.route(request, response);
     });
 
     server.listen(this.config.port, this.config.host, () => {
       console.log(`advisor-ai-agent-ts listening on http://${this.config.host}:${this.config.port}`);
     });
-  }
-
-  private async route(request: IncomingMessage, response: ServerResponse): Promise<void> {
-    try {
-      const url = this.requestUrlFactory.create(request);
-      const healthResult = await this.healthRouteHandler.handle(request.method, url);
-      if (healthResult) {
-        this.jsonResponseWriter.write(response, healthResult.statusCode, healthResult.body);
-        return;
-      }
-
-      if (!this.authorizer.isAuthorized(request)) {
-        this.jsonResponseWriter.write(response, 401, { detail: "invalid agent token" });
-        return;
-      }
-
-      if (await this.chatStreamRouteHandler.handle(request.method, url, request, response)) {
-        return;
-      }
-
-      const workspaceResult = await this.workspaceRouteHandler.handle(request.method, url, request);
-      if (workspaceResult) {
-        this.jsonResponseWriter.write(response, workspaceResult.statusCode, workspaceResult.body);
-        return;
-      }
-
-      const mcpResult = await this.mcpRouteHandler.handle(request.method, url, request);
-      if (mcpResult) {
-        this.jsonResponseWriter.write(response, mcpResult.statusCode, mcpResult.body);
-        return;
-      }
-
-      this.jsonResponseWriter.write(response, 404, { detail: "not found" });
-    } catch (error) {
-      this.jsonResponseWriter.writeError(response, error);
-    }
   }
 }
