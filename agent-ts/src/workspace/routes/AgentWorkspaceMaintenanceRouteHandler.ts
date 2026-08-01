@@ -1,34 +1,25 @@
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceCleanupRouteHandler } from "./AgentWorkspaceCleanupRouteHandler.js";
+import { AgentWorkspaceStatsRouteHandler } from "./AgentWorkspaceStatsRouteHandler.js";
 
 export class AgentWorkspaceMaintenanceRouteHandler {
-  constructor(
-    private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
-  ) {}
+  private readonly cleanupRouteHandler: AgentWorkspaceCleanupRouteHandler;
+  private readonly statsRouteHandler: AgentWorkspaceStatsRouteHandler;
+
+  constructor(workspaceManager: WorkspaceManager, requestReader: AgentHttpRequestReader) {
+    this.cleanupRouteHandler = new AgentWorkspaceCleanupRouteHandler(workspaceManager, requestReader);
+    this.statsRouteHandler = new AgentWorkspaceStatsRouteHandler(workspaceManager, requestReader);
+  }
 
   async handle(method: string | undefined, url: URL): Promise<HttpRouteResult | null> {
     if (method === "POST" && url.pathname === "/workspace/cleanup") {
-      const scope = this.requestReader.readWorkspaceScope(url);
-      return {
-        statusCode: 200,
-        body: {
-          status: "ok",
-          cleaned: await this.workspaceManager.cleanupCache(scope.userId, scope.sessionId)
-        }
-      };
+      return this.cleanupRouteHandler.handle(url);
     }
 
     if (method === "GET" && url.pathname === "/workspace/stats") {
-      const scope = this.requestReader.readWorkspaceScope(url);
-      return {
-        statusCode: 200,
-        body: {
-          status: "ok",
-          stats: await this.workspaceManager.getStats(scope.userId, scope.sessionId)
-        }
-      };
+      return this.statsRouteHandler.handle(url);
     }
 
     return null;
