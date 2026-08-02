@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../openai/chat/model/OpenAIChatTool.js";
 import { RagSearchOpenAiToolDefinition } from "../tools/RagSearchOpenAiToolDefinition.js";
 
 export class RagOpenAiToolCatalog {

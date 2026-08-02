@@ -1,5 +1,5 @@
 import type { ChatMessageDTO } from "../../common/model/ChatStreamRequest.js";
-import type { OpenAIChatMessage } from "./OpenAIChatMessage.js";
+import type { OpenAIChatMessage } from "./model/OpenAIChatMessage.js";
 
 export class OpenAIChatMessageMapper {
   map(messages: ChatMessageDTO[]): OpenAIChatMessage[] {

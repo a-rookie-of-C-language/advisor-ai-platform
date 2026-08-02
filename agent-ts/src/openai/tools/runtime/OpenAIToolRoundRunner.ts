@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { OpenAIChatStreamEvent } from "../../../protocol/events/OpenAIChatStreamEvent.js";
-import type { OpenAIChatMessage } from "../../chat/OpenAIChatMessage.js";
+import type { OpenAIChatMessage } from "../../chat/model/OpenAIChatMessage.js";
 import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
 import type { OpenAIToolCall } from "./OpenAIToolCall.js";
 import { OpenAIToolCallEventFactory } from "./OpenAIToolCallEventFactory.js";

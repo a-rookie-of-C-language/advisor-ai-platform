@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../openai/chat/model/OpenAIChatTool.js";
 
 export class WebFetchOpenAiToolDefinition {
   create(): OpenAIChatTool {
