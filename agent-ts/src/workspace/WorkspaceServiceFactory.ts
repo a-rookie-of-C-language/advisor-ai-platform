@@ -1,17 +1,15 @@
-import { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
-import { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
-import { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import { WorkspaceMaintenanceServiceFactory } from "./WorkspaceMaintenanceServiceFactory.js";
 import { WorkspaceMaintenanceService } from "./WorkspaceMaintenanceService.js";
+import { WorkspaceMutationServiceFactory } from "./WorkspaceMutationServiceFactory.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
 import { WorkspaceReadService } from "./WorkspaceReadService.js";
 import { WorkspaceReadServiceFactory } from "./WorkspaceReadServiceFactory.js";
 import { WorkspaceServiceFactoryComponents } from "./WorkspaceServiceFactoryComponents.js";
-import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 
 export class WorkspaceServiceFactory {
   private readonly components: WorkspaceServiceFactoryComponents;
   private readonly maintenanceServiceFactory = new WorkspaceMaintenanceServiceFactory();
+  private readonly mutationServiceFactory = new WorkspaceMutationServiceFactory();
   private readonly readServiceFactory = new WorkspaceReadServiceFactory();
 
   constructor(basePath: string) {
@@ -23,14 +21,7 @@ export class WorkspaceServiceFactory {
   }
 
   createMutationService(): WorkspaceMutationService {
-    return new WorkspaceMutationService(
-      new WorkspaceDirectoryCreator(),
-      new WorkspaceFileEditor(),
-      new WorkspaceFileWriter(),
-      this.components.pathGuard,
-      this.components.targetPathResolver,
-      new WorkspaceWorkingFileCounter(this.components.fileSystem)
-    );
+    return this.mutationServiceFactory.create(this.components);
   }
 
   createReadService(): WorkspaceReadService {
