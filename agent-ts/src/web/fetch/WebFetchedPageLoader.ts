@@ -1,5 +1,5 @@
 import type { WebFetchClient } from "./WebFetchClient.js";
-import type { WebFetchedPage } from "./WebFetchedPage.js";
+import type { WebFetchedPage } from "./model/WebFetchedPage.js";
 
 export class WebFetchedPageLoader {
   async load(webFetchClient: WebFetchClient, urls: string[]): Promise<WebFetchedPage[]> {

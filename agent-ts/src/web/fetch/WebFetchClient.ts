@@ -1,5 +1,5 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { WebFetchedPage } from "./WebFetchedPage.js";
+import type { WebFetchedPage } from "./model/WebFetchedPage.js";
 import { WebFetchedPageBuilder } from "./WebFetchedPageBuilder.js";
 import { WebPageHttpClient } from "./WebPageHttpClient.js";
 

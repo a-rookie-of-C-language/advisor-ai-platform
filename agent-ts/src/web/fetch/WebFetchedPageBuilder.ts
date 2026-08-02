@@ -1,4 +1,4 @@
-import type { WebFetchedPage } from "./WebFetchedPage.js";
+import type { WebFetchedPage } from "./model/WebFetchedPage.js";
 import { WebHtmlParser } from "./WebHtmlParser.js";
 
 export class WebFetchedPageBuilder {
