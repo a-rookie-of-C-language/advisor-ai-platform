@@ -1,0 +1,15 @@
+import type { MemoryApiClient } from "../../../memory/api/MemoryApiClient.js";
+import { MemoryContextBuilder as MemoryContextBuilderClass } from "../../../memory/context/MemoryContextBuilder.js";
+import { MemoryTaskSubmitter as MemoryTaskSubmitterClass } from "../../../memory/task/MemoryTaskSubmitter.js";
+import { MemoryOpenAiToolBridge as MemoryOpenAiToolBridgeClass } from "../../../memory/tools/core/MemoryOpenAiToolBridge.js";
+import { AgentMemoryFeatureComponents } from "../model/AgentMemoryFeatureComponents.js";
+
+export class AgentMemoryFeatureComponentsFactory {
+  create(memoryClient: MemoryApiClient | undefined, topK: number): AgentMemoryFeatureComponents {
+    return new AgentMemoryFeatureComponents(
+      memoryClient ? new MemoryContextBuilderClass(memoryClient, topK) : undefined,
+      memoryClient ? new MemoryOpenAiToolBridgeClass(memoryClient, topK) : undefined,
+      memoryClient ? new MemoryTaskSubmitterClass(memoryClient) : undefined
+    );
+  }
+}

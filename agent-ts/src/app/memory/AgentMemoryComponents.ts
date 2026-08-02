@@ -3,7 +3,7 @@ import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBui
 import type { MemoryOpenAiToolBridge } from "../../memory/tools/core/MemoryOpenAiToolBridge.js";
 import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.js";
 import { AgentMemoryClientFactory } from "./factory/AgentMemoryClientFactory.js";
-import { AgentMemoryFeatureComponentsFactory } from "./AgentMemoryFeatureComponentsFactory.js";
+import { AgentMemoryFeatureComponentsFactory } from "./factory/AgentMemoryFeatureComponentsFactory.js";
 
 export class AgentMemoryComponents {
   readonly contextBuilder?: MemoryContextBuilder;
