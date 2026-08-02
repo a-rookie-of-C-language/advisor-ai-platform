@@ -1,8 +1,8 @@
 import path from "node:path";
-import { WorkspaceFileSystem } from "./files/WorkspaceFileSystem.js";
-import { WorkspacePathGuard } from "./path/WorkspacePathGuard.js";
-import { WorkspaceSessionPathProvider } from "./path/WorkspaceSessionPathProvider.js";
-import { WorkspaceTargetPathResolver } from "./path/WorkspaceTargetPathResolver.js";
+import { WorkspaceFileSystem } from "../files/WorkspaceFileSystem.js";
+import { WorkspacePathGuard } from "../path/WorkspacePathGuard.js";
+import { WorkspaceSessionPathProvider } from "../path/WorkspaceSessionPathProvider.js";
+import { WorkspaceTargetPathResolver } from "../path/WorkspaceTargetPathResolver.js";
 
 export class WorkspaceServiceFactoryComponents {
   readonly fileSystem = new WorkspaceFileSystem();

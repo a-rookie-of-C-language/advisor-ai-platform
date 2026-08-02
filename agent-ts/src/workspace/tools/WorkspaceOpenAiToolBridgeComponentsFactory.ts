@@ -1,4 +1,4 @@
-import type { WorkspaceManager } from "../WorkspaceManager.js";
+import type { WorkspaceManager } from "../core/WorkspaceManager.js";
 import { WorkspaceOpenAiToolBridgeComponents } from "./WorkspaceOpenAiToolBridgeComponents.js";
 
 export class WorkspaceOpenAiToolBridgeComponentsFactory {

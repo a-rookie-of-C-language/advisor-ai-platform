@@ -1,13 +1,13 @@
-import type { WorkspaceCacheCleanupResult } from "./model/WorkspaceCacheCleanupResult.js";
-import type { WorkspaceCreateDirResult } from "./model/WorkspaceCreateDirResult.js";
-import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
-import type { WorkspaceListing } from "./model/WorkspaceListing.js";
-import { WorkspaceMaintenanceService } from "./maintenance/WorkspaceMaintenanceService.js";
-import { WorkspaceMutationService } from "./services/mutation/WorkspaceMutationService.js";
-import { WorkspaceReadService } from "./services/read/WorkspaceReadService.js";
+import { WorkspaceMaintenanceService } from "../maintenance/WorkspaceMaintenanceService.js";
+import type { WorkspaceCacheCleanupResult } from "../model/WorkspaceCacheCleanupResult.js";
+import type { WorkspaceCreateDirResult } from "../model/WorkspaceCreateDirResult.js";
+import type { WorkspaceEditResult } from "../model/WorkspaceEditResult.js";
+import type { WorkspaceListing } from "../model/WorkspaceListing.js";
+import type { WorkspaceStats } from "../model/WorkspaceStats.js";
+import type { WorkspaceWriteResult } from "../model/WorkspaceWriteResult.js";
+import { WorkspaceMutationService } from "../services/mutation/WorkspaceMutationService.js";
+import { WorkspaceReadService } from "../services/read/WorkspaceReadService.js";
 import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
-import type { WorkspaceStats } from "./model/WorkspaceStats.js";
-import type { WorkspaceWriteResult } from "./model/WorkspaceWriteResult.js";
 
 export class WorkspaceManager {
   private readonly maintenanceService: WorkspaceMaintenanceService;

@@ -3,7 +3,7 @@ import type { JsonObject } from "../../common/JsonTypes.js";
 import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
 import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/OpenAiToolExecutionResult.js";
 import { OpenAiToolResultFactory } from "../../openai/tools/runtime/OpenAiToolResultFactory.js";
-import type { WorkspaceManager } from "../WorkspaceManager.js";
+import type { WorkspaceManager } from "../core/WorkspaceManager.js";
 import { WorkspaceOpenAiToolBridgeComponents } from "./WorkspaceOpenAiToolBridgeComponents.js";
 import { WorkspaceOpenAiToolBridgeComponentsFactory } from "./WorkspaceOpenAiToolBridgeComponentsFactory.js";
 

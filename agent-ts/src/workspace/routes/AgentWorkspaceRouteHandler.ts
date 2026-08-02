@@ -3,7 +3,7 @@ import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequest
 import { AgentWorkspaceRouteComponentsFactory } from "./AgentWorkspaceRouteComponentsFactory.js";
 import { AgentWorkspaceRouteDispatcher } from "./AgentWorkspaceRouteDispatcher.js";
 import type { HttpRouteResult } from "../../http/response/HttpRouteResult.js";
-import type { WorkspaceManager } from "../WorkspaceManager.js";
+import type { WorkspaceManager } from "../core/WorkspaceManager.js";
 
 export class AgentWorkspaceRouteHandler {
   private readonly componentsFactory = new AgentWorkspaceRouteComponentsFactory();

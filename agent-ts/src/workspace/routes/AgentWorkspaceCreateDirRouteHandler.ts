@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/response/HttpRouteResult.js";
-import type { WorkspaceManager } from "../WorkspaceManager.js";
+import type { WorkspaceManager } from "../core/WorkspaceManager.js";
 import { AgentWorkspaceCreateDirRequestReader } from "./AgentWorkspaceCreateDirRequestReader.js";
 
 export class AgentWorkspaceCreateDirRouteHandler {
