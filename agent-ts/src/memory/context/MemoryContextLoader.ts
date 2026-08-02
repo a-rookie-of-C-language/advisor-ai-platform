@@ -1,4 +1,4 @@
-import type { MemoryApiClient } from "./api/MemoryApiClient.js";
+import type { MemoryApiClient } from "../api/MemoryApiClient.js";
 import type { MemoryContextLoadResult } from "./MemoryContextLoadResult.js";
 
 export class MemoryContextLoader {

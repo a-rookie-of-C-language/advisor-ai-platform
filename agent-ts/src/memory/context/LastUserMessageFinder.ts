@@ -1,4 +1,4 @@
-import type { ChatMessageDTO } from "../common/ChatStreamRequest.js";
+import type { ChatMessageDTO } from "../../common/ChatStreamRequest.js";
 
 export class LastUserMessageFinder {
   find(messages: ChatMessageDTO[]): string {

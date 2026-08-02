@@ -1,4 +1,4 @@
-import type { ChatMessageDTO } from "../common/ChatStreamRequest.js";
+import type { ChatMessageDTO } from "../../common/ChatStreamRequest.js";
 import type { MemoryContextLoadResult } from "./MemoryContextLoadResult.js";
 import { MemoryPromptRenderer } from "./MemoryPromptRenderer.js";
 import { MemorySystemMessageFactory } from "./MemorySystemMessageFactory.js";
