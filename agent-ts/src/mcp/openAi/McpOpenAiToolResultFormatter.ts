@@ -1,4 +1,4 @@
-import type { McpCallToolResult } from "../McpCallToolResult.js";
+import type { McpCallToolResult } from "../tools/McpCallToolResult.js";
 import type { OpenAiToolExecutionResult } from "../../openai/OpenAiToolExecutionResult.js";
 
 export class McpOpenAiToolResultFormatter {

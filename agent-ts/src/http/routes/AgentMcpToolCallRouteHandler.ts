@@ -1,8 +1,8 @@
 import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../HttpRouteResult.js";
-import type { McpToolService } from "../../mcp/McpToolService.js";
-import { McpToolServiceGuard } from "../../mcp/McpToolServiceGuard.js";
+import type { McpToolService } from "../../mcp/tools/McpToolService.js";
+import { McpToolServiceGuard } from "../../mcp/tools/McpToolServiceGuard.js";
 import { AgentMcpToolCallRequestReader } from "./AgentMcpToolCallRequestReader.js";
 
 export class AgentMcpToolCallRouteHandler {
