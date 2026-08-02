@@ -3,7 +3,7 @@ import type { WebFetchContextBuilder } from "../../web/context/fetch/core/WebFet
 import { WebOpenAiToolBridge } from "../../web/openAi/core/WebOpenAiToolBridge.js";
 import type { WebSearchContextBuilder } from "../../web/context/search/core/WebSearchContextBuilder.js";
 import { AgentWebClientsFactory } from "./factory/AgentWebClientsFactory.js";
-import { AgentWebContextBuildersFactory } from "./AgentWebContextBuildersFactory.js";
+import { AgentWebContextBuildersFactory } from "./factory/AgentWebContextBuildersFactory.js";
 
 export class AgentWebComponents {
   readonly fetchContextBuilder?: WebFetchContextBuilder;
