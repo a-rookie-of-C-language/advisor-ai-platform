@@ -5,9 +5,9 @@ import type { SseWriter } from "../protocol/SseWriter.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "./memory/AgentMemoryTaskCompletionSubmitter.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "./AgentMissingOpenAiApiKeyFallbackGate.js";
-import type { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
+import type { AgentOpenAiToolFacade } from "./openAi/AgentOpenAiToolFacade.js";
 import { AgentStreamErrorMessageResolver } from "./AgentStreamErrorMessageResolver.js";
-import type { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
+import type { AgentToolExecutorFactory } from "./openAi/AgentToolExecutorFactory.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();

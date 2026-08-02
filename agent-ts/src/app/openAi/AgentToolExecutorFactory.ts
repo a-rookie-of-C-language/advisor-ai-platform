@@ -1,7 +1,7 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
-import type { OpenAIToolExecutor } from "../openai/OpenAIToolRoundRunner.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { OpenAIChatTool } from "../../openai/OpenAIChatTool.js";
+import type { OpenAIToolExecutor } from "../../openai/OpenAIToolRoundRunner.js";
 import type { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 
 export class AgentToolExecutorFactory {

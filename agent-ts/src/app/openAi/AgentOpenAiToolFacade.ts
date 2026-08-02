@@ -1,9 +1,9 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
-import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
-import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
-import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { OpenAIChatTool } from "../../openai/OpenAIChatTool.js";
+import type { OpenAiToolExecutionResult } from "../../openai/OpenAiToolExecutionResult.js";
+import type { OpenAiToolRegistry } from "../../openai/OpenAiToolRegistry.js";
+import { OpenAiToolResultFactory } from "../../openai/OpenAiToolResultFactory.js";
 
 export class AgentOpenAiToolFacade {
   constructor(
