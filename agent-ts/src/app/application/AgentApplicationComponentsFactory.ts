@@ -3,7 +3,7 @@ import { AgentApplicationComponents } from "./AgentApplicationComponents.js";
 import { AgentMcpComponents } from "../mcp/AgentMcpComponents.js";
 import { AgentMemoryComponents } from "../memory/AgentMemoryComponents.js";
 import { AgentRagComponents } from "../rag/AgentRagComponents.js";
-import { AgentWebComponents } from "../web/AgentWebComponents.js";
+import { AgentWebComponents } from "../web/core/AgentWebComponents.js";
 import { AgentWorkspaceComponents } from "../workspace/AgentWorkspaceComponents.js";
 
 export class AgentApplicationComponentsFactory {
