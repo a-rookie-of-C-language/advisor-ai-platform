@@ -1,9 +1,9 @@
-import { AgentCoreExecutableLocator } from "./AgentCoreExecutableLocator.js";
-import { AgentCoreFallbackSerializer } from "./AgentCoreFallbackSerializer.js";
-import { AgentCoreHealthReporter } from "./AgentCoreHealthReporter.js";
-import { AgentCoreProcessRunner } from "./AgentCoreProcessRunner.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { ProtocolEvent } from "../protocol/ProtocolEvent.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { ProtocolEvent } from "../../protocol/ProtocolEvent.js";
+import { AgentCoreHealthReporter } from "../health/AgentCoreHealthReporter.js";
+import { AgentCoreExecutableLocator } from "../process/AgentCoreExecutableLocator.js";
+import { AgentCoreProcessRunner } from "../process/AgentCoreProcessRunner.js";
+import { AgentCoreFallbackSerializer } from "../serialization/AgentCoreFallbackSerializer.js";
 
 export class AgentCoreClient {
   private readonly executablePath: string | undefined;

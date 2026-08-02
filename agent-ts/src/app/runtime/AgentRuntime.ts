@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { AgentCoreClient } from "../../core/AgentCoreClient.js";
+import type { AgentCoreClient } from "../../core/client/AgentCoreClient.js";
 import type { JsonObject } from "../../common/JsonTypes.js";
 import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";

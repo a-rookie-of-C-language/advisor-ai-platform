@@ -1,5 +1,5 @@
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { AgentCoreProcessRunner } from "./AgentCoreProcessRunner.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { AgentCoreProcessRunner } from "../process/AgentCoreProcessRunner.js";
 
 export class AgentCoreHealthReporter {
   constructor(private readonly processRunner: AgentCoreProcessRunner | undefined) {}
