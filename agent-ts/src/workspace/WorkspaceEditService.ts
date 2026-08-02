@@ -1,6 +1,6 @@
 import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
 import type { WorkspaceFileEditor } from "./files/WorkspaceFileEditor.js";
-import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
+import type { WorkspaceTargetPathResolver } from "./path/WorkspaceTargetPathResolver.js";
 
 export class WorkspaceEditService {
   constructor(

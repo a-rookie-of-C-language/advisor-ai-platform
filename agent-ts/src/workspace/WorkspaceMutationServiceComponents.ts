@@ -3,8 +3,8 @@ import type { WorkspaceDirectoryCreator } from "./files/WorkspaceDirectoryCreato
 import { WorkspaceEditService } from "./WorkspaceEditService.js";
 import type { WorkspaceFileEditor } from "./files/WorkspaceFileEditor.js";
 import type { WorkspaceFileWriter } from "./files/WorkspaceFileWriter.js";
-import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
-import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
+import type { WorkspacePathGuard } from "./path/WorkspacePathGuard.js";
+import type { WorkspaceTargetPathResolver } from "./path/WorkspaceTargetPathResolver.js";
 import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 import { WorkspaceWriteService } from "./WorkspaceWriteService.js";
 
