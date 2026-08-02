@@ -1,4 +1,4 @@
-import { AgentApplicationFactory } from "./app/AgentApplicationFactory.js";
+import { AgentApplicationFactory } from "./app/application/AgentApplicationFactory.js";
 
 const server = new AgentApplicationFactory().createServer();
 
