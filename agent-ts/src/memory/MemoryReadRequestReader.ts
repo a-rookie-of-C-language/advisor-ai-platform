@@ -1,6 +1,6 @@
 import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
-import { LatestUserQueryResolver } from "../common/LatestUserQueryResolver.js";
+import { LatestUserQueryResolver } from "../common/request/LatestUserQueryResolver.js";
 import type { MemoryReadRequest } from "./MemoryReadRequest.js";
 import { OpenAiToolArgumentReader } from "../openai/tools/arguments/OpenAiToolArgumentReader.js";
 import { OpenAiToolTopKArgumentReader } from "../openai/tools/arguments/OpenAiToolTopKArgumentReader.js";

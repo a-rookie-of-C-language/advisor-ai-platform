@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "./ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../ChatStreamRequest.js";
 
 export class LatestUserQueryResolver {
   resolve(request: ChatStreamRequest): string {

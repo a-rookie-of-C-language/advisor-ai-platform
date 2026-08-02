@@ -13,7 +13,7 @@ import { AgentGraphHealthDescriptor } from "../health/AgentGraphHealthDescriptor
 import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
 import { AgentRequestIdResolver } from "../request/AgentRequestIdResolver.js";
 import { SseWriterFactory } from "../../protocol/SseWriterFactory.js";
-import { validateChatStreamRequest } from "../../common/validateChatStreamRequest.js";
+import { validateChatStreamRequest } from "../../common/request/validateChatStreamRequest.js";
 
 export class AgentRuntime {
   private readonly components: AgentRuntimeComponents;
