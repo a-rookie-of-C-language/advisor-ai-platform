@@ -2,7 +2,7 @@ import type { WorkspaceCacheCleanupResult } from "./model/WorkspaceCacheCleanupR
 import type { WorkspaceCreateDirResult } from "./model/WorkspaceCreateDirResult.js";
 import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
 import type { WorkspaceListing } from "./model/WorkspaceListing.js";
-import { WorkspaceMaintenanceService } from "./WorkspaceMaintenanceService.js";
+import { WorkspaceMaintenanceService } from "./maintenance/WorkspaceMaintenanceService.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
 import { WorkspaceReadService } from "./WorkspaceReadService.js";
 import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
