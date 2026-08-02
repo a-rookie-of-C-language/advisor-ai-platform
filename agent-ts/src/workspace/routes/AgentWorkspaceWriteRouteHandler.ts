@@ -2,22 +2,26 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceWriteRequestReader } from "./AgentWorkspaceWriteRequestReader.js";
 
 export class AgentWorkspaceWriteRouteHandler {
+  private readonly writeRequestReader: AgentWorkspaceWriteRequestReader;
+
   constructor(
     private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
-  ) {}
+    requestReader: AgentHttpRequestReader
+  ) {
+    this.writeRequestReader = new AgentWorkspaceWriteRequestReader(requestReader);
+  }
 
   async handle(url: URL, request: IncomingMessage): Promise<HttpRouteResult> {
-    const scope = this.requestReader.readWorkspaceScope(url);
-    const body = await this.requestReader.readJsonObject(request);
+    const writeRequest = await this.writeRequestReader.read(url, request);
     const result = await this.workspaceManager.write(
-      scope.userId,
-      scope.sessionId,
-      this.requestReader.readRequiredString(body, "path"),
-      this.requestReader.readRequiredString(body, "content"),
-      this.requestReader.readOptionalBoolean(body, "is_final", false)
+      writeRequest.scope.userId,
+      writeRequest.scope.sessionId,
+      writeRequest.path,
+      writeRequest.content,
+      writeRequest.isFinal
     );
     return { statusCode: 200, body: { status: "ok", result } };
   }
