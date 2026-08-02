@@ -2,21 +2,25 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceCreateDirRequestReader } from "./AgentWorkspaceCreateDirRequestReader.js";
 
 export class AgentWorkspaceCreateDirRouteHandler {
+  private readonly createDirRequestReader: AgentWorkspaceCreateDirRequestReader;
+
   constructor(
     private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
-  ) {}
+    requestReader: AgentHttpRequestReader
+  ) {
+    this.createDirRequestReader = new AgentWorkspaceCreateDirRequestReader(requestReader);
+  }
 
   async handle(url: URL, request: IncomingMessage): Promise<HttpRouteResult> {
-    const scope = this.requestReader.readWorkspaceScope(url);
-    const body = await this.requestReader.readJsonObject(request);
+    const createDirRequest = await this.createDirRequestReader.read(url, request);
     const result = await this.workspaceManager.createDir(
-      scope.userId,
-      scope.sessionId,
-      this.requestReader.readRequiredString(body, "path"),
-      this.requestReader.readOptionalBoolean(body, "is_final", false)
+      createDirRequest.scope.userId,
+      createDirRequest.scope.sessionId,
+      createDirRequest.path,
+      createDirRequest.isFinal
     );
     return { statusCode: 200, body: { status: "ok", result } };
   }
