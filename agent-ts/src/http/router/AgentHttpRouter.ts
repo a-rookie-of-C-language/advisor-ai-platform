@@ -1,14 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorkspaceRouteHandler.js";
-import type { AgentJsonResponseWriter } from "./response/AgentJsonResponseWriter.js";
+import type { AgentWorkspaceRouteHandler } from "../../workspace/routes/AgentWorkspaceRouteHandler.js";
+import type { AgentRequestUrlFactory } from "../request/AgentRequestUrlFactory.js";
+import type { AgentJsonResponseWriter } from "../response/AgentJsonResponseWriter.js";
+import { AgentHttpRouteResultWriter } from "../response/AgentHttpRouteResultWriter.js";
+import type { AgentChatStreamRouteHandler } from "../routes/AgentChatStreamRouteHandler.js";
+import type { AgentHealthRouteHandler } from "../routes/AgentHealthRouteHandler.js";
+import type { AgentMcpRouteHandler } from "../routes/AgentMcpRouteHandler.js";
 import type { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
-import type { AgentRequestUrlFactory } from "./request/AgentRequestUrlFactory.js";
 import { AgentHttpAuthenticatedRouteDispatcher } from "./AgentHttpAuthenticatedRouteDispatcher.js";
 import { AgentHttpPublicRouteDispatcher } from "./AgentHttpPublicRouteDispatcher.js";
-import { AgentHttpRouteResultWriter } from "./response/AgentHttpRouteResultWriter.js";
-import type { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";
-import type { AgentHealthRouteHandler } from "./routes/AgentHealthRouteHandler.js";
-import type { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 
 export class AgentHttpRouter {
   private readonly authenticatedRouteDispatcher: AgentHttpAuthenticatedRouteDispatcher;
