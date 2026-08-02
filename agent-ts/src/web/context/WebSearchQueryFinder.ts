@@ -1,5 +1,5 @@
 import type { ChatMessageDTO } from "../../common/model/ChatStreamRequest.js";
-import { WebSearchTriggerMatcher } from "./WebSearchTriggerMatcher.js";
+import { WebSearchTriggerMatcher } from "./search/matching/WebSearchTriggerMatcher.js";
 
 export class WebSearchQueryFinder {
   private readonly triggerMatcher = new WebSearchTriggerMatcher();
