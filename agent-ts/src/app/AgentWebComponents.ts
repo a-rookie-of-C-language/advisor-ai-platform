@@ -1,10 +1,9 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
-import { WebFetchContextBuilder as WebFetchContextBuilderClass } from "../web/WebFetchContextBuilder.js";
 import { WebOpenAiToolBridge } from "../web/WebOpenAiToolBridge.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
-import { WebSearchContextBuilder as WebSearchContextBuilderClass } from "../web/WebSearchContextBuilder.js";
 import { AgentWebClientsFactory } from "./AgentWebClientsFactory.js";
+import { AgentWebContextBuildersFactory } from "./AgentWebContextBuildersFactory.js";
 
 export class AgentWebComponents {
   readonly fetchContextBuilder?: WebFetchContextBuilder;
@@ -15,8 +14,9 @@ export class AgentWebComponents {
     const webClients = new AgentWebClientsFactory().create(config);
     const webFetchClient = webClients.webFetchClient;
     const webSearchClient = webClients.webSearchClient;
-    this.fetchContextBuilder = webFetchClient ? new WebFetchContextBuilderClass(webFetchClient) : undefined;
-    this.searchContextBuilder = webSearchClient ? new WebSearchContextBuilderClass(webSearchClient) : undefined;
+    const contextBuilders = new AgentWebContextBuildersFactory().create(webClients);
+    this.fetchContextBuilder = contextBuilders.fetchContextBuilder;
+    this.searchContextBuilder = contextBuilders.searchContextBuilder;
     this.openAiToolBridge = new WebOpenAiToolBridge(webFetchClient, webSearchClient);
   }
 }
