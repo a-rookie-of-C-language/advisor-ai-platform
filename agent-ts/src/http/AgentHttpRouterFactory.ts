@@ -5,7 +5,7 @@ import type { WorkspaceManager } from "../workspace/WorkspaceManager.js";
 import { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorkspaceRouteHandler.js";
 import { AgentHttpRequestReader } from "./AgentHttpRequestReader.js";
 import { AgentHttpRouter } from "./AgentHttpRouter.js";
-import { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
+import { AgentJsonResponseWriter } from "./response/AgentJsonResponseWriter.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import { AgentRequestUrlFactory } from "./AgentRequestUrlFactory.js";
 import { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";

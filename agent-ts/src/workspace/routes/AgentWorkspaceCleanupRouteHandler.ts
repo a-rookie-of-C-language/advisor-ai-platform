@@ -1,5 +1,5 @@
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
+import type { HttpRouteResult } from "../../http/response/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
 import { AgentWorkspaceScopedRouteRequestReader } from "./AgentWorkspaceScopedRouteRequestReader.js";
 

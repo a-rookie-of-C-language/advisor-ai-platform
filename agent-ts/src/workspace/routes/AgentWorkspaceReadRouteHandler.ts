@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
+import type { HttpRouteResult } from "../../http/response/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
 import type { AgentWorkspaceReadRouteComponents } from "./AgentWorkspaceReadRouteComponents.js";
 import { AgentWorkspaceReadRouteComponentsFactory } from "./AgentWorkspaceReadRouteComponentsFactory.js";
