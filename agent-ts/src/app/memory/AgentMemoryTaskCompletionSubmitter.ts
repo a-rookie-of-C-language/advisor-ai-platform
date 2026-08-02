@@ -1,5 +1,5 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
 
 export class AgentMemoryTaskCompletionSubmitter {
   constructor(private readonly memoryTaskSubmitter?: MemoryTaskSubmitter) {}

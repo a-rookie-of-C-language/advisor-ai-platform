@@ -8,7 +8,7 @@ import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
 import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
 import { AgentContextPipelineFactory } from "./AgentContextPipelineFactory.js";
-import { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
+import { AgentMemoryTaskCompletionSubmitter } from "./memory/AgentMemoryTaskCompletionSubmitter.js";
 import { AgentOpenAiToolComponentsFactory } from "./AgentOpenAiToolComponentsFactory.js";
 
 export class AgentChatStreamSessionFactory {

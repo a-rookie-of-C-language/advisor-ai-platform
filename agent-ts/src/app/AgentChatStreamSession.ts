@@ -3,7 +3,7 @@ import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
 import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
 import type { SseWriter } from "../protocol/SseWriter.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
-import type { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
+import type { AgentMemoryTaskCompletionSubmitter } from "./memory/AgentMemoryTaskCompletionSubmitter.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "./AgentMissingOpenAiApiKeyFallbackGate.js";
 import type { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentStreamErrorMessageResolver } from "./AgentStreamErrorMessageResolver.js";
