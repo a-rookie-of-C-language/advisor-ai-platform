@@ -1,6 +1,6 @@
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
 import { AgentOpenAiToolFacade } from "./core/AgentOpenAiToolFacade.js";
-import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
+import { AgentToolExecutorFactory } from "./factory/AgentToolExecutorFactory.js";
 import type { AgentOpenAiToolComponents } from "./model/AgentOpenAiToolComponents.js";
 
 export class AgentOpenAiToolComponentsFactory {
