@@ -1,29 +1,25 @@
-import { WorkspaceCacheCleaner } from "./WorkspaceCacheCleaner.js";
 import { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
 import { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
 import { WorkspaceFileReader } from "./WorkspaceFileReader.js";
 import { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
+import { WorkspaceMaintenanceServiceFactory } from "./WorkspaceMaintenanceServiceFactory.js";
 import { WorkspaceMaintenanceService } from "./WorkspaceMaintenanceService.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
 import { WorkspaceReadService } from "./WorkspaceReadService.js";
 import { WorkspaceServiceFactoryComponents } from "./WorkspaceServiceFactoryComponents.js";
-import { WorkspaceStatsCollector } from "./WorkspaceStatsCollector.js";
 import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 
 export class WorkspaceServiceFactory {
   private readonly components: WorkspaceServiceFactoryComponents;
+  private readonly maintenanceServiceFactory = new WorkspaceMaintenanceServiceFactory();
 
   constructor(basePath: string) {
     this.components = new WorkspaceServiceFactoryComponents(basePath);
   }
 
   createMaintenanceService(): WorkspaceMaintenanceService {
-    return new WorkspaceMaintenanceService(
-      new WorkspaceCacheCleaner(this.components.fileSystem),
-      this.components.sessionPathProvider,
-      new WorkspaceStatsCollector(this.components.fileSystem)
-    );
+    return this.maintenanceServiceFactory.create(this.components);
   }
 
   createMutationService(): WorkspaceMutationService {
