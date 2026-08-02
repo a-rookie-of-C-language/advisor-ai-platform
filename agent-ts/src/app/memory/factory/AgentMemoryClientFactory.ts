@@ -1,5 +1,5 @@
-import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import { MemoryApiClient } from "../../memory/api/MemoryApiClient.js";
+import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import { MemoryApiClient } from "../../../memory/api/MemoryApiClient.js";
 
 export class AgentMemoryClientFactory {
   create(config: AgentConfig): MemoryApiClient | undefined {
