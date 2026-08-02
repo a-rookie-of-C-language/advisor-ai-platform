@@ -3,7 +3,7 @@ import type { JsonObject } from "../common/JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
 import type { MemoryApiClient } from "./api/MemoryApiClient.js";
 import type { MemoryToolResultFormatter } from "./MemoryToolResultFormatter.js";
-import type { MemoryWriteRequestReader } from "./MemoryWriteRequestReader.js";
+import type { MemoryWriteRequestReader } from "./request/MemoryWriteRequestReader.js";
 
 export class MemoryWriteOpenAiToolExecutor {
   constructor(

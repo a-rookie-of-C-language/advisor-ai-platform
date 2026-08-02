@@ -1,9 +1,9 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import { LatestUserQueryResolver } from "../common/request/LatestUserQueryResolver.js";
-import type { MemoryReadRequest } from "./model/MemoryReadRequest.js";
-import { OpenAiToolArgumentReader } from "../openai/tools/arguments/OpenAiToolArgumentReader.js";
-import { OpenAiToolTopKArgumentReader } from "../openai/tools/arguments/OpenAiToolTopKArgumentReader.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import { LatestUserQueryResolver } from "../../common/request/LatestUserQueryResolver.js";
+import { OpenAiToolArgumentReader } from "../../openai/tools/arguments/OpenAiToolArgumentReader.js";
+import { OpenAiToolTopKArgumentReader } from "../../openai/tools/arguments/OpenAiToolTopKArgumentReader.js";
+import type { MemoryReadRequest } from "../model/MemoryReadRequest.js";
 
 export class MemoryReadRequestReader {
   private readonly latestUserQueryResolver = new LatestUserQueryResolver();
