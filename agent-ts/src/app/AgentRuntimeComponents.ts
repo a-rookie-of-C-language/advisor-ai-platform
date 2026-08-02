@@ -9,12 +9,12 @@ import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
 import { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
-import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
-import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
+import { AgentOpenAiToolComponentsFactory } from "./AgentOpenAiToolComponentsFactory.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;
   private readonly contextPipelineFactory = new AgentContextPipelineFactory();
+  private readonly openAiToolComponentsFactory = new AgentOpenAiToolComponentsFactory();
 
   constructor(
     config: AgentConfig,
@@ -33,15 +33,14 @@ export class AgentRuntimeComponents {
       webSearchContextBuilder
     );
     const memoryTaskCompletionSubmitter = new AgentMemoryTaskCompletionSubmitter(memoryTaskSubmitter);
-    const openAiToolFacade = new AgentOpenAiToolFacade(config.openAiApiKey, openAiToolRegistry);
-    const toolExecutorFactory = new AgentToolExecutorFactory(openAiToolFacade);
+    const openAiToolComponents = this.openAiToolComponentsFactory.create(config.openAiApiKey, openAiToolRegistry);
     this.streamSession = new AgentChatStreamSession(
       config.openAiApiKey,
       contextPipeline,
       memoryTaskCompletionSubmitter,
       openAiClient,
-      openAiToolFacade,
-      toolExecutorFactory
+      openAiToolComponents.openAiToolFacade,
+      openAiToolComponents.toolExecutorFactory
     );
   }
 }
