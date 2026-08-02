@@ -1,4 +1,4 @@
-import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
+import type { WorkspaceFileWriter } from "./files/WorkspaceFileWriter.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";

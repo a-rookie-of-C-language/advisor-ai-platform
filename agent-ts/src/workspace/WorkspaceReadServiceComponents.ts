@@ -1,7 +1,7 @@
-import type { WorkspaceFileReader } from "./WorkspaceFileReader.js";
+import type { WorkspaceFileReader } from "./files/WorkspaceFileReader.js";
 import { WorkspaceFileReadService } from "./WorkspaceFileReadService.js";
 import { WorkspaceListService } from "./WorkspaceListService.js";
-import type { WorkspaceListingBuilder } from "./WorkspaceListingBuilder.js";
+import type { WorkspaceListingBuilder } from "./files/WorkspaceListingBuilder.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import type { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
 

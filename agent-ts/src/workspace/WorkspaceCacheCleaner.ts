@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { WorkspaceCacheCleanupResult } from "./model/WorkspaceCacheCleanupResult.js";
-import type { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
+import type { WorkspaceFileSystem } from "./files/WorkspaceFileSystem.js";
 import { CACHE_DIR } from "./model/WorkspaceLimits.js";
 
 export class WorkspaceCacheCleaner {

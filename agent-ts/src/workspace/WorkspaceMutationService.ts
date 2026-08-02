@@ -1,8 +1,8 @@
 import type { WorkspaceCreateDirResult } from "./model/WorkspaceCreateDirResult.js";
-import type { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
+import type { WorkspaceDirectoryCreator } from "./files/WorkspaceDirectoryCreator.js";
 import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
-import type { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
-import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
+import type { WorkspaceFileEditor } from "./files/WorkspaceFileEditor.js";
+import type { WorkspaceFileWriter } from "./files/WorkspaceFileWriter.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceMutationServiceComponents } from "./WorkspaceMutationServiceComponents.js";
 import { WorkspaceMutationServiceComponentsFactory } from "./WorkspaceMutationServiceComponentsFactory.js";

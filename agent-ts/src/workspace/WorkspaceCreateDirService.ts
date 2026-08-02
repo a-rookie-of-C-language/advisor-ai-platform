@@ -1,5 +1,5 @@
 import type { WorkspaceCreateDirResult } from "./model/WorkspaceCreateDirResult.js";
-import type { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
+import type { WorkspaceDirectoryCreator } from "./files/WorkspaceDirectoryCreator.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 
 export class WorkspaceCreateDirService {

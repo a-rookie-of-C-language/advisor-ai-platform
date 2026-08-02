@@ -1,5 +1,5 @@
 import path from "node:path";
-import { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
+import { WorkspaceFileSystem } from "./files/WorkspaceFileSystem.js";
 import { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
 import { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";

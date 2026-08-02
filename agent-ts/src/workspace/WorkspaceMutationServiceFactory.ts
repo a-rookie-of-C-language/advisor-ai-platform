@@ -1,6 +1,6 @@
-import { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
-import { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
-import { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
+import { WorkspaceDirectoryCreator } from "./files/WorkspaceDirectoryCreator.js";
+import { WorkspaceFileEditor } from "./files/WorkspaceFileEditor.js";
+import { WorkspaceFileWriter } from "./files/WorkspaceFileWriter.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
 import type { WorkspaceServiceFactoryComponents } from "./WorkspaceServiceFactoryComponents.js";
 import { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
