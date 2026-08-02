@@ -5,9 +5,12 @@ import type { SseWriter } from "../protocol/SseWriter.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
 import type { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
+import { AgentStreamErrorMessageResolver } from "./AgentStreamErrorMessageResolver.js";
 import type { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
 
 export class AgentChatStreamSession {
+  private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
+
   constructor(
     private readonly openAiApiKey: string,
     private readonly contextPipeline: AgentContextPipeline,
@@ -36,7 +39,7 @@ export class AgentChatStreamSession {
       await writer.done("stream_finished");
       await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, eventWriter.answer);
     } catch (error) {
-      await writer.error("internal_error", error instanceof Error ? error.message : "agent stream failed", true);
+      await writer.error("internal_error", this.streamErrorMessageResolver.resolve(error), true);
     }
   }
 }
