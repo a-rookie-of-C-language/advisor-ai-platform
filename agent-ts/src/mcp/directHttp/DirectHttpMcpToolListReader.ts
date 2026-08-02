@@ -1,4 +1,4 @@
-import { JsonObjectReader } from "../../common/JsonObjectReader.js";
+import { JsonObjectReader } from "../../common/json/JsonObjectReader.js";
 import { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
 import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { McpJsonRpcRequestFactory } from "../jsonRpc/McpJsonRpcRequestFactory.js";
