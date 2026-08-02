@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
 
 export class MemoryTaskRecentMessagesBuilder {
   build(request: ChatStreamRequest, assistantText: string): Array<{ role: string; content: string }> {

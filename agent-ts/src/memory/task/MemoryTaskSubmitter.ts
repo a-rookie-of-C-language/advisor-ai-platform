@@ -1,6 +1,6 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import { LastUserMessageFinder } from "./context/LastUserMessageFinder.js";
-import type { MemoryApiClient } from "./api/MemoryApiClient.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { MemoryApiClient } from "../api/MemoryApiClient.js";
+import { LastUserMessageFinder } from "../context/LastUserMessageFinder.js";
 import { MemoryTaskRecentMessagesBuilder } from "./MemoryTaskRecentMessagesBuilder.js";
 
 export class MemoryTaskSubmitter {

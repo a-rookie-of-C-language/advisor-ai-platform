@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
-import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
+import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
