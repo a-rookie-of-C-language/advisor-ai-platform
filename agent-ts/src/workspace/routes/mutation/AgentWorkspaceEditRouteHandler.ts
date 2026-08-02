@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../http/response/HttpRouteResult.js";
-import type { WorkspaceManager } from "../core/WorkspaceManager.js";
+import type { AgentHttpRequestReader } from "../../../http/request/AgentHttpRequestReader.js";
+import type { HttpRouteResult } from "../../../http/response/HttpRouteResult.js";
+import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
 import { AgentWorkspaceEditRequestReader } from "./AgentWorkspaceEditRequestReader.js";
 
 export class AgentWorkspaceEditRouteHandler {
