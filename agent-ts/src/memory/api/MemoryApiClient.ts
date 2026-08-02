@@ -5,9 +5,9 @@ import { MemoryApiArrayResponseReader } from "./MemoryApiArrayResponseReader.js"
 import { MemoryApiEndpointFactory } from "./MemoryApiEndpointFactory.js";
 import { MemoryApiHttpClient } from "./MemoryApiHttpClient.js";
 import { MemoryApiPostRequestFactory } from "./MemoryApiPostRequestFactory.js";
-import type { MemoryCandidateUpsertRequest } from "../MemoryCandidateUpsertRequest.js";
-import type { MemoryItem } from "../MemoryItem.js";
-import type { MemoryTaskSubmitRequest } from "../MemoryTaskSubmitRequest.js";
+import type { MemoryCandidateUpsertRequest } from "../model/MemoryCandidateUpsertRequest.js";
+import type { MemoryItem } from "../model/MemoryItem.js";
+import type { MemoryTaskSubmitRequest } from "../model/MemoryTaskSubmitRequest.js";
 
 export class MemoryApiClient {
   private readonly arrayResponseReader = new MemoryApiArrayResponseReader();

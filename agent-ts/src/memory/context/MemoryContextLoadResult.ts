@@ -1,4 +1,4 @@
-import type { MemoryItem } from "../MemoryItem.js";
+import type { MemoryItem } from "../model/MemoryItem.js";
 import type { SessionSummary } from "../../common/session/SessionSummary.js";
 
 export interface MemoryContextLoadResult {
