@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
-import type { AgentWorkspaceFileReadRequest } from "./model/AgentWorkspaceFileReadRequest.js";
+import type { AgentHttpRequestReader } from "../../../http/request/AgentHttpRequestReader.js";
+import type { AgentWorkspaceFileReadRequest } from "../model/AgentWorkspaceFileReadRequest.js";
 
 export class AgentWorkspaceFileReadRequestReader {
   constructor(private readonly requestReader: AgentHttpRequestReader) {}

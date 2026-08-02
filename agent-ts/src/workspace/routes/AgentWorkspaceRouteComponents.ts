@@ -2,7 +2,7 @@ import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequest
 import type { WorkspaceManager } from "../core/WorkspaceManager.js";
 import { AgentWorkspaceMaintenanceRouteHandler } from "./AgentWorkspaceMaintenanceRouteHandler.js";
 import { AgentWorkspaceMutationRouteHandler } from "./AgentWorkspaceMutationRouteHandler.js";
-import { AgentWorkspaceReadRouteHandler } from "./AgentWorkspaceReadRouteHandler.js";
+import { AgentWorkspaceReadRouteHandler } from "./read/AgentWorkspaceReadRouteHandler.js";
 
 export class AgentWorkspaceRouteComponents {
   readonly maintenanceRouteHandler: AgentWorkspaceMaintenanceRouteHandler;
