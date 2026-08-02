@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorkspaceRouteHandler.js";
 import type { AgentJsonResponseWriter } from "./response/AgentJsonResponseWriter.js";
 import type { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
-import type { AgentRequestUrlFactory } from "./AgentRequestUrlFactory.js";
+import type { AgentRequestUrlFactory } from "./request/AgentRequestUrlFactory.js";
 import { AgentHttpAuthenticatedRouteDispatcher } from "./AgentHttpAuthenticatedRouteDispatcher.js";
 import { AgentHttpPublicRouteDispatcher } from "./AgentHttpPublicRouteDispatcher.js";
 import { AgentHttpRouteResultWriter } from "./response/AgentHttpRouteResultWriter.js";

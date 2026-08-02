@@ -1,4 +1,4 @@
-import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
+import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
 import type { AgentWorkspaceScopedRouteRequest } from "./AgentWorkspaceScopedRouteRequest.js";
 
 export class AgentWorkspaceScopedRouteRequestReader {

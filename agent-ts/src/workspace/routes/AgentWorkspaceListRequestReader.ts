@@ -1,4 +1,4 @@
-import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
+import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
 import type { AgentWorkspaceListRequest } from "./AgentWorkspaceListRequest.js";
 
 export class AgentWorkspaceListRequestReader {

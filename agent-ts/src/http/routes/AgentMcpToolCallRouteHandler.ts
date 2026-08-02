@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentHttpRequestReader } from "../AgentHttpRequestReader.js";
+import type { AgentHttpRequestReader } from "../request/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../response/HttpRouteResult.js";
 import type { McpToolService } from "../../mcp/tools/McpToolService.js";
 import { McpToolServiceGuard } from "../../mcp/tools/McpToolServiceGuard.js";
