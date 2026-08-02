@@ -3,7 +3,7 @@ import { OpenAiToolArgumentReader } from "../../openai/tools/arguments/core/Open
 import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { WebFetchClient } from "../fetch/WebFetchClient.js";
 import type { WebSearchClient } from "../search/WebSearchClient.js";
-import { WebToolResultFactory } from "./WebToolResultFactory.js";
+import { WebToolResultFactory } from "./result/WebToolResultFactory.js";
 
 export class WebOpenAiToolDispatcher {
   private readonly resultFactory = new WebToolResultFactory();
