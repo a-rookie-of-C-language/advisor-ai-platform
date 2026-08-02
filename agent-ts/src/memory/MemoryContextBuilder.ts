@@ -2,6 +2,7 @@ import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequ
 import { LastUserMessageFinder } from "./LastUserMessageFinder.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryContextLoader } from "./MemoryContextLoader.js";
+import { MemoryContextRequestGate } from "./MemoryContextRequestGate.js";
 import { MemoryPromptRenderer } from "./MemoryPromptRenderer.js";
 import { MemorySystemMessageFactory } from "./MemorySystemMessageFactory.js";
 
@@ -9,6 +10,7 @@ export class MemoryContextBuilder {
   private readonly lastUserMessageFinder = new LastUserMessageFinder();
   private readonly loader: MemoryContextLoader;
   private readonly promptRenderer: MemoryPromptRenderer;
+  private readonly requestGate = new MemoryContextRequestGate();
   private readonly systemMessageFactory = new MemorySystemMessageFactory();
 
   constructor(
@@ -21,14 +23,14 @@ export class MemoryContextBuilder {
 
   async injectMemory(request: ChatStreamRequest): Promise<ChatMessageDTO[]> {
     const userQuery = this.lastUserMessageFinder.find(request.messages);
-    if (!request.userId || !request.sessionId || !userQuery) {
+    if (!this.requestGate.shouldLoad(request.userId, request.sessionId, userQuery)) {
       return request.messages;
     }
 
     try {
       const { summary, coreMemories, longTermMemories } = await this.loader.load(
-        request.userId,
-        request.sessionId,
+        request.userId!,
+        request.sessionId!,
         userQuery
       );
       const prompt = this.promptRenderer.render(summary, coreMemories, longTermMemories);
