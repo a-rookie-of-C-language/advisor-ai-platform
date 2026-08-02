@@ -1,4 +1,4 @@
-import type { WebSearchResult } from "./WebSearchResult.js";
+import type { WebSearchResult } from "./search/WebSearchResult.js";
 
 export class WebSearchResultRenderer {
   render(results: WebSearchResult[]): string {
