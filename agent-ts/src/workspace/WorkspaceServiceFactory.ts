@@ -2,8 +2,8 @@ import { WorkspaceMaintenanceService } from "./maintenance/WorkspaceMaintenanceS
 import { WorkspaceMaintenanceServiceFactory } from "./maintenance/WorkspaceMaintenanceServiceFactory.js";
 import { WorkspaceMutationServiceFactory } from "./WorkspaceMutationServiceFactory.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
-import { WorkspaceReadService } from "./WorkspaceReadService.js";
-import { WorkspaceReadServiceFactory } from "./WorkspaceReadServiceFactory.js";
+import { WorkspaceReadService } from "./services/read/WorkspaceReadService.js";
+import { WorkspaceReadServiceFactory } from "./services/read/WorkspaceReadServiceFactory.js";
 import { WorkspaceServiceFactoryComponents } from "./WorkspaceServiceFactoryComponents.js";
 
 export class WorkspaceServiceFactory {

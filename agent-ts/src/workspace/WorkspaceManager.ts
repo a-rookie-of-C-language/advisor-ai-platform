@@ -4,7 +4,7 @@ import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
 import type { WorkspaceListing } from "./model/WorkspaceListing.js";
 import { WorkspaceMaintenanceService } from "./maintenance/WorkspaceMaintenanceService.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
-import { WorkspaceReadService } from "./WorkspaceReadService.js";
+import { WorkspaceReadService } from "./services/read/WorkspaceReadService.js";
 import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
 import type { WorkspaceStats } from "./model/WorkspaceStats.js";
 import type { WorkspaceWriteResult } from "./model/WorkspaceWriteResult.js";

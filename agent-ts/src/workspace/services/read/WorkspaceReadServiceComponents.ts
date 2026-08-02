@@ -1,9 +1,9 @@
-import type { WorkspaceFileReader } from "./files/WorkspaceFileReader.js";
+import type { WorkspaceFileReader } from "../../files/WorkspaceFileReader.js";
+import type { WorkspaceListingBuilder } from "../../files/WorkspaceListingBuilder.js";
+import type { WorkspacePathGuard } from "../../path/WorkspacePathGuard.js";
+import type { WorkspaceSessionPathProvider } from "../../path/WorkspaceSessionPathProvider.js";
 import { WorkspaceFileReadService } from "./WorkspaceFileReadService.js";
 import { WorkspaceListService } from "./WorkspaceListService.js";
-import type { WorkspaceListingBuilder } from "./files/WorkspaceListingBuilder.js";
-import type { WorkspacePathGuard } from "./path/WorkspacePathGuard.js";
-import type { WorkspaceSessionPathProvider } from "./path/WorkspaceSessionPathProvider.js";
 
 export class WorkspaceReadServiceComponents {
   readonly fileReadService: WorkspaceFileReadService;
