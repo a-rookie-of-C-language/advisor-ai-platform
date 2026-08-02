@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { McpOpenAiToolBridge } from "../../mcp/openAi/McpOpenAiToolBridge.js";
-import type { McpToolService } from "../../mcp/tools/McpToolService.js";
+import type { McpToolService } from "../../mcp/tools/core/McpToolService.js";
 import { AgentMcpConfigFactory } from "./AgentMcpConfigFactory.js";
 import { AgentMcpFeatureComponentsFactory } from "./AgentMcpFeatureComponentsFactory.js";
 
