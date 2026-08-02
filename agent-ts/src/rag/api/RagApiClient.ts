@@ -1,6 +1,6 @@
-import type { AgentConfig } from "../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../config/model/AgentConfig.js";
+import type { RagDocument } from "../RagDocument.js";
 import { RagApiHttpClient } from "./RagApiHttpClient.js";
-import type { RagDocument } from "./RagDocument.js";
 
 export class RagApiClient {
   private readonly httpClient: RagApiHttpClient;

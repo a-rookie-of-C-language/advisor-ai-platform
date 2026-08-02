@@ -1,5 +1,5 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { RagApiClient } from "./RagApiClient.js";
+import type { RagApiClient } from "./api/RagApiClient.js";
 import { RagPromptRenderer } from "./RagPromptRenderer.js";
 import { RagSystemMessageFactory } from "./RagSystemMessageFactory.js";
 
