@@ -1,6 +1,6 @@
-import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
-import { WebFetchOpenAiToolDefinition } from "./tools/WebFetchOpenAiToolDefinition.js";
-import { WebSearchOpenAiToolDefinition } from "./tools/WebSearchOpenAiToolDefinition.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
+import { WebFetchOpenAiToolDefinition } from "../tools/WebFetchOpenAiToolDefinition.js";
+import { WebSearchOpenAiToolDefinition } from "../tools/WebSearchOpenAiToolDefinition.js";
 
 export class WebOpenAiToolCatalog {
   private readonly fetchDefinition = new WebFetchOpenAiToolDefinition();

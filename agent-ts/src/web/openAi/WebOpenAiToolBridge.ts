@@ -1,11 +1,11 @@
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
-import type { WebFetchClient } from "./fetch/WebFetchClient.js";
-import { OpenAiToolResultFactory } from "../openai/tools/runtime/OpenAiToolResultFactory.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
+import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/OpenAiToolExecutionResult.js";
+import { OpenAiToolResultFactory } from "../../openai/tools/runtime/OpenAiToolResultFactory.js";
+import type { WebFetchClient } from "../fetch/WebFetchClient.js";
+import type { WebSearchClient } from "../search/WebSearchClient.js";
 import { WebOpenAiToolBridgeComponents } from "./WebOpenAiToolBridgeComponents.js";
 import { WebOpenAiToolBridgeComponentsFactory } from "./WebOpenAiToolBridgeComponentsFactory.js";
-import type { WebSearchClient } from "./search/WebSearchClient.js";
 
 export class WebOpenAiToolBridge {
   private readonly components: WebOpenAiToolBridgeComponents;

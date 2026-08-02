@@ -1,7 +1,7 @@
-import type { WebFetchClient } from "./fetch/WebFetchClient.js";
+import type { WebFetchClient } from "../fetch/WebFetchClient.js";
+import type { WebSearchClient } from "../search/WebSearchClient.js";
 import { WebOpenAiToolCatalog } from "./WebOpenAiToolCatalog.js";
 import { WebOpenAiToolExecutor } from "./WebOpenAiToolExecutor.js";
-import type { WebSearchClient } from "./search/WebSearchClient.js";
 import { WebToolAvailabilityFactory } from "./WebToolAvailabilityFactory.js";
 import { WebToolNameMatcher } from "./WebToolNameMatcher.js";
 

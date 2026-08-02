@@ -1,7 +1,7 @@
 import type { MemoryOpenAiToolBridge } from "../../../memory/MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "../../../mcp/openAi/McpOpenAiToolBridge.js";
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../../../web/WebOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../workspace/WorkspaceOpenAiToolBridge.js";
 import { OpenAiToolCatalogAggregator } from "./OpenAiToolCatalogAggregator.js";
 import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
