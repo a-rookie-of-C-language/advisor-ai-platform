@@ -1,4 +1,4 @@
-import { WebFetchContextBuilder as WebFetchContextBuilderClass } from "../../web/context/WebFetchContextBuilder.js";
+import { WebFetchContextBuilder as WebFetchContextBuilderClass } from "../../web/context/fetch/core/WebFetchContextBuilder.js";
 import { WebSearchContextBuilder as WebSearchContextBuilderClass } from "../../web/context/WebSearchContextBuilder.js";
 import type { AgentWebClients } from "./AgentWebClients.js";
 import { AgentWebContextBuilders } from "./AgentWebContextBuilders.js";

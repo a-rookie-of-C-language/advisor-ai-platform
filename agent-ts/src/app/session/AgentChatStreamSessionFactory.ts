@@ -4,7 +4,7 @@ import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.
 import type { OpenAIChatClient } from "../../openai/chat/core/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../../web/context/WebFetchContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../web/context/WebSearchContextBuilder.js";
 import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
 import { AgentContextPipelineFactory } from "./AgentContextPipelineFactory.js";
