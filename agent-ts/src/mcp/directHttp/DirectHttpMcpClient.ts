@@ -3,7 +3,7 @@ import { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
 import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { DirectHttpMcpToolCaller } from "./DirectHttpMcpToolCaller.js";
 import { DirectHttpMcpToolListReader } from "./DirectHttpMcpToolListReader.js";
-import { McpJsonRpcRequestFactory } from "../McpJsonRpcRequestFactory.js";
+import { McpJsonRpcRequestFactory } from "../jsonRpc/McpJsonRpcRequestFactory.js";
 import type { McpCallToolResult } from "../tools/McpCallToolResult.js";
 import type { McpToolDescriptor } from "../tools/McpToolDescriptor.js";
 import type { McpServerConfig } from "../config/McpServerConfig.js";

@@ -4,7 +4,7 @@ import { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
 import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { McpCallToolResultMapper } from "../tools/McpCallToolResultMapper.js";
 import type { McpCallToolResult } from "../tools/McpCallToolResult.js";
-import { McpJsonRpcRequestFactory } from "../McpJsonRpcRequestFactory.js";
+import { McpJsonRpcRequestFactory } from "../jsonRpc/McpJsonRpcRequestFactory.js";
 
 export class DirectHttpMcpToolCaller {
   private readonly callToolResultMapper = new McpCallToolResultMapper();

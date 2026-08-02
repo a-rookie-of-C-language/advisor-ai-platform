@@ -1,5 +1,5 @@
 import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
-import { McpJsonRpcRequestFactory } from "../McpJsonRpcRequestFactory.js";
+import { McpJsonRpcRequestFactory } from "../jsonRpc/McpJsonRpcRequestFactory.js";
 
 export class DirectHttpMcpInitializer {
   private initialized = false;

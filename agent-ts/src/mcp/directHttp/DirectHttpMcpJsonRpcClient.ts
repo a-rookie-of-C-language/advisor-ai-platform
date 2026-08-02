@@ -2,7 +2,7 @@ import type { JsonObject } from "../../common/JsonTypes.js";
 import { DirectHttpMcpHeadersFactory } from "./DirectHttpMcpHeadersFactory.js";
 import { DirectHttpMcpResponseReader } from "./DirectHttpMcpResponseReader.js";
 import { DirectHttpMcpTransport } from "./DirectHttpMcpTransport.js";
-import type { JsonRpcResponse } from "../JsonRpcResponse.js";
+import type { JsonRpcResponse } from "../jsonRpc/JsonRpcResponse.js";
 import type { McpServerConfig } from "../config/McpServerConfig.js";
 
 export class DirectHttpMcpJsonRpcClient {
