@@ -6,8 +6,8 @@ import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../web/context/WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../web/context/WebSearchContextBuilder.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;

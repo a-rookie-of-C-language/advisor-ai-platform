@@ -1,4 +1,4 @@
-import type { WebFetchedPage } from "./fetch/WebFetchedPage.js";
+import type { WebFetchedPage } from "../fetch/WebFetchedPage.js";
 
 export class WebFetchedPageRenderer {
   render(pages: WebFetchedPage[]): string {

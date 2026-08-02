@@ -1,6 +1,6 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { WebFetchClient } from "./fetch/WebFetchClient.js";
-import { WebFetchedPageLoader } from "./fetch/WebFetchedPageLoader.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { WebFetchClient } from "../fetch/WebFetchClient.js";
+import { WebFetchedPageLoader } from "../fetch/WebFetchedPageLoader.js";
 import { WebFetchedPageRenderer } from "./WebFetchedPageRenderer.js";
 import { WebFetchSystemMessageFactory } from "./WebFetchSystemMessageFactory.js";
 import { WebFetchUrlExtractor } from "./WebFetchUrlExtractor.js";
@@ -24,10 +24,7 @@ export class WebFetchContextBuilder {
       if (pages.length === 0) {
         return request.messages;
       }
-      return [
-        this.systemMessageFactory.create(this.pageRenderer.render(pages)),
-        ...request.messages
-      ];
+      return [this.systemMessageFactory.create(this.pageRenderer.render(pages)), ...request.messages];
     } catch {
       return request.messages;
     }

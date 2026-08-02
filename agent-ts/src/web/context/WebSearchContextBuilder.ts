@@ -1,5 +1,5 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { WebSearchClient } from "./search/WebSearchClient.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { WebSearchClient } from "../search/WebSearchClient.js";
 import { WebSearchQueryFinder } from "./WebSearchQueryFinder.js";
 import { WebSearchResultRenderer } from "./WebSearchResultRenderer.js";
 import { WebSearchSystemMessageFactory } from "./WebSearchSystemMessageFactory.js";
@@ -22,10 +22,7 @@ export class WebSearchContextBuilder {
       if (results.length === 0) {
         return request.messages;
       }
-      return [
-        this.systemMessageFactory.create(this.resultRenderer.render(results)),
-        ...request.messages
-      ];
+      return [this.systemMessageFactory.create(this.resultRenderer.render(results)), ...request.messages];
     } catch {
       return request.messages;
     }
