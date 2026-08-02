@@ -1,5 +1,5 @@
-import type { JsonObject } from "../common/JsonTypes.js";
-import { WorkspaceError } from "../workspace/WorkspaceError.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import { WorkspaceError } from "../../workspace/WorkspaceError.js";
 
 export class AgentHttpJsonObjectFieldReader {
   read(value: unknown, key: string): JsonObject {
