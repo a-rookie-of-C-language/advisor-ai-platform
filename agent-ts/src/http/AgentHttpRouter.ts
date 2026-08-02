@@ -4,6 +4,7 @@ import type { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import type { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRequestUrlFactory } from "./AgentRequestUrlFactory.js";
 import { AgentHttpAuthenticatedRouteDispatcher } from "./AgentHttpAuthenticatedRouteDispatcher.js";
+import { AgentHttpPublicRouteDispatcher } from "./AgentHttpPublicRouteDispatcher.js";
 import { AgentHttpRouteResultWriter } from "./AgentHttpRouteResultWriter.js";
 import type { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";
 import type { AgentHealthRouteHandler } from "./routes/AgentHealthRouteHandler.js";
@@ -11,6 +12,7 @@ import type { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 
 export class AgentHttpRouter {
   private readonly authenticatedRouteDispatcher: AgentHttpAuthenticatedRouteDispatcher;
+  private readonly publicRouteDispatcher: AgentHttpPublicRouteDispatcher;
   private readonly routeResultWriter: AgentHttpRouteResultWriter;
 
   constructor(
@@ -30,13 +32,13 @@ export class AgentHttpRouter {
       this.routeResultWriter,
       this.workspaceRouteHandler
     );
+    this.publicRouteDispatcher = new AgentHttpPublicRouteDispatcher(this.healthRouteHandler, this.routeResultWriter);
   }
 
   async route(request: IncomingMessage, response: ServerResponse): Promise<void> {
     try {
       const url = this.requestUrlFactory.create(request);
-      const healthResult = await this.healthRouteHandler.handle(request.method, url);
-      if (this.routeResultWriter.writeIfPresent(response, healthResult)) {
+      if (await this.publicRouteDispatcher.dispatch(request.method, url, response)) {
         return;
       }
 
