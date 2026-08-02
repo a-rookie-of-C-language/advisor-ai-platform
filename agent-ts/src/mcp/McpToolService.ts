@@ -4,23 +4,20 @@ import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 import { McpSupportedConfigProvider } from "./McpSupportedConfigProvider.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
-import { McpToolDescriptorSorter } from "./McpToolDescriptorSorter.js";
+import { McpToolLister } from "./McpToolLister.js";
 
 export class McpToolService {
   private readonly clientRegistry = new DirectHttpMcpClientRegistry();
   private readonly supportedConfigProvider: McpSupportedConfigProvider;
-  private readonly toolDescriptorSorter = new McpToolDescriptorSorter();
+  private readonly toolLister: McpToolLister;
 
   constructor(configs: McpServerConfig[]) {
     this.supportedConfigProvider = new McpSupportedConfigProvider(configs);
+    this.toolLister = new McpToolLister(this.supportedConfigProvider, this.clientRegistry);
   }
 
   async listTools(): Promise<McpToolDescriptor[]> {
-    const tools: McpToolDescriptor[] = [];
-    for (const config of this.supportedConfigProvider.list()) {
-      tools.push(...(await this.clientRegistry.clientFor(config).listTools()));
-    }
-    return this.toolDescriptorSorter.sort(tools);
+    return this.toolLister.list();
   }
 
   async callTool(server: string, name: string, args: JsonObject): Promise<McpCallToolResult> {
@@ -30,5 +27,4 @@ export class McpToolService {
     }
     return this.clientRegistry.clientFor(config).callTool(name, args);
   }
-
 }
