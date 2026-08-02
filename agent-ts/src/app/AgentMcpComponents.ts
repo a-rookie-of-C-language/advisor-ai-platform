@@ -1,9 +1,8 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
 import type { McpOpenAiToolBridge } from "../mcp/McpOpenAiToolBridge.js";
-import { McpOpenAiToolBridge as McpOpenAiToolBridgeClass } from "../mcp/McpOpenAiToolBridge.js";
 import type { McpToolService } from "../mcp/McpToolService.js";
-import { McpToolService as McpToolServiceClass } from "../mcp/McpToolService.js";
 import { AgentMcpConfigFactory } from "./AgentMcpConfigFactory.js";
+import { AgentMcpFeatureComponentsFactory } from "./AgentMcpFeatureComponentsFactory.js";
 
 export class AgentMcpComponents {
   readonly openAiToolBridge?: McpOpenAiToolBridge;
@@ -11,7 +10,8 @@ export class AgentMcpComponents {
 
   constructor(config: AgentConfig) {
     const mcpConfigs = new AgentMcpConfigFactory().create(config);
-    this.toolService = mcpConfigs.length > 0 ? new McpToolServiceClass(mcpConfigs) : undefined;
-    this.openAiToolBridge = this.toolService ? new McpOpenAiToolBridgeClass(this.toolService) : undefined;
+    const components = new AgentMcpFeatureComponentsFactory().create(mcpConfigs);
+    this.openAiToolBridge = components.openAiToolBridge;
+    this.toolService = components.toolService;
   }
 }
