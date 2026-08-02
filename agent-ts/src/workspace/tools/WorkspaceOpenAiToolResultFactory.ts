@@ -1,5 +1,5 @@
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/OpenAiToolExecutionResult.js";
 
 export class WorkspaceOpenAiToolResultFactory {
   createSuccess(output: JsonObject): OpenAiToolExecutionResult {

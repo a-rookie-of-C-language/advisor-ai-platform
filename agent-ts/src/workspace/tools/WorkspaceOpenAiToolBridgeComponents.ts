@@ -1,4 +1,4 @@
-import type { WorkspaceManager } from "./WorkspaceManager.js";
+import type { WorkspaceManager } from "../WorkspaceManager.js";
 import { WorkspaceOpenAiToolCatalog } from "./WorkspaceOpenAiToolCatalog.js";
 import { WorkspaceOpenAiToolExecutor } from "./WorkspaceOpenAiToolExecutor.js";
 import { WorkspaceOpenAiToolResultFactory } from "./WorkspaceOpenAiToolResultFactory.js";

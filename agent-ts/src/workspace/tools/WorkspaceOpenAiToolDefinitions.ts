@@ -1,9 +1,9 @@
-import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
-import { WorkspaceCreateDirOpenAiToolDefinition } from "./tools/WorkspaceCreateDirOpenAiToolDefinition.js";
-import { WorkspaceEditOpenAiToolDefinition } from "./tools/WorkspaceEditOpenAiToolDefinition.js";
-import { WorkspaceListOpenAiToolDefinition } from "./tools/WorkspaceListOpenAiToolDefinition.js";
-import { WorkspaceReadOpenAiToolDefinition } from "./tools/WorkspaceReadOpenAiToolDefinition.js";
-import { WorkspaceWriteOpenAiToolDefinition } from "./tools/WorkspaceWriteOpenAiToolDefinition.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
+import { WorkspaceCreateDirOpenAiToolDefinition } from "./WorkspaceCreateDirOpenAiToolDefinition.js";
+import { WorkspaceEditOpenAiToolDefinition } from "./WorkspaceEditOpenAiToolDefinition.js";
+import { WorkspaceListOpenAiToolDefinition } from "./WorkspaceListOpenAiToolDefinition.js";
+import { WorkspaceReadOpenAiToolDefinition } from "./WorkspaceReadOpenAiToolDefinition.js";
+import { WorkspaceWriteOpenAiToolDefinition } from "./WorkspaceWriteOpenAiToolDefinition.js";
 
 export class WorkspaceOpenAiToolDefinitions {
   private readonly createDirDefinition = new WorkspaceCreateDirOpenAiToolDefinition();

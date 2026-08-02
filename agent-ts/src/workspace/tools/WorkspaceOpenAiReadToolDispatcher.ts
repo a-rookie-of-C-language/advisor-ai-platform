@@ -1,5 +1,5 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
 import type { WorkspaceFileReadOpenAiToolExecutor } from "./WorkspaceFileReadOpenAiToolExecutor.js";
 import type { WorkspaceListOpenAiToolExecutor } from "./WorkspaceListOpenAiToolExecutor.js";
 

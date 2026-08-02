@@ -2,7 +2,7 @@ import type { MemoryOpenAiToolBridge } from "../../../memory/tools/MemoryOpenAiT
 import type { McpOpenAiToolBridge } from "../../../mcp/openAi/McpOpenAiToolBridge.js";
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "../../../workspace/WorkspaceOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/WorkspaceOpenAiToolBridge.js";
 import type { OpenAIChatTool } from "../../chat/OpenAIChatTool.js";
 import { OpenAiLocalToolCatalogCollector } from "./OpenAiLocalToolCatalogCollector.js";
 import { OpenAiMcpToolCatalogCollector } from "./OpenAiMcpToolCatalogCollector.js";

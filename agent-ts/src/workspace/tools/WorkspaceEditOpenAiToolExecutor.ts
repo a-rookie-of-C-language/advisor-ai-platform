@@ -1,8 +1,8 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import { OpenAiToolArgumentReader } from "../openai/tools/arguments/OpenAiToolArgumentReader.js";
-import type { WorkspaceManager } from "./WorkspaceManager.js";
-import { WorkspaceRequestIdentityResolver } from "./path/WorkspaceRequestIdentityResolver.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import { OpenAiToolArgumentReader } from "../../openai/tools/arguments/OpenAiToolArgumentReader.js";
+import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { WorkspaceRequestIdentityResolver } from "../path/WorkspaceRequestIdentityResolver.js";
 
 export class WorkspaceEditOpenAiToolExecutor {
   private readonly identityResolver = new WorkspaceRequestIdentityResolver();

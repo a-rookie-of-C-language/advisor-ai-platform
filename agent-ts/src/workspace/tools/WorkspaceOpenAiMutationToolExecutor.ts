@@ -1,8 +1,8 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { WorkspaceManager } from "../WorkspaceManager.js";
 import { WorkspaceCreateDirOpenAiToolExecutor } from "./WorkspaceCreateDirOpenAiToolExecutor.js";
 import { WorkspaceEditOpenAiToolExecutor } from "./WorkspaceEditOpenAiToolExecutor.js";
-import type { WorkspaceManager } from "./WorkspaceManager.js";
 import { WorkspaceMutationToolNameMatcher } from "./WorkspaceMutationToolNameMatcher.js";
 import { WorkspaceOpenAiMutationToolDispatcher } from "./WorkspaceOpenAiMutationToolDispatcher.js";
 import { WorkspaceWriteOpenAiToolExecutor } from "./WorkspaceWriteOpenAiToolExecutor.js";
