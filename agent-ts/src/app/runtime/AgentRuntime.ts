@@ -9,7 +9,7 @@ import type { OpenAiToolRegistry } from "../../openai/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
-import { AgentGraphHealthDescriptor } from "../AgentGraphHealthDescriptor.js";
+import { AgentGraphHealthDescriptor } from "../health/AgentGraphHealthDescriptor.js";
 import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
 import { AgentRequestIdResolver } from "../request/AgentRequestIdResolver.js";
 import { SseWriterFactory } from "../../protocol/SseWriterFactory.js";
