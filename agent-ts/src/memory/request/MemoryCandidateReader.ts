@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../common/json/JsonTypes.js";
-import { OpenAiToolArgumentReader } from "../../openai/tools/arguments/OpenAiToolArgumentReader.js";
+import { OpenAiToolArgumentReader } from "../../openai/tools/arguments/core/OpenAiToolArgumentReader.js";
 import type { MemoryCandidateInput } from "../model/MemoryCandidateInput.js";
 
 export class MemoryCandidateReader {
