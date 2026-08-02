@@ -1,9 +1,9 @@
 import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import { LatestUserQueryResolver } from "../common/LatestUserQueryResolver.js";
-import { OpenAiToolArgumentReader } from "../openai/OpenAiToolArgumentReader.js";
+import { OpenAiToolArgumentReader } from "../openai/tools/arguments/OpenAiToolArgumentReader.js";
 import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
-import { OpenAiToolTopKArgumentReader } from "../openai/OpenAiToolTopKArgumentReader.js";
+import { OpenAiToolTopKArgumentReader } from "../openai/tools/arguments/OpenAiToolTopKArgumentReader.js";
 import type { RagApiClient } from "./RagApiClient.js";
 import { RagDocumentRanker } from "./RagDocumentRanker.js";
 import { RagReadyDocumentSelector } from "./RagReadyDocumentSelector.js";

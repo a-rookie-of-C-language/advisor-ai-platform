@@ -1,4 +1,4 @@
-import type { JsonObject } from "../common/JsonTypes.js";
+import type { JsonObject } from "../../../common/JsonTypes.js";
 
 export class OpenAiToolJsonObjectArgumentReader {
   static readOptional(value: unknown): JsonObject | null {
