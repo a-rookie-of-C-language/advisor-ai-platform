@@ -1,8 +1,8 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { WebSearchClient } from "../search/core/WebSearchClient.js";
-import { WebSearchSystemMessageFactory } from "./search/factory/WebSearchSystemMessageFactory.js";
-import { WebSearchQueryFinder } from "./search/query/WebSearchQueryFinder.js";
-import { WebSearchResultRenderer } from "./search/rendering/WebSearchResultRenderer.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { WebSearchClient } from "../../../search/core/WebSearchClient.js";
+import { WebSearchSystemMessageFactory } from "../factory/WebSearchSystemMessageFactory.js";
+import { WebSearchQueryFinder } from "../query/WebSearchQueryFinder.js";
+import { WebSearchResultRenderer } from "../rendering/WebSearchResultRenderer.js";
 
 export class WebSearchContextBuilder {
   private readonly queryFinder = new WebSearchQueryFinder();

@@ -7,7 +7,7 @@ import type { OpenAIChatClient } from "../../openai/chat/core/OpenAIChatClient.j
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/context/fetch/core/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../../web/context/WebSearchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../web/context/search/core/WebSearchContextBuilder.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;
