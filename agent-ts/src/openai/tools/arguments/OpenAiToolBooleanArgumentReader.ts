@@ -1,4 +1,4 @@
-import { BooleanStringReader } from "../../../common/BooleanStringReader.js";
+import { BooleanStringReader } from "../../../common/value/BooleanStringReader.js";
 
 export class OpenAiToolBooleanArgumentReader {
   static readOptional(value: unknown, fallback: boolean): boolean;
