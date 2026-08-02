@@ -1,5 +1,5 @@
-import type { MemoryApiClient } from "../api/MemoryApiClient.js";
-import { MemoryOpenAiToolCatalog } from "./definitions/MemoryOpenAiToolCatalog.js";
+import type { MemoryApiClient } from "../../api/MemoryApiClient.js";
+import { MemoryOpenAiToolCatalog } from "../definitions/MemoryOpenAiToolCatalog.js";
 import { MemoryOpenAiToolExecutor } from "./MemoryOpenAiToolExecutor.js";
 
 export class MemoryOpenAiToolBridgeComponents {
