@@ -1,4 +1,4 @@
-import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
+import type { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
 import type { AgentOpenAiToolComponents } from "./AgentOpenAiToolComponents.js";
 import { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";

@@ -3,7 +3,7 @@ import type { AgentMemoryComponents } from "../memory/AgentMemoryComponents.js";
 import type { AgentRagComponents } from "../rag/AgentRagComponents.js";
 import type { AgentWebComponents } from "../web/AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "../workspace/AgentWorkspaceComponents.js";
-import { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
+import { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
 
 export class AgentOpenAiToolRegistryFactory {
   create(

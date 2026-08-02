@@ -1,10 +1,10 @@
-import type { MemoryOpenAiToolBridge } from "../../../memory/tools/core/MemoryOpenAiToolBridge.js";
-import type { McpOpenAiToolBridge } from "../../../mcp/openAi/McpOpenAiToolBridge.js";
-import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
-import { OpenAiToolCatalogAggregator } from "./catalog/OpenAiToolCatalogAggregator.js";
-import { OpenAiToolExecutorRouter } from "./execution/OpenAiToolExecutorRouter.js";
+import type { MemoryOpenAiToolBridge } from "../../../../memory/tools/core/MemoryOpenAiToolBridge.js";
+import type { McpOpenAiToolBridge } from "../../../../mcp/openAi/McpOpenAiToolBridge.js";
+import type { RagOpenAiToolBridge } from "../../../../rag/openAi/RagOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../../web/openAi/WebOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../../../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
+import { OpenAiToolCatalogAggregator } from "../catalog/OpenAiToolCatalogAggregator.js";
+import { OpenAiToolExecutorRouter } from "../execution/OpenAiToolExecutorRouter.js";
 
 export class OpenAiToolRegistryComponents {
   readonly toolCatalogAggregator: OpenAiToolCatalogAggregator;

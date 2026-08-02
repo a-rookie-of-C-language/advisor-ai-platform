@@ -2,7 +2,7 @@ import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../openai/chat/core/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
+import type { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/context/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../web/context/WebSearchContextBuilder.js";
