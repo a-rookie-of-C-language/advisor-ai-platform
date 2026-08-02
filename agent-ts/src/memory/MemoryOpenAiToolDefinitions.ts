@@ -1,6 +1,6 @@
 import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
-import { MemoryReadOpenAiToolDefinition } from "./tools/MemoryReadOpenAiToolDefinition.js";
-import { MemoryWriteOpenAiToolDefinition } from "./tools/MemoryWriteOpenAiToolDefinition.js";
+import { MemoryReadOpenAiToolDefinition } from "./tools/definitions/MemoryReadOpenAiToolDefinition.js";
+import { MemoryWriteOpenAiToolDefinition } from "./tools/definitions/MemoryWriteOpenAiToolDefinition.js";
 
 export class MemoryOpenAiToolDefinitions {
   private readonly readDefinition = new MemoryReadOpenAiToolDefinition();
