@@ -3,12 +3,14 @@ import type { AgentWorkspaceRouteHandler } from "../workspace/routes/AgentWorksp
 import type { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
 import type { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 import type { AgentRequestUrlFactory } from "./AgentRequestUrlFactory.js";
+import { AgentHttpAuthenticatedRouteDispatcher } from "./AgentHttpAuthenticatedRouteDispatcher.js";
 import { AgentHttpRouteResultWriter } from "./AgentHttpRouteResultWriter.js";
 import type { AgentChatStreamRouteHandler } from "./routes/AgentChatStreamRouteHandler.js";
 import type { AgentHealthRouteHandler } from "./routes/AgentHealthRouteHandler.js";
 import type { AgentMcpRouteHandler } from "./routes/AgentMcpRouteHandler.js";
 
 export class AgentHttpRouter {
+  private readonly authenticatedRouteDispatcher: AgentHttpAuthenticatedRouteDispatcher;
   private readonly routeResultWriter: AgentHttpRouteResultWriter;
 
   constructor(
@@ -21,6 +23,13 @@ export class AgentHttpRouter {
     private readonly workspaceRouteHandler: AgentWorkspaceRouteHandler
   ) {
     this.routeResultWriter = new AgentHttpRouteResultWriter(this.jsonResponseWriter);
+    this.authenticatedRouteDispatcher = new AgentHttpAuthenticatedRouteDispatcher(
+      this.chatStreamRouteHandler,
+      this.jsonResponseWriter,
+      this.mcpRouteHandler,
+      this.routeResultWriter,
+      this.workspaceRouteHandler
+    );
   }
 
   async route(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -36,21 +45,7 @@ export class AgentHttpRouter {
         return;
       }
 
-      if (await this.chatStreamRouteHandler.handle(request.method, url, request, response)) {
-        return;
-      }
-
-      const workspaceResult = await this.workspaceRouteHandler.handle(request.method, url, request);
-      if (this.routeResultWriter.writeIfPresent(response, workspaceResult)) {
-        return;
-      }
-
-      const mcpResult = await this.mcpRouteHandler.handle(request.method, url, request);
-      if (this.routeResultWriter.writeIfPresent(response, mcpResult)) {
-        return;
-      }
-
-      this.jsonResponseWriter.write(response, 404, { detail: "not found" });
+      await this.authenticatedRouteDispatcher.dispatch(url, request, response);
     } catch (error) {
       this.jsonResponseWriter.writeError(response, error);
     }
