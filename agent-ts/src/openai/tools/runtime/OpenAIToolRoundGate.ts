@@ -1,5 +1,5 @@
 import type { OpenAIChatTool } from "../../chat/model/OpenAIChatTool.js";
-import type { OpenAIToolCall } from "./OpenAIToolCall.js";
+import type { OpenAIToolCall } from "./model/OpenAIToolCall.js";
 import type { OpenAIToolExecutor } from "./OpenAIToolRoundRunner.js";
 
 export class OpenAIToolRoundGate {

@@ -5,7 +5,7 @@ import type { McpOpenAiToolBridge } from "../../../mcp/openAi/McpOpenAiToolBridg
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
-import type { OpenAiToolExecutionResult } from "../runtime/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../runtime/model/OpenAiToolExecutionResult.js";
 import { OpenAiToolResultFactory } from "../runtime/OpenAiToolResultFactory.js";
 
 export class OpenAiToolExecutorRouter {

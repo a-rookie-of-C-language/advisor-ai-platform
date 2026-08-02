@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { MemoryItem } from "../../model/MemoryItem.js";
 
 export class MemoryToolResultFormatter {

@@ -1,4 +1,4 @@
-import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "./model/OpenAiToolExecutionResult.js";
 
 export class OpenAiToolResultFactory {
   static error(message: string): OpenAiToolExecutionResult {
