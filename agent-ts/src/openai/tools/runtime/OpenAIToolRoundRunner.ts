@@ -4,7 +4,7 @@ import type { OpenAIChatMessage } from "../../chat/model/OpenAIChatMessage.js";
 import type { OpenAiToolExecutionResult } from "./model/OpenAiToolExecutionResult.js";
 import type { OpenAIToolCall } from "./model/OpenAIToolCall.js";
 import { OpenAIToolCallEventFactory } from "./events/OpenAIToolCallEventFactory.js";
-import { OpenAIToolConversationAppender } from "./OpenAIToolConversationAppender.js";
+import { OpenAIToolConversationAppender } from "./state/OpenAIToolConversationAppender.js";
 import { OpenAIToolResultEventFactory } from "./events/OpenAIToolResultEventFactory.js";
 
 export type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
