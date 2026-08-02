@@ -6,7 +6,7 @@ import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js"
 import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
-import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
+import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "../health/AgentGraphHealthDescriptor.js";

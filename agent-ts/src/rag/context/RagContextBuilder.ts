@@ -1,5 +1,5 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { RagApiClient } from "./api/RagApiClient.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { RagApiClient } from "../api/RagApiClient.js";
 import { RagPromptRenderer } from "./RagPromptRenderer.js";
 import { RagSystemMessageFactory } from "./RagSystemMessageFactory.js";
 
@@ -20,10 +20,7 @@ export class RagContextBuilder {
       if (!prompt) {
         return request.messages;
       }
-      return [
-        this.systemMessageFactory.create(prompt),
-        ...request.messages
-      ];
+      return [this.systemMessageFactory.create(prompt), ...request.messages];
     } catch {
       return request.messages;
     }

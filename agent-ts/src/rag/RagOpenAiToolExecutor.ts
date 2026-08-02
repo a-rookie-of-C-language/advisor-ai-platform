@@ -5,8 +5,8 @@ import { OpenAiToolArgumentReader } from "../openai/tools/arguments/OpenAiToolAr
 import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
 import { OpenAiToolTopKArgumentReader } from "../openai/tools/arguments/OpenAiToolTopKArgumentReader.js";
 import type { RagApiClient } from "./api/RagApiClient.js";
-import { RagDocumentRanker } from "./RagDocumentRanker.js";
-import { RagReadyDocumentSelector } from "./RagReadyDocumentSelector.js";
+import { RagDocumentRanker } from "./context/RagDocumentRanker.js";
+import { RagReadyDocumentSelector } from "./context/RagReadyDocumentSelector.js";
 import { RagSearchToolResultFactory } from "./RagSearchToolResultFactory.js";
 
 export class RagOpenAiToolExecutor {

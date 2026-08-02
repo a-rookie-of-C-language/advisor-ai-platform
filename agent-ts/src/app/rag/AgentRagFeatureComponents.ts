@@ -1,4 +1,4 @@
-import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
+import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
 import type { RagOpenAiToolBridge } from "../../rag/RagOpenAiToolBridge.js";
 
 export class AgentRagFeatureComponents {

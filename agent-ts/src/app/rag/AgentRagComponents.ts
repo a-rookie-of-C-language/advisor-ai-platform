@@ -1,5 +1,5 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
+import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
 import type { RagOpenAiToolBridge } from "../../rag/RagOpenAiToolBridge.js";
 import { AgentRagClientFactory } from "./AgentRagClientFactory.js";
 import { AgentRagFeatureComponentsFactory } from "./AgentRagFeatureComponentsFactory.js";
