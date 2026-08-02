@@ -1,11 +1,11 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { MemoryApiClient } from "./api/MemoryApiClient.js";
-import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
+import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/OpenAiToolExecutionResult.js";
+import { OpenAiToolResultFactory } from "../../openai/tools/runtime/OpenAiToolResultFactory.js";
+import type { MemoryApiClient } from "../api/MemoryApiClient.js";
 import { MemoryOpenAiToolBridgeComponents } from "./MemoryOpenAiToolBridgeComponents.js";
 import { MemoryOpenAiToolBridgeComponentsFactory } from "./MemoryOpenAiToolBridgeComponentsFactory.js";
-import { OpenAiToolResultFactory } from "../openai/tools/runtime/OpenAiToolResultFactory.js";
 
 export class MemoryOpenAiToolBridge {
   private readonly components: MemoryOpenAiToolBridgeComponents;

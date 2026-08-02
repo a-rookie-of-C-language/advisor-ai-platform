@@ -1,4 +1,4 @@
-import type { MemoryOpenAiToolBridge } from "../../../memory/MemoryOpenAiToolBridge.js";
+import type { MemoryOpenAiToolBridge } from "../../../memory/tools/MemoryOpenAiToolBridge.js";
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../workspace/WorkspaceOpenAiToolBridge.js";

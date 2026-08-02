@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
-import type { MemoryOpenAiToolBridge } from "../../memory/MemoryOpenAiToolBridge.js";
+import type { MemoryOpenAiToolBridge } from "../../memory/tools/MemoryOpenAiToolBridge.js";
 import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
 import { AgentMemoryClientFactory } from "./AgentMemoryClientFactory.js";
 import { AgentMemoryFeatureComponentsFactory } from "./AgentMemoryFeatureComponentsFactory.js";

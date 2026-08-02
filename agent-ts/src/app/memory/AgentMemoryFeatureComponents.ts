@@ -1,5 +1,5 @@
 import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
-import type { MemoryOpenAiToolBridge } from "../../memory/MemoryOpenAiToolBridge.js";
+import type { MemoryOpenAiToolBridge } from "../../memory/tools/MemoryOpenAiToolBridge.js";
 import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
 
 export class AgentMemoryFeatureComponents {
