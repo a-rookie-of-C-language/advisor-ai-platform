@@ -6,10 +6,12 @@ import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
 import { WebOpenAiToolCatalog } from "./WebOpenAiToolCatalog.js";
 import { WebOpenAiToolExecutor } from "./WebOpenAiToolExecutor.js";
 import type { WebSearchClient } from "./WebSearchClient.js";
+import { WebToolNameMatcher } from "./WebToolNameMatcher.js";
 
 export class WebOpenAiToolBridge {
   private readonly catalog = new WebOpenAiToolCatalog();
   private readonly executor: WebOpenAiToolExecutor;
+  private readonly toolNameMatcher = new WebToolNameMatcher();
 
   constructor(
     private readonly webFetchClient?: WebFetchClient,
@@ -26,7 +28,10 @@ export class WebOpenAiToolBridge {
   }
 
   canExecute(toolName: string): boolean {
-    return (toolName === "web_fetch" && Boolean(this.webFetchClient)) || (toolName === "web_search" && Boolean(this.webSearchClient));
+    return this.toolNameMatcher.matches(toolName, {
+      webFetchEnabled: Boolean(this.webFetchClient),
+      webSearchEnabled: Boolean(this.webSearchClient)
+    });
   }
 
   async executeTool(toolName: string, args: JsonObject): Promise<OpenAiToolExecutionResult> {
