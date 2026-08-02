@@ -6,7 +6,7 @@ import { DirectHttpMcpToolListReader } from "./DirectHttpMcpToolListReader.js";
 import { McpJsonRpcRequestFactory } from "../McpJsonRpcRequestFactory.js";
 import type { McpCallToolResult } from "../McpCallToolResult.js";
 import type { McpToolDescriptor } from "../McpToolDescriptor.js";
-import type { McpServerConfig } from "../McpServerConfig.js";
+import type { McpServerConfig } from "../config/McpServerConfig.js";
 
 export class DirectHttpMcpClient {
   private readonly initializer: DirectHttpMcpInitializer;

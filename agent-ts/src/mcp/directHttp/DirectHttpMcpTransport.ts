@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../common/JsonTypes.js";
-import type { McpServerConfig } from "../McpServerConfig.js";
+import type { McpServerConfig } from "../config/McpServerConfig.js";
 
 export class DirectHttpMcpTransport {
   constructor(

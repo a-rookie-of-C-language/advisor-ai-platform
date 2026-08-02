@@ -1,5 +1,5 @@
 import { DirectHttpMcpClientRegistry } from "./directHttp/DirectHttpMcpClientRegistry.js";
-import { McpSupportedConfigProvider } from "./McpSupportedConfigProvider.js";
+import { McpSupportedConfigProvider } from "./config/McpSupportedConfigProvider.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import { McpToolDescriptorSorter } from "./McpToolDescriptorSorter.js";
 

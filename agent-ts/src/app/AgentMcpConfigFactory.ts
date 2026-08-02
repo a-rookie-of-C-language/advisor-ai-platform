@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
-import { McpConfigParser } from "../mcp/McpConfigParser.js";
-import type { McpServerConfig } from "../mcp/McpServerConfig.js";
+import { McpConfigParser } from "../mcp/config/McpConfigParser.js";
+import type { McpServerConfig } from "../mcp/config/McpServerConfig.js";
 
 export class AgentMcpConfigFactory {
   private readonly configParser = new McpConfigParser();
