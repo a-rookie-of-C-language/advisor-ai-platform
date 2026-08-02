@@ -1,5 +1,5 @@
 import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
-import type { AgentWorkspaceScopedRouteRequest } from "./AgentWorkspaceScopedRouteRequest.js";
+import type { AgentWorkspaceScopedRouteRequest } from "./model/AgentWorkspaceScopedRouteRequest.js";
 
 export class AgentWorkspaceScopedRouteRequestReader {
   constructor(private readonly requestReader: AgentHttpRequestReader) {}

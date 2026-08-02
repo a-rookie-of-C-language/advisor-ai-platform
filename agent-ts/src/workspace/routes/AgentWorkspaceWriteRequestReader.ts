@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/request/AgentHttpRequestReader.js";
-import type { AgentWorkspaceWriteRequest } from "./AgentWorkspaceWriteRequest.js";
+import type { AgentWorkspaceWriteRequest } from "./model/AgentWorkspaceWriteRequest.js";
 
 export class AgentWorkspaceWriteRequestReader {
   constructor(private readonly requestReader: AgentHttpRequestReader) {}
