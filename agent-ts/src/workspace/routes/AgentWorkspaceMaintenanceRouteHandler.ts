@@ -1,13 +1,15 @@
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
-import { AgentWorkspaceMaintenanceRouteComponents } from "./AgentWorkspaceMaintenanceRouteComponents.js";
+import type { AgentWorkspaceMaintenanceRouteComponents } from "./AgentWorkspaceMaintenanceRouteComponents.js";
+import { AgentWorkspaceMaintenanceRouteComponentsFactory } from "./AgentWorkspaceMaintenanceRouteComponentsFactory.js";
 
 export class AgentWorkspaceMaintenanceRouteHandler {
   private readonly components: AgentWorkspaceMaintenanceRouteComponents;
+  private readonly componentsFactory = new AgentWorkspaceMaintenanceRouteComponentsFactory();
 
   constructor(workspaceManager: WorkspaceManager, requestReader: AgentHttpRequestReader) {
-    this.components = new AgentWorkspaceMaintenanceRouteComponents(workspaceManager, requestReader);
+    this.components = this.componentsFactory.create(workspaceManager, requestReader);
   }
 
   async handle(method: string | undefined, url: URL): Promise<HttpRouteResult | null> {
