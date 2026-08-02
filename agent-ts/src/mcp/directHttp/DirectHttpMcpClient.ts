@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
-import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
+import { DirectHttpMcpJsonRpcClient } from "./protocol/DirectHttpMcpJsonRpcClient.js";
 import { DirectHttpMcpToolCaller } from "./DirectHttpMcpToolCaller.js";
 import { DirectHttpMcpToolListReader } from "./DirectHttpMcpToolListReader.js";
 import { McpJsonRpcRequestFactory } from "../jsonRpc/McpJsonRpcRequestFactory.js";
