@@ -1,9 +1,9 @@
-import { WorkspaceDirectoryCreator } from "./files/WorkspaceDirectoryCreator.js";
-import { WorkspaceFileEditor } from "./files/WorkspaceFileEditor.js";
-import { WorkspaceFileWriter } from "./files/WorkspaceFileWriter.js";
+import { WorkspaceDirectoryCreator } from "../../files/WorkspaceDirectoryCreator.js";
+import { WorkspaceFileEditor } from "../../files/WorkspaceFileEditor.js";
+import { WorkspaceFileWriter } from "../../files/WorkspaceFileWriter.js";
+import { WorkspaceWorkingFileCounter } from "../../maintenance/WorkspaceWorkingFileCounter.js";
+import type { WorkspaceServiceFactoryComponents } from "../../WorkspaceServiceFactoryComponents.js";
 import { WorkspaceMutationService } from "./WorkspaceMutationService.js";
-import type { WorkspaceServiceFactoryComponents } from "./WorkspaceServiceFactoryComponents.js";
-import { WorkspaceWorkingFileCounter } from "./maintenance/WorkspaceWorkingFileCounter.js";
 
 export class WorkspaceMutationServiceFactory {
   create(components: WorkspaceServiceFactoryComponents): WorkspaceMutationService {
