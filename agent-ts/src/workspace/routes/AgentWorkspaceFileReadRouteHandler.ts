@@ -2,22 +2,26 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceFileReadRequestReader } from "./AgentWorkspaceFileReadRequestReader.js";
 
 export class AgentWorkspaceFileReadRouteHandler {
+  private readonly fileReadRequestReader: AgentWorkspaceFileReadRequestReader;
+
   constructor(
     private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
-  ) {}
+    requestReader: AgentHttpRequestReader
+  ) {
+    this.fileReadRequestReader = new AgentWorkspaceFileReadRequestReader(requestReader);
+  }
 
   async handle(url: URL, request: IncomingMessage): Promise<HttpRouteResult> {
-    const scope = this.requestReader.readWorkspaceScope(url);
-    const body = await this.requestReader.readJsonObject(request);
+    const readRequest = await this.fileReadRequestReader.read(url, request);
     const content = await this.workspaceManager.read(
-      scope.userId,
-      scope.sessionId,
-      this.requestReader.readRequiredString(body, "path"),
-      this.requestReader.readOptionalNumber(body, "offset", 0),
-      this.requestReader.readOptionalNumber(body, "limit", 8192)
+      readRequest.scope.userId,
+      readRequest.scope.sessionId,
+      readRequest.path,
+      readRequest.offset,
+      readRequest.limit
     );
     return { statusCode: 200, body: { status: "ok", content } };
   }
