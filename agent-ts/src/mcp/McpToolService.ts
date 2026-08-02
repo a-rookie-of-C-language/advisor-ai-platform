@@ -3,16 +3,19 @@ import { DirectHttpMcpClientRegistry } from "./DirectHttpMcpClientRegistry.js";
 import type { McpCallToolResult } from "./McpCallToolResult.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 import { McpSupportedConfigProvider } from "./McpSupportedConfigProvider.js";
+import { McpToolCaller } from "./McpToolCaller.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 import { McpToolLister } from "./McpToolLister.js";
 
 export class McpToolService {
   private readonly clientRegistry = new DirectHttpMcpClientRegistry();
   private readonly supportedConfigProvider: McpSupportedConfigProvider;
+  private readonly toolCaller: McpToolCaller;
   private readonly toolLister: McpToolLister;
 
   constructor(configs: McpServerConfig[]) {
     this.supportedConfigProvider = new McpSupportedConfigProvider(configs);
+    this.toolCaller = new McpToolCaller(this.supportedConfigProvider, this.clientRegistry);
     this.toolLister = new McpToolLister(this.supportedConfigProvider, this.clientRegistry);
   }
 
@@ -21,10 +24,6 @@ export class McpToolService {
   }
 
   async callTool(server: string, name: string, args: JsonObject): Promise<McpCallToolResult> {
-    const config = this.supportedConfigProvider.list().find((item) => item.name === server);
-    if (!config) {
-      throw new Error(`未找到 MCP server: ${server}`);
-    }
-    return this.clientRegistry.clientFor(config).callTool(name, args);
+    return this.toolCaller.call(server, name, args);
   }
 }
