@@ -1,6 +1,6 @@
 import type { RagApiClient } from "../../rag/api/RagApiClient.js";
 import { RagContextBuilder as RagContextBuilderClass } from "../../rag/context/RagContextBuilder.js";
-import { RagOpenAiToolBridge as RagOpenAiToolBridgeClass } from "../../rag/RagOpenAiToolBridge.js";
+import { RagOpenAiToolBridge as RagOpenAiToolBridgeClass } from "../../rag/openAi/RagOpenAiToolBridge.js";
 import { AgentRagFeatureComponents } from "./AgentRagFeatureComponents.js";
 
 export class AgentRagFeatureComponentsFactory {
