@@ -1,4 +1,4 @@
-import type { WebFetchClient } from "./WebFetchClient.js";
+import type { WebFetchClient } from "./fetch/WebFetchClient.js";
 import { WebOpenAiToolBridgeComponents } from "./WebOpenAiToolBridgeComponents.js";
 import type { WebSearchClient } from "./search/WebSearchClient.js";
 

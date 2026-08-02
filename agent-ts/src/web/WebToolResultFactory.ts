@@ -1,5 +1,5 @@
 import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
-import type { WebFetchedPage } from "./WebFetchedPage.js";
+import type { WebFetchedPage } from "./fetch/WebFetchedPage.js";
 import type { WebSearchResult } from "./search/WebSearchResult.js";
 
 export class WebToolResultFactory {
