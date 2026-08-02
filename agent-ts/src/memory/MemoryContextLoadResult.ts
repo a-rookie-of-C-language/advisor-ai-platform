@@ -1,5 +1,5 @@
 import type { MemoryItem } from "./MemoryItem.js";
-import type { SessionSummary } from "../common/SessionSummary.js";
+import type { SessionSummary } from "../common/session/SessionSummary.js";
 
 export interface MemoryContextLoadResult {
   summary: SessionSummary | null;
