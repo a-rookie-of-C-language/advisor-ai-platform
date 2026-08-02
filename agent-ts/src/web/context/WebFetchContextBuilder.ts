@@ -1,9 +1,9 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { WebFetchClient } from "../fetch/core/WebFetchClient.js";
 import { WebFetchedPageLoader } from "../fetch/loading/WebFetchedPageLoader.js";
+import { WebFetchUrlExtractor } from "./fetch/extraction/WebFetchUrlExtractor.js";
 import { WebFetchedPageRenderer } from "./WebFetchedPageRenderer.js";
 import { WebFetchSystemMessageFactory } from "./WebFetchSystemMessageFactory.js";
-import { WebFetchUrlExtractor } from "./WebFetchUrlExtractor.js";
 
 export class WebFetchContextBuilder {
   private readonly pageLoader = new WebFetchedPageLoader();
