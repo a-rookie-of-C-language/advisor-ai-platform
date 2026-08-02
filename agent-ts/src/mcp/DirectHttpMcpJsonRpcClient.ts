@@ -1,6 +1,6 @@
 import type { JsonObject } from "../common/JsonTypes.js";
 import { DirectHttpMcpHeadersFactory } from "./DirectHttpMcpHeadersFactory.js";
-import { DirectHttpMcpResponseValidator } from "./DirectHttpMcpResponseValidator.js";
+import { DirectHttpMcpResponseReader } from "./DirectHttpMcpResponseReader.js";
 import { DirectHttpMcpTransport } from "./DirectHttpMcpTransport.js";
 import type { JsonRpcResponse } from "./JsonRpcResponse.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
@@ -8,7 +8,7 @@ import type { McpServerConfig } from "./McpServerConfig.js";
 export class DirectHttpMcpJsonRpcClient {
   private readonly headersFactory = new DirectHttpMcpHeadersFactory();
   private readonly headers: Record<string, string>;
-  private readonly responseValidator = new DirectHttpMcpResponseValidator();
+  private readonly responseReader = new DirectHttpMcpResponseReader();
   private readonly transport: DirectHttpMcpTransport;
 
   constructor(config: McpServerConfig) {
@@ -18,10 +18,6 @@ export class DirectHttpMcpJsonRpcClient {
 
   async post(payload: JsonObject): Promise<JsonRpcResponse> {
     const response = await this.transport.post(payload);
-    this.responseValidator.validateHttp(response);
-
-    const data = (await response.json()) as JsonRpcResponse;
-    this.responseValidator.validateJsonRpc(data);
-    return data;
+    return this.responseReader.read(response);
   }
 }
