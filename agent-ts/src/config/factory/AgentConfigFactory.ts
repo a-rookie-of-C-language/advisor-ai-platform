@@ -1,5 +1,5 @@
-import type { AgentConfigValues } from "./model/AgentConfigValues.js";
-import { AgentEnvReader } from "./env/AgentEnvReader.js";
+import { AgentEnvReader } from "../env/AgentEnvReader.js";
+import type { AgentConfigValues } from "../model/AgentConfigValues.js";
 
 export class AgentConfigFactory {
   constructor(private readonly envReader = new AgentEnvReader()) {}

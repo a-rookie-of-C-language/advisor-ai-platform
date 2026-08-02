@@ -1,4 +1,4 @@
-import { AgentConfigFactory } from "../AgentConfigFactory.js";
+import { AgentConfigFactory } from "../factory/AgentConfigFactory.js";
 import type { AgentConfigValues } from "./AgentConfigValues.js";
 
 export class AgentConfig {
