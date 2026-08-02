@@ -1,0 +1,9 @@
+import type { ServerResponse } from "node:http";
+import type { AgentCoreClient } from "../core/AgentCoreClient.js";
+import { SseWriter } from "./SseWriter.js";
+
+export class SseWriterFactory {
+  create(response: ServerResponse, core: AgentCoreClient, traceId: string): SseWriter {
+    return new SseWriter(response, core, traceId);
+  }
+}

@@ -12,13 +12,14 @@ import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js"
 import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
 import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
 import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
-import { SseWriter } from "../protocol/SseWriter.js";
+import { SseWriterFactory } from "../protocol/SseWriterFactory.js";
 import { validateChatStreamRequest } from "../common/validateChatStreamRequest.js";
 
 export class AgentRuntime {
   private readonly components: AgentRuntimeComponents;
   private readonly graphHealthDescriptor = new AgentGraphHealthDescriptor();
   private readonly requestIdResolver = new AgentRequestIdResolver();
+  private readonly sseWriterFactory = new SseWriterFactory();
 
   constructor(
     config: AgentConfig,
@@ -55,7 +56,7 @@ export class AgentRuntime {
     const chatRequest = validateChatStreamRequest(body);
     const traceId = this.requestIdResolver.resolveTraceId(chatRequest, request);
     const turnId = this.requestIdResolver.resolveTurnId(chatRequest, request);
-    const writer = new SseWriter(response, this.core, traceId);
+    const writer = this.sseWriterFactory.create(response, this.core, traceId);
     await this.components.streamSession.stream(chatRequest, turnId, writer);
   }
 }
