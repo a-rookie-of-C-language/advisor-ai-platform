@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
 import { WebOpenAiToolBridge } from "../../web/WebOpenAiToolBridge.js";
 import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";

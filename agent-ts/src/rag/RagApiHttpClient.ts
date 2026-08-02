@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
+import type { AgentConfig } from "../config/model/AgentConfig.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 
 interface RagApiResponse<T> {

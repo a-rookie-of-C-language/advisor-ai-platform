@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { AgentChatStreamSession } from "../session/AgentChatStreamSession.js";
 import { AgentChatStreamSessionFactory } from "../session/AgentChatStreamSessionFactory.js";
 import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";

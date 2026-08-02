@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
+import type { AgentConfig } from "../config/model/AgentConfig.js";
 import { MemoryApiArrayResponseReader } from "./MemoryApiArrayResponseReader.js";
 import { MemoryApiEndpointFactory } from "./MemoryApiEndpointFactory.js";
 import { MemoryApiHttpClient } from "./MemoryApiHttpClient.js";

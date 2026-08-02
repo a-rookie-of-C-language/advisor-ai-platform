@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
+import type { AgentConfig } from "../config/model/AgentConfig.js";
 import { AgentHttpRouter } from "./AgentHttpRouter.js";
 import type { AgentRuntime } from "../app/runtime/AgentRuntime.js";
 import { AgentHttpRouterFactory } from "./AgentHttpRouterFactory.js";

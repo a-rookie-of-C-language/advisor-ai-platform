@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { WorkspaceManager } from "../../workspace/WorkspaceManager.js";
 import type { WorkspaceOpenAiToolBridge } from "../../workspace/WorkspaceOpenAiToolBridge.js";
 import { AgentWorkspaceFeatureComponentsFactory } from "./AgentWorkspaceFeatureComponentsFactory.js";

@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { AgentCoreClient } from "../../core/AgentCoreClient.js";
 import { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
 

@@ -1,4 +1,4 @@
-import type { AgentConfigValues } from "./AgentConfigValues.js";
+import type { AgentConfigValues } from "./model/AgentConfigValues.js";
 import { AgentEnvReader } from "./env/AgentEnvReader.js";
 
 export class AgentConfigFactory {

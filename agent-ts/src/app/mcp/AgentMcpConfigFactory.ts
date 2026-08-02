@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { McpConfigParser } from "../../mcp/config/McpConfigParser.js";
 import type { McpServerConfig } from "../../mcp/config/McpServerConfig.js";
 
