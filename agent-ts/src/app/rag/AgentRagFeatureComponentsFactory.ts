@@ -1,7 +1,7 @@
 import type { RagApiClient } from "../../rag/api/RagApiClient.js";
 import { RagContextBuilder as RagContextBuilderClass } from "../../rag/context/RagContextBuilder.js";
 import { RagOpenAiToolBridge as RagOpenAiToolBridgeClass } from "../../rag/openAi/RagOpenAiToolBridge.js";
-import { AgentRagFeatureComponents } from "./AgentRagFeatureComponents.js";
+import { AgentRagFeatureComponents } from "./model/AgentRagFeatureComponents.js";
 
 export class AgentRagFeatureComponentsFactory {
   create(ragClient: RagApiClient | undefined): AgentRagFeatureComponents {
