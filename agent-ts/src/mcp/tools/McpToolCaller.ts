@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { DirectHttpMcpClientRegistry } from "../directHttp/core/DirectHttpMcpClientRegistry.js";
-import type { McpCallToolResult } from "./McpCallToolResult.js";
+import type { McpCallToolResult } from "./model/McpCallToolResult.js";
 import { McpSupportedConfigProvider } from "../config/McpSupportedConfigProvider.js";
 
 export class McpToolCaller {

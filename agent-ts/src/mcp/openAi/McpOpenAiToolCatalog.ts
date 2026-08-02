@@ -1,6 +1,6 @@
 import type { McpOpenAiToolTarget } from "./McpOpenAiToolTarget.js";
 import { McpOpenAiToolNameFactory } from "./McpOpenAiToolNameFactory.js";
-import type { McpToolDescriptor } from "../tools/McpToolDescriptor.js";
+import type { McpToolDescriptor } from "../tools/model/McpToolDescriptor.js";
 import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
 
 export class McpOpenAiToolCatalog {

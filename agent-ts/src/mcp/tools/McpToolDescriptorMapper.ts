@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { JsonObjectReader } from "../../common/json/JsonObjectReader.js";
-import type { McpToolDescriptor } from "./McpToolDescriptor.js";
+import type { McpToolDescriptor } from "./model/McpToolDescriptor.js";
 
 export class McpToolDescriptorMapper {
   private readonly jsonObjectReader = new JsonObjectReader();

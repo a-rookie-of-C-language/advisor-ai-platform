@@ -1,8 +1,8 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { McpServerConfig } from "../../config/McpServerConfig.js";
 import { McpJsonRpcRequestFactory } from "../../jsonRpc/McpJsonRpcRequestFactory.js";
-import type { McpCallToolResult } from "../../tools/McpCallToolResult.js";
-import type { McpToolDescriptor } from "../../tools/McpToolDescriptor.js";
+import type { McpCallToolResult } from "../../tools/model/McpCallToolResult.js";
+import type { McpToolDescriptor } from "../../tools/model/McpToolDescriptor.js";
 import { DirectHttpMcpInitializer } from "../operations/DirectHttpMcpInitializer.js";
 import { DirectHttpMcpToolCaller } from "../operations/DirectHttpMcpToolCaller.js";
 import { DirectHttpMcpToolListReader } from "../operations/DirectHttpMcpToolListReader.js";
