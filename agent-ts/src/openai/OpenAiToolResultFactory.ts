@@ -7,4 +7,8 @@ export class OpenAiToolResultFactory {
       success: false
     };
   }
+
+  static errorFromUnknown(error: unknown, fallbackMessage: string): OpenAiToolExecutionResult {
+    return this.error(error instanceof Error ? error.message : fallbackMessage);
+  }
 }

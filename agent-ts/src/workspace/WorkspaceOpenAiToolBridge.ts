@@ -35,7 +35,7 @@ export class WorkspaceOpenAiToolBridge {
       const output = await this.executor.execute(request, toolName, args);
       return this.resultFactory.createSuccess(output);
     } catch (error) {
-      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "workspace tool failed");
+      return OpenAiToolResultFactory.errorFromUnknown(error, "workspace tool failed");
     }
   }
 }

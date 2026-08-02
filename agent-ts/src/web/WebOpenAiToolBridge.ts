@@ -34,7 +34,7 @@ export class WebOpenAiToolBridge {
     try {
       return await this.executor.execute(toolName, args);
     } catch (error) {
-      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "web tool failed");
+      return OpenAiToolResultFactory.errorFromUnknown(error, "web tool failed");
     }
   }
 }

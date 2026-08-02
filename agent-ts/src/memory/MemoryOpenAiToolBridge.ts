@@ -35,7 +35,7 @@ export class MemoryOpenAiToolBridge {
     try {
       return await this.executor.execute(request, toolName, args);
     } catch (error) {
-      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "memory tool failed");
+      return OpenAiToolResultFactory.errorFromUnknown(error, "memory tool failed");
     }
   }
 }

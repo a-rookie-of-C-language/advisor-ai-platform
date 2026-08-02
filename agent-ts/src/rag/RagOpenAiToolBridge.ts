@@ -28,7 +28,7 @@ export class RagOpenAiToolBridge {
     try {
       return await this.executor.execute(request, args);
     } catch (error) {
-      return OpenAiToolResultFactory.error(error instanceof Error ? error.message : "rag_search failed");
+      return OpenAiToolResultFactory.errorFromUnknown(error, "rag_search failed");
     }
   }
 }
