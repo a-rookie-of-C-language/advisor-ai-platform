@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { AgentCoreClient } from "../../core/client/AgentCoreClient.js";
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";

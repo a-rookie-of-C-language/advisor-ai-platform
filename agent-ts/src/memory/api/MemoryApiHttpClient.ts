@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 
 interface MemoryApiResponse<T> {

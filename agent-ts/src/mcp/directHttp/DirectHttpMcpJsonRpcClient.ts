@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { DirectHttpMcpHeadersFactory } from "./DirectHttpMcpHeadersFactory.js";
 import { DirectHttpMcpResponseReader } from "./DirectHttpMcpResponseReader.js";
 import { DirectHttpMcpTransport } from "./DirectHttpMcpTransport.js";

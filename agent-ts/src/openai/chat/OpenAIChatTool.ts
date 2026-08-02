@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 
 export interface OpenAIChatTool {
   type: "function";

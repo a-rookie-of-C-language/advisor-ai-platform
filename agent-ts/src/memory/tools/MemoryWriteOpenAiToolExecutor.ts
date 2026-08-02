@@ -1,5 +1,5 @@
 import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/OpenAiToolExecutionResult.js";
 import type { MemoryApiClient } from "../api/MemoryApiClient.js";
 import type { MemoryWriteRequestReader } from "../request/MemoryWriteRequestReader.js";

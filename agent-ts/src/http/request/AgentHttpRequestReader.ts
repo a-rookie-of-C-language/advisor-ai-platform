@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import type { AgentWorkspaceScope } from "../../workspace/routes/AgentWorkspaceScope.js";
 import { AgentWorkspaceScopeReader } from "../../workspace/routes/AgentWorkspaceScopeReader.js";
 import { AgentHttpJsonObjectBodyReader } from "../body/AgentHttpJsonObjectBodyReader.js";

@@ -1,5 +1,5 @@
 import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { LatestUserQueryResolver } from "../../common/request/LatestUserQueryResolver.js";
 import { OpenAiToolArgumentReader } from "../../openai/tools/arguments/OpenAiToolArgumentReader.js";
 import { OpenAiToolTopKArgumentReader } from "../../openai/tools/arguments/OpenAiToolTopKArgumentReader.js";

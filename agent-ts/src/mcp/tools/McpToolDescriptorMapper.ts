@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { JsonObjectReader } from "../../common/json/JsonObjectReader.js";
 import type { McpToolDescriptor } from "./McpToolDescriptor.js";
 

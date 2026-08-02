@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/JsonTypes.js";
+import type { JsonObject } from "../../common/json/JsonTypes.js";
 import { McpOpenAiToolCatalog } from "./McpOpenAiToolCatalog.js";
 import { McpOpenAiToolResultFormatter } from "./McpOpenAiToolResultFormatter.js";
 import type { McpToolService } from "../tools/McpToolService.js";
