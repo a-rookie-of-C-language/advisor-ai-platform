@@ -1,5 +1,5 @@
-import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { TavilySearchResponse } from "./provider/tavily/model/TavilySearchResponse.js";
+import type { AgentConfig } from "../../../../../config/model/AgentConfig.js";
+import type { TavilySearchResponse } from "../model/TavilySearchResponse.js";
 
 export class TavilySearchHttpClient {
   constructor(private readonly config: AgentConfig) {}
