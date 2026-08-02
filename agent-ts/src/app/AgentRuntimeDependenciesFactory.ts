@@ -6,7 +6,7 @@ import { AgentOpenAiToolRegistryFactory } from "./AgentOpenAiToolRegistryFactory
 import { AgentRuntimeClientFactory } from "./AgentRuntimeClientFactory.js";
 import { AgentRuntimeDependencies } from "./AgentRuntimeDependencies.js";
 import type { AgentWebComponents } from "./web/AgentWebComponents.js";
-import type { AgentWorkspaceComponents } from "./AgentWorkspaceComponents.js";
+import type { AgentWorkspaceComponents } from "./workspace/AgentWorkspaceComponents.js";
 
 export class AgentRuntimeDependenciesFactory {
   private readonly clientFactory = new AgentRuntimeClientFactory();
