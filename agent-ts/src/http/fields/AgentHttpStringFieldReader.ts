@@ -1,4 +1,4 @@
-import { WorkspaceError } from "../../workspace/WorkspaceError.js";
+import { WorkspaceError } from "../../workspace/model/WorkspaceError.js";
 
 export class AgentHttpStringFieldReader {
   readRequired(value: unknown, key: string): string {

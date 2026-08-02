@@ -1,6 +1,6 @@
-import type { WorkspaceCreateDirResult } from "./WorkspaceCreateDirResult.js";
+import type { WorkspaceCreateDirResult } from "./model/WorkspaceCreateDirResult.js";
 import type { WorkspaceDirectoryCreator } from "./WorkspaceDirectoryCreator.js";
-import type { WorkspaceEditResult } from "./WorkspaceEditResult.js";
+import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
 import type { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
 import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
@@ -8,7 +8,7 @@ import { WorkspaceMutationServiceComponents } from "./WorkspaceMutationServiceCo
 import { WorkspaceMutationServiceComponentsFactory } from "./WorkspaceMutationServiceComponentsFactory.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
-import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
+import type { WorkspaceWriteResult } from "./model/WorkspaceWriteResult.js";
 
 export class WorkspaceMutationService {
   private readonly components: WorkspaceMutationServiceComponents;

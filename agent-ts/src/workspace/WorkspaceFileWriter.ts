@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { MAX_FILE_SIZE } from "./WorkspaceLimits.js";
-import { WorkspaceError } from "./WorkspaceError.js";
-import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
+import { WorkspaceError } from "./model/WorkspaceError.js";
+import { MAX_FILE_SIZE } from "./model/WorkspaceLimits.js";
+import type { WorkspaceWriteResult } from "./model/WorkspaceWriteResult.js";
 
 export class WorkspaceFileWriter {
   async write(sessionPath: string, targetPath: string, content: string): Promise<WorkspaceWriteResult> {

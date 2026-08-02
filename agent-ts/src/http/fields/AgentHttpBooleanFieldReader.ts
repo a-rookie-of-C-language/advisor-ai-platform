@@ -1,5 +1,5 @@
 import { BooleanStringReader } from "../../common/value/BooleanStringReader.js";
-import { WorkspaceError } from "../../workspace/WorkspaceError.js";
+import { WorkspaceError } from "../../workspace/model/WorkspaceError.js";
 
 export class AgentHttpBooleanFieldReader {
   read(value: unknown, key: string, fallback: boolean): boolean {

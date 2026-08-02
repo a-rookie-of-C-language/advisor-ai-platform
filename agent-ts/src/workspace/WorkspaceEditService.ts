@@ -1,4 +1,4 @@
-import type { WorkspaceEditResult } from "./WorkspaceEditResult.js";
+import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
 import type { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 

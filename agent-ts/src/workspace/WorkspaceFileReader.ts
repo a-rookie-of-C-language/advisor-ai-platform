@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
-import { MAX_FILE_SIZE } from "./WorkspaceLimits.js";
-import { WorkspaceError } from "./WorkspaceError.js";
+import { WorkspaceError } from "./model/WorkspaceError.js";
+import { MAX_FILE_SIZE } from "./model/WorkspaceLimits.js";
 
 export class WorkspaceFileReader {
   async read(targetPath: string, relativePath: string, offset = 0, limit = 8192): Promise<string> {

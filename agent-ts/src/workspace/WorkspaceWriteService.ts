@@ -2,7 +2,7 @@ import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
-import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
+import type { WorkspaceWriteResult } from "./model/WorkspaceWriteResult.js";
 
 export class WorkspaceWriteService {
   constructor(

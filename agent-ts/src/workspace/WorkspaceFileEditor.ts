@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { WorkspaceError } from "./WorkspaceError.js";
-import type { WorkspaceEditResult } from "./WorkspaceEditResult.js";
+import { WorkspaceError } from "./model/WorkspaceError.js";
+import type { WorkspaceEditResult } from "./model/WorkspaceEditResult.js";
 
 export class WorkspaceFileEditor {
   async edit(

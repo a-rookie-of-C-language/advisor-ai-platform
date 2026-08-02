@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { WorkspaceCreateDirResult } from "./WorkspaceCreateDirResult.js";
+import type { WorkspaceCreateDirResult } from "./model/WorkspaceCreateDirResult.js";
 
 export class WorkspaceDirectoryCreator {
   async create(sessionPath: string, targetPath: string): Promise<WorkspaceCreateDirResult> {
