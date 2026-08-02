@@ -1,4 +1,4 @@
-import type { WebFetchClient } from "../../fetch/WebFetchClient.js";
+import type { WebFetchClient } from "../../fetch/core/WebFetchClient.js";
 import type { WebSearchClient } from "../../search/WebSearchClient.js";
 import { WebToolAvailabilityFactory } from "../availability/WebToolAvailabilityFactory.js";
 import { WebOpenAiToolCatalog } from "../catalog/WebOpenAiToolCatalog.js";

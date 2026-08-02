@@ -1,4 +1,4 @@
-import type { WebFetchClient } from "../WebFetchClient.js";
+import type { WebFetchClient } from "../core/WebFetchClient.js";
 import type { WebFetchedPage } from "../model/WebFetchedPage.js";
 
 export class WebFetchedPageLoader {

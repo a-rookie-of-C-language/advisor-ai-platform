@@ -1,5 +1,5 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import { WebFetchClient } from "../../web/fetch/WebFetchClient.js";
+import { WebFetchClient } from "../../web/fetch/core/WebFetchClient.js";
 import { WebSearchClient } from "../../web/search/WebSearchClient.js";
 import { AgentWebClients } from "./AgentWebClients.js";
 
