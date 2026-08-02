@@ -5,12 +5,14 @@ import type { WorkspaceFileEditor } from "./WorkspaceFileEditor.js";
 import type { WorkspaceFileWriter } from "./WorkspaceFileWriter.js";
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import { WorkspaceMutationServiceComponents } from "./WorkspaceMutationServiceComponents.js";
+import { WorkspaceMutationServiceComponentsFactory } from "./WorkspaceMutationServiceComponentsFactory.js";
 import type { WorkspaceTargetPathResolver } from "./WorkspaceTargetPathResolver.js";
 import type { WorkspaceWorkingFileCounter } from "./WorkspaceWorkingFileCounter.js";
 import type { WorkspaceWriteResult } from "./WorkspaceWriteResult.js";
 
 export class WorkspaceMutationService {
   private readonly components: WorkspaceMutationServiceComponents;
+  private readonly componentsFactory = new WorkspaceMutationServiceComponentsFactory();
 
   constructor(
     directoryCreator: WorkspaceDirectoryCreator,
@@ -20,7 +22,7 @@ export class WorkspaceMutationService {
     targetPathResolver: WorkspaceTargetPathResolver,
     workingFileCounter: WorkspaceWorkingFileCounter
   ) {
-    this.components = new WorkspaceMutationServiceComponents(
+    this.components = this.componentsFactory.create(
       directoryCreator,
       fileEditor,
       fileWriter,
