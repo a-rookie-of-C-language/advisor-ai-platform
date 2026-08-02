@@ -9,7 +9,7 @@ import type { WebSearchContextBuilder } from "../../web/context/search/core/WebS
 import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
 import { AgentContextPipelineFactory } from "./AgentContextPipelineFactory.js";
 import { AgentMemoryTaskCompletionSubmitter } from "../memory/AgentMemoryTaskCompletionSubmitter.js";
-import { AgentOpenAiToolComponentsFactory } from "../openAi/AgentOpenAiToolComponentsFactory.js";
+import { AgentOpenAiToolComponentsFactory } from "../openAi/factory/AgentOpenAiToolComponentsFactory.js";
 
 export class AgentChatStreamSessionFactory {
   private readonly contextPipelineFactory = new AgentContextPipelineFactory();
