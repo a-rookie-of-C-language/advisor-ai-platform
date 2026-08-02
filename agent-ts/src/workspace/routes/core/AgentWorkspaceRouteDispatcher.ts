@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
+import type { HttpRouteResult } from "../../../http/response/HttpRouteResult.js";
 import type { AgentWorkspaceRouteComponents } from "./AgentWorkspaceRouteComponents.js";
-import type { HttpRouteResult } from "../../http/response/HttpRouteResult.js";
 
 export class AgentWorkspaceRouteDispatcher {
   constructor(private readonly components: AgentWorkspaceRouteComponents) {}

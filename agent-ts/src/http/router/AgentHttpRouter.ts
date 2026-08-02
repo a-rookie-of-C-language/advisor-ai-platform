@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentWorkspaceRouteHandler } from "../../workspace/routes/AgentWorkspaceRouteHandler.js";
+import type { AgentWorkspaceRouteHandler } from "../../workspace/routes/core/AgentWorkspaceRouteHandler.js";
 import type { AgentRequestUrlFactory } from "../request/AgentRequestUrlFactory.js";
 import type { AgentJsonResponseWriter } from "../response/AgentJsonResponseWriter.js";
 import { AgentHttpRouteResultWriter } from "../response/AgentHttpRouteResultWriter.js";
