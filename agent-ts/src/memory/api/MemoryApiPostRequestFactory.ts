@@ -1,6 +1,6 @@
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { MemoryCandidateUpsertRequest } from "./MemoryCandidateUpsertRequest.js";
-import type { MemoryTaskSubmitRequest } from "./MemoryTaskSubmitRequest.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { MemoryCandidateUpsertRequest } from "../MemoryCandidateUpsertRequest.js";
+import type { MemoryTaskSubmitRequest } from "../MemoryTaskSubmitRequest.js";
 
 export class MemoryApiPostRequestFactory {
   createLongTermSearch(userId: number, kbId: number, query: string, topK: number): RequestInit {

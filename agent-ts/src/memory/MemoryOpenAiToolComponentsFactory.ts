@@ -1,4 +1,4 @@
-import type { MemoryApiClient } from "./MemoryApiClient.js";
+import type { MemoryApiClient } from "./api/MemoryApiClient.js";
 import { MemoryOpenAiToolComponents } from "./MemoryOpenAiToolComponents.js";
 
 export class MemoryOpenAiToolComponentsFactory {
