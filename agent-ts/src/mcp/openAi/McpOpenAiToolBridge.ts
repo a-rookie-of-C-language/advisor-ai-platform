@@ -4,7 +4,7 @@ import { McpOpenAiToolResultFormatter } from "./McpOpenAiToolResultFormatter.js"
 import type { McpToolService } from "../tools/core/McpToolService.js";
 import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { OpenAIChatTool } from "../../openai/chat/model/OpenAIChatTool.js";
-import { OpenAiToolResultFactory } from "../../openai/tools/runtime/OpenAiToolResultFactory.js";
+import { OpenAiToolResultFactory } from "../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
 
 export class McpOpenAiToolBridge {
   private readonly catalog = new McpOpenAiToolCatalog();
