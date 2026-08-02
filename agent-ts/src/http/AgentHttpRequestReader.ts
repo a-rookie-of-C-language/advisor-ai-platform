@@ -1,12 +1,12 @@
 import type { IncomingMessage } from "node:http";
 import { AgentHttpFieldReader } from "./AgentHttpFieldReader.js";
+import { AgentHttpJsonObjectBodyReader } from "./AgentHttpJsonObjectBodyReader.js";
 import type { AgentWorkspaceScope } from "../workspace/routes/AgentWorkspaceScope.js";
 import { AgentWorkspaceScopeReader } from "../workspace/routes/AgentWorkspaceScopeReader.js";
 import type { JsonObject } from "../common/JsonTypes.js";
-import { parseJsonBody } from "./HttpBodyParser.js";
-import { WorkspaceError } from "../workspace/WorkspaceError.js";
 
 export class AgentHttpRequestReader {
+  private readonly bodyReader = new AgentHttpJsonObjectBodyReader();
   private readonly fieldReader = new AgentHttpFieldReader();
   private readonly workspaceScopeReader = new AgentWorkspaceScopeReader();
 
@@ -15,11 +15,7 @@ export class AgentHttpRequestReader {
   }
 
   async readJsonObject(request: IncomingMessage): Promise<Record<string, unknown>> {
-    const body = await parseJsonBody(request);
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      throw new WorkspaceError("请求体必须是 JSON 对象");
-    }
-    return body as Record<string, unknown>;
+    return this.bodyReader.read(request);
   }
 
   readRequiredString(body: Record<string, unknown>, key: string): string {
