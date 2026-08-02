@@ -4,22 +4,21 @@ import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionRes
 import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
 import type { WorkspaceManager } from "./WorkspaceManager.js";
 import { OpenAiToolResultFactory } from "../openai/OpenAiToolResultFactory.js";
-import { WorkspaceOpenAiToolCatalog } from "./WorkspaceOpenAiToolCatalog.js";
-import { WorkspaceOpenAiToolExecutor } from "./WorkspaceOpenAiToolExecutor.js";
-import { WorkspaceOpenAiToolResultFactory } from "./WorkspaceOpenAiToolResultFactory.js";
+import { WorkspaceOpenAiToolBridgeComponents } from "./WorkspaceOpenAiToolBridgeComponents.js";
+import { WorkspaceOpenAiToolBridgeComponentsFactory } from "./WorkspaceOpenAiToolBridgeComponentsFactory.js";
 
 export class WorkspaceOpenAiToolBridge {
-  private readonly catalog = new WorkspaceOpenAiToolCatalog();
-  private readonly executor: WorkspaceOpenAiToolExecutor;
-  private readonly resultFactory = new WorkspaceOpenAiToolResultFactory();
-  private readonly toolNames = this.catalog.toolNames();
+  private readonly components: WorkspaceOpenAiToolBridgeComponents;
+  private readonly componentsFactory = new WorkspaceOpenAiToolBridgeComponentsFactory();
+  private readonly toolNames: Set<string>;
 
   constructor(workspaceManager: WorkspaceManager) {
-    this.executor = new WorkspaceOpenAiToolExecutor(workspaceManager);
+    this.components = this.componentsFactory.create(workspaceManager);
+    this.toolNames = this.components.catalog.toolNames();
   }
 
   listTools(): OpenAIChatTool[] {
-    return this.catalog.listTools();
+    return this.components.catalog.listTools();
   }
 
   canExecute(toolName: string): boolean {
@@ -32,8 +31,8 @@ export class WorkspaceOpenAiToolBridge {
     args: JsonObject
   ): Promise<OpenAiToolExecutionResult> {
     try {
-      const output = await this.executor.execute(request, toolName, args);
-      return this.resultFactory.createSuccess(output);
+      const output = await this.components.executor.execute(request, toolName, args);
+      return this.components.resultFactory.createSuccess(output);
     } catch (error) {
       return OpenAiToolResultFactory.errorFromUnknown(error, "workspace tool failed");
     }
