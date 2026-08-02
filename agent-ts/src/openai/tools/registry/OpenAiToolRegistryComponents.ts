@@ -3,7 +3,7 @@ import type { McpOpenAiToolBridge } from "../../../mcp/openAi/McpOpenAiToolBridg
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
-import { OpenAiToolCatalogAggregator } from "./OpenAiToolCatalogAggregator.js";
+import { OpenAiToolCatalogAggregator } from "./catalog/OpenAiToolCatalogAggregator.js";
 import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
 
 export class OpenAiToolRegistryComponents {
