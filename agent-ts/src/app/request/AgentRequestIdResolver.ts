@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
 import { AgentRequestHeaderValueResolver } from "./AgentRequestHeaderValueResolver.js";
 
 export class AgentRequestIdResolver {
