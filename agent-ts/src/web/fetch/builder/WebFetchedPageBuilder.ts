@@ -1,5 +1,5 @@
-import type { WebFetchedPage } from "./model/WebFetchedPage.js";
-import { WebHtmlParser } from "./parser/WebHtmlParser.js";
+import type { WebFetchedPage } from "../model/WebFetchedPage.js";
+import { WebHtmlParser } from "../parser/WebHtmlParser.js";
 
 export class WebFetchedPageBuilder {
   private readonly htmlParser = new WebHtmlParser();
