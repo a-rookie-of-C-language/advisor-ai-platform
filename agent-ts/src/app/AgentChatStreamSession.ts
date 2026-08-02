@@ -4,11 +4,13 @@ import { AgentStreamEventWriter } from "../protocol/AgentStreamEventWriter.js";
 import type { SseWriter } from "../protocol/SseWriter.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "./AgentMemoryTaskCompletionSubmitter.js";
+import { AgentMissingOpenAiApiKeyFallbackGate } from "./AgentMissingOpenAiApiKeyFallbackGate.js";
 import type { AgentOpenAiToolFacade } from "./AgentOpenAiToolFacade.js";
 import { AgentStreamErrorMessageResolver } from "./AgentStreamErrorMessageResolver.js";
 import type { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
 
 export class AgentChatStreamSession {
+  private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
   private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
 
   constructor(
@@ -32,7 +34,7 @@ export class AgentChatStreamSession {
         await eventWriter.write(event);
       }
 
-      if (!eventWriter.emitted && !this.openAiApiKey) {
+      if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
         await eventWriter.writeMissingOpenAiApiKeyFallback();
       }
 
