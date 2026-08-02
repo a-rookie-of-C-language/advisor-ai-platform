@@ -1,14 +1,14 @@
 import type { ChatMessageDTO } from "../common/ChatStreamRequest.js";
 import type { OpenAIChatCompletionStreamer } from "./OpenAIChatCompletionStreamer.js";
-import { OpenAIChatDeltaEventFactory } from "./OpenAIChatDeltaEventFactory.js";
 import type { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
+import { OpenAIChatRoundEventFactory } from "./OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoundRunner.js";
 import { OpenAIToolRoundGate } from "./OpenAIToolRoundGate.js";
 
 export class OpenAIChatEventStreamer {
-  private readonly deltaEventFactory = new OpenAIChatDeltaEventFactory();
+  private readonly roundEventFactory = new OpenAIChatRoundEventFactory();
   private readonly toolRoundGate = new OpenAIToolRoundGate();
 
   constructor(
@@ -29,7 +29,7 @@ export class OpenAIChatEventStreamer {
 
     const conversation = this.messageMapper.map(messages);
     const firstRound = await this.completionStreamer.collectStream(conversation, tools);
-    for (const event of this.deltaEventFactory.create(firstRound.textParts)) {
+    for (const event of this.roundEventFactory.create(firstRound)) {
       yield event;
     }
 
@@ -42,7 +42,7 @@ export class OpenAIChatEventStreamer {
     }
 
     const finalRound = await this.completionStreamer.collectStream(conversation);
-    for (const event of this.deltaEventFactory.create(finalRound.textParts)) {
+    for (const event of this.roundEventFactory.create(finalRound)) {
       yield event;
     }
   }
