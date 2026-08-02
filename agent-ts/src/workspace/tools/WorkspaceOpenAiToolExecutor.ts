@@ -3,7 +3,7 @@ import type { JsonObject } from "../../common/json/JsonTypes.js";
 import type { WorkspaceManager } from "../core/WorkspaceManager.js";
 import { WorkspaceOpenAiMutationToolExecutor } from "./WorkspaceOpenAiMutationToolExecutor.js";
 import { WorkspaceOpenAiToolDispatcher } from "./WorkspaceOpenAiToolDispatcher.js";
-import { WorkspaceOpenAiReadToolExecutor } from "./WorkspaceOpenAiReadToolExecutor.js";
+import { WorkspaceOpenAiReadToolExecutor } from "./read/WorkspaceOpenAiReadToolExecutor.js";
 
 export class WorkspaceOpenAiToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiToolDispatcher;
