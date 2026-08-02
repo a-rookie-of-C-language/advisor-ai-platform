@@ -4,7 +4,7 @@ import type { RagOpenAiToolBridge } from "../../../rag/openAi/RagOpenAiToolBridg
 import type { WebOpenAiToolBridge } from "../../../web/openAi/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
 import { OpenAiToolCatalogAggregator } from "./catalog/OpenAiToolCatalogAggregator.js";
-import { OpenAiToolExecutorRouter } from "./OpenAiToolExecutorRouter.js";
+import { OpenAiToolExecutorRouter } from "./execution/OpenAiToolExecutorRouter.js";
 
 export class OpenAiToolRegistryComponents {
   readonly toolCatalogAggregator: OpenAiToolCatalogAggregator;
