@@ -3,7 +3,7 @@ import { McpOpenAiToolCatalog } from "./McpOpenAiToolCatalog.js";
 import { McpOpenAiToolResultFormatter } from "./McpOpenAiToolResultFormatter.js";
 import type { McpToolService } from "../tools/McpToolService.js";
 import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "../../openai/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
 import { OpenAiToolResultFactory } from "../../openai/tools/runtime/OpenAiToolResultFactory.js";
 
 export class McpOpenAiToolBridge {

@@ -1,6 +1,6 @@
-import type { OpenAIChatRoundResult } from "./OpenAIChatRoundResult.js";
+import type { OpenAIChatStreamEvent } from "../../protocol/OpenAIChatStreamEvent.js";
 import { OpenAIChatDeltaEventFactory } from "./OpenAIChatDeltaEventFactory.js";
-import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
+import type { OpenAIChatRoundResult } from "./OpenAIChatRoundResult.js";
 
 export class OpenAIChatRoundEventFactory {
   private readonly deltaEventFactory = new OpenAIChatDeltaEventFactory();

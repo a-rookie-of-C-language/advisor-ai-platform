@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../../openai/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
 
 export class WorkspaceWriteOpenAiToolDefinition {
   create(): OpenAIChatTool {

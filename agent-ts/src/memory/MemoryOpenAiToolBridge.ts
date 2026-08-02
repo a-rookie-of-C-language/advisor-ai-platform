@@ -2,7 +2,7 @@ import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
-import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
 import { MemoryOpenAiToolBridgeComponents } from "./MemoryOpenAiToolBridgeComponents.js";
 import { MemoryOpenAiToolBridgeComponentsFactory } from "./MemoryOpenAiToolBridgeComponentsFactory.js";
 import { OpenAiToolResultFactory } from "../openai/tools/runtime/OpenAiToolResultFactory.js";

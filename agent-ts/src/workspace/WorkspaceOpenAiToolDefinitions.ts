@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../openai/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../openai/chat/OpenAIChatTool.js";
 import { WorkspaceCreateDirOpenAiToolDefinition } from "./tools/WorkspaceCreateDirOpenAiToolDefinition.js";
 import { WorkspaceEditOpenAiToolDefinition } from "./tools/WorkspaceEditOpenAiToolDefinition.js";
 import { WorkspaceListOpenAiToolDefinition } from "./tools/WorkspaceListOpenAiToolDefinition.js";

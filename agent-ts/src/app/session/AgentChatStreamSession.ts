@@ -1,5 +1,5 @@
 import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
-import type { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
+import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
 import { AgentStreamEventWriter } from "../../protocol/AgentStreamEventWriter.js";
 import type { SseWriter } from "../../protocol/SseWriter.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";

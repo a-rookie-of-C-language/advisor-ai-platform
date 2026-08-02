@@ -1,7 +1,7 @@
 import type { McpOpenAiToolTarget } from "./McpOpenAiToolTarget.js";
 import { McpOpenAiToolNameFactory } from "./McpOpenAiToolNameFactory.js";
 import type { McpToolDescriptor } from "../tools/McpToolDescriptor.js";
-import type { OpenAIChatTool } from "../../openai/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
 
 export class McpOpenAiToolCatalog {
   private readonly toolTargets = new Map<string, McpOpenAiToolTarget>();

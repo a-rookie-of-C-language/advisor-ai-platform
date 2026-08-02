@@ -4,7 +4,7 @@ import type { AgentCoreClient } from "../../core/AgentCoreClient.js";
 import type { JsonObject } from "../../common/JsonTypes.js";
 import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
-import type { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
+import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";

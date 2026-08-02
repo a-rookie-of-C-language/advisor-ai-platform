@@ -1,4 +1,4 @@
-import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
+import type { OpenAIChatStreamEvent } from "../../protocol/OpenAIChatStreamEvent.js";
 
 export class OpenAIChatDeltaEventFactory {
   create(textParts: string[]): OpenAIChatStreamEvent[] {

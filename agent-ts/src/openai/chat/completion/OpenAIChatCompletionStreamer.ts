@@ -1,10 +1,10 @@
 import type { AgentConfig } from "../../../config/AgentConfig.js";
 import { OpenAIChatCompletionHttpClient } from "./OpenAIChatCompletionHttpClient.js";
 import { OpenAIChatCompletionRequestBuilder } from "./OpenAIChatCompletionRequestBuilder.js";
-import { OpenAIChatResponseBodyCollector } from "../../OpenAIChatResponseBodyCollector.js";
-import type { OpenAIChatMessage } from "../../OpenAIChatMessage.js";
-import type { OpenAIChatRoundResult } from "../../OpenAIChatRoundResult.js";
-import type { OpenAIChatTool } from "../../OpenAIChatTool.js";
+import { OpenAIChatResponseBodyCollector } from "../OpenAIChatResponseBodyCollector.js";
+import type { OpenAIChatMessage } from "../OpenAIChatMessage.js";
+import type { OpenAIChatRoundResult } from "../OpenAIChatRoundResult.js";
+import type { OpenAIChatTool } from "../OpenAIChatTool.js";
 
 export class OpenAIChatCompletionStreamer {
   private readonly httpClient: OpenAIChatCompletionHttpClient;

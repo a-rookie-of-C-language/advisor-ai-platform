@@ -1,11 +1,11 @@
-import type { ChatMessageDTO } from "../common/ChatStreamRequest.js";
-import type { OpenAIChatCompletionStreamer } from "./chat/completion/OpenAIChatCompletionStreamer.js";
+import type { ChatMessageDTO } from "../../common/ChatStreamRequest.js";
+import type { OpenAIChatStreamEvent } from "../../protocol/OpenAIChatStreamEvent.js";
+import type { OpenAIChatCompletionStreamer } from "./completion/OpenAIChatCompletionStreamer.js";
 import type { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
 import { OpenAIChatRoundEventFactory } from "./OpenAIChatRoundEventFactory.js";
-import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import { OpenAIToolRoundGate } from "./tools/runtime/OpenAIToolRoundGate.js";
-import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "./tools/runtime/OpenAIToolRoundRunner.js";
+import { OpenAIToolRoundGate } from "../tools/runtime/OpenAIToolRoundGate.js";
+import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "../tools/runtime/OpenAIToolRoundRunner.js";
 
 export class OpenAIChatEventStreamer {
   private readonly roundEventFactory = new OpenAIChatRoundEventFactory();
