@@ -5,7 +5,7 @@ import type { AgentRagComponents } from "./rag/AgentRagComponents.js";
 import { AgentOpenAiToolRegistryFactory } from "./AgentOpenAiToolRegistryFactory.js";
 import { AgentRuntimeClientFactory } from "./AgentRuntimeClientFactory.js";
 import { AgentRuntimeDependencies } from "./AgentRuntimeDependencies.js";
-import type { AgentWebComponents } from "./AgentWebComponents.js";
+import type { AgentWebComponents } from "./web/AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "./AgentWorkspaceComponents.js";
 
 export class AgentRuntimeDependenciesFactory {

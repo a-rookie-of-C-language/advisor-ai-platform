@@ -1,6 +1,6 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
-import { WebFetchClient } from "../web/WebFetchClient.js";
-import { WebSearchClient } from "../web/WebSearchClient.js";
+import type { AgentConfig } from "../../config/AgentConfig.js";
+import { WebFetchClient } from "../../web/WebFetchClient.js";
+import { WebSearchClient } from "../../web/WebSearchClient.js";
 import { AgentWebClients } from "./AgentWebClients.js";
 
 export class AgentWebClientsFactory {
