@@ -1,15 +1,15 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
-import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
-import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
-import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
-import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
+import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";
+import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
+import type { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
+import type { OpenAiToolRegistry } from "../../openai/OpenAiToolRegistry.js";
+import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
 import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
 import { AgentContextPipelineFactory } from "./AgentContextPipelineFactory.js";
-import { AgentMemoryTaskCompletionSubmitter } from "./memory/AgentMemoryTaskCompletionSubmitter.js";
-import { AgentOpenAiToolComponentsFactory } from "./openAi/AgentOpenAiToolComponentsFactory.js";
+import { AgentMemoryTaskCompletionSubmitter } from "../memory/AgentMemoryTaskCompletionSubmitter.js";
+import { AgentOpenAiToolComponentsFactory } from "../openAi/AgentOpenAiToolComponentsFactory.js";
 
 export class AgentChatStreamSessionFactory {
   private readonly contextPipelineFactory = new AgentContextPipelineFactory();

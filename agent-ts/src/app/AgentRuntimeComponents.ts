@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
-import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
-import { AgentChatStreamSessionFactory } from "./AgentChatStreamSessionFactory.js";
+import { AgentChatStreamSession } from "./session/AgentChatStreamSession.js";
+import { AgentChatStreamSessionFactory } from "./session/AgentChatStreamSessionFactory.js";
 import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
