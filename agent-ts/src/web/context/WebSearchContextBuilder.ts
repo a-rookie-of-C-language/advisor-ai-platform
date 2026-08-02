@@ -1,5 +1,5 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { WebSearchClient } from "../search/WebSearchClient.js";
+import type { WebSearchClient } from "../search/core/WebSearchClient.js";
 import { WebSearchQueryFinder } from "./WebSearchQueryFinder.js";
 import { WebSearchResultRenderer } from "./WebSearchResultRenderer.js";
 import { WebSearchSystemMessageFactory } from "./WebSearchSystemMessageFactory.js";

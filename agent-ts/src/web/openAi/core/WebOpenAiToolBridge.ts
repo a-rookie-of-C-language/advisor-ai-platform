@@ -3,7 +3,7 @@ import type { OpenAIChatTool } from "../../../openai/chat/model/OpenAIChatTool.j
 import { OpenAiToolResultFactory } from "../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { WebFetchClient } from "../../fetch/core/WebFetchClient.js";
-import type { WebSearchClient } from "../../search/WebSearchClient.js";
+import type { WebSearchClient } from "../../search/core/WebSearchClient.js";
 import { WebOpenAiToolBridgeComponentsFactory } from "../factory/WebOpenAiToolBridgeComponentsFactory.js";
 import { WebOpenAiToolBridgeComponents } from "./WebOpenAiToolBridgeComponents.js";
 

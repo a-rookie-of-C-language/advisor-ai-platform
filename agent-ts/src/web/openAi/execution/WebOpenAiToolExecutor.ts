@@ -1,7 +1,7 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { WebFetchClient } from "../../fetch/core/WebFetchClient.js";
-import type { WebSearchClient } from "../../search/WebSearchClient.js";
+import type { WebSearchClient } from "../../search/core/WebSearchClient.js";
 import { WebOpenAiToolDispatcher } from "./WebOpenAiToolDispatcher.js";
 
 export class WebOpenAiToolExecutor {
