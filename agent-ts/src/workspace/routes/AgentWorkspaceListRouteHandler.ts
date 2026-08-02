@@ -1,20 +1,25 @@
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceListRequestReader } from "./AgentWorkspaceListRequestReader.js";
 
 export class AgentWorkspaceListRouteHandler {
+  private readonly listRequestReader: AgentWorkspaceListRequestReader;
+
   constructor(
     private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
-  ) {}
+    requestReader: AgentHttpRequestReader
+  ) {
+    this.listRequestReader = new AgentWorkspaceListRequestReader(requestReader);
+  }
 
   async handle(url: URL): Promise<HttpRouteResult> {
-    const scope = this.requestReader.readWorkspaceScope(url);
+    const listRequest = this.listRequestReader.read(url);
     const items = await this.workspaceManager.list(
-      scope.userId,
-      scope.sessionId,
-      url.searchParams.get("path") || ".",
-      this.requestReader.readBooleanQuery(url.searchParams.get("recursive"), false)
+      listRequest.scope.userId,
+      listRequest.scope.sessionId,
+      listRequest.path,
+      listRequest.recursive
     );
     return { statusCode: 200, body: { status: "ok", items } };
   }
