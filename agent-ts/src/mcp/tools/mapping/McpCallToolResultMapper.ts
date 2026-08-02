@@ -1,6 +1,6 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import { JsonObjectReader } from "../../common/json/JsonObjectReader.js";
-import type { McpCallToolResult } from "./model/McpCallToolResult.js";
+import { JsonObjectReader } from "../../../common/json/JsonObjectReader.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { McpCallToolResult } from "../model/McpCallToolResult.js";
 
 export class McpCallToolResultMapper {
   private readonly jsonObjectReader = new JsonObjectReader();
