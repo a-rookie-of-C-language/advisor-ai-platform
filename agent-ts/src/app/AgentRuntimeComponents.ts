@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../config/AgentConfig.js";
 import { AgentChatStreamSession } from "./AgentChatStreamSession.js";
-import { AgentContextPipeline } from "./AgentContextPipeline.js";
+import { AgentContextPipelineFactory } from "./AgentContextPipelineFactory.js";
 import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
@@ -14,6 +14,7 @@ import { AgentToolExecutorFactory } from "./AgentToolExecutorFactory.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;
+  private readonly contextPipelineFactory = new AgentContextPipelineFactory();
 
   constructor(
     config: AgentConfig,
@@ -25,7 +26,7 @@ export class AgentRuntimeComponents {
     webSearchContextBuilder?: WebSearchContextBuilder,
     openAiToolRegistry?: OpenAiToolRegistry
   ) {
-    const contextPipeline = new AgentContextPipeline(
+    const contextPipeline = this.contextPipelineFactory.create(
       memoryContextBuilder,
       ragContextBuilder,
       webFetchContextBuilder,
