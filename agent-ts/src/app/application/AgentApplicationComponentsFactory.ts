@@ -2,7 +2,7 @@ import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { AgentApplicationComponents } from "./AgentApplicationComponents.js";
 import { AgentMcpComponents } from "../mcp/AgentMcpComponents.js";
 import { AgentMemoryComponents } from "../memory/core/AgentMemoryComponents.js";
-import { AgentRagComponents } from "../rag/AgentRagComponents.js";
+import { AgentRagComponents } from "../rag/core/AgentRagComponents.js";
 import { AgentWebComponents } from "../web/core/AgentWebComponents.js";
 import { AgentWorkspaceComponents } from "../workspace/AgentWorkspaceComponents.js";
 

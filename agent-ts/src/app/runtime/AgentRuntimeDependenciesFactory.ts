@@ -1,7 +1,7 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import type { AgentMcpComponents } from "../mcp/AgentMcpComponents.js";
 import type { AgentMemoryComponents } from "../memory/core/AgentMemoryComponents.js";
-import type { AgentRagComponents } from "../rag/AgentRagComponents.js";
+import type { AgentRagComponents } from "../rag/core/AgentRagComponents.js";
 import { AgentOpenAiToolRegistryFactory } from "../openAi/factory/AgentOpenAiToolRegistryFactory.js";
 import { AgentRuntimeClientFactory } from "./AgentRuntimeClientFactory.js";
 import { AgentRuntimeDependencies } from "./AgentRuntimeDependencies.js";
