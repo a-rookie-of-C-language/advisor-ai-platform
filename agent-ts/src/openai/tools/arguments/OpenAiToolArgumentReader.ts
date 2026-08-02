@@ -1,9 +1,9 @@
 import { AliasedValueReader } from "../../../common/value/AliasedValueReader.js";
 import type { JsonObject, JsonValue } from "../../../common/json/JsonTypes.js";
-import { OpenAiToolBooleanArgumentReader } from "./OpenAiToolBooleanArgumentReader.js";
-import { OpenAiToolJsonObjectArgumentReader } from "./OpenAiToolJsonObjectArgumentReader.js";
-import { OpenAiToolNumberArgumentReader } from "./OpenAiToolNumberArgumentReader.js";
-import { OpenAiToolStringArgumentReader } from "./OpenAiToolStringArgumentReader.js";
+import { OpenAiToolBooleanArgumentReader } from "./readers/OpenAiToolBooleanArgumentReader.js";
+import { OpenAiToolJsonObjectArgumentReader } from "./readers/OpenAiToolJsonObjectArgumentReader.js";
+import { OpenAiToolNumberArgumentReader } from "./readers/OpenAiToolNumberArgumentReader.js";
+import { OpenAiToolStringArgumentReader } from "./readers/OpenAiToolStringArgumentReader.js";
 
 export class OpenAiToolArgumentReader {
   static readRequiredString(args: JsonObject, key: string): string {
