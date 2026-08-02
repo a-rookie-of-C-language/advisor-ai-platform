@@ -1,12 +1,12 @@
-import type { JsonObject } from "../common/JsonTypes.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
 import { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
 import { DirectHttpMcpJsonRpcClient } from "./DirectHttpMcpJsonRpcClient.js";
 import { DirectHttpMcpToolCaller } from "./DirectHttpMcpToolCaller.js";
 import { DirectHttpMcpToolListReader } from "./DirectHttpMcpToolListReader.js";
-import { McpJsonRpcRequestFactory } from "./McpJsonRpcRequestFactory.js";
-import type { McpCallToolResult } from "./McpCallToolResult.js";
-import type { McpToolDescriptor } from "./McpToolDescriptor.js";
-import type { McpServerConfig } from "./McpServerConfig.js";
+import { McpJsonRpcRequestFactory } from "../McpJsonRpcRequestFactory.js";
+import type { McpCallToolResult } from "../McpCallToolResult.js";
+import type { McpToolDescriptor } from "../McpToolDescriptor.js";
+import type { McpServerConfig } from "../McpServerConfig.js";
 
 export class DirectHttpMcpClient {
   private readonly initializer: DirectHttpMcpInitializer;

@@ -1,5 +1,5 @@
 import { DirectHttpMcpClient } from "./DirectHttpMcpClient.js";
-import type { McpServerConfig } from "./McpServerConfig.js";
+import type { McpServerConfig } from "../McpServerConfig.js";
 
 export class DirectHttpMcpClientRegistry {
   private readonly clients = new Map<string, DirectHttpMcpClient>();

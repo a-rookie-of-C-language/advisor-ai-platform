@@ -1,4 +1,4 @@
-import type { McpServerConfig } from "./McpServerConfig.js";
+import type { McpServerConfig } from "../McpServerConfig.js";
 
 export class DirectHttpMcpHeadersFactory {
   create(config: McpServerConfig): Record<string, string> {
