@@ -1,6 +1,6 @@
 import type { ChatMessageDTO } from "../../common/ChatStreamRequest.js";
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { OpenAIChatStreamEvent } from "../../protocol/OpenAIChatStreamEvent.js";
+import type { OpenAIChatStreamEvent } from "../../protocol/events/OpenAIChatStreamEvent.js";
 import { OpenAIChatCompletionStreamer } from "./completion/OpenAIChatCompletionStreamer.js";
 import { OpenAIChatEventStreamer } from "./OpenAIChatEventStreamer.js";
 import { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";

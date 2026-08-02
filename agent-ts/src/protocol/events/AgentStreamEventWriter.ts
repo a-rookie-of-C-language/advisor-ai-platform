@@ -1,6 +1,6 @@
 import type { OpenAIChatStreamEvent } from "./OpenAIChatStreamEvent.js";
 import { AgentStreamEventEmitter } from "./AgentStreamEventEmitter.js";
-import type { SseWriter } from "./SseWriter.js";
+import type { SseWriter } from "../sse/SseWriter.js";
 
 export class AgentStreamEventWriter {
   private answerText = "";

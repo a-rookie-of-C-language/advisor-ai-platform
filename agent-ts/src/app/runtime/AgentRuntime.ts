@@ -12,7 +12,7 @@ import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.
 import { AgentGraphHealthDescriptor } from "../health/AgentGraphHealthDescriptor.js";
 import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
 import { AgentRequestIdResolver } from "../request/AgentRequestIdResolver.js";
-import { SseWriterFactory } from "../../protocol/SseWriterFactory.js";
+import { SseWriterFactory } from "../../protocol/sse/SseWriterFactory.js";
 import { validateChatStreamRequest } from "../../common/request/validateChatStreamRequest.js";
 
 export class AgentRuntime {

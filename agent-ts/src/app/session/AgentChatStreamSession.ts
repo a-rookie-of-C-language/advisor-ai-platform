@@ -1,7 +1,7 @@
 import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
 import type { OpenAIChatClient } from "../../openai/chat/OpenAIChatClient.js";
-import { AgentStreamEventWriter } from "../../protocol/AgentStreamEventWriter.js";
-import type { SseWriter } from "../../protocol/SseWriter.js";
+import { AgentStreamEventWriter } from "../../protocol/events/AgentStreamEventWriter.js";
+import type { SseWriter } from "../../protocol/sse/SseWriter.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "./AgentMissingOpenAiApiKeyFallbackGate.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "../memory/AgentMemoryTaskCompletionSubmitter.js";

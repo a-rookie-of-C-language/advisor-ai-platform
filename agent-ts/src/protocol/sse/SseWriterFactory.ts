@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import type { AgentCoreClient } from "../core/client/AgentCoreClient.js";
+import type { AgentCoreClient } from "../../core/client/AgentCoreClient.js";
 import { SseWriter } from "./SseWriter.js";
 
 export class SseWriterFactory {
