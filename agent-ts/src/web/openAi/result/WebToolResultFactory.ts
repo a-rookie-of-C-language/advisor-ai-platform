@@ -1,6 +1,6 @@
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { WebFetchedPage } from "../../fetch/model/WebFetchedPage.js";
-import type { WebSearchResult } from "../../search/WebSearchResult.js";
+import type { WebSearchResult } from "../../search/model/WebSearchResult.js";
 
 export class WebToolResultFactory {
   createFetchResult(page: WebFetchedPage | null): OpenAiToolExecutionResult {

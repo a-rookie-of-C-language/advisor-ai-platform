@@ -1,5 +1,5 @@
 import type { TavilySearchResponse } from "./TavilySearchResponse.js";
-import type { WebSearchResult } from "./WebSearchResult.js";
+import type { WebSearchResult } from "./model/WebSearchResult.js";
 
 export class TavilySearchResultMapper {
   mapResults(payload: TavilySearchResponse): WebSearchResult[] {

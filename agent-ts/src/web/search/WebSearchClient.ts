@@ -1,7 +1,7 @@
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { TavilySearchHttpClient } from "./TavilySearchHttpClient.js";
 import { TavilySearchResultMapper } from "./TavilySearchResultMapper.js";
-import type { WebSearchResult } from "./WebSearchResult.js";
+import type { WebSearchResult } from "./model/WebSearchResult.js";
 
 export class WebSearchClient {
   private readonly httpClient: TavilySearchHttpClient;
