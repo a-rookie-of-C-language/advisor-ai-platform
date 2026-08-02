@@ -1,5 +1,5 @@
 import type { OpenAIChatTool } from "../../../openai/chat/model/OpenAIChatTool.js";
-import { WebFetchOpenAiToolDefinition } from "../../tools/WebFetchOpenAiToolDefinition.js";
+import { WebFetchOpenAiToolDefinition } from "../../tools/definitions/WebFetchOpenAiToolDefinition.js";
 import { WebSearchOpenAiToolDefinition } from "../../tools/WebSearchOpenAiToolDefinition.js";
 
 export class WebOpenAiToolCatalog {
