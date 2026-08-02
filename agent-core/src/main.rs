@@ -1,29 +1,15 @@
 use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use protocol_envelope::ProtocolEnvelope;
+use protocol_event_input::ProtocolEventInput;
+use serde_json::json;
 use std::env;
 use std::io::{self, Read};
 use time::OffsetDateTime;
 
+mod protocol_envelope;
+mod protocol_event_input;
+
 const EVENT_VERSION: &str = "1.0";
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ProtocolEventInput {
-    event: String,
-    source: Option<String>,
-    trace_id: Option<String>,
-    payload: Value,
-}
-
-#[derive(Debug, Serialize)]
-struct ProtocolEnvelope {
-    event_version: &'static str,
-    trace_id: String,
-    timestamp: i128,
-    source: String,
-    payload: Value,
-}
 
 fn main() -> Result<()> {
     let command = env::args()
