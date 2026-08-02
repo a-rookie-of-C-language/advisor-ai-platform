@@ -1,12 +1,12 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import { DirectHttpMcpInitializer } from "./operations/DirectHttpMcpInitializer.js";
-import { DirectHttpMcpToolCaller } from "./operations/DirectHttpMcpToolCaller.js";
-import { DirectHttpMcpToolListReader } from "./operations/DirectHttpMcpToolListReader.js";
-import { DirectHttpMcpJsonRpcClient } from "./protocol/DirectHttpMcpJsonRpcClient.js";
-import { McpJsonRpcRequestFactory } from "../jsonRpc/McpJsonRpcRequestFactory.js";
-import type { McpCallToolResult } from "../tools/McpCallToolResult.js";
-import type { McpToolDescriptor } from "../tools/McpToolDescriptor.js";
-import type { McpServerConfig } from "../config/McpServerConfig.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { McpServerConfig } from "../../config/McpServerConfig.js";
+import { McpJsonRpcRequestFactory } from "../../jsonRpc/McpJsonRpcRequestFactory.js";
+import type { McpCallToolResult } from "../../tools/McpCallToolResult.js";
+import type { McpToolDescriptor } from "../../tools/McpToolDescriptor.js";
+import { DirectHttpMcpInitializer } from "../operations/DirectHttpMcpInitializer.js";
+import { DirectHttpMcpToolCaller } from "../operations/DirectHttpMcpToolCaller.js";
+import { DirectHttpMcpToolListReader } from "../operations/DirectHttpMcpToolListReader.js";
+import { DirectHttpMcpJsonRpcClient } from "../protocol/DirectHttpMcpJsonRpcClient.js";
 
 export class DirectHttpMcpClient {
   private readonly initializer: DirectHttpMcpInitializer;
