@@ -5,7 +5,7 @@ import { OpenAiToolResultFactory } from "../../openai/tools/runtime/factory/Open
 import type { WebFetchClient } from "../fetch/WebFetchClient.js";
 import type { WebSearchClient } from "../search/WebSearchClient.js";
 import { WebOpenAiToolBridgeComponents } from "./core/WebOpenAiToolBridgeComponents.js";
-import { WebOpenAiToolBridgeComponentsFactory } from "./WebOpenAiToolBridgeComponentsFactory.js";
+import { WebOpenAiToolBridgeComponentsFactory } from "./factory/WebOpenAiToolBridgeComponentsFactory.js";
 
 export class WebOpenAiToolBridge {
   private readonly components: WebOpenAiToolBridgeComponents;
