@@ -1,6 +1,6 @@
 import type { OpenAIChatRoundResult } from "./OpenAIChatRoundResult.js";
 import { OpenAIStreamParser } from "./stream/OpenAIStreamParser.js";
-import type { OpenAIToolCall } from "./OpenAIToolCall.js";
+import type { OpenAIToolCall } from "./tools/runtime/OpenAIToolCall.js";
 
 export class OpenAIChatResponseBodyCollector {
   private readonly streamParser = new OpenAIStreamParser();

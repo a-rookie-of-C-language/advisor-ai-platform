@@ -1,4 +1,4 @@
-import type { OpenAIToolCall } from "./OpenAIToolCall.js";
+import type { OpenAIToolCall } from "./tools/runtime/OpenAIToolCall.js";
 
 export interface OpenAIChatMessage {
   role: string;

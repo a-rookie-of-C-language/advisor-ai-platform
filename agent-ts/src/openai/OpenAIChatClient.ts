@@ -5,7 +5,7 @@ import { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
 import { OpenAIChatCompletionStreamer } from "./chat/completion/OpenAIChatCompletionStreamer.js";
 import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import { type OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoundRunner.js";
+import { type OpenAIToolExecutor, OpenAIToolRoundRunner } from "./tools/runtime/OpenAIToolRoundRunner.js";
 
 export class OpenAIChatClient {
   private readonly completionStreamer: OpenAIChatCompletionStreamer;

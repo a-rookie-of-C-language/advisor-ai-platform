@@ -2,7 +2,7 @@ import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
 import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "../mcp/openAi/McpOpenAiToolBridge.js";
-import type { OpenAiToolExecutionResult } from "./OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "./tools/runtime/OpenAiToolExecutionResult.js";
 import { OpenAiToolRegistryComponents } from "./OpenAiToolRegistryComponents.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 import type { RagOpenAiToolBridge } from "../rag/RagOpenAiToolBridge.js";

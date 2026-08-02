@@ -1,6 +1,6 @@
+import type { OpenAIChatTool } from "../../OpenAIChatTool.js";
 import type { OpenAIToolCall } from "./OpenAIToolCall.js";
 import type { OpenAIToolExecutor } from "./OpenAIToolRoundRunner.js";
-import type { OpenAIChatTool } from "./OpenAIChatTool.js";
 
 export class OpenAIToolRoundGate {
   shouldRun(toolCalls: OpenAIToolCall[], tools: OpenAIChatTool[], toolExecutor?: OpenAIToolExecutor): boolean {

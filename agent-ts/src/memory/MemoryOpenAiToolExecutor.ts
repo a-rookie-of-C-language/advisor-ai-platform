@@ -3,7 +3,7 @@ import type { JsonObject } from "../common/JsonTypes.js";
 import type { MemoryApiClient } from "./MemoryApiClient.js";
 import { MemoryOpenAiToolComponents } from "./MemoryOpenAiToolComponents.js";
 import { MemoryOpenAiToolComponentsFactory } from "./MemoryOpenAiToolComponentsFactory.js";
-import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
 
 export class MemoryOpenAiToolExecutor {
   private readonly components: MemoryOpenAiToolComponents;

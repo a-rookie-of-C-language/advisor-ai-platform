@@ -4,8 +4,8 @@ import type { OpenAIChatMessageMapper } from "./OpenAIChatMessageMapper.js";
 import { OpenAIChatRoundEventFactory } from "./OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatStreamEvent } from "../protocol/OpenAIChatStreamEvent.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "./OpenAIToolRoundRunner.js";
-import { OpenAIToolRoundGate } from "./OpenAIToolRoundGate.js";
+import { OpenAIToolRoundGate } from "./tools/runtime/OpenAIToolRoundGate.js";
+import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "./tools/runtime/OpenAIToolRoundRunner.js";
 
 export class OpenAIChatEventStreamer {
   private readonly roundEventFactory = new OpenAIChatRoundEventFactory();

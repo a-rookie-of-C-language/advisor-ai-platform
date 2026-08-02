@@ -1,4 +1,4 @@
-import type { OpenAiToolExecutionResult } from "../openai/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../openai/tools/runtime/OpenAiToolExecutionResult.js";
 import type { WebFetchedPage } from "./WebFetchedPage.js";
 import type { WebSearchResult } from "./WebSearchResult.js";
 
