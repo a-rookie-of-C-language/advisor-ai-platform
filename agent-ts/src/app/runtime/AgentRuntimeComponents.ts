@@ -1,13 +1,13 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
-import { AgentChatStreamSession } from "./session/AgentChatStreamSession.js";
-import { AgentChatStreamSessionFactory } from "./session/AgentChatStreamSessionFactory.js";
-import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
-import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
-import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
-import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
+import type { AgentConfig } from "../../config/AgentConfig.js";
+import { AgentChatStreamSession } from "../session/AgentChatStreamSession.js";
+import { AgentChatStreamSessionFactory } from "../session/AgentChatStreamSessionFactory.js";
+import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";
+import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
+import type { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
+import type { OpenAiToolRegistry } from "../../openai/OpenAiToolRegistry.js";
+import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;

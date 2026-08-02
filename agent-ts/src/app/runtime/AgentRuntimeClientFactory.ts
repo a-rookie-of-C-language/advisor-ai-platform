@@ -1,6 +1,6 @@
-import type { AgentConfig } from "../config/AgentConfig.js";
-import { AgentCoreClient } from "../core/AgentCoreClient.js";
-import { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
+import type { AgentConfig } from "../../config/AgentConfig.js";
+import { AgentCoreClient } from "../../core/AgentCoreClient.js";
+import { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
 
 export class AgentRuntimeClientFactory {
   createCoreClient(config: AgentConfig): AgentCoreClient {

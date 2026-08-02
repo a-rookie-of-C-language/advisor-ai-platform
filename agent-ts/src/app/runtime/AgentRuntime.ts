@@ -1,19 +1,19 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentConfig } from "../config/AgentConfig.js";
-import type { AgentCoreClient } from "../core/AgentCoreClient.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { MemoryContextBuilder } from "../memory/MemoryContextBuilder.js";
-import type { MemoryTaskSubmitter } from "../memory/MemoryTaskSubmitter.js";
-import type { OpenAIChatClient } from "../openai/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../openai/OpenAiToolRegistry.js";
-import type { RagContextBuilder } from "../rag/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../web/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../web/WebSearchContextBuilder.js";
-import { AgentGraphHealthDescriptor } from "./AgentGraphHealthDescriptor.js";
+import type { AgentConfig } from "../../config/AgentConfig.js";
+import type { AgentCoreClient } from "../../core/AgentCoreClient.js";
+import type { JsonObject } from "../../common/JsonTypes.js";
+import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";
+import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
+import type { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
+import type { OpenAiToolRegistry } from "../../openai/OpenAiToolRegistry.js";
+import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
+import { AgentGraphHealthDescriptor } from "../AgentGraphHealthDescriptor.js";
 import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
-import { AgentRequestIdResolver } from "./AgentRequestIdResolver.js";
-import { SseWriterFactory } from "../protocol/SseWriterFactory.js";
-import { validateChatStreamRequest } from "../common/validateChatStreamRequest.js";
+import { AgentRequestIdResolver } from "../AgentRequestIdResolver.js";
+import { SseWriterFactory } from "../../protocol/SseWriterFactory.js";
+import { validateChatStreamRequest } from "../../common/validateChatStreamRequest.js";
 
 export class AgentRuntime {
   private readonly components: AgentRuntimeComponents;

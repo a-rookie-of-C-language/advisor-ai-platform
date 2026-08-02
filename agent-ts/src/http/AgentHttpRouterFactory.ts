@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "../app/AgentRuntime.js";
+import type { AgentRuntime } from "../app/runtime/AgentRuntime.js";
 import type { AgentConfig } from "../config/AgentConfig.js";
 import type { McpToolService } from "../mcp/tools/McpToolService.js";
 import type { WorkspaceManager } from "../workspace/WorkspaceManager.js";
