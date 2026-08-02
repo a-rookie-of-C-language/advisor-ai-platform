@@ -2,33 +2,27 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../HttpRouteResult.js";
 import type { McpToolService } from "../../mcp/McpToolService.js";
-import { McpToolServiceGuard } from "../../mcp/McpToolServiceGuard.js";
-import { AgentMcpToolCallRequestReader } from "./AgentMcpToolCallRequestReader.js";
+import { AgentMcpToolCallRouteHandler } from "./AgentMcpToolCallRouteHandler.js";
+import { AgentMcpToolsRouteHandler } from "./AgentMcpToolsRouteHandler.js";
 
 export class AgentMcpRouteHandler {
-  private readonly callRequestReader: AgentMcpToolCallRequestReader;
-  private readonly mcpToolServiceGuard = new McpToolServiceGuard();
+  private readonly toolCallRouteHandler: AgentMcpToolCallRouteHandler;
+  private readonly toolsRouteHandler: AgentMcpToolsRouteHandler;
 
   constructor(
-    private readonly mcpToolService: McpToolService | undefined,
-    private readonly requestReader: AgentHttpRequestReader
+    mcpToolService: McpToolService | undefined,
+    requestReader: AgentHttpRequestReader
   ) {
-    this.callRequestReader = new AgentMcpToolCallRequestReader(this.requestReader);
+    this.toolCallRouteHandler = new AgentMcpToolCallRouteHandler(mcpToolService, requestReader);
+    this.toolsRouteHandler = new AgentMcpToolsRouteHandler(mcpToolService);
   }
 
   async handle(method: string | undefined, url: URL, request: IncomingMessage): Promise<HttpRouteResult | null> {
-    if (method === "GET" && url.pathname === "/mcp/tools") {
-      const mcpToolService = this.mcpToolServiceGuard.requireEnabled(this.mcpToolService);
-      return { statusCode: 200, body: { status: "ok", tools: await mcpToolService.listTools() } };
+    const toolsResult = await this.toolsRouteHandler.handle(method, url);
+    if (toolsResult) {
+      return toolsResult;
     }
 
-    if (method === "POST" && url.pathname === "/mcp/call") {
-      const mcpToolService = this.mcpToolServiceGuard.requireEnabled(this.mcpToolService);
-      const callRequest = await this.callRequestReader.read(request);
-      const result = await mcpToolService.callTool(callRequest.server, callRequest.name, callRequest.args);
-      return { statusCode: 200, body: { status: "ok", result } };
-    }
-
-    return null;
+    return this.toolCallRouteHandler.handle(method, url, request);
   }
 }
