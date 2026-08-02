@@ -2,23 +2,27 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../http/HttpRouteResult.js";
 import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceEditRequestReader } from "./AgentWorkspaceEditRequestReader.js";
 
 export class AgentWorkspaceEditRouteHandler {
+  private readonly editRequestReader: AgentWorkspaceEditRequestReader;
+
   constructor(
     private readonly workspaceManager: WorkspaceManager,
-    private readonly requestReader: AgentHttpRequestReader
-  ) {}
+    requestReader: AgentHttpRequestReader
+  ) {
+    this.editRequestReader = new AgentWorkspaceEditRequestReader(requestReader);
+  }
 
   async handle(url: URL, request: IncomingMessage): Promise<HttpRouteResult> {
-    const scope = this.requestReader.readWorkspaceScope(url);
-    const body = await this.requestReader.readJsonObject(request);
+    const editRequest = await this.editRequestReader.read(url, request);
     const result = await this.workspaceManager.edit(
-      scope.userId,
-      scope.sessionId,
-      this.requestReader.readRequiredString(body, "path"),
-      this.requestReader.readRequiredString(body, "old_string"),
-      this.requestReader.readRequiredString(body, "new_string"),
-      this.requestReader.readOptionalBoolean(body, "is_final", false)
+      editRequest.scope.userId,
+      editRequest.scope.sessionId,
+      editRequest.path,
+      editRequest.oldString,
+      editRequest.newString,
+      editRequest.isFinal
     );
     return { statusCode: 200, body: { status: "ok", result } };
   }
