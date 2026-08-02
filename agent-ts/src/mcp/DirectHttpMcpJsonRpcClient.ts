@@ -1,15 +1,14 @@
 import type { JsonObject } from "../common/JsonTypes.js";
+import { DirectHttpMcpHeadersFactory } from "./DirectHttpMcpHeadersFactory.js";
 import type { JsonRpcResponse } from "./JsonRpcResponse.js";
 import type { McpServerConfig } from "./McpServerConfig.js";
 
 export class DirectHttpMcpJsonRpcClient {
+  private readonly headersFactory = new DirectHttpMcpHeadersFactory();
   private readonly headers: Record<string, string>;
 
   constructor(private readonly config: McpServerConfig) {
-    this.headers = { "Content-Type": "application/json" };
-    if (config.token) {
-      this.headers.Authorization = `Bearer ${config.token}`;
-    }
+    this.headers = this.headersFactory.create(config);
   }
 
   async post(payload: JsonObject): Promise<JsonRpcResponse> {
