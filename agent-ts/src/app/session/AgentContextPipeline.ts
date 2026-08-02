@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
 import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/context/WebFetchContextBuilder.js";

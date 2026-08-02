@@ -1,4 +1,4 @@
-import type { ChatMessageDTO } from "../../common/ChatStreamRequest.js";
+import type { ChatMessageDTO } from "../../common/model/ChatStreamRequest.js";
 
 export class RagSystemMessageFactory {
   create(prompt: string): ChatMessageDTO {

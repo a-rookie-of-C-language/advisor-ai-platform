@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { JsonObject } from "../../common/JsonTypes.js";
 import { WorkspaceFileReadOpenAiToolExecutor } from "./WorkspaceFileReadOpenAiToolExecutor.js";
 import { WorkspaceListOpenAiToolExecutor } from "./WorkspaceListOpenAiToolExecutor.js";

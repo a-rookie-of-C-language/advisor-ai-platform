@@ -1,4 +1,4 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import { LastUserMessageFinder } from "./LastUserMessageFinder.js";
 import type { MemoryApiClient } from "../api/MemoryApiClient.js";
 import { MemoryContextLoader } from "./MemoryContextLoader.js";

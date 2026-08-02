@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.js";
 
 export class AgentMemoryTaskCompletionSubmitter {

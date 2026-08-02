@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../model/ChatStreamRequest.js";
 import { ChatMessageListValidator } from "./ChatMessageListValidator.js";
 import { ChatStreamRequestFieldReader } from "./ChatStreamRequestFieldReader.js";
 

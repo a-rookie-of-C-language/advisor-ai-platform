@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { JsonObject } from "../../common/JsonTypes.js";
 import type { OpenAIChatTool } from "../../openai/chat/OpenAIChatTool.js";
 import type { OpenAIToolExecutor } from "../../openai/tools/runtime/OpenAIToolRoundRunner.js";

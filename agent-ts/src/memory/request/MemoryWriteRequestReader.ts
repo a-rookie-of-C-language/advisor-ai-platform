@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../../common/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { JsonObject } from "../../common/JsonTypes.js";
 import type { MemoryWriteRequest } from "../model/MemoryWriteRequest.js";
 import { MemoryCandidateReader } from "./MemoryCandidateReader.js";
