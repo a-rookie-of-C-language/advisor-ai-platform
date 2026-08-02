@@ -1,0 +1,9 @@
+import type { AgentHttpRequestReader } from "../../http/AgentHttpRequestReader.js";
+import type { WorkspaceManager } from "../WorkspaceManager.js";
+import { AgentWorkspaceRouteComponents } from "./AgentWorkspaceRouteComponents.js";
+
+export class AgentWorkspaceRouteComponentsFactory {
+  create(workspaceManager: WorkspaceManager, requestReader: AgentHttpRequestReader): AgentWorkspaceRouteComponents {
+    return new AgentWorkspaceRouteComponents(workspaceManager, requestReader);
+  }
+}
