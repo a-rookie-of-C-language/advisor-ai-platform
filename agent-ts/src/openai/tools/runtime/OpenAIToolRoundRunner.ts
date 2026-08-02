@@ -3,9 +3,9 @@ import type { OpenAIChatStreamEvent } from "../../../protocol/events/OpenAIChatS
 import type { OpenAIChatMessage } from "../../chat/model/OpenAIChatMessage.js";
 import type { OpenAiToolExecutionResult } from "./model/OpenAiToolExecutionResult.js";
 import type { OpenAIToolCall } from "./model/OpenAIToolCall.js";
-import { OpenAIToolCallEventFactory } from "./OpenAIToolCallEventFactory.js";
+import { OpenAIToolCallEventFactory } from "./events/OpenAIToolCallEventFactory.js";
 import { OpenAIToolConversationAppender } from "./OpenAIToolConversationAppender.js";
-import { OpenAIToolResultEventFactory } from "./OpenAIToolResultEventFactory.js";
+import { OpenAIToolResultEventFactory } from "./events/OpenAIToolResultEventFactory.js";
 
 export type OpenAIToolExecutor = (toolName: string, args: JsonObject) => Promise<OpenAiToolExecutionResult>;
 
