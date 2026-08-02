@@ -1,12 +1,12 @@
-import type { ChatStreamRequest } from "../common/ChatStreamRequest.js";
-import type { JsonObject } from "../common/JsonTypes.js";
-import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
-import type { McpOpenAiToolBridge } from "../mcp/openAi/McpOpenAiToolBridge.js";
-import type { OpenAiToolExecutionResult } from "./tools/runtime/OpenAiToolExecutionResult.js";
-import { OpenAiToolResultFactory } from "./tools/runtime/OpenAiToolResultFactory.js";
-import type { RagOpenAiToolBridge } from "../rag/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../web/WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "../workspace/WorkspaceOpenAiToolBridge.js";
+import type { ChatStreamRequest } from "../../../common/ChatStreamRequest.js";
+import type { JsonObject } from "../../../common/JsonTypes.js";
+import type { MemoryOpenAiToolBridge } from "../../../memory/MemoryOpenAiToolBridge.js";
+import type { McpOpenAiToolBridge } from "../../../mcp/openAi/McpOpenAiToolBridge.js";
+import type { RagOpenAiToolBridge } from "../../../rag/RagOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../web/WebOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../../../workspace/WorkspaceOpenAiToolBridge.js";
+import type { OpenAiToolExecutionResult } from "../runtime/OpenAiToolExecutionResult.js";
+import { OpenAiToolResultFactory } from "../runtime/OpenAiToolResultFactory.js";
 
 export class OpenAiToolExecutorRouter {
   constructor(

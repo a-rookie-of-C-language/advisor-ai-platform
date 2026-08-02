@@ -1,8 +1,8 @@
-import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
-import type { OpenAIChatTool } from "./OpenAIChatTool.js";
-import type { RagOpenAiToolBridge } from "../rag/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../web/WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "../workspace/WorkspaceOpenAiToolBridge.js";
+import type { MemoryOpenAiToolBridge } from "../../../memory/MemoryOpenAiToolBridge.js";
+import type { RagOpenAiToolBridge } from "../../../rag/RagOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../web/WebOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../../../workspace/WorkspaceOpenAiToolBridge.js";
+import type { OpenAIChatTool } from "../../OpenAIChatTool.js";
 
 export class OpenAiLocalToolCatalogCollector {
   constructor(

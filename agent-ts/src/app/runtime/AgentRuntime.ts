@@ -5,7 +5,7 @@ import type { JsonObject } from "../../common/JsonTypes.js";
 import type { MemoryContextBuilder } from "../../memory/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../memory/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../openai/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../../openai/OpenAiToolRegistry.js";
+import type { OpenAiToolRegistry } from "../../openai/tools/registry/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../rag/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../web/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../web/WebSearchContextBuilder.js";
