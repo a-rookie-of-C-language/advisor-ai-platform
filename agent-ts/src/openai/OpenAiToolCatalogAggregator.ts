@@ -1,5 +1,5 @@
 import type { MemoryOpenAiToolBridge } from "../memory/MemoryOpenAiToolBridge.js";
-import type { McpOpenAiToolBridge } from "../mcp/McpOpenAiToolBridge.js";
+import type { McpOpenAiToolBridge } from "../mcp/openAi/McpOpenAiToolBridge.js";
 import { OpenAiLocalToolCatalogCollector } from "./OpenAiLocalToolCatalogCollector.js";
 import { OpenAiMcpToolCatalogCollector } from "./OpenAiMcpToolCatalogCollector.js";
 import type { OpenAIChatTool } from "./OpenAIChatTool.js";
