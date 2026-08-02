@@ -1,9 +1,9 @@
-import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { WorkspaceManager } from "../core/WorkspaceManager.js";
-import { WorkspaceOpenAiMutationToolExecutor } from "./mutation/WorkspaceOpenAiMutationToolExecutor.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
+import { WorkspaceOpenAiMutationToolExecutor } from "../mutation/WorkspaceOpenAiMutationToolExecutor.js";
+import { WorkspaceOpenAiReadToolExecutor } from "../read/WorkspaceOpenAiReadToolExecutor.js";
 import { WorkspaceOpenAiToolDispatcher } from "./WorkspaceOpenAiToolDispatcher.js";
-import { WorkspaceOpenAiReadToolExecutor } from "./read/WorkspaceOpenAiReadToolExecutor.js";
 
 export class WorkspaceOpenAiToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiToolDispatcher;
