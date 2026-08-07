@@ -1,4 +1,4 @@
-import { WorkspaceMaintenanceService } from "../maintenance/WorkspaceMaintenanceService.js";
+import { WorkspaceMaintenanceService } from "../maintenance/core/WorkspaceMaintenanceService.js";
 import type { WorkspaceCacheCleanupResult } from "../model/result/WorkspaceCacheCleanupResult.js";
 import type { WorkspaceCreateDirResult } from "../model/result/WorkspaceCreateDirResult.js";
 import type { WorkspaceEditResult } from "../model/result/WorkspaceEditResult.js";

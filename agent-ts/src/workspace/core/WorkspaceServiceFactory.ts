@@ -1,5 +1,5 @@
-import { WorkspaceMaintenanceService } from "../maintenance/WorkspaceMaintenanceService.js";
-import { WorkspaceMaintenanceServiceFactory } from "../maintenance/WorkspaceMaintenanceServiceFactory.js";
+import { WorkspaceMaintenanceService } from "../maintenance/core/WorkspaceMaintenanceService.js";
+import { WorkspaceMaintenanceServiceFactory } from "../maintenance/factory/WorkspaceMaintenanceServiceFactory.js";
 import { WorkspaceMutationService } from "../services/mutation/core/WorkspaceMutationService.js";
 import { WorkspaceMutationServiceFactory } from "../services/mutation/factory/WorkspaceMutationServiceFactory.js";
 import { WorkspaceReadService } from "../services/read/core/WorkspaceReadService.js";
