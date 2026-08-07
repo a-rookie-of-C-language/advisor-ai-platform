@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentHttpRequestReader } from "../request/AgentHttpRequestReader.js";
-import type { AgentMcpToolCallRequest } from "./AgentMcpToolCallRequest.js";
+import type { AgentHttpRequestReader } from "../../../request/AgentHttpRequestReader.js";
+import type { AgentMcpToolCallRequest } from "../model/AgentMcpToolCallRequest.js";
 
 export class AgentMcpToolCallRequestReader {
   constructor(private readonly requestReader: AgentHttpRequestReader) {}

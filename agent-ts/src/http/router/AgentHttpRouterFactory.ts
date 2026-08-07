@@ -6,9 +6,9 @@ import { AgentWorkspaceRouteHandler } from "../../workspace/routes/core/AgentWor
 import { AgentHttpRequestReader } from "../request/AgentHttpRequestReader.js";
 import { AgentRequestUrlFactory } from "../request/AgentRequestUrlFactory.js";
 import { AgentJsonResponseWriter } from "../response/AgentJsonResponseWriter.js";
-import { AgentChatStreamRouteHandler } from "../routes/AgentChatStreamRouteHandler.js";
-import { AgentHealthRouteHandler } from "../routes/AgentHealthRouteHandler.js";
-import { AgentMcpRouteHandler } from "../routes/AgentMcpRouteHandler.js";
+import { AgentChatStreamRouteHandler } from "../routes/chat/AgentChatStreamRouteHandler.js";
+import { AgentHealthRouteHandler } from "../routes/health/AgentHealthRouteHandler.js";
+import { AgentMcpRouteHandler } from "../routes/mcp/core/AgentMcpRouteHandler.js";
 import { AgentHttpRouter } from "./AgentHttpRouter.js";
 import { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
 

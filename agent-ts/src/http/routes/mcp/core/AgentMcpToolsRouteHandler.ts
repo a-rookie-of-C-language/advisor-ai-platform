@@ -1,6 +1,6 @@
-import type { HttpRouteResult } from "../response/HttpRouteResult.js";
-import type { McpToolService } from "../../mcp/tools/core/McpToolService.js";
-import { McpToolServiceGuard } from "../../mcp/tools/core/McpToolServiceGuard.js";
+import type { HttpRouteResult } from "../../../response/HttpRouteResult.js";
+import type { McpToolService } from "../../../../mcp/tools/core/McpToolService.js";
+import { McpToolServiceGuard } from "../../../../mcp/tools/core/McpToolServiceGuard.js";
 
 export class AgentMcpToolsRouteHandler {
   private readonly mcpToolServiceGuard = new McpToolServiceGuard();
