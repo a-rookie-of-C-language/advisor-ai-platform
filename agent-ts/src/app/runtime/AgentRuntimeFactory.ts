@@ -5,7 +5,7 @@ import type { AgentRagComponents } from "../rag/core/AgentRagComponents.js";
 import { AgentRuntime } from "./AgentRuntime.js";
 import { AgentRuntimeDependenciesFactory } from "./AgentRuntimeDependenciesFactory.js";
 import type { AgentWebComponents } from "../web/core/AgentWebComponents.js";
-import type { AgentWorkspaceComponents } from "../workspace/AgentWorkspaceComponents.js";
+import type { AgentWorkspaceComponents } from "../workspace/core/AgentWorkspaceComponents.js";
 
 export class AgentRuntimeFactory {
   private readonly dependenciesFactory = new AgentRuntimeDependenciesFactory();

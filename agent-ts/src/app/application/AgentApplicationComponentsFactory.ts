@@ -4,7 +4,7 @@ import { AgentMcpComponents } from "../mcp/core/AgentMcpComponents.js";
 import { AgentMemoryComponents } from "../memory/core/AgentMemoryComponents.js";
 import { AgentRagComponents } from "../rag/core/AgentRagComponents.js";
 import { AgentWebComponents } from "../web/core/AgentWebComponents.js";
-import { AgentWorkspaceComponents } from "../workspace/AgentWorkspaceComponents.js";
+import { AgentWorkspaceComponents } from "../workspace/core/AgentWorkspaceComponents.js";
 
 export class AgentApplicationComponentsFactory {
   create(config: AgentConfig): AgentApplicationComponents {

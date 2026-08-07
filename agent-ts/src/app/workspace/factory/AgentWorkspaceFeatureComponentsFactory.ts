@@ -1,6 +1,6 @@
-import { WorkspaceManager } from "../../workspace/core/WorkspaceManager.js";
-import { WorkspaceOpenAiToolBridge } from "../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
-import { AgentWorkspaceFeatureComponents } from "./AgentWorkspaceFeatureComponents.js";
+import { WorkspaceManager } from "../../../workspace/core/WorkspaceManager.js";
+import { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/core/WorkspaceOpenAiToolBridge.js";
+import { AgentWorkspaceFeatureComponents } from "../model/AgentWorkspaceFeatureComponents.js";
 
 export class AgentWorkspaceFeatureComponentsFactory {
   create(workspaceBasePath: string): AgentWorkspaceFeatureComponents {
