@@ -1,13 +1,13 @@
-import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { OpenAIChatClient } from "../../openai/chat/core/OpenAIChatClient.js";
-import { AgentStreamEventWriter } from "../../protocol/events/AgentStreamEventWriter.js";
-import type { SseWriter } from "../../protocol/sse/SseWriter.js";
+import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import type { OpenAIChatClient } from "../../../openai/chat/core/OpenAIChatClient.js";
+import { AgentStreamEventWriter } from "../../../protocol/events/AgentStreamEventWriter.js";
+import type { SseWriter } from "../../../protocol/sse/SseWriter.js";
+import type { AgentMemoryTaskCompletionSubmitter } from "../../memory/execution/AgentMemoryTaskCompletionSubmitter.js";
+import type { AgentOpenAiToolFacade } from "../../openAi/core/AgentOpenAiToolFacade.js";
+import type { AgentToolExecutorFactory } from "../../openAi/factory/AgentToolExecutorFactory.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
-import { AgentMissingOpenAiApiKeyFallbackGate } from "./AgentMissingOpenAiApiKeyFallbackGate.js";
-import type { AgentMemoryTaskCompletionSubmitter } from "../memory/execution/AgentMemoryTaskCompletionSubmitter.js";
-import type { AgentOpenAiToolFacade } from "../openAi/core/AgentOpenAiToolFacade.js";
-import { AgentStreamErrorMessageResolver } from "./AgentStreamErrorMessageResolver.js";
-import type { AgentToolExecutorFactory } from "../openAi/factory/AgentToolExecutorFactory.js";
+import { AgentMissingOpenAiApiKeyFallbackGate } from "../support/AgentMissingOpenAiApiKeyFallbackGate.js";
+import { AgentStreamErrorMessageResolver } from "../support/AgentStreamErrorMessageResolver.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();

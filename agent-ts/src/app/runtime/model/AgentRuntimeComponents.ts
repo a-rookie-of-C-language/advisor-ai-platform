@@ -6,8 +6,8 @@ import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/Ope
 import type { RagContextBuilder } from "../../../rag/context/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
-import { AgentChatStreamSession } from "../../session/AgentChatStreamSession.js";
-import { AgentChatStreamSessionFactory } from "../../session/AgentChatStreamSessionFactory.js";
+import { AgentChatStreamSession } from "../../session/core/AgentChatStreamSession.js";
+import { AgentChatStreamSessionFactory } from "../../session/factory/AgentChatStreamSessionFactory.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;
