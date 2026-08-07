@@ -1,11 +1,11 @@
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
-import type { OpenAIChatTool } from "../../../openai/chat/model/OpenAIChatTool.js";
-import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
-import { OpenAiToolResultFactory } from "../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
-import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
-import { WorkspaceOpenAiToolBridgeComponents } from "./WorkspaceOpenAiToolBridgeComponents.js";
-import { WorkspaceOpenAiToolBridgeComponentsFactory } from "./WorkspaceOpenAiToolBridgeComponentsFactory.js";
+import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { OpenAIChatTool } from "../../../../openai/chat/model/OpenAIChatTool.js";
+import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
+import { OpenAiToolResultFactory } from "../../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
+import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import { WorkspaceOpenAiToolBridgeComponents } from "../model/WorkspaceOpenAiToolBridgeComponents.js";
+import { WorkspaceOpenAiToolBridgeComponentsFactory } from "../factory/WorkspaceOpenAiToolBridgeComponentsFactory.js";
 
 export class WorkspaceOpenAiToolBridge {
   private readonly components: WorkspaceOpenAiToolBridgeComponents;
