@@ -1,9 +1,9 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentHttpRequestReader } from "../../../http/request/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../../http/response/model/HttpRouteResult.js";
-import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
-import type { AgentWorkspaceReadRouteComponents } from "./AgentWorkspaceReadRouteComponents.js";
-import { AgentWorkspaceReadRouteComponentsFactory } from "./AgentWorkspaceReadRouteComponentsFactory.js";
+import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
+import type { HttpRouteResult } from "../../../../http/response/model/HttpRouteResult.js";
+import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import { AgentWorkspaceReadRouteComponentsFactory } from "../factory/AgentWorkspaceReadRouteComponentsFactory.js";
+import type { AgentWorkspaceReadRouteComponents } from "../model/AgentWorkspaceReadRouteComponents.js";
 
 export class AgentWorkspaceReadRouteHandler {
   private readonly components: AgentWorkspaceReadRouteComponents;
