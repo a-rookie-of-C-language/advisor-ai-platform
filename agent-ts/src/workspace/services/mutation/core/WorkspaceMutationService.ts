@@ -1,14 +1,14 @@
-import type { WorkspaceDirectoryCreator } from "../../files/mutation/WorkspaceDirectoryCreator.js";
-import type { WorkspaceFileEditor } from "../../files/mutation/WorkspaceFileEditor.js";
-import type { WorkspaceFileWriter } from "../../files/mutation/WorkspaceFileWriter.js";
-import type { WorkspaceWorkingFileCounter } from "../../maintenance/WorkspaceWorkingFileCounter.js";
-import type { WorkspaceCreateDirResult } from "../../model/result/WorkspaceCreateDirResult.js";
-import type { WorkspaceEditResult } from "../../model/result/WorkspaceEditResult.js";
-import type { WorkspaceWriteResult } from "../../model/result/WorkspaceWriteResult.js";
-import type { WorkspacePathGuard } from "../../path/WorkspacePathGuard.js";
-import type { WorkspaceTargetPathResolver } from "../../path/WorkspaceTargetPathResolver.js";
-import { WorkspaceMutationServiceComponents } from "./WorkspaceMutationServiceComponents.js";
-import { WorkspaceMutationServiceComponentsFactory } from "./WorkspaceMutationServiceComponentsFactory.js";
+import type { WorkspaceDirectoryCreator } from "../../../files/mutation/WorkspaceDirectoryCreator.js";
+import type { WorkspaceFileEditor } from "../../../files/mutation/WorkspaceFileEditor.js";
+import type { WorkspaceFileWriter } from "../../../files/mutation/WorkspaceFileWriter.js";
+import type { WorkspaceWorkingFileCounter } from "../../../maintenance/WorkspaceWorkingFileCounter.js";
+import type { WorkspaceCreateDirResult } from "../../../model/result/WorkspaceCreateDirResult.js";
+import type { WorkspaceEditResult } from "../../../model/result/WorkspaceEditResult.js";
+import type { WorkspaceWriteResult } from "../../../model/result/WorkspaceWriteResult.js";
+import type { WorkspacePathGuard } from "../../../path/WorkspacePathGuard.js";
+import type { WorkspaceTargetPathResolver } from "../../../path/WorkspaceTargetPathResolver.js";
+import { WorkspaceMutationServiceComponentsFactory } from "../factory/WorkspaceMutationServiceComponentsFactory.js";
+import type { WorkspaceMutationServiceComponents } from "../model/WorkspaceMutationServiceComponents.js";
 
 export class WorkspaceMutationService {
   private readonly components: WorkspaceMutationServiceComponents;

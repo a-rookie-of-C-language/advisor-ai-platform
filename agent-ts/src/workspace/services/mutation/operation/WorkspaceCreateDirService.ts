@@ -1,6 +1,6 @@
-import type { WorkspaceDirectoryCreator } from "../../files/mutation/WorkspaceDirectoryCreator.js";
-import type { WorkspaceCreateDirResult } from "../../model/result/WorkspaceCreateDirResult.js";
-import type { WorkspaceTargetPathResolver } from "../../path/WorkspaceTargetPathResolver.js";
+import type { WorkspaceDirectoryCreator } from "../../../files/mutation/WorkspaceDirectoryCreator.js";
+import type { WorkspaceCreateDirResult } from "../../../model/result/WorkspaceCreateDirResult.js";
+import type { WorkspaceTargetPathResolver } from "../../../path/WorkspaceTargetPathResolver.js";
 
 export class WorkspaceCreateDirService {
   constructor(
