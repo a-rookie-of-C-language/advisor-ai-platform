@@ -1,9 +1,9 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import { AliasedValueReader } from "../../common/value/AliasedValueReader.js";
-import { AgentHttpBooleanFieldReader } from "./AgentHttpBooleanFieldReader.js";
-import { AgentHttpJsonObjectFieldReader } from "./AgentHttpJsonObjectFieldReader.js";
-import { AgentHttpNumberFieldReader } from "./AgentHttpNumberFieldReader.js";
-import { AgentHttpStringFieldReader } from "./AgentHttpStringFieldReader.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import { AliasedValueReader } from "../../../common/value/AliasedValueReader.js";
+import { AgentHttpBooleanFieldReader } from "../readers/AgentHttpBooleanFieldReader.js";
+import { AgentHttpJsonObjectFieldReader } from "../readers/AgentHttpJsonObjectFieldReader.js";
+import { AgentHttpNumberFieldReader } from "../readers/AgentHttpNumberFieldReader.js";
+import { AgentHttpStringFieldReader } from "../readers/AgentHttpStringFieldReader.js";
 
 export class AgentHttpFieldReader {
   private readonly booleanFieldReader = new AgentHttpBooleanFieldReader();

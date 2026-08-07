@@ -3,7 +3,7 @@ import type { JsonObject } from "../../common/json/JsonTypes.js";
 import type { AgentWorkspaceScope } from "../../workspace/routes/model/AgentWorkspaceScope.js";
 import { AgentWorkspaceScopeReader } from "../../workspace/routes/support/AgentWorkspaceScopeReader.js";
 import { AgentHttpJsonObjectBodyReader } from "../body/AgentHttpJsonObjectBodyReader.js";
-import { AgentHttpFieldReader } from "../fields/AgentHttpFieldReader.js";
+import { AgentHttpFieldReader } from "../fields/core/AgentHttpFieldReader.js";
 
 export class AgentHttpRequestReader {
   private readonly bodyReader = new AgentHttpJsonObjectBodyReader();
