@@ -1,4 +1,4 @@
-import type { WorkspaceFileEditor } from "../../../files/mutation/WorkspaceFileEditor.js";
+import type { WorkspaceFileEditor } from "../../../files/mutation/file/WorkspaceFileEditor.js";
 import type { WorkspaceEditResult } from "../../../model/result/mutation/WorkspaceEditResult.js";
 import type { WorkspaceTargetPathResolver } from "../../../path/target/WorkspaceTargetPathResolver.js";
 
