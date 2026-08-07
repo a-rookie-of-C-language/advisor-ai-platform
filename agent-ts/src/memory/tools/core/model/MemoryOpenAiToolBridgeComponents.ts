@@ -1,6 +1,6 @@
-import type { MemoryApiClient } from "../../api/MemoryApiClient.js";
-import { MemoryOpenAiToolCatalog } from "../definitions/MemoryOpenAiToolCatalog.js";
-import { MemoryOpenAiToolExecutor } from "./MemoryOpenAiToolExecutor.js";
+import type { MemoryApiClient } from "../../../api/MemoryApiClient.js";
+import { MemoryOpenAiToolCatalog } from "../../definitions/MemoryOpenAiToolCatalog.js";
+import { MemoryOpenAiToolExecutor } from "../execution/MemoryOpenAiToolExecutor.js";
 
 export class MemoryOpenAiToolBridgeComponents {
   readonly catalog = new MemoryOpenAiToolCatalog();
