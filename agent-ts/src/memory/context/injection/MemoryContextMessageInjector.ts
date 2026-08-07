@@ -1,7 +1,7 @@
 import type { ChatMessageDTO } from "../../../common/model/ChatStreamRequest.js";
 import type { MemoryContextLoadResult } from "../model/MemoryContextLoadResult.js";
-import { MemoryPromptRenderer } from "../rendering/MemoryPromptRenderer.js";
-import { MemorySystemMessageFactory } from "../rendering/MemorySystemMessageFactory.js";
+import { MemorySystemMessageFactory } from "../rendering/message/MemorySystemMessageFactory.js";
+import { MemoryPromptRenderer } from "../rendering/prompt/MemoryPromptRenderer.js";
 
 export class MemoryContextMessageInjector {
   private readonly promptRenderer: MemoryPromptRenderer;
@@ -16,9 +16,6 @@ export class MemoryContextMessageInjector {
     if (!prompt) {
       return messages;
     }
-    return [
-      this.systemMessageFactory.create(prompt),
-      ...messages
-    ];
+    return [this.systemMessageFactory.create(prompt), ...messages];
   }
 }

@@ -1,6 +1,6 @@
-import type { SessionSummary } from "../../../common/session/SessionSummary.js";
-import type { MemoryItem } from "../../model/entity/MemoryItem.js";
-import { MemoryItemListRenderer } from "./MemoryItemListRenderer.js";
+import type { SessionSummary } from "../../../../common/session/SessionSummary.js";
+import type { MemoryItem } from "../../../model/entity/MemoryItem.js";
+import { MemoryItemListRenderer } from "../list/MemoryItemListRenderer.js";
 
 export class MemoryPromptRenderer {
   private readonly itemListRenderer: MemoryItemListRenderer;
