@@ -6,7 +6,7 @@ import type { McpToolDescriptor } from "../../tools/model/McpToolDescriptor.js";
 import { DirectHttpMcpInitializer } from "../operations/DirectHttpMcpInitializer.js";
 import { DirectHttpMcpToolCaller } from "../operations/DirectHttpMcpToolCaller.js";
 import { DirectHttpMcpToolListReader } from "../operations/DirectHttpMcpToolListReader.js";
-import { DirectHttpMcpJsonRpcClient } from "../protocol/DirectHttpMcpJsonRpcClient.js";
+import { DirectHttpMcpJsonRpcClient } from "../protocol/core/DirectHttpMcpJsonRpcClient.js";
 
 export class DirectHttpMcpClient {
   private readonly initializer: DirectHttpMcpInitializer;

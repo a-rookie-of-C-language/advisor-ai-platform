@@ -1,5 +1,5 @@
-import type { JsonRpcResponse } from "../../jsonRpc/JsonRpcResponse.js";
-import { DirectHttpMcpResponseValidator } from "./DirectHttpMcpResponseValidator.js";
+import type { JsonRpcResponse } from "../../../jsonRpc/JsonRpcResponse.js";
+import { DirectHttpMcpResponseValidator } from "../validation/DirectHttpMcpResponseValidator.js";
 
 export class DirectHttpMcpResponseReader {
   private readonly responseValidator = new DirectHttpMcpResponseValidator();

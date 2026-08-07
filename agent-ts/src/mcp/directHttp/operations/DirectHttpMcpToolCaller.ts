@@ -3,7 +3,7 @@ import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { McpJsonRpcRequestFactory } from "../../jsonRpc/McpJsonRpcRequestFactory.js";
 import type { McpCallToolResult } from "../../tools/model/McpCallToolResult.js";
 import { McpCallToolResultMapper } from "../../tools/mapping/McpCallToolResultMapper.js";
-import type { DirectHttpMcpJsonRpcClient } from "../protocol/DirectHttpMcpJsonRpcClient.js";
+import type { DirectHttpMcpJsonRpcClient } from "../protocol/core/DirectHttpMcpJsonRpcClient.js";
 import type { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
 
 export class DirectHttpMcpToolCaller {
