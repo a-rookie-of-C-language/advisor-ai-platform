@@ -1,11 +1,11 @@
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
-import type { AgentMcpComponents } from "../../mcp/core/AgentMcpComponents.js";
-import type { AgentMemoryComponents } from "../../memory/core/AgentMemoryComponents.js";
-import type { AgentRagComponents } from "../../rag/core/AgentRagComponents.js";
-import type { AgentWebComponents } from "../../web/core/AgentWebComponents.js";
-import type { AgentWorkspaceComponents } from "../../workspace/core/AgentWorkspaceComponents.js";
-import { AgentRuntime } from "../core/AgentRuntime.js";
-import { AgentRuntimeDependenciesFactory } from "./AgentRuntimeDependenciesFactory.js";
+import type { AgentConfig } from "../../../../config/model/AgentConfig.js";
+import type { AgentMcpComponents } from "../../../mcp/core/AgentMcpComponents.js";
+import type { AgentMemoryComponents } from "../../../memory/core/AgentMemoryComponents.js";
+import type { AgentRagComponents } from "../../../rag/core/AgentRagComponents.js";
+import type { AgentWebComponents } from "../../../web/core/AgentWebComponents.js";
+import type { AgentWorkspaceComponents } from "../../../workspace/core/AgentWorkspaceComponents.js";
+import { AgentRuntime } from "../../core/AgentRuntime.js";
+import { AgentRuntimeDependenciesFactory } from "../dependencies/AgentRuntimeDependenciesFactory.js";
 
 export class AgentRuntimeFactory {
   private readonly dependenciesFactory = new AgentRuntimeDependenciesFactory();
