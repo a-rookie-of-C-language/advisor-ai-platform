@@ -1,11 +1,11 @@
-import type { MemoryOpenAiToolBridge } from "../../../../memory/tools/core/bridge/MemoryOpenAiToolBridge.js";
-import type { McpOpenAiToolBridge } from "../../../../mcp/openAi/core/McpOpenAiToolBridge.js";
-import type { RagOpenAiToolBridge } from "../../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../../../../web/openAi/core/WebOpenAiToolBridge.js";
-import type { WorkspaceOpenAiToolBridge } from "../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
-import type { OpenAIChatTool } from "../../../chat/model/OpenAIChatTool.js";
-import { OpenAiLocalToolCatalogCollector } from "./OpenAiLocalToolCatalogCollector.js";
-import { OpenAiMcpToolCatalogCollector } from "./OpenAiMcpToolCatalogCollector.js";
+import type { McpOpenAiToolBridge } from "../../../../../mcp/openAi/core/McpOpenAiToolBridge.js";
+import type { MemoryOpenAiToolBridge } from "../../../../../memory/tools/core/bridge/MemoryOpenAiToolBridge.js";
+import type { RagOpenAiToolBridge } from "../../../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../../../web/openAi/core/WebOpenAiToolBridge.js";
+import type { WorkspaceOpenAiToolBridge } from "../../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
+import type { OpenAIChatTool } from "../../../../chat/model/OpenAIChatTool.js";
+import { OpenAiLocalToolCatalogCollector } from "../collector/OpenAiLocalToolCatalogCollector.js";
+import { OpenAiMcpToolCatalogCollector } from "../collector/OpenAiMcpToolCatalogCollector.js";
 
 export class OpenAiToolCatalogAggregator {
   private readonly localToolCatalogCollector: OpenAiLocalToolCatalogCollector;
