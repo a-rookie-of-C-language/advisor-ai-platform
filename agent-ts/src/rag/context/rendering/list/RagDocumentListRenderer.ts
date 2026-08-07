@@ -1,4 +1,4 @@
-import type { RagDocument } from "../model/RagDocument.js";
+import type { RagDocument } from "../../model/RagDocument.js";
 
 export class RagDocumentListRenderer {
   render(documents: RagDocument[]): string {
