@@ -1,12 +1,12 @@
-import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { AgentMcpComponents } from "../mcp/core/AgentMcpComponents.js";
-import type { AgentMemoryComponents } from "../memory/core/AgentMemoryComponents.js";
-import type { AgentRagComponents } from "../rag/core/AgentRagComponents.js";
-import { AgentOpenAiToolRegistryFactory } from "../openAi/factory/AgentOpenAiToolRegistryFactory.js";
+import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import { AgentOpenAiToolRegistryFactory } from "../../openAi/factory/AgentOpenAiToolRegistryFactory.js";
+import type { AgentMcpComponents } from "../../mcp/core/AgentMcpComponents.js";
+import type { AgentMemoryComponents } from "../../memory/core/AgentMemoryComponents.js";
+import type { AgentRagComponents } from "../../rag/core/AgentRagComponents.js";
+import type { AgentWebComponents } from "../../web/core/AgentWebComponents.js";
+import type { AgentWorkspaceComponents } from "../../workspace/core/AgentWorkspaceComponents.js";
+import { AgentRuntimeDependencies } from "../model/AgentRuntimeDependencies.js";
 import { AgentRuntimeClientFactory } from "./AgentRuntimeClientFactory.js";
-import { AgentRuntimeDependencies } from "./AgentRuntimeDependencies.js";
-import type { AgentWebComponents } from "../web/core/AgentWebComponents.js";
-import type { AgentWorkspaceComponents } from "../workspace/core/AgentWorkspaceComponents.js";
 
 export class AgentRuntimeDependenciesFactory {
   private readonly clientFactory = new AgentRuntimeClientFactory();

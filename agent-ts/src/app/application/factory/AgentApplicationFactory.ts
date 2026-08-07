@@ -1,6 +1,6 @@
 import { AgentConfig } from "../../../config/model/AgentConfig.js";
 import { AgentHttpServer } from "../../../http/server/AgentHttpServer.js";
-import { AgentRuntimeFactory } from "../../runtime/AgentRuntimeFactory.js";
+import { AgentRuntimeFactory } from "../../runtime/factory/AgentRuntimeFactory.js";
 import { AgentApplicationComponentsFactory } from "./AgentApplicationComponentsFactory.js";
 
 export class AgentApplicationFactory {

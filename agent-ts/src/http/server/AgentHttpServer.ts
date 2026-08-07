@@ -1,7 +1,7 @@
 import http from "node:http";
 import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { AgentHttpServerComponents } from "./AgentHttpServerComponents.js";
-import type { AgentRuntime } from "../../app/runtime/AgentRuntime.js";
+import type { AgentRuntime } from "../../app/runtime/core/AgentRuntime.js";
 import type { McpToolService } from "../../mcp/tools/core/McpToolService.js";
 import { WorkspaceManager } from "../../workspace/core/WorkspaceManager.js";
 

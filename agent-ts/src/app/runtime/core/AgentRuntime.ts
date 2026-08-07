@@ -1,19 +1,19 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import type { AgentCoreClient } from "../../core/client/AgentCoreClient.js";
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { MemoryContextBuilder } from "../../memory/context/MemoryContextBuilder.js";
-import type { MemoryTaskSubmitter } from "../../memory/task/MemoryTaskSubmitter.js";
-import type { OpenAIChatClient } from "../../openai/chat/core/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../../openai/tools/registry/core/OpenAiToolRegistry.js";
-import type { RagContextBuilder } from "../../rag/context/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../../web/context/fetch/core/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../../web/context/search/core/WebSearchContextBuilder.js";
-import { AgentGraphHealthDescriptor } from "../health/AgentGraphHealthDescriptor.js";
-import { AgentRuntimeComponents } from "./AgentRuntimeComponents.js";
-import { AgentRequestIdResolver } from "../request/AgentRequestIdResolver.js";
-import { SseWriterFactory } from "../../protocol/sse/SseWriterFactory.js";
-import { validateChatStreamRequest } from "../../common/request/validateChatStreamRequest.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import { validateChatStreamRequest } from "../../../common/request/validateChatStreamRequest.js";
+import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";
+import type { MemoryContextBuilder } from "../../../memory/context/MemoryContextBuilder.js";
+import type { MemoryTaskSubmitter } from "../../../memory/task/MemoryTaskSubmitter.js";
+import type { OpenAIChatClient } from "../../../openai/chat/core/OpenAIChatClient.js";
+import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/OpenAiToolRegistry.js";
+import { SseWriterFactory } from "../../../protocol/sse/SseWriterFactory.js";
+import type { RagContextBuilder } from "../../../rag/context/RagContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
+import { AgentGraphHealthDescriptor } from "../../health/AgentGraphHealthDescriptor.js";
+import { AgentRequestIdResolver } from "../../request/AgentRequestIdResolver.js";
+import { AgentRuntimeComponents } from "../model/AgentRuntimeComponents.js";
 
 export class AgentRuntime {
   private readonly components: AgentRuntimeComponents;
