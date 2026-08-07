@@ -1,6 +1,6 @@
 import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
 import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { MemoryWriteRequest } from "../model/request/MemoryWriteRequest.js";
+import type { MemoryWriteRequest } from "../model/request/tool/MemoryWriteRequest.js";
 import { MemoryCandidateReader } from "./MemoryCandidateReader.js";
 
 export class MemoryWriteRequestReader {

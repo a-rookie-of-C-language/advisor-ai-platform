@@ -5,7 +5,7 @@ import { MemoryApiArrayResponseReader } from "../reader/MemoryApiArrayResponseRe
 import { MemoryApiEndpointFactory } from "../factory/MemoryApiEndpointFactory.js";
 import { MemoryApiHttpClient } from "../http/MemoryApiHttpClient.js";
 import { MemoryApiPostRequestFactory } from "../factory/MemoryApiPostRequestFactory.js";
-import type { MemoryCandidateUpsertRequest } from "../../model/request/MemoryCandidateUpsertRequest.js";
+import type { MemoryCandidateUpsertRequest } from "../../model/request/api/MemoryCandidateUpsertRequest.js";
 import type { MemoryItem } from "../../model/entity/MemoryItem.js";
 import type { MemoryTaskSubmitRequest } from "../../model/task/MemoryTaskSubmitRequest.js";
 
