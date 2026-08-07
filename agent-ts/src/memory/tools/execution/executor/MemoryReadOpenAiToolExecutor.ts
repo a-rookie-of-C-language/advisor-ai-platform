@@ -2,7 +2,7 @@ import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { MemoryApiClient } from "../../../api/core/MemoryApiClient.js";
-import type { MemoryReadRequestReader } from "../../../request/MemoryReadRequestReader.js";
+import type { MemoryReadRequestReader } from "../../../request/tool/MemoryReadRequestReader.js";
 import type { MemoryToolResultFormatter } from "../formatting/MemoryToolResultFormatter.js";
 
 export class MemoryReadOpenAiToolExecutor {
