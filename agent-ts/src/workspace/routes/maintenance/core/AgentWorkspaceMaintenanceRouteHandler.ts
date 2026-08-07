@@ -1,8 +1,8 @@
-import type { AgentHttpRequestReader } from "../../../http/request/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../../http/response/model/HttpRouteResult.js";
-import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
-import type { AgentWorkspaceMaintenanceRouteComponents } from "./AgentWorkspaceMaintenanceRouteComponents.js";
-import { AgentWorkspaceMaintenanceRouteComponentsFactory } from "./AgentWorkspaceMaintenanceRouteComponentsFactory.js";
+import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
+import type { HttpRouteResult } from "../../../../http/response/model/HttpRouteResult.js";
+import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import type { AgentWorkspaceMaintenanceRouteComponents } from "../model/AgentWorkspaceMaintenanceRouteComponents.js";
+import { AgentWorkspaceMaintenanceRouteComponentsFactory } from "../factory/AgentWorkspaceMaintenanceRouteComponentsFactory.js";
 
 export class AgentWorkspaceMaintenanceRouteHandler {
   private readonly components: AgentWorkspaceMaintenanceRouteComponents;
