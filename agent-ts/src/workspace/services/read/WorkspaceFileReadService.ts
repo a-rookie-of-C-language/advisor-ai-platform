@@ -1,4 +1,4 @@
-import type { WorkspaceFileReader } from "../../files/WorkspaceFileReader.js";
+import type { WorkspaceFileReader } from "../../files/read/WorkspaceFileReader.js";
 import type { WorkspacePathGuard } from "../../path/WorkspacePathGuard.js";
 
 export class WorkspaceFileReadService {

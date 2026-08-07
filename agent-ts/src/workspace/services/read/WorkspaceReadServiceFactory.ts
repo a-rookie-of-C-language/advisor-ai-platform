@@ -1,5 +1,5 @@
-import { WorkspaceFileReader } from "../../files/WorkspaceFileReader.js";
-import { WorkspaceListingBuilder } from "../../files/WorkspaceListingBuilder.js";
+import { WorkspaceFileReader } from "../../files/read/WorkspaceFileReader.js";
+import { WorkspaceListingBuilder } from "../../files/read/WorkspaceListingBuilder.js";
 import type { WorkspaceServiceFactoryComponents } from "../../core/WorkspaceServiceFactoryComponents.js";
 import { WorkspaceReadService } from "./WorkspaceReadService.js";
 

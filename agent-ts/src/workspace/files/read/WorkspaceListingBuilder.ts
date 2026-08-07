@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { WorkspaceFileSystem } from "./WorkspaceFileSystem.js";
-import { CACHE_DIR } from "../model/config/WorkspaceLimits.js";
-import type { WorkspaceListing } from "../model/result/WorkspaceListing.js";
+import type { WorkspaceFileSystem } from "../core/WorkspaceFileSystem.js";
+import { CACHE_DIR } from "../../model/config/WorkspaceLimits.js";
+import type { WorkspaceListing } from "../../model/result/WorkspaceListing.js";
 
 export class WorkspaceListingBuilder {
   constructor(private readonly fileSystem: WorkspaceFileSystem) {}
