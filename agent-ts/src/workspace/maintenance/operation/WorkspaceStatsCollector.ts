@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { WorkspaceFileSystem } from "../../files/core/WorkspaceFileSystem.js";
 import { CACHE_DIR, FINAL_DIR } from "../../model/config/WorkspaceLimits.js";
-import type { WorkspaceStats } from "../../model/result/WorkspaceStats.js";
+import type { WorkspaceStats } from "../../model/result/maintenance/WorkspaceStats.js";
 
 export class WorkspaceStatsCollector {
   constructor(private readonly fileSystem: WorkspaceFileSystem) {}

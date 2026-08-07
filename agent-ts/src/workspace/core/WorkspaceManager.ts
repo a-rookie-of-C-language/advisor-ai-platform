@@ -1,10 +1,10 @@
 import { WorkspaceMaintenanceService } from "../maintenance/core/WorkspaceMaintenanceService.js";
-import type { WorkspaceCacheCleanupResult } from "../model/result/WorkspaceCacheCleanupResult.js";
-import type { WorkspaceCreateDirResult } from "../model/result/WorkspaceCreateDirResult.js";
-import type { WorkspaceEditResult } from "../model/result/WorkspaceEditResult.js";
-import type { WorkspaceListing } from "../model/result/WorkspaceListing.js";
-import type { WorkspaceStats } from "../model/result/WorkspaceStats.js";
-import type { WorkspaceWriteResult } from "../model/result/WorkspaceWriteResult.js";
+import type { WorkspaceCacheCleanupResult } from "../model/result/maintenance/WorkspaceCacheCleanupResult.js";
+import type { WorkspaceStats } from "../model/result/maintenance/WorkspaceStats.js";
+import type { WorkspaceCreateDirResult } from "../model/result/mutation/WorkspaceCreateDirResult.js";
+import type { WorkspaceEditResult } from "../model/result/mutation/WorkspaceEditResult.js";
+import type { WorkspaceWriteResult } from "../model/result/mutation/WorkspaceWriteResult.js";
+import type { WorkspaceListing } from "../model/result/read/WorkspaceListing.js";
 import { WorkspaceMutationService } from "../services/mutation/core/WorkspaceMutationService.js";
 import { WorkspaceReadService } from "../services/read/core/WorkspaceReadService.js";
 import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
