@@ -1,11 +1,11 @@
-import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { OpenAIChatTool } from "../../openai/chat/model/OpenAIChatTool.js";
-import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
-import { OpenAiToolResultFactory } from "../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
-import type { RagApiClient } from "../api/RagApiClient.js";
-import { RagOpenAiToolCatalog } from "./RagOpenAiToolCatalog.js";
-import { RagOpenAiToolExecutor } from "./RagOpenAiToolExecutor.js";
+import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { OpenAIChatTool } from "../../../openai/chat/model/OpenAIChatTool.js";
+import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
+import { OpenAiToolResultFactory } from "../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
+import type { RagApiClient } from "../../api/RagApiClient.js";
+import { RagOpenAiToolCatalog } from "../catalog/RagOpenAiToolCatalog.js";
+import { RagOpenAiToolExecutor } from "../execution/RagOpenAiToolExecutor.js";
 
 export class RagOpenAiToolBridge {
   private readonly catalog = new RagOpenAiToolCatalog();

@@ -1,5 +1,5 @@
-import type { OpenAIChatTool } from "../../openai/chat/model/OpenAIChatTool.js";
-import { RagSearchOpenAiToolDefinition } from "../tools/RagSearchOpenAiToolDefinition.js";
+import type { OpenAIChatTool } from "../../../openai/chat/model/OpenAIChatTool.js";
+import { RagSearchOpenAiToolDefinition } from "../../tools/RagSearchOpenAiToolDefinition.js";
 
 export class RagOpenAiToolCatalog {
   private readonly searchDefinition = new RagSearchOpenAiToolDefinition();
