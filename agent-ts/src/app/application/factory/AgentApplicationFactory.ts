@@ -1,7 +1,7 @@
-import { AgentConfig } from "../../config/model/AgentConfig.js";
-import { AgentHttpServer } from "../../http/server/AgentHttpServer.js";
+import { AgentConfig } from "../../../config/model/AgentConfig.js";
+import { AgentHttpServer } from "../../../http/server/AgentHttpServer.js";
+import { AgentRuntimeFactory } from "../../runtime/AgentRuntimeFactory.js";
 import { AgentApplicationComponentsFactory } from "./AgentApplicationComponentsFactory.js";
-import { AgentRuntimeFactory } from "../runtime/AgentRuntimeFactory.js";
 
 export class AgentApplicationFactory {
   private readonly componentsFactory = new AgentApplicationComponentsFactory();
