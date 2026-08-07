@@ -1,5 +1,5 @@
 import type { AgentConfig } from "../../../config/model/AgentConfig.js";
-import { AgentOpenAiToolRegistryFactory } from "../../openAi/factory/AgentOpenAiToolRegistryFactory.js";
+import { AgentOpenAiToolRegistryFactory } from "../../openAi/factory/registry/AgentOpenAiToolRegistryFactory.js";
 import type { AgentMcpComponents } from "../../mcp/core/AgentMcpComponents.js";
 import type { AgentMemoryComponents } from "../../memory/core/AgentMemoryComponents.js";
 import type { AgentRagComponents } from "../../rag/core/AgentRagComponents.js";

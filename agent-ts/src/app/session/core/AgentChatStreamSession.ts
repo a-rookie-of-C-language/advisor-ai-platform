@@ -4,7 +4,7 @@ import { AgentStreamEventWriter } from "../../../protocol/events/stream/AgentStr
 import type { SseWriter } from "../../../protocol/sse/SseWriter.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "../../memory/execution/AgentMemoryTaskCompletionSubmitter.js";
 import type { AgentOpenAiToolFacade } from "../../openAi/core/AgentOpenAiToolFacade.js";
-import type { AgentToolExecutorFactory } from "../../openAi/factory/AgentToolExecutorFactory.js";
+import type { AgentToolExecutorFactory } from "../../openAi/factory/executor/AgentToolExecutorFactory.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "../support/AgentMissingOpenAiApiKeyFallbackGate.js";
 import { AgentStreamErrorMessageResolver } from "../support/AgentStreamErrorMessageResolver.js";
