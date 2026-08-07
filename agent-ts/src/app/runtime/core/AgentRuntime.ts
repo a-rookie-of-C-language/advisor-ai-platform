@@ -11,7 +11,7 @@ import { SseWriterFactory } from "../../../protocol/sse/SseWriterFactory.js";
 import type { RagContextBuilder } from "../../../rag/context/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
-import { AgentGraphHealthDescriptor } from "../../health/AgentGraphHealthDescriptor.js";
+import { AgentGraphHealthDescriptor } from "../../health/core/AgentGraphHealthDescriptor.js";
 import { AgentRequestIdResolver } from "../../request/AgentRequestIdResolver.js";
 import { AgentRuntimeComponents } from "../model/AgentRuntimeComponents.js";
 
