@@ -1,4 +1,4 @@
-import { WorkspaceError } from "../../../workspace/model/WorkspaceError.js";
+import { WorkspaceError } from "../../../workspace/model/error/WorkspaceError.js";
 import type { McpToolService } from "./McpToolService.js";
 
 export class McpToolServiceGuard {

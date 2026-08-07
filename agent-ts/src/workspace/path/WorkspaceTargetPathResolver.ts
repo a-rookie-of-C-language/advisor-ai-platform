@@ -1,6 +1,6 @@
 import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
 import type { WorkspaceSessionPathProvider } from "./WorkspaceSessionPathProvider.js";
-import type { WorkspaceTargetPath } from "../model/WorkspaceTargetPath.js";
+import type { WorkspaceTargetPath } from "../model/target/WorkspaceTargetPath.js";
 
 export class WorkspaceTargetPathResolver {
   constructor(

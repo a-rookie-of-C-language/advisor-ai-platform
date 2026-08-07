@@ -1,5 +1,5 @@
 import type { WorkspaceListingBuilder } from "../../files/WorkspaceListingBuilder.js";
-import type { WorkspaceListing } from "../../model/WorkspaceListing.js";
+import type { WorkspaceListing } from "../../model/result/WorkspaceListing.js";
 import type { WorkspacePathGuard } from "../../path/WorkspacePathGuard.js";
 import type { WorkspaceSessionPathProvider } from "../../path/WorkspaceSessionPathProvider.js";
 

@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import { WorkspaceError } from "../../workspace/model/WorkspaceError.js";
+import { WorkspaceError } from "../../workspace/model/error/WorkspaceError.js";
 import { parseJsonBody } from "./HttpBodyParser.js";
 
 export class AgentHttpJsonObjectBodyReader {
