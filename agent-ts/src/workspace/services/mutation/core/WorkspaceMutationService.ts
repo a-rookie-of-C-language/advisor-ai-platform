@@ -5,8 +5,8 @@ import type { WorkspaceWorkingFileCounter } from "../../../maintenance/support/W
 import type { WorkspaceCreateDirResult } from "../../../model/result/WorkspaceCreateDirResult.js";
 import type { WorkspaceEditResult } from "../../../model/result/WorkspaceEditResult.js";
 import type { WorkspaceWriteResult } from "../../../model/result/WorkspaceWriteResult.js";
-import type { WorkspacePathGuard } from "../../../path/WorkspacePathGuard.js";
-import type { WorkspaceTargetPathResolver } from "../../../path/WorkspaceTargetPathResolver.js";
+import type { WorkspacePathGuard } from "../../../path/guard/WorkspacePathGuard.js";
+import type { WorkspaceTargetPathResolver } from "../../../path/target/WorkspaceTargetPathResolver.js";
 import { WorkspaceMutationServiceComponentsFactory } from "../factory/WorkspaceMutationServiceComponentsFactory.js";
 import type { WorkspaceMutationServiceComponents } from "../model/WorkspaceMutationServiceComponents.js";
 

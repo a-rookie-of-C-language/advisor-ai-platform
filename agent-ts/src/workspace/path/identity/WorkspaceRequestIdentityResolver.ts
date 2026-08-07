@@ -1,4 +1,4 @@
-import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
+import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
 
 export class WorkspaceRequestIdentityResolver {
   resolve(request: ChatStreamRequest): { userId: number | null; sessionId: number | null } {

@@ -1,8 +1,8 @@
 import type { WorkspaceFileReader } from "../../../files/read/WorkspaceFileReader.js";
 import type { WorkspaceListingBuilder } from "../../../files/read/WorkspaceListingBuilder.js";
 import type { WorkspaceListing } from "../../../model/result/WorkspaceListing.js";
-import type { WorkspacePathGuard } from "../../../path/WorkspacePathGuard.js";
-import type { WorkspaceSessionPathProvider } from "../../../path/WorkspaceSessionPathProvider.js";
+import type { WorkspacePathGuard } from "../../../path/guard/WorkspacePathGuard.js";
+import type { WorkspaceSessionPathProvider } from "../../../path/session/WorkspaceSessionPathProvider.js";
 import { WorkspaceReadServiceComponentsFactory } from "../factory/WorkspaceReadServiceComponentsFactory.js";
 import type { WorkspaceReadServiceComponents } from "../model/WorkspaceReadServiceComponents.js";
 

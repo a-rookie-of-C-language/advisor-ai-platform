@@ -1,6 +1,6 @@
 import path from "node:path";
-import { WorkspaceError } from "../model/error/WorkspaceError.js";
-import { BINARY_EXTENSIONS, FINAL_DIR, MAX_DEPTH, MAX_FILES_PER_SESSION } from "../model/config/WorkspaceLimits.js";
+import { BINARY_EXTENSIONS, FINAL_DIR, MAX_DEPTH, MAX_FILES_PER_SESSION } from "../../model/config/WorkspaceLimits.js";
+import { WorkspaceError } from "../../model/error/WorkspaceError.js";
 
 export class WorkspacePathGuard {
   constructor(private readonly basePath: string) {}

@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import type { WorkspacePathGuard } from "./WorkspacePathGuard.js";
+import type { WorkspacePathGuard } from "../guard/WorkspacePathGuard.js";
 
 export class WorkspaceSessionPathProvider {
   constructor(private readonly pathGuard: WorkspacePathGuard) {}

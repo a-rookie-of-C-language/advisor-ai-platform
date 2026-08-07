@@ -1,7 +1,7 @@
 import type { WorkspaceCacheCleaner } from "../operation/WorkspaceCacheCleaner.js";
 import type { WorkspaceCacheCleanupResult } from "../../model/result/WorkspaceCacheCleanupResult.js";
 import type { WorkspaceStats } from "../../model/result/WorkspaceStats.js";
-import type { WorkspaceSessionPathProvider } from "../../path/WorkspaceSessionPathProvider.js";
+import type { WorkspaceSessionPathProvider } from "../../path/session/WorkspaceSessionPathProvider.js";
 import type { WorkspaceStatsCollector } from "../operation/WorkspaceStatsCollector.js";
 
 export class WorkspaceMaintenanceService {
