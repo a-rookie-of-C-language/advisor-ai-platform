@@ -1,11 +1,11 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
-import { WorkspaceCreateDirOpenAiToolExecutor } from "../execution/WorkspaceCreateDirOpenAiToolExecutor.js";
-import { WorkspaceEditOpenAiToolExecutor } from "../execution/WorkspaceEditOpenAiToolExecutor.js";
 import { WorkspaceOpenAiMutationToolDispatcher } from "../execution/WorkspaceOpenAiMutationToolDispatcher.js";
-import { WorkspaceWriteOpenAiToolExecutor } from "../execution/WorkspaceWriteOpenAiToolExecutor.js";
 import { WorkspaceMutationToolNameMatcher } from "../matching/WorkspaceMutationToolNameMatcher.js";
+import { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/WorkspaceCreateDirOpenAiToolExecutor.js";
+import { WorkspaceEditOpenAiToolExecutor } from "../operation/WorkspaceEditOpenAiToolExecutor.js";
+import { WorkspaceWriteOpenAiToolExecutor } from "../operation/WorkspaceWriteOpenAiToolExecutor.js";
 
 export class WorkspaceOpenAiMutationToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiMutationToolDispatcher;
