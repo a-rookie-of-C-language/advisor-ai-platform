@@ -1,4 +1,4 @@
-import { BooleanStringReader } from "../../common/value/BooleanStringReader.js";
+import { BooleanStringReader } from "../../../common/value/BooleanStringReader.js";
 
 export class AgentBooleanEnvReader {
   read(name: string, defaultValue: boolean): boolean {
