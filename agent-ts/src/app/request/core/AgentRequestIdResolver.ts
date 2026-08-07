@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import type { ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import { AgentRequestHeaderValueResolver } from "./AgentRequestHeaderValueResolver.js";
+import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import { AgentRequestHeaderValueResolver } from "../support/AgentRequestHeaderValueResolver.js";
 
 export class AgentRequestIdResolver {
   private readonly headerValueResolver = new AgentRequestHeaderValueResolver();

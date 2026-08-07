@@ -12,7 +12,7 @@ import type { RagContextBuilder } from "../../../rag/context/RagContextBuilder.j
 import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "../../health/core/AgentGraphHealthDescriptor.js";
-import { AgentRequestIdResolver } from "../../request/AgentRequestIdResolver.js";
+import { AgentRequestIdResolver } from "../../request/core/AgentRequestIdResolver.js";
 import { AgentRuntimeComponents } from "../model/AgentRuntimeComponents.js";
 
 export class AgentRuntime {
