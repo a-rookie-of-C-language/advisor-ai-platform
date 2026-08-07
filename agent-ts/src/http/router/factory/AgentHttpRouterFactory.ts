@@ -1,6 +1,6 @@
 import type { AgentRuntime } from "../../../app/runtime/core/AgentRuntime.js";
 import type { AgentConfig } from "../../../config/model/AgentConfig.js";
-import type { McpToolService } from "../../../mcp/tools/core/McpToolService.js";
+import type { McpToolService } from "../../../mcp/tools/core/service/McpToolService.js";
 import type { WorkspaceManager } from "../../../workspace/core/WorkspaceManager.js";
 import { AgentWorkspaceRouteHandler } from "../../../workspace/routes/core/handler/AgentWorkspaceRouteHandler.js";
 import { AgentHttpRequestReader } from "../../request/AgentHttpRequestReader.js";

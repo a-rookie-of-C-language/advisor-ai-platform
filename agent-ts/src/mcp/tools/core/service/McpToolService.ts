@@ -1,11 +1,11 @@
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import type { McpServerConfig } from "../../config/model/McpServerConfig.js";
-import { McpSupportedConfigProvider } from "../../config/selection/McpSupportedConfigProvider.js";
-import { DirectHttpMcpClientRegistry } from "../../directHttp/core/registry/DirectHttpMcpClientRegistry.js";
-import type { McpCallToolResult } from "../model/McpCallToolResult.js";
-import type { McpToolDescriptor } from "../model/McpToolDescriptor.js";
-import { McpToolCaller } from "./McpToolCaller.js";
-import { McpToolLister } from "./McpToolLister.js";
+import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { McpServerConfig } from "../../../config/model/McpServerConfig.js";
+import { McpSupportedConfigProvider } from "../../../config/selection/McpSupportedConfigProvider.js";
+import { DirectHttpMcpClientRegistry } from "../../../directHttp/core/registry/DirectHttpMcpClientRegistry.js";
+import type { McpCallToolResult } from "../../model/McpCallToolResult.js";
+import type { McpToolDescriptor } from "../../model/McpToolDescriptor.js";
+import { McpToolCaller } from "../operation/McpToolCaller.js";
+import { McpToolLister } from "../operation/McpToolLister.js";
 
 export class McpToolService {
   private readonly clientRegistry = new DirectHttpMcpClientRegistry();

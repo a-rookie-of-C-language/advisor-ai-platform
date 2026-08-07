@@ -2,7 +2,7 @@ import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { OpenAIChatTool } from "../../../openai/chat/model/OpenAIChatTool.js";
 import { OpenAiToolResultFactory } from "../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
-import type { McpToolService } from "../../tools/core/McpToolService.js";
+import type { McpToolService } from "../../tools/core/service/McpToolService.js";
 import { McpOpenAiToolCatalog } from "../catalog/McpOpenAiToolCatalog.js";
 import { McpOpenAiToolResultFormatter } from "../result/McpOpenAiToolResultFormatter.js";
 
