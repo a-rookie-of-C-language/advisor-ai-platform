@@ -1,5 +1,5 @@
-import type { OpenAIParsedStreamLine } from "./OpenAIParsedStreamLine.js";
-import type { OpenAIStreamToolCallDelta } from "./OpenAIStreamToolCallDelta.js";
+import type { OpenAIParsedStreamLine } from "../model/OpenAIParsedStreamLine.js";
+import type { OpenAIStreamToolCallDelta } from "../model/OpenAIStreamToolCallDelta.js";
 
 interface OpenAIStreamChoice {
   delta?: {

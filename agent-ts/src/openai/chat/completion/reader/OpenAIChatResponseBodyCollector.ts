@@ -1,4 +1,4 @@
-import { OpenAIStreamParser } from "../../../stream/OpenAIStreamParser.js";
+import { OpenAIStreamParser } from "../../../stream/core/OpenAIStreamParser.js";
 import type { OpenAIToolCall } from "../../../tools/runtime/model/OpenAIToolCall.js";
 import type { OpenAIChatRoundResult } from "../../model/OpenAIChatRoundResult.js";
 

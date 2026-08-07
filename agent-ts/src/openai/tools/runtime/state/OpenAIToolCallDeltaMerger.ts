@@ -1,4 +1,4 @@
-import type { OpenAIStreamToolCallDelta } from "../../../stream/OpenAIStreamToolCallDelta.js";
+import type { OpenAIStreamToolCallDelta } from "../../../stream/model/OpenAIStreamToolCallDelta.js";
 import type { OpenAIToolCall } from "../model/OpenAIToolCall.js";
 
 export class OpenAIToolCallDeltaMerger {
