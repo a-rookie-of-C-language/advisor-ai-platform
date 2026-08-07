@@ -1,4 +1,4 @@
-import type { McpServerConfig } from "../../config/McpServerConfig.js";
+import type { McpServerConfig } from "../../config/model/McpServerConfig.js";
 import { DirectHttpMcpClient } from "./DirectHttpMcpClient.js";
 
 export class DirectHttpMcpClientRegistry {

@@ -1,6 +1,6 @@
-import { McpServerConfig } from "./McpServerConfig.js";
-import { McpStdioEnvParser } from "./McpStdioEnvParser.js";
-import { McpTokenEnvKeyFactory } from "./McpTokenEnvKeyFactory.js";
+import { McpServerConfig } from "../model/McpServerConfig.js";
+import { McpStdioEnvParser } from "../env/McpStdioEnvParser.js";
+import { McpTokenEnvKeyFactory } from "../env/McpTokenEnvKeyFactory.js";
 
 export class McpConfigParser {
   private readonly stdioEnvParser = new McpStdioEnvParser();

@@ -1,4 +1,4 @@
-import type { McpServerConfig } from "../../../mcp/config/McpServerConfig.js";
+import type { McpServerConfig } from "../../../mcp/config/model/McpServerConfig.js";
 import { McpOpenAiToolBridge as McpOpenAiToolBridgeClass } from "../../../mcp/openAi/core/McpOpenAiToolBridge.js";
 import { McpToolService as McpToolServiceClass } from "../../../mcp/tools/core/McpToolService.js";
 import { AgentMcpFeatureComponents } from "../model/AgentMcpFeatureComponents.js";

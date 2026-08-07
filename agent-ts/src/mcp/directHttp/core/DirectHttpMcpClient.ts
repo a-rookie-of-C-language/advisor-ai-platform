@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import type { McpServerConfig } from "../../config/McpServerConfig.js";
+import type { McpServerConfig } from "../../config/model/McpServerConfig.js";
 import { McpJsonRpcRequestFactory } from "../../jsonRpc/McpJsonRpcRequestFactory.js";
 import type { McpCallToolResult } from "../../tools/model/McpCallToolResult.js";
 import type { McpToolDescriptor } from "../../tools/model/McpToolDescriptor.js";
