@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentWorkspaceRouteHandler } from "../../workspace/routes/core/AgentWorkspaceRouteHandler.js";
-import type { AgentHttpRouteResultWriter } from "../response/AgentHttpRouteResultWriter.js";
-import type { AgentJsonResponseWriter } from "../response/AgentJsonResponseWriter.js";
-import type { AgentChatStreamRouteHandler } from "../routes/chat/AgentChatStreamRouteHandler.js";
-import type { AgentMcpRouteHandler } from "../routes/mcp/core/AgentMcpRouteHandler.js";
+import type { AgentWorkspaceRouteHandler } from "../../../workspace/routes/core/AgentWorkspaceRouteHandler.js";
+import type { AgentHttpRouteResultWriter } from "../../response/AgentHttpRouteResultWriter.js";
+import type { AgentJsonResponseWriter } from "../../response/AgentJsonResponseWriter.js";
+import type { AgentChatStreamRouteHandler } from "../../routes/chat/AgentChatStreamRouteHandler.js";
+import type { AgentMcpRouteHandler } from "../../routes/mcp/core/AgentMcpRouteHandler.js";
 
 export class AgentHttpAuthenticatedRouteDispatcher {
   constructor(

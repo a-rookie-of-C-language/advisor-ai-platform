@@ -1,14 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentWorkspaceRouteHandler } from "../../workspace/routes/core/AgentWorkspaceRouteHandler.js";
-import type { AgentRequestUrlFactory } from "../request/AgentRequestUrlFactory.js";
-import type { AgentJsonResponseWriter } from "../response/AgentJsonResponseWriter.js";
-import { AgentHttpRouteResultWriter } from "../response/AgentHttpRouteResultWriter.js";
-import type { AgentChatStreamRouteHandler } from "../routes/chat/AgentChatStreamRouteHandler.js";
-import type { AgentHealthRouteHandler } from "../routes/health/AgentHealthRouteHandler.js";
-import type { AgentMcpRouteHandler } from "../routes/mcp/core/AgentMcpRouteHandler.js";
-import type { AgentRequestAuthorizer } from "./AgentRequestAuthorizer.js";
-import { AgentHttpAuthenticatedRouteDispatcher } from "./AgentHttpAuthenticatedRouteDispatcher.js";
-import { AgentHttpPublicRouteDispatcher } from "./AgentHttpPublicRouteDispatcher.js";
+import type { AgentWorkspaceRouteHandler } from "../../../workspace/routes/core/AgentWorkspaceRouteHandler.js";
+import type { AgentRequestUrlFactory } from "../../request/AgentRequestUrlFactory.js";
+import { AgentHttpRouteResultWriter } from "../../response/AgentHttpRouteResultWriter.js";
+import type { AgentJsonResponseWriter } from "../../response/AgentJsonResponseWriter.js";
+import type { AgentChatStreamRouteHandler } from "../../routes/chat/AgentChatStreamRouteHandler.js";
+import type { AgentHealthRouteHandler } from "../../routes/health/AgentHealthRouteHandler.js";
+import type { AgentMcpRouteHandler } from "../../routes/mcp/core/AgentMcpRouteHandler.js";
+import { AgentHttpAuthenticatedRouteDispatcher } from "../dispatch/AgentHttpAuthenticatedRouteDispatcher.js";
+import { AgentHttpPublicRouteDispatcher } from "../dispatch/AgentHttpPublicRouteDispatcher.js";
+import type { AgentRequestAuthorizer } from "../security/AgentRequestAuthorizer.js";
 
 export class AgentHttpRouter {
   private readonly authenticatedRouteDispatcher: AgentHttpAuthenticatedRouteDispatcher;
