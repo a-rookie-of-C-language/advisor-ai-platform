@@ -1,9 +1,9 @@
-import { JsonObjectReader } from "../../../common/json/JsonObjectReader.js";
-import type { McpJsonRpcRequestFactory } from "../../jsonRpc/McpJsonRpcRequestFactory.js";
-import type { McpToolDescriptor } from "../../tools/model/McpToolDescriptor.js";
-import { McpToolDescriptorMapper } from "../../tools/mapping/McpToolDescriptorMapper.js";
-import type { DirectHttpMcpJsonRpcClient } from "../protocol/core/DirectHttpMcpJsonRpcClient.js";
-import type { DirectHttpMcpInitializer } from "./DirectHttpMcpInitializer.js";
+import { JsonObjectReader } from "../../../../common/json/JsonObjectReader.js";
+import type { McpJsonRpcRequestFactory } from "../../../jsonRpc/McpJsonRpcRequestFactory.js";
+import type { McpToolDescriptor } from "../../../tools/model/McpToolDescriptor.js";
+import { McpToolDescriptorMapper } from "../../../tools/mapping/McpToolDescriptorMapper.js";
+import type { DirectHttpMcpJsonRpcClient } from "../../protocol/core/DirectHttpMcpJsonRpcClient.js";
+import type { DirectHttpMcpInitializer } from "../lifecycle/DirectHttpMcpInitializer.js";
 
 export class DirectHttpMcpToolListReader {
   private readonly jsonObjectReader = new JsonObjectReader();
