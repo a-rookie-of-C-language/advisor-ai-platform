@@ -1,7 +1,7 @@
 import { DirectHttpMcpClientRegistry } from "../../../directHttp/core/registry/DirectHttpMcpClientRegistry.js";
 import { McpSupportedConfigProvider } from "../../../config/selection/McpSupportedConfigProvider.js";
 import { McpToolDescriptorSorter } from "../../mapping/descriptor/McpToolDescriptorSorter.js";
-import type { McpToolDescriptor } from "../../model/McpToolDescriptor.js";
+import type { McpToolDescriptor } from "../../model/descriptor/McpToolDescriptor.js";
 
 export class McpToolLister {
   private readonly toolDescriptorSorter = new McpToolDescriptorSorter();
