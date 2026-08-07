@@ -1,4 +1,4 @@
-import type { MemoryItem } from "../model/MemoryItem.js";
+import type { MemoryItem } from "../../model/MemoryItem.js";
 
 export class MemoryItemListRenderer {
   constructor(private readonly topK: number) {}

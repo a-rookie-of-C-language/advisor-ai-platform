@@ -1,4 +1,4 @@
-import type { ChatMessageDTO } from "../../common/model/ChatStreamRequest.js";
+import type { ChatMessageDTO } from "../../../common/model/ChatStreamRequest.js";
 
 export class MemorySystemMessageFactory {
   create(prompt: string): ChatMessageDTO {

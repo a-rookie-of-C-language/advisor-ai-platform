@@ -1,5 +1,5 @@
-import type { SessionSummary } from "../../common/session/SessionSummary.js";
-import type { MemoryItem } from "../model/MemoryItem.js";
+import type { SessionSummary } from "../../../common/session/SessionSummary.js";
+import type { MemoryItem } from "../../model/MemoryItem.js";
 import { MemoryItemListRenderer } from "./MemoryItemListRenderer.js";
 
 export class MemoryPromptRenderer {

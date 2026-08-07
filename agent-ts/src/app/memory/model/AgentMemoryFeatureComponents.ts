@@ -1,4 +1,4 @@
-import type { MemoryContextBuilder } from "../../../memory/context/MemoryContextBuilder.js";
+import type { MemoryContextBuilder } from "../../../memory/context/core/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../../memory/task/MemoryTaskSubmitter.js";
 import type { MemoryOpenAiToolBridge } from "../../../memory/tools/core/MemoryOpenAiToolBridge.js";
 

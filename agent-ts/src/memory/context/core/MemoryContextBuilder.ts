@@ -1,9 +1,9 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import { LastUserMessageFinder } from "./LastUserMessageFinder.js";
-import type { MemoryApiClient } from "../api/MemoryApiClient.js";
-import { MemoryContextLoader } from "./MemoryContextLoader.js";
-import { MemoryContextMessageInjector } from "./MemoryContextMessageInjector.js";
-import { MemoryContextRequestGate } from "./MemoryContextRequestGate.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import type { MemoryApiClient } from "../../api/MemoryApiClient.js";
+import { MemoryContextRequestGate } from "../gate/MemoryContextRequestGate.js";
+import { MemoryContextMessageInjector } from "../injection/MemoryContextMessageInjector.js";
+import { MemoryContextLoader } from "../loading/MemoryContextLoader.js";
+import { LastUserMessageFinder } from "../support/LastUserMessageFinder.js";
 
 export class MemoryContextBuilder {
   private readonly lastUserMessageFinder = new LastUserMessageFinder();
