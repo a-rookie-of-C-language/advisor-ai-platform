@@ -1,9 +1,9 @@
 import type { OpenAIChatTool } from "../../../../openai/chat/model/OpenAIChatTool.js";
-import { WorkspaceCreateDirOpenAiToolDefinition } from "../model/WorkspaceCreateDirOpenAiToolDefinition.js";
-import { WorkspaceEditOpenAiToolDefinition } from "../model/WorkspaceEditOpenAiToolDefinition.js";
-import { WorkspaceListOpenAiToolDefinition } from "../model/WorkspaceListOpenAiToolDefinition.js";
-import { WorkspaceReadOpenAiToolDefinition } from "../model/WorkspaceReadOpenAiToolDefinition.js";
-import { WorkspaceWriteOpenAiToolDefinition } from "../model/WorkspaceWriteOpenAiToolDefinition.js";
+import { WorkspaceCreateDirOpenAiToolDefinition } from "../model/mutation/WorkspaceCreateDirOpenAiToolDefinition.js";
+import { WorkspaceEditOpenAiToolDefinition } from "../model/mutation/WorkspaceEditOpenAiToolDefinition.js";
+import { WorkspaceWriteOpenAiToolDefinition } from "../model/mutation/WorkspaceWriteOpenAiToolDefinition.js";
+import { WorkspaceListOpenAiToolDefinition } from "../model/read/WorkspaceListOpenAiToolDefinition.js";
+import { WorkspaceReadOpenAiToolDefinition } from "../model/read/WorkspaceReadOpenAiToolDefinition.js";
 
 export class WorkspaceOpenAiToolDefinitions {
   private readonly createDirDefinition = new WorkspaceCreateDirOpenAiToolDefinition();
