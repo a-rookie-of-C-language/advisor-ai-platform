@@ -1,10 +1,10 @@
 import type { MemoryApiClient } from "../../../api/core/MemoryApiClient.js";
 import { MemoryReadRequestReader } from "../../../request/MemoryReadRequestReader.js";
 import { MemoryWriteRequestReader } from "../../../request/MemoryWriteRequestReader.js";
-import { MemoryOpenAiToolDispatcher } from "../../execution/MemoryOpenAiToolDispatcher.js";
-import { MemoryReadOpenAiToolExecutor } from "../../execution/MemoryReadOpenAiToolExecutor.js";
-import { MemoryToolResultFormatter } from "../../execution/MemoryToolResultFormatter.js";
-import { MemoryWriteOpenAiToolExecutor } from "../../execution/MemoryWriteOpenAiToolExecutor.js";
+import { MemoryOpenAiToolDispatcher } from "../../execution/dispatch/MemoryOpenAiToolDispatcher.js";
+import { MemoryReadOpenAiToolExecutor } from "../../execution/executor/MemoryReadOpenAiToolExecutor.js";
+import { MemoryToolResultFormatter } from "../../execution/formatting/MemoryToolResultFormatter.js";
+import { MemoryWriteOpenAiToolExecutor } from "../../execution/executor/MemoryWriteOpenAiToolExecutor.js";
 
 export class MemoryOpenAiToolComponents {
   readonly dispatcher: MemoryOpenAiToolDispatcher;
