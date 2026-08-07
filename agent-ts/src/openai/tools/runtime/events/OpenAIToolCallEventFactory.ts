@@ -1,4 +1,4 @@
-import type { OpenAIChatStreamEvent } from "../../../../protocol/events/OpenAIChatStreamEvent.js";
+import type { OpenAIChatStreamEvent } from "../../../../protocol/events/model/OpenAIChatStreamEvent.js";
 import { OpenAIToolArgumentParser } from "../../arguments/parser/OpenAIToolArgumentParser.js";
 import type { OpenAIToolCall } from "../model/OpenAIToolCall.js";
 

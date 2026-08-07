@@ -1,5 +1,5 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { SseWriter } from "../sse/SseWriter.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { SseWriter } from "../../sse/SseWriter.js";
 
 export class AgentStreamEventEmitter {
   constructor(private readonly writer: SseWriter) {}

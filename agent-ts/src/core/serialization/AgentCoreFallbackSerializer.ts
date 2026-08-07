@@ -1,4 +1,4 @@
-import type { ProtocolEvent } from "../../protocol/events/ProtocolEvent.js";
+import type { ProtocolEvent } from "../../protocol/events/model/ProtocolEvent.js";
 
 export class AgentCoreFallbackSerializer {
   serializeEvent(event: ProtocolEvent): string {
