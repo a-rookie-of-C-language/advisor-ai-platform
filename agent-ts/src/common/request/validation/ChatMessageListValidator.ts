@@ -1,4 +1,4 @@
-import type { ChatMessageDTO } from "../model/ChatStreamRequest.js";
+import type { ChatMessageDTO } from "../../model/ChatStreamRequest.js";
 
 export class ChatMessageListValidator {
   validate(messages: unknown): ChatMessageDTO[] {

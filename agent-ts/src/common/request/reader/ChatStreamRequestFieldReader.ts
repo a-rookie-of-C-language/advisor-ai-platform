@@ -1,4 +1,4 @@
-import type { AttachmentDTO } from "../model/ChatStreamRequest.js";
+import type { AttachmentDTO } from "../../model/ChatStreamRequest.js";
 
 export class ChatStreamRequestFieldReader {
   readOptionalAttachments(value: unknown): AttachmentDTO[] | null {
