@@ -2,7 +2,7 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../../../http/response/model/HttpRouteResult.js";
 import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
-import { AgentWorkspaceCreateDirRequestReader } from "../reader/AgentWorkspaceCreateDirRequestReader.js";
+import { AgentWorkspaceCreateDirRequestReader } from "../reader/directory/AgentWorkspaceCreateDirRequestReader.js";
 
 export class AgentWorkspaceCreateDirRouteHandler {
   private readonly createDirRequestReader: AgentWorkspaceCreateDirRequestReader;
