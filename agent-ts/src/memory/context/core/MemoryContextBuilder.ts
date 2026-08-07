@@ -1,5 +1,5 @@
 import type { ChatMessageDTO, ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
-import type { MemoryApiClient } from "../../api/MemoryApiClient.js";
+import type { MemoryApiClient } from "../../api/core/MemoryApiClient.js";
 import { MemoryContextRequestGate } from "../gate/MemoryContextRequestGate.js";
 import { MemoryContextMessageInjector } from "../injection/MemoryContextMessageInjector.js";
 import { MemoryContextLoader } from "../loading/MemoryContextLoader.js";

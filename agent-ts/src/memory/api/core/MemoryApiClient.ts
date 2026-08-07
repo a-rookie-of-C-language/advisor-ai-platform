@@ -1,13 +1,13 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { SessionSummary } from "../../common/session/SessionSummary.js";
-import type { AgentConfig } from "../../config/model/AgentConfig.js";
-import { MemoryApiArrayResponseReader } from "./MemoryApiArrayResponseReader.js";
-import { MemoryApiEndpointFactory } from "./MemoryApiEndpointFactory.js";
-import { MemoryApiHttpClient } from "./MemoryApiHttpClient.js";
-import { MemoryApiPostRequestFactory } from "./MemoryApiPostRequestFactory.js";
-import type { MemoryCandidateUpsertRequest } from "../model/request/MemoryCandidateUpsertRequest.js";
-import type { MemoryItem } from "../model/entity/MemoryItem.js";
-import type { MemoryTaskSubmitRequest } from "../model/task/MemoryTaskSubmitRequest.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { SessionSummary } from "../../../common/session/SessionSummary.js";
+import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import { MemoryApiArrayResponseReader } from "../reader/MemoryApiArrayResponseReader.js";
+import { MemoryApiEndpointFactory } from "../factory/MemoryApiEndpointFactory.js";
+import { MemoryApiHttpClient } from "../http/MemoryApiHttpClient.js";
+import { MemoryApiPostRequestFactory } from "../factory/MemoryApiPostRequestFactory.js";
+import type { MemoryCandidateUpsertRequest } from "../../model/request/MemoryCandidateUpsertRequest.js";
+import type { MemoryItem } from "../../model/entity/MemoryItem.js";
+import type { MemoryTaskSubmitRequest } from "../../model/task/MemoryTaskSubmitRequest.js";
 
 export class MemoryApiClient {
   private readonly arrayResponseReader = new MemoryApiArrayResponseReader();
