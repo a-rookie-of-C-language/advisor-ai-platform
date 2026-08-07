@@ -6,7 +6,7 @@ import type { WorkspaceListing } from "../model/result/WorkspaceListing.js";
 import type { WorkspaceStats } from "../model/result/WorkspaceStats.js";
 import type { WorkspaceWriteResult } from "../model/result/WorkspaceWriteResult.js";
 import { WorkspaceMutationService } from "../services/mutation/WorkspaceMutationService.js";
-import { WorkspaceReadService } from "../services/read/WorkspaceReadService.js";
+import { WorkspaceReadService } from "../services/read/core/WorkspaceReadService.js";
 import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
 
 export class WorkspaceManager {

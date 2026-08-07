@@ -1,7 +1,7 @@
-import type { WorkspaceListingBuilder } from "../../files/read/WorkspaceListingBuilder.js";
-import type { WorkspaceListing } from "../../model/result/WorkspaceListing.js";
-import type { WorkspacePathGuard } from "../../path/WorkspacePathGuard.js";
-import type { WorkspaceSessionPathProvider } from "../../path/WorkspaceSessionPathProvider.js";
+import type { WorkspaceListingBuilder } from "../../../files/read/WorkspaceListingBuilder.js";
+import type { WorkspaceListing } from "../../../model/result/WorkspaceListing.js";
+import type { WorkspacePathGuard } from "../../../path/WorkspacePathGuard.js";
+import type { WorkspaceSessionPathProvider } from "../../../path/WorkspaceSessionPathProvider.js";
 
 export class WorkspaceListService {
   constructor(
