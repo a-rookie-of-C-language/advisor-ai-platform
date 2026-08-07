@@ -1,4 +1,4 @@
-import type { HttpRouteResult } from "../../../response/HttpRouteResult.js";
+import type { HttpRouteResult } from "../../../response/model/HttpRouteResult.js";
 import type { McpToolService } from "../../../../mcp/tools/core/McpToolService.js";
 import { McpToolServiceGuard } from "../../../../mcp/tools/core/McpToolServiceGuard.js";
 

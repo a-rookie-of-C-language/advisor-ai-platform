@@ -1,5 +1,5 @@
 import type { AgentHttpRequestReader } from "../../../http/request/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../../http/response/HttpRouteResult.js";
+import type { HttpRouteResult } from "../../../http/response/model/HttpRouteResult.js";
 import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
 import type { AgentWorkspaceMaintenanceRouteComponents } from "./AgentWorkspaceMaintenanceRouteComponents.js";
 import { AgentWorkspaceMaintenanceRouteComponentsFactory } from "./AgentWorkspaceMaintenanceRouteComponentsFactory.js";

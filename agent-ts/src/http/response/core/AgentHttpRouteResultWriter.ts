@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
+import type { HttpRouteResult } from "../model/HttpRouteResult.js";
 import type { AgentJsonResponseWriter } from "./AgentJsonResponseWriter.js";
-import type { HttpRouteResult } from "./HttpRouteResult.js";
 
 export class AgentHttpRouteResultWriter {
   constructor(private readonly jsonResponseWriter: AgentJsonResponseWriter) {}
