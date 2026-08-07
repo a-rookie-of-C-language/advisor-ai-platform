@@ -1,6 +1,6 @@
-import type { RagDocument } from "./RagDocument.js";
+import type { RagDocument } from "../model/RagDocument.js";
+import { RagReadyDocumentSelector } from "../selection/RagReadyDocumentSelector.js";
 import { RagDocumentListRenderer } from "./RagDocumentListRenderer.js";
-import { RagReadyDocumentSelector } from "./RagReadyDocumentSelector.js";
 
 export class RagPromptRenderer {
   private readonly documentListRenderer = new RagDocumentListRenderer();

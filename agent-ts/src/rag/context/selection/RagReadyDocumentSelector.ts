@@ -1,4 +1,4 @@
-import type { RagDocument } from "./RagDocument.js";
+import type { RagDocument } from "../model/RagDocument.js";
 
 export class RagReadyDocumentSelector {
   select(documents: RagDocument[]): RagDocument[] {

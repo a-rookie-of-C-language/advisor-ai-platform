@@ -8,7 +8,7 @@ import type { MemoryTaskSubmitter } from "../../../memory/task/MemoryTaskSubmitt
 import type { OpenAIChatClient } from "../../../openai/chat/core/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/OpenAiToolRegistry.js";
 import { SseWriterFactory } from "../../../protocol/sse/SseWriterFactory.js";
-import type { RagContextBuilder } from "../../../rag/context/RagContextBuilder.js";
+import type { RagContextBuilder } from "../../../rag/context/core/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "../../health/core/AgentGraphHealthDescriptor.js";

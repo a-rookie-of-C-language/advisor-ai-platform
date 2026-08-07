@@ -1,7 +1,7 @@
-import type { ChatMessageDTO, ChatStreamRequest } from "../../common/model/ChatStreamRequest.js";
-import type { RagApiClient } from "../api/RagApiClient.js";
-import { RagPromptRenderer } from "./RagPromptRenderer.js";
-import { RagSystemMessageFactory } from "./RagSystemMessageFactory.js";
+import type { ChatMessageDTO, ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import type { RagApiClient } from "../../api/RagApiClient.js";
+import { RagPromptRenderer } from "../rendering/RagPromptRenderer.js";
+import { RagSystemMessageFactory } from "../rendering/RagSystemMessageFactory.js";
 
 export class RagContextBuilder {
   private readonly promptRenderer = new RagPromptRenderer();
