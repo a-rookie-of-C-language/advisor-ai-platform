@@ -1,4 +1,4 @@
-import type { McpToolDescriptor } from "../model/McpToolDescriptor.js";
+import type { McpToolDescriptor } from "../../model/McpToolDescriptor.js";
 
 export class McpToolDescriptorSorter {
   sort(tools: McpToolDescriptor[]): McpToolDescriptor[] {
