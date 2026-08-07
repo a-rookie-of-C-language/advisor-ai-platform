@@ -2,7 +2,7 @@ import type { ChatMessageDTO } from "../../../common/model/ChatStreamRequest.js"
 import type { OpenAIChatStreamEvent } from "../../../protocol/events/OpenAIChatStreamEvent.js";
 import { OpenAIToolRoundGate } from "../../tools/runtime/core/OpenAIToolRoundGate.js";
 import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "../../tools/runtime/core/OpenAIToolRoundRunner.js";
-import type { OpenAIChatCompletionStreamer } from "../completion/OpenAIChatCompletionStreamer.js";
+import type { OpenAIChatCompletionStreamer } from "../completion/core/OpenAIChatCompletionStreamer.js";
 import { OpenAIChatRoundEventFactory } from "../events/OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatMessageMapper } from "../mapping/OpenAIChatMessageMapper.js";
 import type { OpenAIChatTool } from "../model/OpenAIChatTool.js";
