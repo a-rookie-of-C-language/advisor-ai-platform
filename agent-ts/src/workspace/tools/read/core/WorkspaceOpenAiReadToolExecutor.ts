@@ -1,10 +1,10 @@
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
-import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
-import { WorkspaceFileReadOpenAiToolExecutor } from "./WorkspaceFileReadOpenAiToolExecutor.js";
-import { WorkspaceListOpenAiToolExecutor } from "./WorkspaceListOpenAiToolExecutor.js";
-import { WorkspaceOpenAiReadToolDispatcher } from "./WorkspaceOpenAiReadToolDispatcher.js";
-import { WorkspaceReadToolNameMatcher } from "./WorkspaceReadToolNameMatcher.js";
+import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import { WorkspaceFileReadOpenAiToolExecutor } from "../execution/WorkspaceFileReadOpenAiToolExecutor.js";
+import { WorkspaceListOpenAiToolExecutor } from "../execution/WorkspaceListOpenAiToolExecutor.js";
+import { WorkspaceOpenAiReadToolDispatcher } from "../execution/WorkspaceOpenAiReadToolDispatcher.js";
+import { WorkspaceReadToolNameMatcher } from "../matching/WorkspaceReadToolNameMatcher.js";
 
 export class WorkspaceOpenAiReadToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiReadToolDispatcher;
