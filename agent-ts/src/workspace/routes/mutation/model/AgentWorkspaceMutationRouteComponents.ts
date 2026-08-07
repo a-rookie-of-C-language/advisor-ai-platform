@@ -1,8 +1,8 @@
 import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
 import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
-import { AgentWorkspaceCreateDirRouteHandler } from "../operation/AgentWorkspaceCreateDirRouteHandler.js";
-import { AgentWorkspaceEditRouteHandler } from "../operation/AgentWorkspaceEditRouteHandler.js";
-import { AgentWorkspaceWriteRouteHandler } from "../operation/AgentWorkspaceWriteRouteHandler.js";
+import { AgentWorkspaceCreateDirRouteHandler } from "../operation/directory/AgentWorkspaceCreateDirRouteHandler.js";
+import { AgentWorkspaceEditRouteHandler } from "../operation/file/AgentWorkspaceEditRouteHandler.js";
+import { AgentWorkspaceWriteRouteHandler } from "../operation/file/AgentWorkspaceWriteRouteHandler.js";
 
 export class AgentWorkspaceMutationRouteComponents {
   readonly createDirRouteHandler: AgentWorkspaceCreateDirRouteHandler;
