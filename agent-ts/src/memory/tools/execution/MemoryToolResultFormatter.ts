@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
-import type { MemoryItem } from "../../model/MemoryItem.js";
+import type { MemoryItem } from "../../model/entity/MemoryItem.js";
 
 export class MemoryToolResultFormatter {
   formatRead(items: MemoryItem[]): OpenAiToolExecutionResult {
