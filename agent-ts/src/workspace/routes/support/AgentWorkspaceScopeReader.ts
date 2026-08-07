@@ -1,4 +1,4 @@
-import type { AgentWorkspaceScope } from "../model/AgentWorkspaceScope.js";
+import type { AgentWorkspaceScope } from "../model/scope/AgentWorkspaceScope.js";
 
 export class AgentWorkspaceScopeReader {
   read(url: URL): AgentWorkspaceScope {

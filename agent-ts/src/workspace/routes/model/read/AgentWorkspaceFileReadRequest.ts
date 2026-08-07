@@ -1,4 +1,4 @@
-import type { AgentWorkspaceScope } from "./AgentWorkspaceScope.js";
+import type { AgentWorkspaceScope } from "../scope/AgentWorkspaceScope.js";
 
 export interface AgentWorkspaceFileReadRequest {
   limit: number;
