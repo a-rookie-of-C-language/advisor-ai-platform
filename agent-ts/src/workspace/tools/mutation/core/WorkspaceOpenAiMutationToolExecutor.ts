@@ -1,11 +1,11 @@
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
-import type { WorkspaceManager } from "../../core/WorkspaceManager.js";
-import { WorkspaceCreateDirOpenAiToolExecutor } from "./WorkspaceCreateDirOpenAiToolExecutor.js";
-import { WorkspaceEditOpenAiToolExecutor } from "./WorkspaceEditOpenAiToolExecutor.js";
-import { WorkspaceMutationToolNameMatcher } from "./WorkspaceMutationToolNameMatcher.js";
-import { WorkspaceOpenAiMutationToolDispatcher } from "./WorkspaceOpenAiMutationToolDispatcher.js";
-import { WorkspaceWriteOpenAiToolExecutor } from "./WorkspaceWriteOpenAiToolExecutor.js";
+import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import { WorkspaceCreateDirOpenAiToolExecutor } from "../execution/WorkspaceCreateDirOpenAiToolExecutor.js";
+import { WorkspaceEditOpenAiToolExecutor } from "../execution/WorkspaceEditOpenAiToolExecutor.js";
+import { WorkspaceOpenAiMutationToolDispatcher } from "../execution/WorkspaceOpenAiMutationToolDispatcher.js";
+import { WorkspaceWriteOpenAiToolExecutor } from "../execution/WorkspaceWriteOpenAiToolExecutor.js";
+import { WorkspaceMutationToolNameMatcher } from "../matching/WorkspaceMutationToolNameMatcher.js";
 
 export class WorkspaceOpenAiMutationToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiMutationToolDispatcher;
