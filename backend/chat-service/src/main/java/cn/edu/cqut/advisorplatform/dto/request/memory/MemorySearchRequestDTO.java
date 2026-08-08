@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.request;
+package cn.edu.cqut.advisorplatform.dto.request.memory;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

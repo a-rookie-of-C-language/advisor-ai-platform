@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.response;
+package cn.edu.cqut.advisorplatform.dto.response.memory;
 
 import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
 import java.time.LocalDateTime;

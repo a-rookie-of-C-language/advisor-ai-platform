@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.service.impl.memory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateItemDTO;
-import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryCandidateItemDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
 import java.math.BigDecimal;
 import java.util.List;

@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.response;
+package cn.edu.cqut.advisorplatform.dto.response.memory;
 
 import java.time.LocalDateTime;
 import java.util.Map;

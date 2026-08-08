@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.request;
+package cn.edu.cqut.advisorplatform.dto.request.memory;
 
 import java.util.Map;
 import lombok.Data;

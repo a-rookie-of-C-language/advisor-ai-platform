@@ -1,13 +1,13 @@
 package cn.edu.cqut.advisorplatform.service;
 
-import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
-import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;
-import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
-import cn.edu.cqut.advisorplatform.dto.request.SessionSummaryUpdateRequestDTO;
-import cn.edu.cqut.advisorplatform.dto.response.MemoryCandidateUpsertResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.MemoryItemResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryCandidateUpsertRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.MemorySearchRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryTaskSubmitDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.SessionSummaryUpdateRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryCandidateUpsertResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryItemResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryTaskResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.memory.SessionSummaryResponseDTO;
 import java.util.List;
 import java.util.Map;
 

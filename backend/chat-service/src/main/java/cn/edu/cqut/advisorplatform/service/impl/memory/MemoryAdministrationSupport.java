@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
-import cn.edu.cqut.advisorplatform.dto.request.SessionSummaryUpdateRequestDTO;
-import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.SessionSummaryResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryTaskSubmitDTO;
+import cn.edu.cqut.advisorplatform.dto.request.memory.SessionSummaryUpdateRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryTaskResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.memory.SessionSummaryResponseDTO;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
