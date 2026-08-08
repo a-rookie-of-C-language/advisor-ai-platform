@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.response;
+package cn.edu.cqut.advisorplatform.dto.response.monitor;
 
 import java.util.List;
 import lombok.AllArgsConstructor;

@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
-import cn.edu.cqut.advisorplatform.dto.response.MonitorMetricCardDTO;
+import cn.edu.cqut.advisorplatform.dto.response.monitor.MonitorMetricCardDTO;
 
 class MonitorMetricCardFactory {
 

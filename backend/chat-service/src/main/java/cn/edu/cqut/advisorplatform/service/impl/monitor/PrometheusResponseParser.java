@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
-import cn.edu.cqut.advisorplatform.dto.response.MonitorPointDTO;
+import cn.edu.cqut.advisorplatform.dto.response.monitor.MonitorPointDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;

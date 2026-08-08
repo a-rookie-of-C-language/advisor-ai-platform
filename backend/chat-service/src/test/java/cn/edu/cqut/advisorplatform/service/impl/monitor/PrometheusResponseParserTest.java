@@ -2,7 +2,7 @@ package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cn.edu.cqut.advisorplatform.dto.response.MonitorPointDTO;
+import cn.edu.cqut.advisorplatform.dto.response.monitor.MonitorPointDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;

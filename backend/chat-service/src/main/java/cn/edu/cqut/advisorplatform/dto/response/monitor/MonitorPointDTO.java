@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.response;
+package cn.edu.cqut.advisorplatform.dto.response.monitor;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

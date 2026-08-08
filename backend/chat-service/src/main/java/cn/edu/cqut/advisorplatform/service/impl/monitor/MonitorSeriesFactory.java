@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
-import cn.edu.cqut.advisorplatform.dto.response.MonitorSeriesDTO;
+import cn.edu.cqut.advisorplatform.dto.response.monitor.MonitorSeriesDTO;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 
