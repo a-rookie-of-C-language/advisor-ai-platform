@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentRuntime } from "../../../app/runtime/core/AgentRuntime.js";
-import { parseJsonBody } from "../../body/HttpBodyParser.js";
+import { parseJsonBody } from "../../body/parser/HttpBodyParser.js";
 
 export class AgentChatStreamRouteHandler {
   constructor(private readonly runtime: AgentRuntime) {}

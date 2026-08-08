@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import { WorkspaceError } from "../../workspace/model/error/WorkspaceError.js";
-import { parseJsonBody } from "./HttpBodyParser.js";
+import { WorkspaceError } from "../../../workspace/model/error/WorkspaceError.js";
+import { parseJsonBody } from "../parser/HttpBodyParser.js";
 
 export class AgentHttpJsonObjectBodyReader {
   async read(request: IncomingMessage): Promise<Record<string, unknown>> {
