@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentWorkspaceRouteHandler } from "../../../workspace/routes/core/handler/AgentWorkspaceRouteHandler.js";
-import type { AgentRequestUrlFactory } from "../../request/AgentRequestUrlFactory.js";
+import type { AgentRequestUrlFactory } from "../../request/url/AgentRequestUrlFactory.js";
 import { AgentHttpRouteResultWriter } from "../../response/core/route/AgentHttpRouteResultWriter.js";
 import type { AgentJsonResponseWriter } from "../../response/core/json/AgentJsonResponseWriter.js";
 import type { AgentChatStreamRouteHandler } from "../../routes/chat/AgentChatStreamRouteHandler.js";

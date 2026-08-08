@@ -1,4 +1,4 @@
-import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
+import type { AgentHttpRequestReader } from "../../../../http/request/reader/AgentHttpRequestReader.js";
 import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
 import { AgentWorkspaceReadRouteComponents } from "../model/AgentWorkspaceReadRouteComponents.js";
 

@@ -1,9 +1,9 @@
 import type { IncomingMessage } from "node:http";
-import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { AgentWorkspaceScope } from "../../workspace/routes/model/scope/AgentWorkspaceScope.js";
-import { AgentWorkspaceScopeReader } from "../../workspace/routes/support/AgentWorkspaceScopeReader.js";
-import { AgentHttpJsonObjectBodyReader } from "../body/reader/AgentHttpJsonObjectBodyReader.js";
-import { AgentHttpFieldReader } from "../fields/core/AgentHttpFieldReader.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { AgentWorkspaceScope } from "../../../workspace/routes/model/scope/AgentWorkspaceScope.js";
+import { AgentWorkspaceScopeReader } from "../../../workspace/routes/support/AgentWorkspaceScopeReader.js";
+import { AgentHttpJsonObjectBodyReader } from "../../body/reader/AgentHttpJsonObjectBodyReader.js";
+import { AgentHttpFieldReader } from "../../fields/core/AgentHttpFieldReader.js";
 
 export class AgentHttpRequestReader {
   private readonly bodyReader = new AgentHttpJsonObjectBodyReader();
