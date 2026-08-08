@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../common/json/JsonTypes.js";
 
 export class McpJsonRpcRequestFactory {
   createInitializeRequest(): JsonObject {

@@ -1,4 +1,4 @@
-import type { JsonRpcResponse } from "../../../jsonRpc/JsonRpcResponse.js";
+import type { JsonRpcResponse } from "../../../jsonRpc/model/JsonRpcResponse.js";
 import { DirectHttpMcpResponseValidator } from "../validation/DirectHttpMcpResponseValidator.js";
 
 export class DirectHttpMcpResponseReader {

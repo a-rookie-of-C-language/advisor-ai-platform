@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { McpServerConfig } from "../../../config/model/McpServerConfig.js";
-import type { JsonRpcResponse } from "../../../jsonRpc/JsonRpcResponse.js";
+import type { JsonRpcResponse } from "../../../jsonRpc/model/JsonRpcResponse.js";
 import { DirectHttpMcpHeadersFactory } from "../http/DirectHttpMcpHeadersFactory.js";
 import { DirectHttpMcpResponseReader } from "../reader/DirectHttpMcpResponseReader.js";
 import { DirectHttpMcpTransport } from "../http/DirectHttpMcpTransport.js";
