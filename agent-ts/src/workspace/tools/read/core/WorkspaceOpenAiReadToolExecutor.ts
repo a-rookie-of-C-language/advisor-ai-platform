@@ -3,8 +3,8 @@ import type { ChatStreamRequest } from "../../../../common/model/ChatStreamReque
 import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
 import { WorkspaceOpenAiReadToolDispatcher } from "../execution/WorkspaceOpenAiReadToolDispatcher.js";
 import { WorkspaceReadToolNameMatcher } from "../matching/WorkspaceReadToolNameMatcher.js";
-import { WorkspaceFileReadOpenAiToolExecutor } from "../operation/WorkspaceFileReadOpenAiToolExecutor.js";
-import { WorkspaceListOpenAiToolExecutor } from "../operation/WorkspaceListOpenAiToolExecutor.js";
+import { WorkspaceFileReadOpenAiToolExecutor } from "../operation/file/WorkspaceFileReadOpenAiToolExecutor.js";
+import { WorkspaceListOpenAiToolExecutor } from "../operation/list/WorkspaceListOpenAiToolExecutor.js";
 
 export class WorkspaceOpenAiReadToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiReadToolDispatcher;
