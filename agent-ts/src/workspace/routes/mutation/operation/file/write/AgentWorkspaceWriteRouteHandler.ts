@@ -2,7 +2,7 @@ import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../../../../../http/request/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../../../../../http/response/model/HttpRouteResult.js";
 import type { WorkspaceManager } from "../../../../../core/manager/WorkspaceManager.js";
-import { AgentWorkspaceWriteRequestReader } from "../../../reader/file/AgentWorkspaceWriteRequestReader.js";
+import { AgentWorkspaceWriteRequestReader } from "../../../reader/file/write/AgentWorkspaceWriteRequestReader.js";
 
 export class AgentWorkspaceWriteRouteHandler {
   private readonly writeRequestReader: AgentWorkspaceWriteRequestReader;
