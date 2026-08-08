@@ -1,9 +1,9 @@
-import type { JsonObject, JsonValue } from "../../../../common/json/JsonTypes.js";
-import { AliasedValueReader } from "../../../../common/value/alias/AliasedValueReader.js";
-import { OpenAiToolJsonObjectArgumentReader } from "../readers/object/OpenAiToolJsonObjectArgumentReader.js";
-import { OpenAiToolBooleanArgumentReader } from "../readers/primitive/boolean/OpenAiToolBooleanArgumentReader.js";
-import { OpenAiToolNumberArgumentReader } from "../readers/primitive/number/OpenAiToolNumberArgumentReader.js";
-import { OpenAiToolStringArgumentReader } from "../readers/primitive/string/OpenAiToolStringArgumentReader.js";
+import type { JsonObject, JsonValue } from "../../../../../common/json/JsonTypes.js";
+import { AliasedValueReader } from "../../../../../common/value/alias/AliasedValueReader.js";
+import { OpenAiToolJsonObjectArgumentReader } from "../../readers/object/OpenAiToolJsonObjectArgumentReader.js";
+import { OpenAiToolBooleanArgumentReader } from "../../readers/primitive/boolean/OpenAiToolBooleanArgumentReader.js";
+import { OpenAiToolNumberArgumentReader } from "../../readers/primitive/number/OpenAiToolNumberArgumentReader.js";
+import { OpenAiToolStringArgumentReader } from "../../readers/primitive/string/OpenAiToolStringArgumentReader.js";
 
 export class OpenAiToolArgumentReader {
   static readRequiredString(args: JsonObject, key: string): string {

@@ -1,8 +1,8 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import { LatestUserQueryResolver } from "../../../../common/request/resolver/LatestUserQueryResolver.js";
-import { OpenAiToolArgumentReader } from "../../../../openai/tools/arguments/core/OpenAiToolArgumentReader.js";
-import { OpenAiToolTopKArgumentReader } from "../../../../openai/tools/arguments/core/OpenAiToolTopKArgumentReader.js";
+import { OpenAiToolArgumentReader } from "../../../../openai/tools/arguments/core/reader/OpenAiToolArgumentReader.js";
+import { OpenAiToolTopKArgumentReader } from "../../../../openai/tools/arguments/core/topK/OpenAiToolTopKArgumentReader.js";
 import type { MemoryReadRequest } from "../../../model/request/tool/read/MemoryReadRequest.js";
 
 export class MemoryReadRequestReader {

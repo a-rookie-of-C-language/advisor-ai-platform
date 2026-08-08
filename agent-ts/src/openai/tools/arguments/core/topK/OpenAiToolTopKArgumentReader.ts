@@ -1,5 +1,5 @@
-import type { JsonObject } from "../../../../common/json/JsonTypes.js";
-import { OpenAiToolArgumentReader } from "./OpenAiToolArgumentReader.js";
+import type { JsonObject } from "../../../../../common/json/JsonTypes.js";
+import { OpenAiToolArgumentReader } from "../reader/OpenAiToolArgumentReader.js";
 
 export class OpenAiToolTopKArgumentReader {
   static read(args: JsonObject, fallback: number): number {
