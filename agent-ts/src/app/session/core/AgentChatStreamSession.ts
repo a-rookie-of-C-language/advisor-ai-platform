@@ -6,8 +6,8 @@ import type { AgentMemoryTaskCompletionSubmitter } from "../../memory/execution/
 import type { AgentOpenAiToolFacade } from "../../openAi/core/AgentOpenAiToolFacade.js";
 import type { AgentToolExecutorFactory } from "../../openAi/factory/executor/AgentToolExecutorFactory.js";
 import type { AgentContextPipeline } from "./AgentContextPipeline.js";
-import { AgentMissingOpenAiApiKeyFallbackGate } from "../support/AgentMissingOpenAiApiKeyFallbackGate.js";
-import { AgentStreamErrorMessageResolver } from "../support/AgentStreamErrorMessageResolver.js";
+import { AgentMissingOpenAiApiKeyFallbackGate } from "../support/fallback/AgentMissingOpenAiApiKeyFallbackGate.js";
+import { AgentStreamErrorMessageResolver } from "../support/error/AgentStreamErrorMessageResolver.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
