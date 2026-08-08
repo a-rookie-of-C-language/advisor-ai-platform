@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.identity;
 
 import cn.edu.cqut.advisorplatform.dao.UserIdentityDao;
 import cn.edu.cqut.advisorplatform.dto.response.UserIdentityResponse;
