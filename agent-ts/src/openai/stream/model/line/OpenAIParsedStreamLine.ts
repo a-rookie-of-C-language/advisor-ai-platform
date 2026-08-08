@@ -1,4 +1,4 @@
-import type { OpenAIStreamToolCallDelta } from "./OpenAIStreamToolCallDelta.js";
+import type { OpenAIStreamToolCallDelta } from "../toolCall/OpenAIStreamToolCallDelta.js";
 
 export interface OpenAIParsedStreamLine {
   text: string;
