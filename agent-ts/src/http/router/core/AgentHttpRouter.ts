@@ -6,8 +6,8 @@ import type { AgentJsonResponseWriter } from "../../response/core/json/AgentJson
 import type { AgentChatStreamRouteHandler } from "../../routes/chat/AgentChatStreamRouteHandler.js";
 import type { AgentHealthRouteHandler } from "../../routes/health/AgentHealthRouteHandler.js";
 import type { AgentMcpRouteHandler } from "../../routes/mcp/core/AgentMcpRouteHandler.js";
-import { AgentHttpAuthenticatedRouteDispatcher } from "../dispatch/AgentHttpAuthenticatedRouteDispatcher.js";
-import { AgentHttpPublicRouteDispatcher } from "../dispatch/AgentHttpPublicRouteDispatcher.js";
+import { AgentHttpAuthenticatedRouteDispatcher } from "../dispatch/authenticated/AgentHttpAuthenticatedRouteDispatcher.js";
+import { AgentHttpPublicRouteDispatcher } from "../dispatch/public/AgentHttpPublicRouteDispatcher.js";
 import type { AgentRequestAuthorizer } from "../security/AgentRequestAuthorizer.js";
 
 export class AgentHttpRouter {

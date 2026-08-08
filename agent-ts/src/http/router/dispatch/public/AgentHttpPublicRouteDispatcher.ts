@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
-import type { AgentHttpRouteResultWriter } from "../../response/core/route/AgentHttpRouteResultWriter.js";
-import type { AgentHealthRouteHandler } from "../../routes/health/AgentHealthRouteHandler.js";
+import type { AgentHttpRouteResultWriter } from "../../../response/core/route/AgentHttpRouteResultWriter.js";
+import type { AgentHealthRouteHandler } from "../../../routes/health/AgentHealthRouteHandler.js";
 
 export class AgentHttpPublicRouteDispatcher {
   constructor(
