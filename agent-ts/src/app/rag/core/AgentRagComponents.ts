@@ -1,8 +1,8 @@
 import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { RagContextBuilder } from "../../../rag/context/core/RagContextBuilder.js";
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
-import { AgentRagClientFactory } from "../factory/AgentRagClientFactory.js";
-import { AgentRagFeatureComponentsFactory } from "../factory/AgentRagFeatureComponentsFactory.js";
+import { AgentRagClientFactory } from "../factory/client/AgentRagClientFactory.js";
+import { AgentRagFeatureComponentsFactory } from "../factory/components/AgentRagFeatureComponentsFactory.js";
 
 export class AgentRagComponents {
   readonly contextBuilder?: RagContextBuilder;
