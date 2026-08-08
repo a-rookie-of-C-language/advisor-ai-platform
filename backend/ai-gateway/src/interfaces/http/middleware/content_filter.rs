@@ -142,7 +142,9 @@ fn check_content(text: &str) -> bool {
 
 /// 查找命中的规则
 fn find_matching_rule(text: &str) -> Option<&'static ContentRule> {
-    CONTENT_RULES.iter().find(|rule| rule.pattern.is_match(text))
+    CONTENT_RULES
+        .iter()
+        .find(|rule| rule.pattern.is_match(text))
 }
 
 /// 内容安全过滤中间件
