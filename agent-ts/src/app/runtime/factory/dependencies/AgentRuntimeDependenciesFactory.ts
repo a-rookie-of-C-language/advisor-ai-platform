@@ -5,7 +5,7 @@ import type { AgentMemoryComponents } from "../../../memory/core/AgentMemoryComp
 import type { AgentRagComponents } from "../../../rag/core/AgentRagComponents.js";
 import type { AgentWebComponents } from "../../../web/core/AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "../../../workspace/core/AgentWorkspaceComponents.js";
-import { AgentRuntimeDependencies } from "../../model/AgentRuntimeDependencies.js";
+import { AgentRuntimeDependencies } from "../../model/dependencies/AgentRuntimeDependencies.js";
 import { AgentRuntimeClientFactory } from "../client/AgentRuntimeClientFactory.js";
 
 export class AgentRuntimeDependenciesFactory {

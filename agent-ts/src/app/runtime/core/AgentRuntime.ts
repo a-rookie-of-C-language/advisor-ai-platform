@@ -13,7 +13,7 @@ import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/Web
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
 import { AgentGraphHealthDescriptor } from "../../health/core/AgentGraphHealthDescriptor.js";
 import { AgentRequestIdResolver } from "../../request/core/AgentRequestIdResolver.js";
-import { AgentRuntimeComponents } from "../model/AgentRuntimeComponents.js";
+import { AgentRuntimeComponents } from "../model/components/AgentRuntimeComponents.js";
 
 export class AgentRuntime {
   private readonly components: AgentRuntimeComponents;
