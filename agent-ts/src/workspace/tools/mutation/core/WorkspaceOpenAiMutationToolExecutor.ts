@@ -4,8 +4,8 @@ import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js
 import { WorkspaceOpenAiMutationToolDispatcher } from "../execution/WorkspaceOpenAiMutationToolDispatcher.js";
 import { WorkspaceMutationToolNameMatcher } from "../matching/WorkspaceMutationToolNameMatcher.js";
 import { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/directory/WorkspaceCreateDirOpenAiToolExecutor.js";
-import { WorkspaceEditOpenAiToolExecutor } from "../operation/file/WorkspaceEditOpenAiToolExecutor.js";
-import { WorkspaceWriteOpenAiToolExecutor } from "../operation/file/WorkspaceWriteOpenAiToolExecutor.js";
+import { WorkspaceEditOpenAiToolExecutor } from "../operation/file/edit/WorkspaceEditOpenAiToolExecutor.js";
+import { WorkspaceWriteOpenAiToolExecutor } from "../operation/file/write/WorkspaceWriteOpenAiToolExecutor.js";
 
 export class WorkspaceOpenAiMutationToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiMutationToolDispatcher;

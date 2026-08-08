@@ -1,8 +1,8 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/directory/WorkspaceCreateDirOpenAiToolExecutor.js";
-import type { WorkspaceEditOpenAiToolExecutor } from "../operation/file/WorkspaceEditOpenAiToolExecutor.js";
-import type { WorkspaceWriteOpenAiToolExecutor } from "../operation/file/WorkspaceWriteOpenAiToolExecutor.js";
+import type { WorkspaceEditOpenAiToolExecutor } from "../operation/file/edit/WorkspaceEditOpenAiToolExecutor.js";
+import type { WorkspaceWriteOpenAiToolExecutor } from "../operation/file/write/WorkspaceWriteOpenAiToolExecutor.js";
 
 export class WorkspaceOpenAiMutationToolDispatcher {
   constructor(
