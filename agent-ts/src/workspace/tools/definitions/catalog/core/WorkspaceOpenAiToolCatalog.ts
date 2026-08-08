@@ -1,5 +1,5 @@
-import type { OpenAIChatTool } from "../../../../openai/chat/model/tool/OpenAIChatTool.js";
-import { WorkspaceOpenAiToolDefinitions } from "./WorkspaceOpenAiToolDefinitions.js";
+import type { OpenAIChatTool } from "../../../../../openai/chat/model/tool/OpenAIChatTool.js";
+import { WorkspaceOpenAiToolDefinitions } from "../definitions/WorkspaceOpenAiToolDefinitions.js";
 
 export class WorkspaceOpenAiToolCatalog {
   private readonly definitions = new WorkspaceOpenAiToolDefinitions();
