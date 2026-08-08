@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../common/json/JsonTypes.js";
-import type { ProtocolEvent } from "../../protocol/events/model/ProtocolEvent.js";
+import type { ProtocolEvent } from "../../protocol/events/model/protocol/ProtocolEvent.js";
 import { AgentCoreHealthReporter } from "../health/AgentCoreHealthReporter.js";
 import { AgentCoreExecutableLocator } from "../process/AgentCoreExecutableLocator.js";
 import { AgentCoreProcessRunner } from "../process/AgentCoreProcessRunner.js";
