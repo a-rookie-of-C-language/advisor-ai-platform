@@ -3,7 +3,7 @@ import type { WorkspaceListingBuilder } from "../../../files/read/list/Workspace
 import type { WorkspaceListing } from "../../../model/result/read/WorkspaceListing.js";
 import type { WorkspacePathGuard } from "../../../path/guard/WorkspacePathGuard.js";
 import type { WorkspaceSessionPathProvider } from "../../../path/session/WorkspaceSessionPathProvider.js";
-import { WorkspaceReadServiceComponentsFactory } from "../factory/WorkspaceReadServiceComponentsFactory.js";
+import { WorkspaceReadServiceComponentsFactory } from "../factory/components/WorkspaceReadServiceComponentsFactory.js";
 import type { WorkspaceReadServiceComponents } from "../model/WorkspaceReadServiceComponents.js";
 
 export class WorkspaceReadService {
