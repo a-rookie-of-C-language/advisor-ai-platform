@@ -5,7 +5,7 @@ import type { McpOpenAiToolBridge } from "../../../../mcp/openAi/core/McpOpenAiT
 import type { RagOpenAiToolBridge } from "../../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
 import type { WebOpenAiToolBridge } from "../../../../web/openAi/core/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
-import type { OpenAIChatTool } from "../../../chat/model/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../../chat/model/tool/OpenAIChatTool.js";
 import type { OpenAiToolExecutionResult } from "../../runtime/model/OpenAiToolExecutionResult.js";
 import { OpenAiToolRegistryComponents } from "./OpenAiToolRegistryComponents.js";
 

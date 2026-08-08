@@ -1,4 +1,4 @@
-import type { OpenAIChatMessage } from "../../../chat/model/OpenAIChatMessage.js";
+import type { OpenAIChatMessage } from "../../../chat/model/message/OpenAIChatMessage.js";
 import type { OpenAIToolCall } from "../model/OpenAIToolCall.js";
 
 export class OpenAIToolConversationAppender {

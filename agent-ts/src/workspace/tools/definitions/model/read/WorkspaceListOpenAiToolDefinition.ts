@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../../../../../openai/chat/model/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../../../../openai/chat/model/tool/OpenAIChatTool.js";
 
 export class WorkspaceListOpenAiToolDefinition {
   create(): OpenAIChatTool {

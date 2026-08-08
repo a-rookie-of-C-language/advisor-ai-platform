@@ -1,7 +1,7 @@
 import type { AgentConfig } from "../../../../config/model/AgentConfig.js";
 import type { OpenAIChatCompletionRequest } from "../model/OpenAIChatCompletionRequest.js";
-import type { OpenAIChatMessage } from "../../model/OpenAIChatMessage.js";
-import type { OpenAIChatTool } from "../../model/OpenAIChatTool.js";
+import type { OpenAIChatMessage } from "../../model/message/OpenAIChatMessage.js";
+import type { OpenAIChatTool } from "../../model/tool/OpenAIChatTool.js";
 
 export class OpenAIChatCompletionRequestBuilder {
   constructor(private readonly config: AgentConfig) {}

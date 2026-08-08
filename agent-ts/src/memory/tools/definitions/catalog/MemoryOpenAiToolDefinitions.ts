@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../../../../openai/chat/model/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../../../openai/chat/model/tool/OpenAIChatTool.js";
 import { MemoryReadOpenAiToolDefinition } from "../model/MemoryReadOpenAiToolDefinition.js";
 import { MemoryWriteOpenAiToolDefinition } from "../model/MemoryWriteOpenAiToolDefinition.js";
 

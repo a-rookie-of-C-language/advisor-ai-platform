@@ -1,5 +1,5 @@
 import type { McpOpenAiToolBridge } from "../../../../../mcp/openAi/core/McpOpenAiToolBridge.js";
-import type { OpenAIChatTool } from "../../../../chat/model/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../../../chat/model/tool/OpenAIChatTool.js";
 
 export class OpenAiMcpToolCatalogCollector {
   constructor(private readonly mcpOpenAiToolBridge?: McpOpenAiToolBridge) {}

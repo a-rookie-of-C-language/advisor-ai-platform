@@ -1,4 +1,4 @@
-import type { OpenAIChatTool } from "../../../chat/model/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../../../chat/model/tool/OpenAIChatTool.js";
 import type { OpenAIToolExecutor } from "./OpenAIToolRoundRunner.js";
 import type { OpenAIToolCall } from "../model/OpenAIToolCall.js";
 

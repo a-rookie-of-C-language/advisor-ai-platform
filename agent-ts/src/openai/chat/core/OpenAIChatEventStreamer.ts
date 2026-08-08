@@ -5,7 +5,7 @@ import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "../../tools/runt
 import type { OpenAIChatCompletionStreamer } from "../completion/core/OpenAIChatCompletionStreamer.js";
 import { OpenAIChatRoundEventFactory } from "../events/OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatMessageMapper } from "../mapping/OpenAIChatMessageMapper.js";
-import type { OpenAIChatTool } from "../model/OpenAIChatTool.js";
+import type { OpenAIChatTool } from "../model/tool/OpenAIChatTool.js";
 
 export class OpenAIChatEventStreamer {
   private readonly roundEventFactory = new OpenAIChatRoundEventFactory();
