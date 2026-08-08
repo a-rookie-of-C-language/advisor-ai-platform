@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.refresh;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

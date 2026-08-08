@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.refresh;
 
 import cn.edu.cqut.advisorplatform.entity.AuthRefreshTokenDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
