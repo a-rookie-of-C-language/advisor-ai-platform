@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.request;
+package cn.edu.cqut.advisorplatform.dto.request.auth;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

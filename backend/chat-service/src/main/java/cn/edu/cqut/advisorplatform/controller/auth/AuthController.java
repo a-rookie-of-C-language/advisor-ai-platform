@@ -1,10 +1,10 @@
 package cn.edu.cqut.advisorplatform.controller.auth;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
-import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;
-import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.auth.LoginRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.auth.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.auth.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.service.AuthService;
