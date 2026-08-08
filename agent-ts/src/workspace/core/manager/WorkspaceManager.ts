@@ -1,13 +1,13 @@
-import { WorkspaceMaintenanceService } from "../maintenance/core/WorkspaceMaintenanceService.js";
-import type { WorkspaceCacheCleanupResult } from "../model/result/maintenance/WorkspaceCacheCleanupResult.js";
-import type { WorkspaceStats } from "../model/result/maintenance/WorkspaceStats.js";
-import type { WorkspaceCreateDirResult } from "../model/result/mutation/directory/WorkspaceCreateDirResult.js";
-import type { WorkspaceEditResult } from "../model/result/mutation/file/WorkspaceEditResult.js";
-import type { WorkspaceWriteResult } from "../model/result/mutation/file/WorkspaceWriteResult.js";
-import type { WorkspaceListing } from "../model/result/read/WorkspaceListing.js";
-import { WorkspaceMutationService } from "../services/mutation/core/WorkspaceMutationService.js";
-import { WorkspaceReadService } from "../services/read/core/WorkspaceReadService.js";
-import { WorkspaceServiceFactory } from "./WorkspaceServiceFactory.js";
+import { WorkspaceMaintenanceService } from "../../maintenance/core/WorkspaceMaintenanceService.js";
+import type { WorkspaceCacheCleanupResult } from "../../model/result/maintenance/WorkspaceCacheCleanupResult.js";
+import type { WorkspaceStats } from "../../model/result/maintenance/WorkspaceStats.js";
+import type { WorkspaceCreateDirResult } from "../../model/result/mutation/directory/WorkspaceCreateDirResult.js";
+import type { WorkspaceEditResult } from "../../model/result/mutation/file/WorkspaceEditResult.js";
+import type { WorkspaceWriteResult } from "../../model/result/mutation/file/WorkspaceWriteResult.js";
+import type { WorkspaceListing } from "../../model/result/read/WorkspaceListing.js";
+import { WorkspaceMutationService } from "../../services/mutation/core/WorkspaceMutationService.js";
+import { WorkspaceReadService } from "../../services/read/core/WorkspaceReadService.js";
+import { WorkspaceServiceFactory } from "../factory/WorkspaceServiceFactory.js";
 
 export class WorkspaceManager {
   private readonly maintenanceService: WorkspaceMaintenanceService;

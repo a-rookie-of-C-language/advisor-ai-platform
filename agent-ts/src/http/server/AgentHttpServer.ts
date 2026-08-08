@@ -3,7 +3,7 @@ import type { AgentConfig } from "../../config/model/AgentConfig.js";
 import { AgentHttpServerComponents } from "./AgentHttpServerComponents.js";
 import type { AgentRuntime } from "../../app/runtime/core/AgentRuntime.js";
 import type { McpToolService } from "../../mcp/tools/core/service/McpToolService.js";
-import { WorkspaceManager } from "../../workspace/core/WorkspaceManager.js";
+import { WorkspaceManager } from "../../workspace/core/manager/WorkspaceManager.js";
 
 export class AgentHttpServer {
   private readonly components: AgentHttpServerComponents;

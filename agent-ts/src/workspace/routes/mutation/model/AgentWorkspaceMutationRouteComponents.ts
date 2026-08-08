@@ -1,5 +1,5 @@
 import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
-import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
 import { AgentWorkspaceCreateDirRouteHandler } from "../operation/directory/AgentWorkspaceCreateDirRouteHandler.js";
 import { AgentWorkspaceEditRouteHandler } from "../operation/file/AgentWorkspaceEditRouteHandler.js";
 import { AgentWorkspaceWriteRouteHandler } from "../operation/file/AgentWorkspaceWriteRouteHandler.js";

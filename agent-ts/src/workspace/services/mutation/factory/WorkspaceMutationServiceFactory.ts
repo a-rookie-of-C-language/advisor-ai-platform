@@ -1,4 +1,4 @@
-import type { WorkspaceServiceFactoryComponents } from "../../../core/WorkspaceServiceFactoryComponents.js";
+import type { WorkspaceServiceFactoryComponents } from "../../../core/factory/components/WorkspaceServiceFactoryComponents.js";
 import { WorkspaceDirectoryCreator } from "../../../files/mutation/directory/WorkspaceDirectoryCreator.js";
 import { WorkspaceFileEditor } from "../../../files/mutation/file/WorkspaceFileEditor.js";
 import { WorkspaceFileWriter } from "../../../files/mutation/file/WorkspaceFileWriter.js";

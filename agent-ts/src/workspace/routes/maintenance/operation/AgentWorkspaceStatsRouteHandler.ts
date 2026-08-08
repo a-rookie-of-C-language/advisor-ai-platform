@@ -1,6 +1,6 @@
 import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../../../http/response/model/HttpRouteResult.js";
-import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
 import { AgentWorkspaceScopedRouteRequestReader } from "../reader/AgentWorkspaceScopedRouteRequestReader.js";
 
 export class AgentWorkspaceStatsRouteHandler {

@@ -1,6 +1,6 @@
 import { WorkspaceCacheCleaner } from "../operation/WorkspaceCacheCleaner.js";
 import { WorkspaceMaintenanceService } from "../core/WorkspaceMaintenanceService.js";
-import type { WorkspaceServiceFactoryComponents } from "../../core/WorkspaceServiceFactoryComponents.js";
+import type { WorkspaceServiceFactoryComponents } from "../../core/factory/components/WorkspaceServiceFactoryComponents.js";
 import { WorkspaceStatsCollector } from "../operation/WorkspaceStatsCollector.js";
 
 export class WorkspaceMaintenanceServiceFactory {

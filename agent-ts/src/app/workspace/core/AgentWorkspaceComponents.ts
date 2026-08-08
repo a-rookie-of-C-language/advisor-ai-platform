@@ -1,5 +1,5 @@
 import type { AgentConfig } from "../../../config/model/AgentConfig.js";
-import type { WorkspaceManager } from "../../../workspace/core/WorkspaceManager.js";
+import type { WorkspaceManager } from "../../../workspace/core/manager/WorkspaceManager.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
 import { AgentWorkspaceFeatureComponentsFactory } from "../factory/AgentWorkspaceFeatureComponentsFactory.js";
 

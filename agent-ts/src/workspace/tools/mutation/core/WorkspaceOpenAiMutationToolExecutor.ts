@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
-import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
+import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
 import { WorkspaceOpenAiMutationToolDispatcher } from "../execution/WorkspaceOpenAiMutationToolDispatcher.js";
 import { WorkspaceMutationToolNameMatcher } from "../matching/WorkspaceMutationToolNameMatcher.js";
 import { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/directory/WorkspaceCreateDirOpenAiToolExecutor.js";
