@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.gateway.filter;
+package cn.edu.cqut.advisorplatform.gateway.filter.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

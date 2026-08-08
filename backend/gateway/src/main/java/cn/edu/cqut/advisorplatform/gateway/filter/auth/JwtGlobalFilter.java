@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.gateway.filter;
+package cn.edu.cqut.advisorplatform.gateway.filter.auth;
 
 import cn.edu.cqut.advisorplatform.common.trace.TraceHeaderConstants;
 import java.util.List;
