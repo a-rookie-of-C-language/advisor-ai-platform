@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.student;
 
 import cn.edu.cqut.advisorplatform.dao.StudentProfileDao;
 import cn.edu.cqut.advisorplatform.dto.request.StudentCreateRequest;

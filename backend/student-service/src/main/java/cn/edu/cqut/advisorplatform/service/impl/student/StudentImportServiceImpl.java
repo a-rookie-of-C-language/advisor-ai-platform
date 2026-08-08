@@ -1,9 +1,8 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.student;
 
 import cn.edu.cqut.advisorplatform.dto.response.ImportBatchResponse;
 import cn.edu.cqut.advisorplatform.dto.response.ImportResultResponse;
 import cn.edu.cqut.advisorplatform.service.StudentImportService;
-import cn.edu.cqut.advisorplatform.service.impl.student.StudentImportSupport;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
