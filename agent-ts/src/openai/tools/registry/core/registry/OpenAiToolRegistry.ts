@@ -6,7 +6,7 @@ import type { RagOpenAiToolBridge } from "../../../../../rag/openAi/bridge/RagOp
 import type { WebOpenAiToolBridge } from "../../../../../web/openAi/core/bridge/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
 import type { OpenAIChatTool } from "../../../../chat/model/tool/OpenAIChatTool.js";
-import type { OpenAiToolExecutionResult } from "../../../runtime/model/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../../../runtime/model/result/OpenAiToolExecutionResult.js";
 import { OpenAiToolRegistryComponents } from "../components/OpenAiToolRegistryComponents.js";
 
 export class OpenAiToolRegistry {

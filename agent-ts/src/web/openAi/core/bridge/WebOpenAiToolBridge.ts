@@ -1,7 +1,7 @@
 import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { OpenAIChatTool } from "../../../../openai/chat/model/tool/OpenAIChatTool.js";
 import { OpenAiToolResultFactory } from "../../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
-import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/result/OpenAiToolExecutionResult.js";
 import type { WebFetchClient } from "../../../fetch/core/WebFetchClient.js";
 import type { WebSearchClient } from "../../../search/core/WebSearchClient.js";
 import { WebOpenAiToolBridgeComponentsFactory } from "../../factory/WebOpenAiToolBridgeComponentsFactory.js";

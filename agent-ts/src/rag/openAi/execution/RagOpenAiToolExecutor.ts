@@ -3,7 +3,7 @@ import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import { LatestUserQueryResolver } from "../../../common/request/resolver/LatestUserQueryResolver.js";
 import { OpenAiToolArgumentReader } from "../../../openai/tools/arguments/core/reader/OpenAiToolArgumentReader.js";
 import { OpenAiToolTopKArgumentReader } from "../../../openai/tools/arguments/core/topK/OpenAiToolTopKArgumentReader.js";
-import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/result/OpenAiToolExecutionResult.js";
 import type { RagApiClient } from "../../api/core/RagApiClient.js";
 import { RagDocumentRanker } from "../../context/ranking/RagDocumentRanker.js";
 import { RagReadyDocumentSelector } from "../../context/selection/RagReadyDocumentSelector.js";

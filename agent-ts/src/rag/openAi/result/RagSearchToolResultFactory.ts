@@ -1,4 +1,4 @@
-import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/result/OpenAiToolExecutionResult.js";
 import type { RagDocument } from "../../context/model/RagDocument.js";
 
 export class RagSearchToolResultFactory {

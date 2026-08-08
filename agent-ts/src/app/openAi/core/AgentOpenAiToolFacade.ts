@@ -3,7 +3,7 @@ import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.
 import type { OpenAIChatTool } from "../../../openai/chat/model/tool/OpenAIChatTool.js";
 import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/registry/OpenAiToolRegistry.js";
 import { OpenAiToolResultFactory } from "../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
-import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
+import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/result/OpenAiToolExecutionResult.js";
 
 export class AgentOpenAiToolFacade {
   constructor(

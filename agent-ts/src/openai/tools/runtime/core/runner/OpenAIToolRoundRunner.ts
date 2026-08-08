@@ -2,8 +2,8 @@ import type { JsonObject } from "../../../../../common/json/types/JsonTypes.js";
 import type { OpenAIChatStreamEvent } from "../../../../../protocol/events/model/openai/OpenAIChatStreamEvent.js";
 import type { OpenAIChatMessage } from "../../../../chat/model/message/OpenAIChatMessage.js";
 import { OpenAIToolCallEventFactory } from "../../events/call/OpenAIToolCallEventFactory.js";
-import type { OpenAiToolExecutionResult } from "../../model/OpenAiToolExecutionResult.js";
-import type { OpenAIToolCall } from "../../model/OpenAIToolCall.js";
+import type { OpenAiToolExecutionResult } from "../../model/result/OpenAiToolExecutionResult.js";
+import type { OpenAIToolCall } from "../../model/call/OpenAIToolCall.js";
 import { OpenAIToolConversationAppender } from "../../state/conversation/OpenAIToolConversationAppender.js";
 import { OpenAIToolResultEventFactory } from "../../events/result/OpenAIToolResultEventFactory.js";
 
