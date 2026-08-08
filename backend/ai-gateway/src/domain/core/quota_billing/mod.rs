@@ -5,7 +5,7 @@ pub mod GroupByDimension;
 #[path = "model/policy/QuotaPolicy.rs"]
 pub mod QuotaPolicy;
 #[allow(non_snake_case)]
-#[path = "dao/QuotaPolicyDao.rs"]
+#[path = "dao/policy/QuotaPolicyDao.rs"]
 pub mod QuotaPolicyDao;
 #[allow(non_snake_case)]
 #[path = "model/streaming/StreamingCompletion.rs"]
@@ -14,7 +14,7 @@ pub mod StreamingCompletion;
 #[path = "model/usage/detail/TokenUsage.rs"]
 pub mod TokenUsage;
 #[allow(non_snake_case)]
-#[path = "dao/TokenUsageDao.rs"]
+#[path = "dao/usage/TokenUsageDao.rs"]
 pub mod TokenUsageDao;
 #[allow(non_snake_case)]
 #[path = "query/UsageQuery.rs"]
