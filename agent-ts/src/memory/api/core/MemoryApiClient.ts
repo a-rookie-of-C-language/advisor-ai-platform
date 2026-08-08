@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import type { SessionSummary } from "../../../common/session/SessionSummary.js";
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import { MemoryApiArrayResponseReader } from "../reader/MemoryApiArrayResponseReader.js";
 import { MemoryApiEndpointFactory } from "../factory/endpoint/MemoryApiEndpointFactory.js";
 import { MemoryApiHttpClient } from "../http/MemoryApiHttpClient.js";

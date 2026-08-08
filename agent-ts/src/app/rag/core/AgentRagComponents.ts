@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { RagContextBuilder } from "../../../rag/context/core/RagContextBuilder.js";
 import type { RagOpenAiToolBridge } from "../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
 import { AgentRagClientFactory } from "../factory/AgentRagClientFactory.js";

@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { MemoryContextBuilder } from "../../../memory/context/core/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../../memory/task/submitter/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../../openai/chat/core/client/OpenAIChatClient.js";

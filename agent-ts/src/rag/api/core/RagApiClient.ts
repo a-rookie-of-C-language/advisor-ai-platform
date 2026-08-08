@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { RagDocument } from "../../context/model/RagDocument.js";
 import { RagApiHttpClient } from "../http/RagApiHttpClient.js";
 

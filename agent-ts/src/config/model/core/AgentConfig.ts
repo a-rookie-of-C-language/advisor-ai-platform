@@ -1,5 +1,5 @@
-import { AgentConfigFactory } from "../factory/AgentConfigFactory.js";
-import type { AgentConfigValues } from "./AgentConfigValues.js";
+import { AgentConfigFactory } from "../../factory/AgentConfigFactory.js";
+import type { AgentConfigValues } from "../values/AgentConfigValues.js";
 
 export class AgentConfig {
   readonly host: string;

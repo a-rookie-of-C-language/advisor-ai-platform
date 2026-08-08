@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import { AgentMcpComponents } from "../../mcp/core/AgentMcpComponents.js";
 import { AgentMemoryComponents } from "../../memory/core/AgentMemoryComponents.js";
 import { AgentRagComponents } from "../../rag/core/AgentRagComponents.js";

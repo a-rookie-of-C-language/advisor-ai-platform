@@ -1,4 +1,4 @@
-import type { AgentConfig } from "../../../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../../../config/model/core/AgentConfig.js";
 import type { TavilySearchResponse } from "../model/TavilySearchResponse.js";
 
 export class TavilySearchHttpClient {

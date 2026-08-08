@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import type { AgentConfig } from "../../../config/model/AgentConfig.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 
 export class AgentRequestAuthorizer {
   constructor(private readonly config: AgentConfig) {}
