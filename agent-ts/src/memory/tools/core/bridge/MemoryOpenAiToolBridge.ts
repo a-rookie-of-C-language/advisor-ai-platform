@@ -5,7 +5,7 @@ import { OpenAiToolResultFactory } from "../../../../openai/tools/runtime/factor
 import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { MemoryApiClient } from "../../../api/core/MemoryApiClient.js";
 import { MemoryOpenAiToolBridgeComponentsFactory } from "../factory/bridge/MemoryOpenAiToolBridgeComponentsFactory.js";
-import type { MemoryOpenAiToolBridgeComponents } from "../model/MemoryOpenAiToolBridgeComponents.js";
+import type { MemoryOpenAiToolBridgeComponents } from "../model/bridge/MemoryOpenAiToolBridgeComponents.js";
 
 export class MemoryOpenAiToolBridge {
   private readonly components: MemoryOpenAiToolBridgeComponents;

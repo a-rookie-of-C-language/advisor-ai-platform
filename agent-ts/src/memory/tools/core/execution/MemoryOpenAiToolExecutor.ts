@@ -3,7 +3,7 @@ import type { ChatStreamRequest } from "../../../../common/model/ChatStreamReque
 import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import type { MemoryApiClient } from "../../../api/core/MemoryApiClient.js";
 import { MemoryOpenAiToolComponentsFactory } from "../factory/tool/MemoryOpenAiToolComponentsFactory.js";
-import type { MemoryOpenAiToolComponents } from "../model/MemoryOpenAiToolComponents.js";
+import type { MemoryOpenAiToolComponents } from "../model/tool/MemoryOpenAiToolComponents.js";
 
 export class MemoryOpenAiToolExecutor {
   private readonly components: MemoryOpenAiToolComponents;
