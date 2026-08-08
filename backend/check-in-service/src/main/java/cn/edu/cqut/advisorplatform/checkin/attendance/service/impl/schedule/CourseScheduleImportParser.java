@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.checkin.attendance.service.impl;
+package cn.edu.cqut.advisorplatform.checkin.attendance.service.impl.schedule;
 
 import cn.edu.cqut.advisorplatform.checkin.attendance.dto.CourseScheduleImportRow;
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
