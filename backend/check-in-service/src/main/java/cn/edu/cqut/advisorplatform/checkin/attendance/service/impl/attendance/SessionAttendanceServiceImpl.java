@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.checkin.attendance.service.impl;
+package cn.edu.cqut.advisorplatform.checkin.attendance.service.impl.attendance;
 
 import cn.edu.cqut.advisorplatform.checkin.attendance.dao.ClassSessionDao;
 import cn.edu.cqut.advisorplatform.checkin.attendance.dao.SessionAttendanceDao;
