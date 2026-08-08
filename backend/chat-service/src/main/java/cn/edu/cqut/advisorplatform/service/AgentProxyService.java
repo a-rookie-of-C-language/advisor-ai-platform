@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service;
 
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import java.io.IOException;
 import java.io.OutputStream;

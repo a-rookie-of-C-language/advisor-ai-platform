@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl.agent;
 
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.service.AgentProxyService;
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;

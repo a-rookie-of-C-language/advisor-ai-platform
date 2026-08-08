@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.request;
+package cn.edu.cqut.advisorplatform.dto.request.chat;
 
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;

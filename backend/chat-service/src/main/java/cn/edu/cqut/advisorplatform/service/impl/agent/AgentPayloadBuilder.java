@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl.agent;
 
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamRequestDTO;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.request;
+package cn.edu.cqut.advisorplatform.dto.request.chat;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;

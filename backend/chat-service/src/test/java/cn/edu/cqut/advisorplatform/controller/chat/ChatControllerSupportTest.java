@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.controller.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamMessageDTO;
-import cn.edu.cqut.advisorplatform.dto.request.ChatStreamRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamMessageDTO;
+import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamRequestDTO;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
