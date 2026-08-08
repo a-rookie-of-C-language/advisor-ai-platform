@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+package cn.edu.cqut.advisorplatform.controller.memory;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;

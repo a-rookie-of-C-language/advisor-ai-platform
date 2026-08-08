@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+package cn.edu.cqut.advisorplatform.controller.auth;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.dto.request.LoginRequestDTO;

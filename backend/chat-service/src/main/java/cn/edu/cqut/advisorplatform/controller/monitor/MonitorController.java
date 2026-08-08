@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+package cn.edu.cqut.advisorplatform.controller.monitor;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorRealtimeResponseDTO;
