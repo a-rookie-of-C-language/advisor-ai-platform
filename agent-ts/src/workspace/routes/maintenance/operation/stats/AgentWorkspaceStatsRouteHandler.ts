@@ -1,7 +1,7 @@
-import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
-import type { HttpRouteResult } from "../../../../http/response/model/HttpRouteResult.js";
-import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
-import { AgentWorkspaceScopedRouteRequestReader } from "../reader/AgentWorkspaceScopedRouteRequestReader.js";
+import type { AgentHttpRequestReader } from "../../../../../http/request/AgentHttpRequestReader.js";
+import type { HttpRouteResult } from "../../../../../http/response/model/HttpRouteResult.js";
+import type { WorkspaceManager } from "../../../../core/manager/WorkspaceManager.js";
+import { AgentWorkspaceScopedRouteRequestReader } from "../../reader/AgentWorkspaceScopedRouteRequestReader.js";
 
 export class AgentWorkspaceStatsRouteHandler {
   private readonly scopedRequestReader: AgentWorkspaceScopedRouteRequestReader;
