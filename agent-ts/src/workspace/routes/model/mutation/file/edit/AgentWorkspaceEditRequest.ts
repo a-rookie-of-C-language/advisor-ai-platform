@@ -1,4 +1,4 @@
-import type { AgentWorkspaceScope } from "../../scope/AgentWorkspaceScope.js";
+import type { AgentWorkspaceScope } from "../../../scope/AgentWorkspaceScope.js";
 
 export interface AgentWorkspaceEditRequest {
   isFinal: boolean;

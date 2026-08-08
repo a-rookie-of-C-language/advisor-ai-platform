@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 import type { AgentHttpRequestReader } from "../../../../../http/request/AgentHttpRequestReader.js";
-import type { AgentWorkspaceEditRequest } from "../../../model/mutation/file/AgentWorkspaceEditRequest.js";
+import type { AgentWorkspaceEditRequest } from "../../../model/mutation/file/edit/AgentWorkspaceEditRequest.js";
 
 export class AgentWorkspaceEditRequestReader {
   constructor(private readonly requestReader: AgentHttpRequestReader) {}
