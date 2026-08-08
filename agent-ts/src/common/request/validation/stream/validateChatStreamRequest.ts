@@ -1,6 +1,6 @@
-import type { ChatStreamRequest } from "../../model/ChatStreamRequest.js";
-import { ChatMessageListValidator } from "./ChatMessageListValidator.js";
-import { ChatStreamRequestFieldReader } from "../reader/ChatStreamRequestFieldReader.js";
+import type { ChatStreamRequest } from "../../../model/ChatStreamRequest.js";
+import { ChatMessageListValidator } from "../message/ChatMessageListValidator.js";
+import { ChatStreamRequestFieldReader } from "../../reader/ChatStreamRequestFieldReader.js";
 
 const fieldReader = new ChatStreamRequestFieldReader();
 const messageListValidator = new ChatMessageListValidator();
