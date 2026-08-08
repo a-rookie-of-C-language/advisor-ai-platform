@@ -4,7 +4,7 @@ use command::runner::CoreCommandRunner;
 
 mod command;
 mod protocol;
-mod sse_event_serializer;
+mod sse;
 
 fn main() -> Result<()> {
     let command = CoreCommandReader::read()?;

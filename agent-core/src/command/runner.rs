@@ -1,5 +1,5 @@
 use crate::protocol::event_input::ProtocolEventInput;
-use crate::sse_event_serializer::SseEventSerializer;
+use crate::sse::event_serializer::SseEventSerializer;
 use anyhow::{anyhow, Result};
 use serde_json::json;
 use std::io::{self, Read};
