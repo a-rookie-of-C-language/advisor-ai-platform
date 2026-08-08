@@ -1,7 +1,7 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { OpenAIChatTool } from "../../../../openai/chat/model/tool/OpenAIChatTool.js";
-import type { OpenAIToolExecutor } from "../../../../openai/tools/runtime/core/OpenAIToolRoundRunner.js";
+import type { OpenAIToolExecutor } from "../../../../openai/tools/runtime/core/runner/OpenAIToolRoundRunner.js";
 import type { AgentOpenAiToolFacade } from "../../core/AgentOpenAiToolFacade.js";
 
 export class AgentToolExecutorFactory {
