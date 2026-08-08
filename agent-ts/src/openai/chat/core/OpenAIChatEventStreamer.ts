@@ -3,7 +3,7 @@ import type { OpenAIChatStreamEvent } from "../../../protocol/events/model/opena
 import { OpenAIToolRoundGate } from "../../tools/runtime/core/OpenAIToolRoundGate.js";
 import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "../../tools/runtime/core/OpenAIToolRoundRunner.js";
 import type { OpenAIChatCompletionStreamer } from "../completion/core/OpenAIChatCompletionStreamer.js";
-import { OpenAIChatRoundEventFactory } from "../events/OpenAIChatRoundEventFactory.js";
+import { OpenAIChatRoundEventFactory } from "../events/round/OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatMessageMapper } from "../mapping/OpenAIChatMessageMapper.js";
 import type { OpenAIChatTool } from "../model/tool/OpenAIChatTool.js";
 
