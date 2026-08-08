@@ -1,8 +1,8 @@
-import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
-import type { MemoryContextBuilder } from "../../../memory/context/core/MemoryContextBuilder.js";
-import type { RagContextBuilder } from "../../../rag/context/core/RagContextBuilder.js";
-import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
-import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
+import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { MemoryContextBuilder } from "../../../../memory/context/core/MemoryContextBuilder.js";
+import type { RagContextBuilder } from "../../../../rag/context/core/RagContextBuilder.js";
+import type { WebFetchContextBuilder } from "../../../../web/context/fetch/core/WebFetchContextBuilder.js";
+import type { WebSearchContextBuilder } from "../../../../web/context/search/core/WebSearchContextBuilder.js";
 
 export class AgentContextPipeline {
   constructor(
