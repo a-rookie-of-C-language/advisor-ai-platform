@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.response;
+package cn.edu.cqut.advisorplatform.dto.response.workspace;
 
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;

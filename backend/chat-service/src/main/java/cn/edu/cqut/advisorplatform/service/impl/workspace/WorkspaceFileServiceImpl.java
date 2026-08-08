@@ -4,7 +4,7 @@ import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
 import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dao.WorkspaceFileDao;
-import cn.edu.cqut.advisorplatform.dto.response.WorkspaceFileResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.workspace.WorkspaceFileResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.entity.WorkspaceFileDO;

@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.controller.workspace;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.WorkspaceFileResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.workspace.WorkspaceFileResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.service.WorkspaceFileService;
 import java.util.List;
