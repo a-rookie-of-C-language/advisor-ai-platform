@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { ProtocolEvent } from "../../protocol/events/model/protocol/ProtocolEvent.js";
 import { AgentCoreHealthReporter } from "../health/AgentCoreHealthReporter.js";
 import { AgentCoreExecutableLocator } from "../process/locator/AgentCoreExecutableLocator.js";

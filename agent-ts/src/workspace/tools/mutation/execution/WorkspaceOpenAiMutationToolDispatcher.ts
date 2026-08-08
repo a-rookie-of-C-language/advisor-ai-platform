@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/directory/WorkspaceCreateDirOpenAiToolExecutor.js";
 import type { WorkspaceEditOpenAiToolExecutor } from "../operation/file/edit/WorkspaceEditOpenAiToolExecutor.js";

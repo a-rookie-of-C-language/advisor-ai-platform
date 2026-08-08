@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { McpServerConfig } from "../../../config/model/McpServerConfig.js";
 import type { JsonRpcResponse } from "../../../jsonRpc/model/JsonRpcResponse.js";
 import { DirectHttpMcpHeadersFactory } from "../http/headers/DirectHttpMcpHeadersFactory.js";

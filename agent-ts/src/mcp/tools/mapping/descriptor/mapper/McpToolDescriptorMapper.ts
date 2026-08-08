@@ -1,5 +1,5 @@
-import { JsonObjectReader } from "../../../../../common/json/JsonObjectReader.js";
-import type { JsonObject } from "../../../../../common/json/JsonTypes.js";
+import { JsonObjectReader } from "../../../../../common/json/reader/JsonObjectReader.js";
+import type { JsonObject } from "../../../../../common/json/types/JsonTypes.js";
 import type { McpToolDescriptor } from "../../../model/descriptor/McpToolDescriptor.js";
 
 export class McpToolDescriptorMapper {

@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { AgentCoreProcessRunner } from "../process/runner/AgentCoreProcessRunner.js";
 
 export class AgentCoreHealthReporter {

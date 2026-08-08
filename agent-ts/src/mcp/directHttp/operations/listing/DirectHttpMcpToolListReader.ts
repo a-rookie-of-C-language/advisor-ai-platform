@@ -1,4 +1,4 @@
-import { JsonObjectReader } from "../../../../common/json/JsonObjectReader.js";
+import { JsonObjectReader } from "../../../../common/json/reader/JsonObjectReader.js";
 import type { McpJsonRpcRequestFactory } from "../../../jsonRpc/factory/McpJsonRpcRequestFactory.js";
 import type { McpToolDescriptor } from "../../../tools/model/descriptor/McpToolDescriptor.js";
 import { McpToolDescriptorMapper } from "../../../tools/mapping/descriptor/mapper/McpToolDescriptorMapper.js";

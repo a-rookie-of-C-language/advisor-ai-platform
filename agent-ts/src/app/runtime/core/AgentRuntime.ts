@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import { validateChatStreamRequest } from "../../../common/request/validation/validateChatStreamRequest.js";
 import type { AgentConfig } from "../../../config/model/AgentConfig.js";
 import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";

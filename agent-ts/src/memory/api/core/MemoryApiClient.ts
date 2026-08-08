@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import type { SessionSummary } from "../../../common/session/SessionSummary.js";
 import type { AgentConfig } from "../../../config/model/AgentConfig.js";
 import { MemoryApiArrayResponseReader } from "../reader/MemoryApiArrayResponseReader.js";

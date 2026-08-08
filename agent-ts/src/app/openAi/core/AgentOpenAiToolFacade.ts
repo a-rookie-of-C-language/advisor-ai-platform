@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
 import type { OpenAIChatTool } from "../../../openai/chat/model/tool/OpenAIChatTool.js";
 import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/registry/OpenAiToolRegistry.js";

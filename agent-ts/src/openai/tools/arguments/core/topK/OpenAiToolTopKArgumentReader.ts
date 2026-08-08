@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../../../common/json/types/JsonTypes.js";
 import { OpenAiToolArgumentReader } from "../reader/OpenAiToolArgumentReader.js";
 
 export class OpenAiToolTopKArgumentReader {

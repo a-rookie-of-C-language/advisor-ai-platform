@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { SseWriter } from "../../../sse/writer/SseWriter.js";
 
 export class AgentStreamEventEmitter {

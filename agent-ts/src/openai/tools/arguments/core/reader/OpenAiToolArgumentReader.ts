@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue } from "../../../../../common/json/JsonTypes.js";
+import type { JsonObject, JsonValue } from "../../../../../common/json/types/JsonTypes.js";
 import { AliasedValueReader } from "../../../../../common/value/alias/AliasedValueReader.js";
 import { OpenAiToolJsonObjectArgumentReader } from "../../readers/object/OpenAiToolJsonObjectArgumentReader.js";
 import { OpenAiToolBooleanArgumentReader } from "../../readers/primitive/boolean/OpenAiToolBooleanArgumentReader.js";

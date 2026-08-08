@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../../../common/json/JsonTypes.js";
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 
 export class OpenAIToolArgumentParser {
   static parse(rawArguments: string): JsonObject {
