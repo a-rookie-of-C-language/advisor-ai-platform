@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.memory;
 
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;

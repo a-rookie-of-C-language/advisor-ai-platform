@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.memory;
 
 import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
 import cn.edu.cqut.advisorplatform.dto.response.MemoryTaskResponseDTO;

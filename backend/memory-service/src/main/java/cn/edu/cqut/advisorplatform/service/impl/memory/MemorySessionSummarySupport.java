@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.memory;
 
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
