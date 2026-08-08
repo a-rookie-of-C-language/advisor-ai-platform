@@ -2,8 +2,8 @@ import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import { WebOpenAiToolBridge } from "../../../web/openAi/core/bridge/WebOpenAiToolBridge.js";
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
-import { AgentWebClientsFactory } from "../factory/AgentWebClientsFactory.js";
-import { AgentWebContextBuildersFactory } from "../factory/AgentWebContextBuildersFactory.js";
+import { AgentWebClientsFactory } from "../factory/clients/AgentWebClientsFactory.js";
+import { AgentWebContextBuildersFactory } from "../factory/builders/AgentWebContextBuildersFactory.js";
 
 export class AgentWebComponents {
   readonly fetchContextBuilder?: WebFetchContextBuilder;
