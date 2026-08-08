@@ -2,8 +2,8 @@ import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { MemoryContextBuilder } from "../../../memory/context/core/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../../memory/task/submitter/MemoryTaskSubmitter.js";
 import type { MemoryOpenAiToolBridge } from "../../../memory/tools/core/bridge/MemoryOpenAiToolBridge.js";
-import { AgentMemoryClientFactory } from "../factory/AgentMemoryClientFactory.js";
-import { AgentMemoryFeatureComponentsFactory } from "../factory/AgentMemoryFeatureComponentsFactory.js";
+import { AgentMemoryClientFactory } from "../factory/client/AgentMemoryClientFactory.js";
+import { AgentMemoryFeatureComponentsFactory } from "../factory/components/AgentMemoryFeatureComponentsFactory.js";
 
 export class AgentMemoryComponents {
   readonly contextBuilder?: MemoryContextBuilder;
