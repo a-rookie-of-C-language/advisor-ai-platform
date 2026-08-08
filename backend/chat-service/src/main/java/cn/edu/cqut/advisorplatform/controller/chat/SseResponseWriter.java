@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+package cn.edu.cqut.advisorplatform.controller.chat;
 
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;

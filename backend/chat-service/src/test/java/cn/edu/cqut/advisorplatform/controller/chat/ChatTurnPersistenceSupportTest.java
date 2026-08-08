@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.controller;
+package cn.edu.cqut.advisorplatform.controller.chat;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
