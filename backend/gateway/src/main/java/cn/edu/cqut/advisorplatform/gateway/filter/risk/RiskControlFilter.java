@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.gateway.filter;
+package cn.edu.cqut.advisorplatform.gateway.filter.risk;
 
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;

@@ -1,14 +1,14 @@
-package cn.edu.cqut.advisorplatform.gateway.filter;
+package cn.edu.cqut.advisorplatform.gateway.filter.risk;
 
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-class RiskOutputCheckClient {
+class RiskInputCheckClient {
 
   private final WebClient webClient;
-  private final RiskResponseRequestFactory requestFactory = new RiskResponseRequestFactory();
+  private final RiskControlRequestFactory requestFactory = new RiskControlRequestFactory();
 
-  RiskOutputCheckClient(WebClient webClient) {
+  RiskInputCheckClient(WebClient webClient) {
     this.webClient = webClient;
   }
 
@@ -16,9 +16,12 @@ class RiskOutputCheckClient {
       String riskControlServiceUrl,
       String internalServiceToken,
       String userId,
+      String sessionId,
+      String ipAddress,
       String path,
-      String content) {
-    RiskCheckRequest request = requestFactory.outputRequest(userId, path, content);
+      String requestBody) {
+    RiskCheckRequest request =
+        requestFactory.inputRequest(userId, sessionId, ipAddress, path, requestBody);
 
     return webClient
         .post()

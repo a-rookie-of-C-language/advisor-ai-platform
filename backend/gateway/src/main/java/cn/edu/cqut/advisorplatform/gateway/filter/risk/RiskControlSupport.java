@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.gateway.filter;
+package cn.edu.cqut.advisorplatform.gateway.filter.risk;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;

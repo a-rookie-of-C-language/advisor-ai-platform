@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.gateway.filter;
+package cn.edu.cqut.advisorplatform.gateway.filter.risk;
 
 public class RiskCheckRequest {
   private Long userId;
