@@ -1,6 +1,6 @@
 import type { MemoryApiClient } from "../../../api/core/MemoryApiClient.js";
-import { MemoryReadRequestReader } from "../../../request/tool/MemoryReadRequestReader.js";
-import { MemoryWriteRequestReader } from "../../../request/tool/MemoryWriteRequestReader.js";
+import { MemoryReadRequestReader } from "../../../request/tool/read/MemoryReadRequestReader.js";
+import { MemoryWriteRequestReader } from "../../../request/tool/write/MemoryWriteRequestReader.js";
 import { MemoryOpenAiToolDispatcher } from "../../execution/dispatch/MemoryOpenAiToolDispatcher.js";
 import { MemoryReadOpenAiToolExecutor } from "../../execution/executor/MemoryReadOpenAiToolExecutor.js";
 import { MemoryToolResultFormatter } from "../../execution/formatting/MemoryToolResultFormatter.js";
