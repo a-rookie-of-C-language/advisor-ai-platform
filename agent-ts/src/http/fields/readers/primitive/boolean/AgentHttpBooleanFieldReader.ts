@@ -1,4 +1,4 @@
-import { BooleanStringReader } from "../../../../../common/value/BooleanStringReader.js";
+import { BooleanStringReader } from "../../../../../common/value/boolean/BooleanStringReader.js";
 import { WorkspaceError } from "../../../../../workspace/model/error/WorkspaceError.js";
 
 export class AgentHttpBooleanFieldReader {

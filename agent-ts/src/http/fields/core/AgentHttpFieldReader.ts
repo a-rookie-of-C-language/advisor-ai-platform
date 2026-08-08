@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../../common/json/JsonTypes.js";
-import { AliasedValueReader } from "../../../common/value/AliasedValueReader.js";
+import { AliasedValueReader } from "../../../common/value/alias/AliasedValueReader.js";
 import { AgentHttpJsonObjectFieldReader } from "../readers/object/AgentHttpJsonObjectFieldReader.js";
 import { AgentHttpBooleanFieldReader } from "../readers/primitive/boolean/AgentHttpBooleanFieldReader.js";
 import { AgentHttpNumberFieldReader } from "../readers/primitive/number/AgentHttpNumberFieldReader.js";
