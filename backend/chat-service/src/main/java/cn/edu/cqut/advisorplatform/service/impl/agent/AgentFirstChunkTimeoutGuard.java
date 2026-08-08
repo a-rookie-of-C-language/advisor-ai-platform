@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.agent;
 
 import java.io.IOException;
 import java.io.InputStream;

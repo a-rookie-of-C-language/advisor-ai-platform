@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.agent;
 
 import cn.edu.cqut.advisorplatform.service.model.ChatStreamProxyResult;
 import java.io.IOException;

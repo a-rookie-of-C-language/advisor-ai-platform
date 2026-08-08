@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.agent;
 
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
