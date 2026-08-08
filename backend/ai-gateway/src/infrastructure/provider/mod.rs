@@ -2,7 +2,7 @@
 #[path = "routing/DefaultProviderRouter.rs"]
 pub mod DefaultProviderRouter;
 #[allow(non_snake_case)]
-#[path = "model/OpenAIChatCompletionRequest.rs"]
+#[path = "model/request/OpenAIChatCompletionRequest.rs"]
 pub mod OpenAIChatCompletionRequest;
 #[allow(non_snake_case)]
 #[path = "gateway/OpenAICompatibleGateway.rs"]
@@ -11,7 +11,7 @@ pub mod OpenAICompatibleGateway;
 #[path = "parsing/completion/OpenAICompletionResponseParser.rs"]
 pub mod OpenAICompletionResponseParser;
 #[allow(non_snake_case)]
-#[path = "model/OpenAIRequestBody.rs"]
+#[path = "model/body/OpenAIRequestBody.rs"]
 pub mod OpenAIRequestBody;
 #[allow(non_snake_case)]
 #[path = "parsing/stream/OpenAIStreamResponseReader.rs"]
