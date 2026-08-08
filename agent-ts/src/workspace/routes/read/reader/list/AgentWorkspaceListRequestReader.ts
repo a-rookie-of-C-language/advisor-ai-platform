@@ -1,5 +1,5 @@
-import type { AgentHttpRequestReader } from "../../../../http/request/AgentHttpRequestReader.js";
-import type { AgentWorkspaceListRequest } from "../../model/read/list/AgentWorkspaceListRequest.js";
+import type { AgentHttpRequestReader } from "../../../../../http/request/AgentHttpRequestReader.js";
+import type { AgentWorkspaceListRequest } from "../../../model/read/list/AgentWorkspaceListRequest.js";
 
 export class AgentWorkspaceListRequestReader {
   constructor(private readonly requestReader: AgentHttpRequestReader) {}

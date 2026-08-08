@@ -1,7 +1,7 @@
 import type { AgentHttpRequestReader } from "../../../../../http/request/AgentHttpRequestReader.js";
 import type { HttpRouteResult } from "../../../../../http/response/model/HttpRouteResult.js";
 import type { WorkspaceManager } from "../../../../core/manager/WorkspaceManager.js";
-import { AgentWorkspaceListRequestReader } from "../../reader/AgentWorkspaceListRequestReader.js";
+import { AgentWorkspaceListRequestReader } from "../../reader/list/AgentWorkspaceListRequestReader.js";
 
 export class AgentWorkspaceListRouteHandler {
   private readonly listRequestReader: AgentWorkspaceListRequestReader;
