@@ -1,4 +1,4 @@
-import type { McpServerConfig } from "../model/McpServerConfig.js";
+import type { McpServerConfig } from "../../model/McpServerConfig.js";
 
 export class McpSupportedConfigSelector {
   select(configs: McpServerConfig[]): McpServerConfig[] {
