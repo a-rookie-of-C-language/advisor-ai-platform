@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.riskcontrol.service;
+package cn.edu.cqut.advisorplatform.riskcontrol.service.filter;
 
 import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserBehaviorStatDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserViolationDao;

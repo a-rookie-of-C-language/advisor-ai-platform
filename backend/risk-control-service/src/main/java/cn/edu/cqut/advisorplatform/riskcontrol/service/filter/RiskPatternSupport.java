@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.riskcontrol.service;
+package cn.edu.cqut.advisorplatform.riskcontrol.service.filter;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;

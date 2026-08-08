@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.riskcontrol.service;
+package cn.edu.cqut.advisorplatform.riskcontrol.service.filter;
 
 import cn.edu.cqut.advisorplatform.riskcontrol.dao.RateLimitDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
