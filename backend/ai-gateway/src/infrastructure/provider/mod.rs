@@ -14,8 +14,8 @@ pub mod OpenAICompletionResponseParser;
 #[path = "model/body/OpenAIRequestBody.rs"]
 pub mod OpenAIRequestBody;
 #[allow(non_snake_case)]
-#[path = "parsing/stream/OpenAIStreamResponseReader.rs"]
+#[path = "parsing/stream/response/OpenAIStreamResponseReader.rs"]
 pub mod OpenAIStreamResponseReader;
 #[allow(non_snake_case)]
-#[path = "parsing/stream/OpenAIStreamUsageParser.rs"]
+#[path = "parsing/stream/usage/OpenAIStreamUsageParser.rs"]
 pub mod OpenAIStreamUsageParser;
