@@ -3,9 +3,9 @@ import type { ChatStreamRequest } from "../../../../common/model/ChatStreamReque
 import type { WorkspaceManager } from "../../../core/WorkspaceManager.js";
 import { WorkspaceOpenAiMutationToolDispatcher } from "../execution/WorkspaceOpenAiMutationToolDispatcher.js";
 import { WorkspaceMutationToolNameMatcher } from "../matching/WorkspaceMutationToolNameMatcher.js";
-import { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/WorkspaceCreateDirOpenAiToolExecutor.js";
-import { WorkspaceEditOpenAiToolExecutor } from "../operation/WorkspaceEditOpenAiToolExecutor.js";
-import { WorkspaceWriteOpenAiToolExecutor } from "../operation/WorkspaceWriteOpenAiToolExecutor.js";
+import { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/directory/WorkspaceCreateDirOpenAiToolExecutor.js";
+import { WorkspaceEditOpenAiToolExecutor } from "../operation/file/WorkspaceEditOpenAiToolExecutor.js";
+import { WorkspaceWriteOpenAiToolExecutor } from "../operation/file/WorkspaceWriteOpenAiToolExecutor.js";
 
 export class WorkspaceOpenAiMutationToolExecutor {
   private readonly dispatcher: WorkspaceOpenAiMutationToolDispatcher;
