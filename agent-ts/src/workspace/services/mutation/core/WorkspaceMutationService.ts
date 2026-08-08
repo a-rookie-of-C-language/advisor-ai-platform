@@ -7,7 +7,7 @@ import type { WorkspaceEditResult } from "../../../model/result/mutation/file/ed
 import type { WorkspaceWriteResult } from "../../../model/result/mutation/file/write/WorkspaceWriteResult.js";
 import type { WorkspacePathGuard } from "../../../path/guard/WorkspacePathGuard.js";
 import type { WorkspaceTargetPathResolver } from "../../../path/target/WorkspaceTargetPathResolver.js";
-import { WorkspaceMutationServiceComponentsFactory } from "../factory/WorkspaceMutationServiceComponentsFactory.js";
+import { WorkspaceMutationServiceComponentsFactory } from "../factory/components/WorkspaceMutationServiceComponentsFactory.js";
 import type { WorkspaceMutationServiceComponents } from "../model/WorkspaceMutationServiceComponents.js";
 
 export class WorkspaceMutationService {
