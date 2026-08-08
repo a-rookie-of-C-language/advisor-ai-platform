@@ -3,7 +3,7 @@ import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.
 import { LatestUserQueryResolver } from "../../../common/request/resolver/LatestUserQueryResolver.js";
 import { OpenAiToolArgumentReader } from "../../../openai/tools/arguments/core/OpenAiToolArgumentReader.js";
 import { OpenAiToolTopKArgumentReader } from "../../../openai/tools/arguments/core/OpenAiToolTopKArgumentReader.js";
-import type { MemoryReadRequest } from "../../model/request/tool/MemoryReadRequest.js";
+import type { MemoryReadRequest } from "../../model/request/tool/read/MemoryReadRequest.js";
 
 export class MemoryReadRequestReader {
   private readonly latestUserQueryResolver = new LatestUserQueryResolver();
