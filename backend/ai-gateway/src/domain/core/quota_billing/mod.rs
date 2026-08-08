@@ -1,17 +1,17 @@
 #[allow(non_snake_case)]
-#[path = "model/GroupByDimension.rs"]
+#[path = "model/grouping/GroupByDimension.rs"]
 pub mod GroupByDimension;
 #[allow(non_snake_case)]
-#[path = "model/QuotaPolicy.rs"]
+#[path = "model/policy/QuotaPolicy.rs"]
 pub mod QuotaPolicy;
 #[allow(non_snake_case)]
 #[path = "dao/QuotaPolicyDao.rs"]
 pub mod QuotaPolicyDao;
 #[allow(non_snake_case)]
-#[path = "model/StreamingCompletion.rs"]
+#[path = "model/streaming/StreamingCompletion.rs"]
 pub mod StreamingCompletion;
 #[allow(non_snake_case)]
-#[path = "model/TokenUsage.rs"]
+#[path = "model/usage/TokenUsage.rs"]
 pub mod TokenUsage;
 #[allow(non_snake_case)]
 #[path = "dao/TokenUsageDao.rs"]
@@ -20,5 +20,5 @@ pub mod TokenUsageDao;
 #[path = "query/UsageQuery.rs"]
 pub mod UsageQuery;
 #[allow(non_snake_case)]
-#[path = "model/UsageSummary.rs"]
+#[path = "model/usage/UsageSummary.rs"]
 pub mod UsageSummary;
