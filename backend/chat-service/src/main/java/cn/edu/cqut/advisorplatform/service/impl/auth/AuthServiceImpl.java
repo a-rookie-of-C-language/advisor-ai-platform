@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.auth;
 
 import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
 import cn.edu.cqut.advisorplatform.dao.UserDao;
