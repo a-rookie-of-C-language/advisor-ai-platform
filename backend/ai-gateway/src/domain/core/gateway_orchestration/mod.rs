@@ -2,11 +2,11 @@
 #[path = "gateway/ChatGateway.rs"]
 pub mod ChatGateway;
 #[allow(non_snake_case)]
-#[path = "model/CompletionRequest.rs"]
+#[path = "model/request/CompletionRequest.rs"]
 pub mod CompletionRequest;
 #[allow(non_snake_case)]
-#[path = "model/CompletionResult.rs"]
+#[path = "model/result/CompletionResult.rs"]
 pub mod CompletionResult;
 #[allow(non_snake_case)]
-#[path = "model/Message.rs"]
+#[path = "model/message/Message.rs"]
 pub mod Message;
