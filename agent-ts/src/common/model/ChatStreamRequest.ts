@@ -1,15 +1,8 @@
-export interface AttachmentDTO {
-  id: number;
-  fileName?: string | null;
-  fileType?: string | null;
-  filePath?: string | null;
-}
+import type { AttachmentDTO } from "./AttachmentDTO.js";
+import type { ChatMessageDTO } from "./ChatMessageDTO.js";
 
-export interface ChatMessageDTO {
-  role: string;
-  content: string;
-  attachments?: AttachmentDTO[] | null;
-}
+export type { AttachmentDTO } from "./AttachmentDTO.js";
+export type { ChatMessageDTO } from "./ChatMessageDTO.js";
 
 export interface ChatStreamRequest {
   messages: ChatMessageDTO[];
