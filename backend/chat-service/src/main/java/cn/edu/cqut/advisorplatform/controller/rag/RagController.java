@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.controller.rag;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.rag.KnowledgeBaseResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.rag.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.AuditAction;
 import cn.edu.cqut.advisorplatform.entity.AuditModule;
 import cn.edu.cqut.advisorplatform.entity.UserDO;

@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.service;
 
-import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.rag.KnowledgeBaseResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.rag.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import java.util.List;
 import org.springframework.lang.Nullable;

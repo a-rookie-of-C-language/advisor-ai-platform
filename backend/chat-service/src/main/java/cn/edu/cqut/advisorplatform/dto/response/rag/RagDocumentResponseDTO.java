@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.dto.response;
+package cn.edu.cqut.advisorplatform.dto.response.rag;
 
 import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
 import java.time.LocalDateTime;

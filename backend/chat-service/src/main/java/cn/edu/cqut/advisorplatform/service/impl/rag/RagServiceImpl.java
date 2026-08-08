@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.service.impl.rag;
 
 import cn.edu.cqut.advisorplatform.dao.RagDocumentDao;
 import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
-import cn.edu.cqut.advisorplatform.dto.response.KnowledgeBaseResponseDTO;
-import cn.edu.cqut.advisorplatform.dto.response.RagDocumentResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.rag.KnowledgeBaseResponseDTO;
+import cn.edu.cqut.advisorplatform.dto.response.rag.RagDocumentResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
 import cn.edu.cqut.advisorplatform.entity.UserDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
