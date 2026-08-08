@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
-import { WorkspaceError } from "../../../workspace/model/error/WorkspaceError.js";
-import { AgentHttpErrorMessageResolver } from "../support/AgentHttpErrorMessageResolver.js";
+import { WorkspaceError } from "../../../../workspace/model/error/WorkspaceError.js";
+import { AgentHttpErrorMessageResolver } from "../../support/AgentHttpErrorMessageResolver.js";
 
 export class AgentJsonResponseWriter {
   private readonly errorMessageResolver = new AgentHttpErrorMessageResolver();
