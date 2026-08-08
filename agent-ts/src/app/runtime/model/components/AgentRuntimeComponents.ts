@@ -7,7 +7,7 @@ import type { RagContextBuilder } from "../../../../rag/context/core/RagContextB
 import type { WebFetchContextBuilder } from "../../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../../web/context/search/core/WebSearchContextBuilder.js";
 import { AgentChatStreamSession } from "../../../session/core/stream/AgentChatStreamSession.js";
-import { AgentChatStreamSessionFactory } from "../../../session/factory/AgentChatStreamSessionFactory.js";
+import { AgentChatStreamSessionFactory } from "../../../session/factory/session/AgentChatStreamSessionFactory.js";
 
 export class AgentRuntimeComponents {
   readonly streamSession: AgentChatStreamSession;
