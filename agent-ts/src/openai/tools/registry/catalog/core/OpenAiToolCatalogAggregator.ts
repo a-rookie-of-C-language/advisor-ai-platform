@@ -4,8 +4,8 @@ import type { RagOpenAiToolBridge } from "../../../../../rag/openAi/bridge/RagOp
 import type { WebOpenAiToolBridge } from "../../../../../web/openAi/core/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
 import type { OpenAIChatTool } from "../../../../chat/model/tool/OpenAIChatTool.js";
-import { OpenAiLocalToolCatalogCollector } from "../collector/OpenAiLocalToolCatalogCollector.js";
-import { OpenAiMcpToolCatalogCollector } from "../collector/OpenAiMcpToolCatalogCollector.js";
+import { OpenAiLocalToolCatalogCollector } from "../collector/local/OpenAiLocalToolCatalogCollector.js";
+import { OpenAiMcpToolCatalogCollector } from "../collector/mcp/OpenAiMcpToolCatalogCollector.js";
 
 export class OpenAiToolCatalogAggregator {
   private readonly localToolCatalogCollector: OpenAiLocalToolCatalogCollector;
