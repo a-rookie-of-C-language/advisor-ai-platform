@@ -1,8 +1,8 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { OpenAiToolExecutionResult } from "../../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
-import type { MemoryReadOpenAiToolExecutor } from "../executor/MemoryReadOpenAiToolExecutor.js";
-import type { MemoryWriteOpenAiToolExecutor } from "../executor/MemoryWriteOpenAiToolExecutor.js";
+import type { MemoryReadOpenAiToolExecutor } from "../executor/read/MemoryReadOpenAiToolExecutor.js";
+import type { MemoryWriteOpenAiToolExecutor } from "../executor/write/MemoryWriteOpenAiToolExecutor.js";
 
 export class MemoryOpenAiToolDispatcher {
   constructor(
