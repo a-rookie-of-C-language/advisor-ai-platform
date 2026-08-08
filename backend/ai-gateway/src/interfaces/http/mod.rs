@@ -4,7 +4,7 @@ pub mod middleware;
 #[path = "audit/chat_audit.rs"]
 pub mod chat_audit;
 #[allow(non_snake_case)]
-#[path = "usage/chat_completion_usage.rs"]
+#[path = "usage/completion/chat_completion_usage.rs"]
 pub mod chat_completion_usage;
 #[allow(non_snake_case)]
 #[path = "chat/completion/chat_completions.rs"]
@@ -13,7 +13,7 @@ pub mod chat_completions;
 #[path = "chat/stream/chat_stream.rs"]
 pub mod chat_stream;
 #[allow(non_snake_case)]
-#[path = "usage/chat_stream_usage.rs"]
+#[path = "usage/stream/chat_stream_usage.rs"]
 pub mod chat_stream_usage;
 #[allow(non_snake_case)]
 #[path = "health/health.rs"]
