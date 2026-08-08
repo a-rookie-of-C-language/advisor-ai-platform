@@ -1,9 +1,8 @@
 use anyhow::Result;
-use core_command_reader::CoreCommandReader;
-use core_command_runner::CoreCommandRunner;
+use command::reader::CoreCommandReader;
+use command::runner::CoreCommandRunner;
 
-mod core_command_reader;
-mod core_command_runner;
+mod command;
 mod protocol_envelope;
 mod protocol_event_input;
 mod sse_event_serializer;
