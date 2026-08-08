@@ -2,9 +2,9 @@ import type { WorkspaceDirectoryCreator } from "../../../files/mutation/director
 import type { WorkspaceFileEditor } from "../../../files/mutation/file/WorkspaceFileEditor.js";
 import type { WorkspaceFileWriter } from "../../../files/mutation/file/WorkspaceFileWriter.js";
 import type { WorkspaceWorkingFileCounter } from "../../../maintenance/support/WorkspaceWorkingFileCounter.js";
-import type { WorkspaceCreateDirResult } from "../../../model/result/mutation/WorkspaceCreateDirResult.js";
-import type { WorkspaceEditResult } from "../../../model/result/mutation/WorkspaceEditResult.js";
-import type { WorkspaceWriteResult } from "../../../model/result/mutation/WorkspaceWriteResult.js";
+import type { WorkspaceCreateDirResult } from "../../../model/result/mutation/directory/WorkspaceCreateDirResult.js";
+import type { WorkspaceEditResult } from "../../../model/result/mutation/file/WorkspaceEditResult.js";
+import type { WorkspaceWriteResult } from "../../../model/result/mutation/file/WorkspaceWriteResult.js";
 import type { WorkspacePathGuard } from "../../../path/guard/WorkspacePathGuard.js";
 import type { WorkspaceTargetPathResolver } from "../../../path/target/WorkspaceTargetPathResolver.js";
 import { WorkspaceMutationServiceComponentsFactory } from "../factory/WorkspaceMutationServiceComponentsFactory.js";
