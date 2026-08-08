@@ -1,5 +1,5 @@
-import { AgentBooleanEnvReader } from "../readers/AgentBooleanEnvReader.js";
-import { OpenAiTimeoutEnvReader } from "../readers/OpenAiTimeoutEnvReader.js";
+import { AgentBooleanEnvReader } from "../readers/boolean/AgentBooleanEnvReader.js";
+import { OpenAiTimeoutEnvReader } from "../readers/openai/OpenAiTimeoutEnvReader.js";
 
 export class AgentEnvReader {
   private readonly booleanEnvReader = new AgentBooleanEnvReader();
