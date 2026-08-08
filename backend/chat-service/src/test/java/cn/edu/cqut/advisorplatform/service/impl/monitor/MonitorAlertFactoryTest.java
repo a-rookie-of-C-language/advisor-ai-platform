@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

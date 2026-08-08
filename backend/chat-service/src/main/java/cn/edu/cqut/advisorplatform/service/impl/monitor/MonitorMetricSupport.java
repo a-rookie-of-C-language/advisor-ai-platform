@@ -1,8 +1,7 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.dto.response.MonitorRealtimeResponseDTO;
-import cn.edu.cqut.advisorplatform.service.impl.monitor.PrometheusQueryClient;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
 

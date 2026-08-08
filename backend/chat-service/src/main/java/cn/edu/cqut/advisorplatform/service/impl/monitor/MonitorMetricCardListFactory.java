@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
 import cn.edu.cqut.advisorplatform.dto.response.MonitorMetricCardDTO;
 import java.util.List;

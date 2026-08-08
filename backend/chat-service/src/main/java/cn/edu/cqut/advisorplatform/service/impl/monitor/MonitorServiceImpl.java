@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.monitor;
 
 import cn.edu.cqut.advisorplatform.dto.response.MonitorRealtimeResponseDTO;
 import cn.edu.cqut.advisorplatform.service.MonitorService;
