@@ -4,8 +4,8 @@ import { McpSupportedConfigProvider } from "../../../config/selection/provider/M
 import { DirectHttpMcpClientRegistry } from "../../../directHttp/core/registry/DirectHttpMcpClientRegistry.js";
 import type { McpToolDescriptor } from "../../model/descriptor/McpToolDescriptor.js";
 import type { McpCallToolResult } from "../../model/result/McpCallToolResult.js";
-import { McpToolCaller } from "../operation/McpToolCaller.js";
-import { McpToolLister } from "../operation/McpToolLister.js";
+import { McpToolCaller } from "../operation/call/McpToolCaller.js";
+import { McpToolLister } from "../operation/list/McpToolLister.js";
 
 export class McpToolService {
   private readonly clientRegistry = new DirectHttpMcpClientRegistry();
