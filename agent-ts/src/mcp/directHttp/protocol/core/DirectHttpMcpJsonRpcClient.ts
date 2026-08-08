@@ -1,9 +1,9 @@
 import type { JsonObject } from "../../../../common/json/JsonTypes.js";
 import type { McpServerConfig } from "../../../config/model/McpServerConfig.js";
 import type { JsonRpcResponse } from "../../../jsonRpc/model/JsonRpcResponse.js";
-import { DirectHttpMcpHeadersFactory } from "../http/DirectHttpMcpHeadersFactory.js";
+import { DirectHttpMcpHeadersFactory } from "../http/headers/DirectHttpMcpHeadersFactory.js";
 import { DirectHttpMcpResponseReader } from "../reader/DirectHttpMcpResponseReader.js";
-import { DirectHttpMcpTransport } from "../http/DirectHttpMcpTransport.js";
+import { DirectHttpMcpTransport } from "../http/transport/DirectHttpMcpTransport.js";
 
 export class DirectHttpMcpJsonRpcClient {
   private readonly headersFactory = new DirectHttpMcpHeadersFactory();
