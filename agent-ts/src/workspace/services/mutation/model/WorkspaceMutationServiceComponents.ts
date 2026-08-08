@@ -5,8 +5,8 @@ import type { WorkspaceWorkingFileCounter } from "../../../maintenance/support/W
 import type { WorkspacePathGuard } from "../../../path/guard/WorkspacePathGuard.js";
 import type { WorkspaceTargetPathResolver } from "../../../path/target/WorkspaceTargetPathResolver.js";
 import { WorkspaceCreateDirService } from "../operation/directory/WorkspaceCreateDirService.js";
-import { WorkspaceEditService } from "../operation/file/WorkspaceEditService.js";
-import { WorkspaceWriteService } from "../operation/file/WorkspaceWriteService.js";
+import { WorkspaceEditService } from "../operation/file/edit/WorkspaceEditService.js";
+import { WorkspaceWriteService } from "../operation/file/write/WorkspaceWriteService.js";
 
 export class WorkspaceMutationServiceComponents {
   readonly createDirService: WorkspaceCreateDirService;

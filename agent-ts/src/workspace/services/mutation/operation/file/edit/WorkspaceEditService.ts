@@ -1,6 +1,6 @@
-import type { WorkspaceFileEditor } from "../../../../files/mutation/file/WorkspaceFileEditor.js";
-import type { WorkspaceEditResult } from "../../../../model/result/mutation/file/edit/WorkspaceEditResult.js";
-import type { WorkspaceTargetPathResolver } from "../../../../path/target/WorkspaceTargetPathResolver.js";
+import type { WorkspaceFileEditor } from "../../../../../files/mutation/file/WorkspaceFileEditor.js";
+import type { WorkspaceEditResult } from "../../../../../model/result/mutation/file/edit/WorkspaceEditResult.js";
+import type { WorkspaceTargetPathResolver } from "../../../../../path/target/WorkspaceTargetPathResolver.js";
 
 export class WorkspaceEditService {
   constructor(
