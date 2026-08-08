@@ -1,6 +1,6 @@
 import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";
 import type { OpenAIChatClient } from "../../../openai/chat/core/OpenAIChatClient.js";
-import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/OpenAiToolRegistry.js";
+import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/registry/OpenAiToolRegistry.js";
 
 export class AgentRuntimeDependencies {
   constructor(
