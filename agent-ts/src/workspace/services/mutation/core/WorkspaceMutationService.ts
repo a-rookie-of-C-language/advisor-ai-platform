@@ -1,6 +1,6 @@
 import type { WorkspaceDirectoryCreator } from "../../../files/mutation/directory/WorkspaceDirectoryCreator.js";
-import type { WorkspaceFileEditor } from "../../../files/mutation/file/WorkspaceFileEditor.js";
-import type { WorkspaceFileWriter } from "../../../files/mutation/file/WorkspaceFileWriter.js";
+import type { WorkspaceFileEditor } from "../../../files/mutation/file/edit/WorkspaceFileEditor.js";
+import type { WorkspaceFileWriter } from "../../../files/mutation/file/write/WorkspaceFileWriter.js";
 import type { WorkspaceWorkingFileCounter } from "../../../maintenance/support/WorkspaceWorkingFileCounter.js";
 import type { WorkspaceCreateDirResult } from "../../../model/result/mutation/directory/WorkspaceCreateDirResult.js";
 import type { WorkspaceEditResult } from "../../../model/result/mutation/file/edit/WorkspaceEditResult.js";

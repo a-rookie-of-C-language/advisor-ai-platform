@@ -1,4 +1,4 @@
-import type { WorkspaceFileWriter } from "../../../../../files/mutation/file/WorkspaceFileWriter.js";
+import type { WorkspaceFileWriter } from "../../../../../files/mutation/file/write/WorkspaceFileWriter.js";
 import type { WorkspaceWorkingFileCounter } from "../../../../../maintenance/support/WorkspaceWorkingFileCounter.js";
 import type { WorkspaceWriteResult } from "../../../../../model/result/mutation/file/write/WorkspaceWriteResult.js";
 import type { WorkspacePathGuard } from "../../../../../path/guard/WorkspacePathGuard.js";
