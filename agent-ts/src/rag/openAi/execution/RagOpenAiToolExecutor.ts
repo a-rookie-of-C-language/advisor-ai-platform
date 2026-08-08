@@ -4,7 +4,7 @@ import { LatestUserQueryResolver } from "../../../common/request/resolver/Latest
 import { OpenAiToolArgumentReader } from "../../../openai/tools/arguments/core/reader/OpenAiToolArgumentReader.js";
 import { OpenAiToolTopKArgumentReader } from "../../../openai/tools/arguments/core/topK/OpenAiToolTopKArgumentReader.js";
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
-import type { RagApiClient } from "../../api/RagApiClient.js";
+import type { RagApiClient } from "../../api/core/RagApiClient.js";
 import { RagDocumentRanker } from "../../context/ranking/RagDocumentRanker.js";
 import { RagReadyDocumentSelector } from "../../context/selection/RagReadyDocumentSelector.js";
 import { RagSearchToolResultFactory } from "../result/RagSearchToolResultFactory.js";

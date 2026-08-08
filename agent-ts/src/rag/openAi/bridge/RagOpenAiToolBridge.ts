@@ -3,7 +3,7 @@ import type { JsonObject } from "../../../common/json/JsonTypes.js";
 import type { OpenAIChatTool } from "../../../openai/chat/model/tool/OpenAIChatTool.js";
 import type { OpenAiToolExecutionResult } from "../../../openai/tools/runtime/model/OpenAiToolExecutionResult.js";
 import { OpenAiToolResultFactory } from "../../../openai/tools/runtime/factory/OpenAiToolResultFactory.js";
-import type { RagApiClient } from "../../api/RagApiClient.js";
+import type { RagApiClient } from "../../api/core/RagApiClient.js";
 import { RagOpenAiToolCatalog } from "../catalog/RagOpenAiToolCatalog.js";
 import { RagOpenAiToolExecutor } from "../execution/RagOpenAiToolExecutor.js";
 
