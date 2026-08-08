@@ -1,6 +1,6 @@
 import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
 import { WorkspaceOpenAiToolCatalog } from "../../definitions/catalog/WorkspaceOpenAiToolCatalog.js";
-import { WorkspaceOpenAiToolExecutor } from "../execution/WorkspaceOpenAiToolExecutor.js";
+import { WorkspaceOpenAiToolExecutor } from "../execution/executor/WorkspaceOpenAiToolExecutor.js";
 import { WorkspaceOpenAiToolResultFactory } from "../result/WorkspaceOpenAiToolResultFactory.js";
 
 export class WorkspaceOpenAiToolBridgeComponents {
