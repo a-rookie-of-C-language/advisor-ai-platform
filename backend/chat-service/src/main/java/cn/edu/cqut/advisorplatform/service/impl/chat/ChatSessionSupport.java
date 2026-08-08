@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.chat;
 
 import cn.edu.cqut.advisorplatform.client.RagServiceClient;
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
