@@ -2,7 +2,7 @@ import type { OpenAIParsedStreamLine } from "../model/line/OpenAIParsedStreamLin
 import { OpenAIStreamDataLineParser } from "../parsing/OpenAIStreamDataLineParser.js";
 import type { OpenAIStreamToolCallDelta } from "../model/toolCall/OpenAIStreamToolCallDelta.js";
 import type { OpenAIToolCall } from "../../tools/runtime/model/OpenAIToolCall.js";
-import { OpenAIToolCallDeltaMerger } from "../../tools/runtime/state/OpenAIToolCallDeltaMerger.js";
+import { OpenAIToolCallDeltaMerger } from "../../tools/runtime/state/delta/OpenAIToolCallDeltaMerger.js";
 
 export class OpenAIStreamParser {
   private readonly dataLineParser = new OpenAIStreamDataLineParser();
