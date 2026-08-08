@@ -1,4 +1,4 @@
-import type { WorkspaceListingBuilder } from "../../../../files/read/WorkspaceListingBuilder.js";
+import type { WorkspaceListingBuilder } from "../../../../files/read/list/WorkspaceListingBuilder.js";
 import type { WorkspaceListing } from "../../../../model/result/read/WorkspaceListing.js";
 import type { WorkspacePathGuard } from "../../../../path/guard/WorkspacePathGuard.js";
 import type { WorkspaceSessionPathProvider } from "../../../../path/session/WorkspaceSessionPathProvider.js";

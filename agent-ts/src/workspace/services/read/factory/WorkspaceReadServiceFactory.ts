@@ -1,6 +1,6 @@
 import type { WorkspaceServiceFactoryComponents } from "../../../core/factory/components/WorkspaceServiceFactoryComponents.js";
-import { WorkspaceFileReader } from "../../../files/read/WorkspaceFileReader.js";
-import { WorkspaceListingBuilder } from "../../../files/read/WorkspaceListingBuilder.js";
+import { WorkspaceFileReader } from "../../../files/read/file/WorkspaceFileReader.js";
+import { WorkspaceListingBuilder } from "../../../files/read/list/WorkspaceListingBuilder.js";
 import { WorkspaceReadService } from "../core/WorkspaceReadService.js";
 
 export class WorkspaceReadServiceFactory {
