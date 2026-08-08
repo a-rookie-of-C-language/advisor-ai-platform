@@ -1,6 +1,6 @@
 import type { MemoryOpenAiToolBridge } from "../../../../../../memory/tools/core/bridge/MemoryOpenAiToolBridge.js";
 import type { RagOpenAiToolBridge } from "../../../../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../../../../../../web/openAi/core/WebOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../../../../web/openAi/core/bridge/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
 import type { OpenAIChatTool } from "../../../../../chat/model/tool/OpenAIChatTool.js";
 

@@ -3,7 +3,7 @@ import type { ChatStreamRequest } from "../../../../common/model/ChatStreamReque
 import type { MemoryOpenAiToolBridge } from "../../../../memory/tools/core/bridge/MemoryOpenAiToolBridge.js";
 import type { McpOpenAiToolBridge } from "../../../../mcp/openAi/core/McpOpenAiToolBridge.js";
 import type { RagOpenAiToolBridge } from "../../../../rag/openAi/bridge/RagOpenAiToolBridge.js";
-import type { WebOpenAiToolBridge } from "../../../../web/openAi/core/WebOpenAiToolBridge.js";
+import type { WebOpenAiToolBridge } from "../../../../web/openAi/core/bridge/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
 import { OpenAiToolResultFactory } from "../../runtime/factory/OpenAiToolResultFactory.js";
 import type { OpenAiToolExecutionResult } from "../../runtime/model/OpenAiToolExecutionResult.js";
