@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.audit;
 
 import cn.edu.cqut.advisorplatform.client.AuditServiceClient;
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;

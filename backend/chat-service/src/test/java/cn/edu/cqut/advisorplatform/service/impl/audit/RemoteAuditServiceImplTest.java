@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.audit;
 
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
