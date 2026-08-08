@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.rag;
 
 import cn.edu.cqut.advisorplatform.dao.RagDocumentDao;
 import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;

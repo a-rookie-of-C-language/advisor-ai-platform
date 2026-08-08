@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.impl;
+package cn.edu.cqut.advisorplatform.service.impl.rag;
 
 import cn.edu.cqut.advisorplatform.entity.DocumentStatus;
 import cn.edu.cqut.advisorplatform.entity.KnowledgeBaseStatus;
