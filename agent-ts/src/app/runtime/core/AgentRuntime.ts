@@ -5,7 +5,7 @@ import type { AgentConfig } from "../../../config/model/AgentConfig.js";
 import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";
 import type { MemoryContextBuilder } from "../../../memory/context/core/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../../memory/task/submitter/MemoryTaskSubmitter.js";
-import type { OpenAIChatClient } from "../../../openai/chat/core/OpenAIChatClient.js";
+import type { OpenAIChatClient } from "../../../openai/chat/core/client/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../../openai/tools/registry/core/registry/OpenAiToolRegistry.js";
 import { SseWriterFactory } from "../../../protocol/sse/factory/SseWriterFactory.js";
 import type { RagContextBuilder } from "../../../rag/context/core/RagContextBuilder.js";
