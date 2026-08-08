@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.checkin.service.impl;
+package cn.edu.cqut.advisorplatform.checkin.service.impl.checkin;
 
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.CheckInRecordItem;
 import cn.edu.cqut.advisorplatform.checkin.record.dto.response.StudentCheckInDetailResponse;

@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.checkin.service.impl;
+package cn.edu.cqut.advisorplatform.checkin.service.impl.checkin;
 
 import cn.edu.cqut.advisorplatform.checkin.client.dto.StudentClassResponse;
 import cn.edu.cqut.advisorplatform.checkin.dao.CheckInDao;

@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.checkin.service.impl;
+package cn.edu.cqut.advisorplatform.checkin.service.impl.checkin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
