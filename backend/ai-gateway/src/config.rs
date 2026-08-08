@@ -1,8 +1,8 @@
 #[allow(non_snake_case)]
-#[path = "config/ConfigEnv.rs"]
+#[path = "config/env/ConfigEnv.rs"]
 mod ConfigEnv;
 #[allow(non_snake_case)]
-#[path = "config/ConfigValidation.rs"]
+#[path = "config/validation/ConfigValidation.rs"]
 mod ConfigValidation;
 
 pub use ConfigValidation::ConfigError;
