@@ -1,4 +1,4 @@
-use crate::protocol_event_input::ProtocolEventInput;
+use crate::protocol::event_input::ProtocolEventInput;
 use crate::sse_event_serializer::SseEventSerializer;
 use anyhow::{anyhow, Result};
 use serde_json::json;

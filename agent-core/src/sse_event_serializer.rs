@@ -1,5 +1,5 @@
-use crate::protocol_envelope::ProtocolEnvelope;
-use crate::protocol_event_input::ProtocolEventInput;
+use crate::protocol::envelope::ProtocolEnvelope;
+use crate::protocol::event_input::ProtocolEventInput;
 use anyhow::Result;
 use time::OffsetDateTime;
 
