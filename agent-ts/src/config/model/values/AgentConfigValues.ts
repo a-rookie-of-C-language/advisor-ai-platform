@@ -7,6 +7,7 @@ export interface AgentConfigValues {
   openAiModel: string;
   openAiTemperature: number;
   requestTimeoutMs: number;
+  rustCoreEnabled: boolean;
   rustCorePath: string | undefined;
   workspaceBasePath: string;
   memoryApiBaseUrl: string;

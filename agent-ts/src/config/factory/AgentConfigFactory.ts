@@ -14,6 +14,7 @@ export class AgentConfigFactory {
       openAiModel: this.envReader.readString("OPENAI_MODEL", "gpt-4.1-mini"),
       openAiTemperature: this.envReader.readFloat("OPENAI_TEMPERATURE", 0.2),
       requestTimeoutMs: this.envReader.readOpenAiTimeoutMs(),
+      rustCoreEnabled: this.envReader.readBool("AGENT_RUST_CORE_ENABLED", true),
       rustCorePath: this.envReader.readOptionalString("AGENT_CORE_PATH"),
       workspaceBasePath: this.envReader.readString("AGENT_WORKSPACE_PATH", "workspace"),
       memoryApiBaseUrl: this.envReader.readTrimmedUrl("MEMORY_API_BASE_URL", ""),

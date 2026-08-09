@@ -10,6 +10,7 @@ export class AgentConfig {
   readonly openAiModel: string;
   readonly openAiTemperature: number;
   readonly requestTimeoutMs: number;
+  readonly rustCoreEnabled: boolean;
   readonly rustCorePath: string | undefined;
   readonly workspaceBasePath: string;
   readonly memoryApiBaseUrl: string;
@@ -35,6 +36,7 @@ export class AgentConfig {
     this.openAiModel = values.openAiModel;
     this.openAiTemperature = values.openAiTemperature;
     this.requestTimeoutMs = values.requestTimeoutMs;
+    this.rustCoreEnabled = values.rustCoreEnabled;
     this.rustCorePath = values.rustCorePath;
     this.workspaceBasePath = values.workspaceBasePath;
     this.memoryApiBaseUrl = values.memoryApiBaseUrl;

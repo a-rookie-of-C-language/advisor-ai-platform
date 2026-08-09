@@ -13,8 +13,10 @@ export class AgentCoreClient {
   private readonly healthReporter: AgentCoreHealthReporter;
   private readonly processRunner: AgentCoreProcessRunner | undefined;
 
-  constructor(explicitPath?: string) {
-    this.executablePath = explicitPath || new AgentCoreExecutableLocator().findDefaultExecutable();
+  constructor(explicitPath?: string, enabled = true) {
+    this.executablePath = enabled
+      ? explicitPath || new AgentCoreExecutableLocator().findDefaultExecutable()
+      : undefined;
     this.processRunner = this.executablePath ? new AgentCoreProcessRunner(this.executablePath) : undefined;
     this.healthReporter = new AgentCoreHealthReporter(this.processRunner);
   }

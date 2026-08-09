@@ -4,7 +4,7 @@ import { OpenAIChatClient } from "../../../../openai/chat/core/client/OpenAIChat
 
 export class AgentRuntimeClientFactory {
   createCoreClient(config: AgentConfig): AgentCoreClient {
-    return new AgentCoreClient(config.rustCorePath);
+    return new AgentCoreClient(config.rustCorePath, config.rustCoreEnabled);
   }
 
   createOpenAiClient(config: AgentConfig): OpenAIChatClient {
