@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.controller.workspace;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.workspace.WorkspaceFileResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.service.WorkspaceFileService;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
+import cn.edu.cqut.advisorplatform.service.workspace.WorkspaceFileService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
