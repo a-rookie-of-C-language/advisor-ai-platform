@@ -1,0 +1,11 @@
+.git
+.env
+target
+**/target
+*.log
+rag-service-build.log
+student-service-build.log
+node_modules
+**/node_modules
+.venv
+__pycache__

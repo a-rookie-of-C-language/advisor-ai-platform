@@ -1,0 +1,17 @@
+.git
+.venv
+node_modules
+**/node_modules
+dist
+**/dist
+target
+backend/**/target
+agent-core/target
+*.log
+.tmp
+.pytest_cache
+.ruff_cache
+__pycache__
+agent/.venv
+backend/.env
+.env

@@ -1,4 +1,4 @@
-FROM rust:1.83-bookworm AS core-builder
+FROM rust:1.89-bookworm AS core-builder
 
 WORKDIR /repo/agent-core
 COPY agent-core/Cargo.toml agent-core/Cargo.lock ./

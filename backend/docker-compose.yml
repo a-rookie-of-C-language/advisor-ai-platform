@@ -272,10 +272,11 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
       OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.2}
       OPENAI_TIMEOUT_SEC: ${OPENAI_TIMEOUT_SEC:-120}
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      http_proxy: ""
-      https_proxy: ""
+      NODE_USE_ENV_PROXY: "1"
+      HTTP_PROXY: ${AGENT_HTTP_PROXY:-http://192.168.112.1:33210}
+      HTTPS_PROXY: ${AGENT_HTTPS_PROXY:-http://192.168.112.1:33210}
+      http_proxy: ${AGENT_HTTP_PROXY:-http://192.168.112.1:33210}
+      https_proxy: ${AGENT_HTTPS_PROXY:-http://192.168.112.1:33210}
       NO_PROXY: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
       no_proxy: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
     depends_on:
