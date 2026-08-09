@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.client;
+package cn.edu.cqut.advisorplatform.client.rag;
 
 import cn.edu.cqut.advisorplatform.common.config.InternalTokenFeignConfig;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;

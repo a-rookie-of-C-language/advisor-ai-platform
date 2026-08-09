@@ -1,8 +1,8 @@
-package cn.edu.cqut.advisorplatform.client;
+package cn.edu.cqut.advisorplatform.client.audit;
 
 import cn.edu.cqut.advisorplatform.common.config.InternalTokenFeignConfig;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
 import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
