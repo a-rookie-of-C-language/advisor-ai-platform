@@ -1,5 +1,6 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity.chat;
 
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -8,22 +9,22 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "session_summary")
-public class SessionSummaryDO {
+@Table(name = "chat_session")
+public class ChatSessionDO {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "session_id", nullable = false, unique = true)
-  private ChatSessionDO session;
-
-  @Column(nullable = false, columnDefinition = "TEXT")
-  private String summary;
+  @Column(nullable = false, length = 256)
+  private String title = "新对话";
 
   @Column(nullable = false)
-  private Integer version = 1;
+  private Long kbId = 0L;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private UserDO user;
 
   @Column(updatable = false)
   private LocalDateTime createdAt;

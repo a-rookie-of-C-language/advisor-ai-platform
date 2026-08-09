@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity.memory;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

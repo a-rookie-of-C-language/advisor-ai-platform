@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity.chat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

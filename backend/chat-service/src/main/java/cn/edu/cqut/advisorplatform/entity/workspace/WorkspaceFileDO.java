@@ -1,5 +1,7 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity.workspace;
 
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.Data;

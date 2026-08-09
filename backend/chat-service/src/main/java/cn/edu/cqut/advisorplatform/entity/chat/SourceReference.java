@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity.chat;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.entity;
+package cn.edu.cqut.advisorplatform.entity.user;
 
 public enum UserRole {
   ADMIN,
