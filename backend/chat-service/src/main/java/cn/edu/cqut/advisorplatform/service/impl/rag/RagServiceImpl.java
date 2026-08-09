@@ -1,14 +1,14 @@
 package cn.edu.cqut.advisorplatform.service.impl.rag;
 
-import cn.edu.cqut.advisorplatform.dao.RagDocumentDao;
-import cn.edu.cqut.advisorplatform.dao.RagKnowledgeBaseDao;
+import cn.edu.cqut.advisorplatform.dao.rag.RagDocumentDao;
+import cn.edu.cqut.advisorplatform.dao.rag.RagKnowledgeBaseDao;
 import cn.edu.cqut.advisorplatform.dto.response.rag.KnowledgeBaseResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.rag.RagDocumentResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.rag.RagKnowledgeBaseDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
-import cn.edu.cqut.advisorplatform.service.RagService;
+import cn.edu.cqut.advisorplatform.service.rag.RagService;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;

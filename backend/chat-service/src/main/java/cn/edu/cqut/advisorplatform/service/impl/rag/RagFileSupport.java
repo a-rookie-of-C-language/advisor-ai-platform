@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.impl.rag;
 
-import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
-import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.rag.RagDocumentDO;
+import cn.edu.cqut.advisorplatform.entity.rag.RagKnowledgeBaseDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import java.io.IOException;
 import java.nio.file.Files;

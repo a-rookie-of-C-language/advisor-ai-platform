@@ -1,10 +1,10 @@
 package cn.edu.cqut.advisorplatform.service.impl.rag;
 
-import cn.edu.cqut.advisorplatform.entity.DocumentStatus;
-import cn.edu.cqut.advisorplatform.entity.KnowledgeBaseStatus;
-import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
-import cn.edu.cqut.advisorplatform.entity.RagKnowledgeBaseDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.rag.DocumentStatus;
+import cn.edu.cqut.advisorplatform.entity.rag.KnowledgeBaseStatus;
+import cn.edu.cqut.advisorplatform.entity.rag.RagDocumentDO;
+import cn.edu.cqut.advisorplatform.entity.rag.RagKnowledgeBaseDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import java.time.LocalDateTime;
 
 class RagEntityFactory {
