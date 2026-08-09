@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.dto.response.auth;
 
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import lombok.Data;
 
 @Data

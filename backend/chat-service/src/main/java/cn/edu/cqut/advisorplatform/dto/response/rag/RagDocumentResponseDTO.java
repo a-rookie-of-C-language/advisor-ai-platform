@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.dto.response.rag;
 
-import cn.edu.cqut.advisorplatform.entity.RagDocumentDO;
+import cn.edu.cqut.advisorplatform.entity.rag.RagDocumentDO;
 import java.time.LocalDateTime;
 import lombok.Data;
 
