@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
+import cn.edu.cqut.advisorplatform.dao.memory.UserMemoryDao;
 import cn.edu.cqut.advisorplatform.dto.request.memory.MemorySearchRequestDTO;
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.entity.memory.UserMemoryDO;
 import cn.edu.cqut.advisorplatform.service.vector.EmbeddingService;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryServiceFactory;
 import cn.edu.cqut.advisorplatform.service.vector.MemoryVectorService;

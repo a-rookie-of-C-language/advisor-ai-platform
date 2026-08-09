@@ -2,12 +2,12 @@ package cn.edu.cqut.advisorplatform.service.impl.memory;
 
 import cn.edu.cqut.advisorplatform.common.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.dao.SessionSummaryDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dao.chat.SessionSummaryDao;
 import cn.edu.cqut.advisorplatform.dto.request.memory.SessionSummaryUpdateRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.memory.SessionSummaryResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.chat.SessionSummaryDO;
 import cn.edu.cqut.advisorplatform.utils.Assert;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.entity.memory.UserMemoryDO;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;

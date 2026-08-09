@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.dao.MemoryTaskDao;
-import cn.edu.cqut.advisorplatform.dao.SessionSummaryDao;
-import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dao.chat.SessionSummaryDao;
+import cn.edu.cqut.advisorplatform.dao.memory.MemoryTaskDao;
+import cn.edu.cqut.advisorplatform.dao.memory.UserMemoryDao;
 import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryCandidateUpsertRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.memory.MemorySearchRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryTaskSubmitDTO;
@@ -12,8 +12,8 @@ import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryCandidateUpsertResp
 import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.memory.SessionSummaryResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
-import cn.edu.cqut.advisorplatform.service.MemoryService;
+import cn.edu.cqut.advisorplatform.entity.memory.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.service.memory.MemoryService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;

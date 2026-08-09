@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.dao.MemoryTaskDao;
+import cn.edu.cqut.advisorplatform.dao.memory.MemoryTaskDao;
 import cn.edu.cqut.advisorplatform.dto.request.memory.MemoryTaskSubmitDTO;
 import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryTaskResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.MemoryTaskDO;
+import cn.edu.cqut.advisorplatform.entity.memory.MemoryTaskDO;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;

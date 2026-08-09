@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.dao.UserMemoryDao;
-import cn.edu.cqut.advisorplatform.entity.UserMemoryDO;
+import cn.edu.cqut.advisorplatform.dao.memory.UserMemoryDao;
+import cn.edu.cqut.advisorplatform.entity.memory.UserMemoryDO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;

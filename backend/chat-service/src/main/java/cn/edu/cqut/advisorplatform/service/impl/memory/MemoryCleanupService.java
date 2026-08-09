@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.service.impl.memory;
 
-import cn.edu.cqut.advisorplatform.service.MemoryService;
+import cn.edu.cqut.advisorplatform.service.memory.MemoryService;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
