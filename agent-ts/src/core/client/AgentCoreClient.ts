@@ -49,6 +49,7 @@ export class AgentCoreClient {
       api_key: request.apiKey,
       model: request.model,
       temperature: request.temperature,
+      request_timeout_ms: request.requestTimeoutMs,
       messages: request.messages,
       tools: request.tools ?? []
     });

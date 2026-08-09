@@ -120,6 +120,7 @@ export class AgentChatStreamSession {
       apiKey: this.config.openAiApiKey,
       model: this.config.openAiModel,
       temperature: this.config.openAiTemperature,
+      requestTimeoutMs: this.config.requestTimeoutMs,
       messages,
       tools
     });

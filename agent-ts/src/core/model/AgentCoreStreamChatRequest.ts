@@ -6,6 +6,7 @@ export interface AgentCoreStreamChatRequest {
   apiKey: string;
   model: string;
   temperature: number;
+  requestTimeoutMs: number;
   messages: OpenAIChatMessage[];
   tools?: OpenAIChatTool[];
 }
