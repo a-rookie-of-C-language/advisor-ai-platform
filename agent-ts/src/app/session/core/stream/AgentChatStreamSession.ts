@@ -14,6 +14,10 @@ import type { AgentContextPipeline } from "../pipeline/AgentContextPipeline.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "../../support/fallback/AgentMissingOpenAiApiKeyFallbackGate.js";
 import { AgentStreamErrorMessageResolver } from "../../support/error/AgentStreamErrorMessageResolver.js";
 
+interface RustStreamState {
+  emitted: boolean;
+}
+
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
   private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
@@ -39,11 +43,17 @@ export class AgentChatStreamSession {
       const tools = await this.openAiToolFacade.listTools();
       const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
       if (this.openAiApiKey && this.core.canStream()) {
-        await this.streamWithRust(modelMessages, tools, chatRequest, eventWriter);
-      } else {
-        for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
-          await eventWriter.write(event);
+        const rustState: RustStreamState = { emitted: false };
+        try {
+          await this.streamWithRust(modelMessages, tools, chatRequest, eventWriter, rustState);
+        } catch (error) {
+          if (rustState.emitted) {
+            throw error;
+          }
+          await this.streamWithTypescript(modelMessages, tools, toolExecutor, eventWriter);
         }
+      } else {
+        await this.streamWithTypescript(modelMessages, tools, toolExecutor, eventWriter);
       }
 
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
@@ -61,7 +71,8 @@ export class AgentChatStreamSession {
     modelMessages: ChatStreamRequest["messages"],
     tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
     chatRequest: ChatStreamRequest,
-    eventWriter: AgentStreamEventWriter
+    eventWriter: AgentStreamEventWriter,
+    state: RustStreamState
   ): Promise<void> {
     const conversation = modelMessages.map(({ role, content }) => ({ role, content }));
     const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
@@ -69,8 +80,10 @@ export class AgentChatStreamSession {
 
     for await (const event of this.streamRustRound(conversation, tools)) {
       if (event.type === "delta") {
+        state.emitted = true;
         await eventWriter.write(event);
       } else if (event.type === "tool_call") {
+        state.emitted = true;
         const toolCall = {
           id: event.tool_call_id,
           type: "function" as const,
@@ -106,8 +119,20 @@ export class AgentChatStreamSession {
 
     for await (const event of this.streamRustRound(conversation, [])) {
       if (event.type === "delta") {
+        state.emitted = true;
         await eventWriter.write(event);
       }
+    }
+  }
+
+  private async streamWithTypescript(
+    messages: ChatStreamRequest["messages"],
+    tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
+    toolExecutor: ReturnType<AgentToolExecutorFactory["create"]>,
+    eventWriter: AgentStreamEventWriter
+  ): Promise<void> {
+    for await (const event of this.openAiClient.streamChatEvents(messages, tools, toolExecutor)) {
+      await eventWriter.write(event);
     }
   }
 
