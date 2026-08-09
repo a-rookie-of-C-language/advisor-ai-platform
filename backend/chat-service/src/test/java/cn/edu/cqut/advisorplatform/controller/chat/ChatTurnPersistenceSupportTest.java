@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
-import cn.edu.cqut.advisorplatform.entity.SourceReference;
-import cn.edu.cqut.advisorplatform.service.ChatMessageService;
+import cn.edu.cqut.advisorplatform.entity.chat.SourceReference;
+import cn.edu.cqut.advisorplatform.service.chat.ChatMessageService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.controller.chat;
 
 import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamMessageDTO;
 import cn.edu.cqut.advisorplatform.dto.request.chat.ChatStreamRequestDTO;
-import cn.edu.cqut.advisorplatform.entity.SourceReference;
-import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
+import cn.edu.cqut.advisorplatform.entity.chat.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.chat.StreamEventRecord;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

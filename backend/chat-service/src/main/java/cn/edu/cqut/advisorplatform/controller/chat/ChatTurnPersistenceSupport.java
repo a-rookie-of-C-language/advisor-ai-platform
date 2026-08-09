@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.controller.chat;
 
-import cn.edu.cqut.advisorplatform.entity.SourceReference;
-import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
-import cn.edu.cqut.advisorplatform.service.ChatMessageService;
+import cn.edu.cqut.advisorplatform.entity.chat.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.chat.StreamEventRecord;
+import cn.edu.cqut.advisorplatform.service.chat.ChatMessageService;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

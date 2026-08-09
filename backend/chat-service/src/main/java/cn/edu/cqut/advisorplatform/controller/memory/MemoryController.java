@@ -14,9 +14,9 @@ import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryCandidateUpsertResp
 import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryItemResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.memory.MemoryTaskResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.memory.SessionSummaryResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
-import cn.edu.cqut.advisorplatform.service.MemoryService;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
+import cn.edu.cqut.advisorplatform.service.memory.MemoryService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
