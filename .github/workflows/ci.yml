@@ -89,6 +89,52 @@ jobs:
       - name: Build
         run: npm run build
 
+  build-agent:
+    name: Agent (TypeScript + Rust Build)
+    runs-on: ubuntu-latest
+    needs: [encoding-guard]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: agent-ts/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: Install Agent TypeScript dependencies
+        working-directory: agent-ts
+        run: npm ci
+
+      - name: Check Agent TypeScript
+        working-directory: agent-ts
+        run: npm run check
+
+      - name: Build Agent TypeScript
+        working-directory: agent-ts
+        run: npm run build
+
+      - name: Check Rust formatting
+        working-directory: agent-core
+        run: cargo fmt --all -- --check
+
+      - name: Check Rust core
+        working-directory: agent-core
+        run: cargo check
+
+      - name: Test Rust core
+        working-directory: agent-core
+        run: cargo test
+
+      - name: Build Rust release core
+        working-directory: agent-core
+        run: cargo build --release
+
   build-python:
     name: Python (.venv + compile + test)
     runs-on: ubuntu-latest
