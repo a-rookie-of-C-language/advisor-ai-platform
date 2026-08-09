@@ -2,6 +2,9 @@ import type { ChatStreamRequest } from "../../../../common/model/ChatStreamReque
 import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
 import type { AgentCoreClient } from "../../../../core/client/AgentCoreClient.js";
 import type { OpenAIChatClient } from "../../../../openai/chat/core/client/OpenAIChatClient.js";
+import type { OpenAIToolCall } from "../../../../openai/tools/runtime/model/call/OpenAIToolCall.js";
+import { OpenAIToolConversationAppender } from "../../../../openai/tools/runtime/state/conversation/OpenAIToolConversationAppender.js";
+import { OpenAIToolArgumentParser } from "../../../../openai/tools/arguments/parser/OpenAIToolArgumentParser.js";
 import { AgentStreamEventWriter } from "../../../../protocol/events/stream/writer/AgentStreamEventWriter.js";
 import type { SseWriter } from "../../../../protocol/sse/writer/SseWriter.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "../../../memory/execution/AgentMemoryTaskCompletionSubmitter.js";
@@ -14,6 +17,7 @@ import { AgentStreamErrorMessageResolver } from "../../support/error/AgentStream
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
   private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
+  private readonly toolConversationAppender = new OpenAIToolConversationAppender();
 
   constructor(
     private readonly openAiApiKey: string,
@@ -34,19 +38,8 @@ export class AgentChatStreamSession {
       const modelMessages = await this.contextPipeline.build(chatRequest);
       const tools = await this.openAiToolFacade.listTools();
       const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
-      if (this.openAiApiKey && tools.length === 0 && this.core.canStream()) {
-        const rustMessages = modelMessages.map(({ role, content }) => ({ role, content }));
-        for await (const event of this.core.streamChat({
-          url: `${this.config.openAiBaseUrl}/chat/completions`,
-          apiKey: this.config.openAiApiKey,
-          model: this.config.openAiModel,
-          temperature: this.config.openAiTemperature,
-          messages: rustMessages
-        })) {
-          if (event.type === "delta") {
-            await eventWriter.write(event);
-          }
-        }
+      if (this.openAiApiKey && this.core.canStream()) {
+        await this.streamWithRust(modelMessages, tools, chatRequest, eventWriter);
       } else {
         for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
           await eventWriter.write(event);
@@ -62,5 +55,73 @@ export class AgentChatStreamSession {
     } catch (error) {
       await writer.error("internal_error", this.streamErrorMessageResolver.resolve(error), true);
     }
+  }
+
+  private async streamWithRust(
+    modelMessages: ChatStreamRequest["messages"],
+    tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
+    chatRequest: ChatStreamRequest,
+    eventWriter: AgentStreamEventWriter
+  ): Promise<void> {
+    const conversation = modelMessages.map(({ role, content }) => ({ role, content }));
+    const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
+    const toolCalls: OpenAIToolCall[] = [];
+
+    for await (const event of this.streamRustRound(conversation, tools)) {
+      if (event.type === "delta") {
+        await eventWriter.write(event);
+      } else if (event.type === "tool_call") {
+        const toolCall = {
+          id: event.tool_call_id,
+          type: "function" as const,
+          function: { name: event.tool_name, arguments: JSON.stringify(event.tool_args) }
+        };
+        toolCalls.push(toolCall);
+        await eventWriter.write({
+          type: "tool_call",
+          toolCallId: event.tool_call_id,
+          toolName: event.tool_name,
+          toolArgs: event.tool_args
+        });
+      }
+    }
+
+    if (toolCalls.length === 0 || !toolExecutor) {
+      return;
+    }
+
+    this.toolConversationAppender.appendAssistantToolCalls(conversation, toolCalls);
+    for (const toolCall of toolCalls) {
+      const toolArgs = OpenAIToolArgumentParser.parse(toolCall.function.arguments);
+      const toolResult = await toolExecutor(toolCall.function.name, toolArgs);
+      await eventWriter.write({
+        type: "tool_result",
+        toolCallId: toolCall.id,
+        toolName: toolCall.function.name,
+        toolOutput: toolResult.output,
+        success: toolResult.success
+      });
+      this.toolConversationAppender.appendToolResult(conversation, toolCall, toolResult.output);
+    }
+
+    for await (const event of this.streamRustRound(conversation, [])) {
+      if (event.type === "delta") {
+        await eventWriter.write(event);
+      }
+    }
+  }
+
+  private streamRustRound(
+    messages: Parameters<AgentCoreClient["streamChat"]>[0]["messages"],
+    tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>
+  ) {
+    return this.core.streamChat({
+      url: `${this.config.openAiBaseUrl}/chat/completions`,
+      apiKey: this.config.openAiApiKey,
+      model: this.config.openAiModel,
+      temperature: this.config.openAiTemperature,
+      messages,
+      tools
+    });
   }
 }
