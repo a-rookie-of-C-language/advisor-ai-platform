@@ -1,15 +1,15 @@
 package cn.edu.cqut.advisorplatform.service.impl.auth;
 
 import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
-import cn.edu.cqut.advisorplatform.dao.UserDao;
+import cn.edu.cqut.advisorplatform.dao.user.UserDao;
 import cn.edu.cqut.advisorplatform.dto.request.auth.LoginRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.auth.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.auth.LoginResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.entity.UserRole;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserRole;
 import cn.edu.cqut.advisorplatform.exception.BadRequestException;
 import cn.edu.cqut.advisorplatform.exception.NotFoundException;
-import cn.edu.cqut.advisorplatform.service.AuthService;
+import cn.edu.cqut.advisorplatform.service.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
