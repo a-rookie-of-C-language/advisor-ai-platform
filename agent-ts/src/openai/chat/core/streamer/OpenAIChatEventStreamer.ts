@@ -21,14 +21,15 @@ export class OpenAIChatEventStreamer {
   async *stream(
     messages: ChatMessageDTO[],
     tools: OpenAIChatTool[] = [],
-    toolExecutor?: OpenAIToolExecutor
+    toolExecutor?: OpenAIToolExecutor,
+    signal?: AbortSignal
   ): AsyncGenerator<OpenAIChatStreamEvent> {
     if (!this.openAiApiKey) {
       return;
     }
 
     const conversation = this.messageMapper.map(messages);
-    const firstRound = await this.completionStreamer.collectStream(conversation, tools);
+    const firstRound = await this.completionStreamer.collectStream(conversation, tools, signal);
     for (const event of this.roundEventFactory.create(firstRound)) {
       yield event;
     }
@@ -41,7 +42,7 @@ export class OpenAIChatEventStreamer {
       yield event;
     }
 
-    const finalRound = await this.completionStreamer.collectStream(conversation);
+    const finalRound = await this.completionStreamer.collectStream(conversation, [], signal);
     for (const event of this.roundEventFactory.create(finalRound)) {
       yield event;
     }

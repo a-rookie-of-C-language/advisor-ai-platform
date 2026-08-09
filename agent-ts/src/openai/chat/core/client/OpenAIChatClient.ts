@@ -23,8 +23,8 @@ export class OpenAIChatClient {
     );
   }
 
-  async *streamChat(messages: ChatMessageDTO[]): AsyncGenerator<string> {
-    for await (const event of this.streamChatEvents(messages)) {
+  async *streamChat(messages: ChatMessageDTO[], signal?: AbortSignal): AsyncGenerator<string> {
+    for await (const event of this.streamChatEvents(messages, [], undefined, signal)) {
       if (event.type === "delta") {
         yield event.text;
       }
@@ -34,9 +34,10 @@ export class OpenAIChatClient {
   async *streamChatEvents(
     messages: ChatMessageDTO[],
     tools: OpenAIChatTool[] = [],
-    toolExecutor?: OpenAIToolExecutor
+    toolExecutor?: OpenAIToolExecutor,
+    signal?: AbortSignal
   ): AsyncGenerator<OpenAIChatStreamEvent> {
-    for await (const event of this.eventStreamer.stream(messages, tools, toolExecutor)) {
+    for await (const event of this.eventStreamer.stream(messages, tools, toolExecutor, signal)) {
       yield event;
     }
   }

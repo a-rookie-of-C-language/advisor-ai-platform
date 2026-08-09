@@ -6,10 +6,16 @@ export class OpenAIChatCompletionHttpClient {
 
   async fetchStream<T>(
     buildRequest: (signal: AbortSignal) => OpenAIChatCompletionRequest,
-    consumeBody: (body: ReadableStream<Uint8Array>) => Promise<T>
+    consumeBody: (body: ReadableStream<Uint8Array>) => Promise<T>,
+    externalSignal?: AbortSignal
   ): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
+    const abortExternalRequest = () => controller.abort();
+    externalSignal?.addEventListener("abort", abortExternalRequest, { once: true });
+    if (externalSignal?.aborted) {
+      controller.abort();
+    }
 
     try {
       const request = buildRequest(controller.signal);
@@ -22,6 +28,7 @@ export class OpenAIChatCompletionHttpClient {
       return consumeBody(response.body);
     } finally {
       clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", abortExternalRequest);
     }
   }
 }

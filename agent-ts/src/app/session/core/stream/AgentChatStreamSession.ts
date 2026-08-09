@@ -53,10 +53,10 @@ export class AgentChatStreamSession {
           if (rustState.emitted) {
             throw error;
           }
-          await this.streamWithTypescript(modelMessages, tools, toolExecutor, eventWriter);
+          await this.streamWithTypescript(modelMessages, tools, toolExecutor, eventWriter, writer.signal);
         }
       } else {
-        await this.streamWithTypescript(modelMessages, tools, toolExecutor, eventWriter);
+        await this.streamWithTypescript(modelMessages, tools, toolExecutor, eventWriter, writer.signal);
       }
 
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
@@ -136,9 +136,10 @@ export class AgentChatStreamSession {
     messages: ChatStreamRequest["messages"],
     tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
     toolExecutor: ReturnType<AgentToolExecutorFactory["create"]>,
-    eventWriter: AgentStreamEventWriter
+    eventWriter: AgentStreamEventWriter,
+    signal?: AbortSignal
   ): Promise<void> {
-    for await (const event of this.openAiClient.streamChatEvents(messages, tools, toolExecutor)) {
+    for await (const event of this.openAiClient.streamChatEvents(messages, tools, toolExecutor, signal)) {
       await eventWriter.write(event);
     }
   }

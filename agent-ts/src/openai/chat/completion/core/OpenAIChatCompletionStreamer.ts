@@ -16,10 +16,15 @@ export class OpenAIChatCompletionStreamer {
     this.requestBuilder = new OpenAIChatCompletionRequestBuilder(config);
   }
 
-  async collectStream(messages: OpenAIChatMessage[], tools: OpenAIChatTool[] = []): Promise<OpenAIChatRoundResult> {
+  async collectStream(
+    messages: OpenAIChatMessage[],
+    tools: OpenAIChatTool[] = [],
+    signal?: AbortSignal
+  ): Promise<OpenAIChatRoundResult> {
     return this.httpClient.fetchStream(
       signal => this.requestBuilder.build(messages, tools, signal),
-      body => this.responseBodyCollector.collect(body)
+      body => this.responseBodyCollector.collect(body),
+      signal
     );
   }
 }
