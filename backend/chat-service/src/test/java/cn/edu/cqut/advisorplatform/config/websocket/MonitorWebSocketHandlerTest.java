@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
-import cn.edu.cqut.advisorplatform.service.MonitorService;
+import cn.edu.cqut.advisorplatform.service.monitor.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import java.net.URI;

@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.config.websocket;
 
 import cn.edu.cqut.advisorplatform.common.security.JwtUtil;
-import cn.edu.cqut.advisorplatform.service.MonitorService;
+import cn.edu.cqut.advisorplatform.service.monitor.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

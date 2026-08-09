@@ -2,10 +2,10 @@ package cn.edu.cqut.advisorplatform.controller.monitor;
 
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.monitor.MonitorRealtimeResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.entity.UserRole;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserRole;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
-import cn.edu.cqut.advisorplatform.service.MonitorService;
+import cn.edu.cqut.advisorplatform.service.monitor.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
