@@ -33,6 +33,9 @@ copy application-local.yml.example application-local.yml
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`
 - `OPENAI_MODEL`
+- `OPENAI_TIMEOUT_SEC`（OpenAI 请求超时时间，默认 120 秒）
+- `AGENT_RUST_CORE_ENABLED`（是否启用 Rust 执行核心，默认 `true`）
+- `AGENT_CORE_PATH`（可选，指定 `agent-core` 可执行文件路径）
 - `MEMORY_API_BASE_URL`（可选，启用记忆上下文读取与写回）
 - `MEMORY_API_TOKEN`（配置 `MEMORY_API_BASE_URL` 时建议同时配置）
 
@@ -56,6 +59,17 @@ cd ..\agent-ts
 npm install
 npm run build
 npm start
+```
+本地验证 TS 与 Rust 联调：
+```bash
+cd agent-core
+cargo fmt --all -- --check
+cargo test
+cargo build
+
+cd ..\agent-ts
+npm run check
+npm run test:integration
 ```
 也可以使用本地脚本启动：
 ```powershell

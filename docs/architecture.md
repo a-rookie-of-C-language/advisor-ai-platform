@@ -8,7 +8,7 @@
 - `backend/gateway`：统一业务 API 入口，负责路由转发、JWT 认证协同、输入风控前置和跨服务入口治理。
 - Java 业务微服务：负责各业务域的数据、流程、鉴权与审计协作。
 - `agent-ts`：AI 控制层，负责聊天 HTTP/SSE 接入、模型编排、工具编排入口和运行时胶水。
-- `agent-core`：Rust 执行核心，负责高性能协议封装、执行状态机和后续热点路径承载。
+- `agent-core`：Rust 执行核心，负责 OpenAI-compatible 流式请求、SSE 分片解析、工具调用协议和执行状态机。
 - `agent`：旧版 Python Agent，迁移期间保留为兼容参考。
 - `backend/ai-gateway`：模型供应商网关，负责面向模型服务的 provider 抽象、模型路由、限流和调用治理。
 - 基础设施：PostgreSQL/pgvector、Redis、Kafka、Nacos、Jaeger、Prometheus、Grafana 等提供存储、注册配置、消息、追踪和监控能力。
@@ -59,7 +59,7 @@
 
 ### agent-ts / agent-core
 
-TypeScript + Rust AI 编排服务，不作为普通业务数据服务使用。`agent-ts` 负责 HTTP/SSE、模型编排和外部系统胶水，`agent-core` 负责可独立演进的高性能执行核心。
+TypeScript + Rust AI 编排服务，不作为普通业务数据服务使用。`agent-ts` 负责 HTTP/SSE、上下文构建、工具执行和外部系统胶水，`agent-core` 负责可独立演进的高性能模型流式执行核心。两者通过 stdin/stdout JSONL 通信。
 
 主要职责：
 
@@ -68,7 +68,10 @@ TypeScript + Rust AI 编排服务，不作为普通业务数据服务使用。`a
 - 通过 workspace 管理能力提供会话级文件统计和缓存清理。
 - 编排 RAG 检索、工具调用、MCP 工具和安全过滤；这些能力在 TS/Rust 迁移中逐步替换旧 Python 实现。
 - 提供 `/chat/stream` 给 `chat-service` 调用。
-- 通过 `agent-core` 生成兼容旧协议的 SSE 事件封装。
+- `agent-core` 执行 OpenAI-compatible 流式请求，输出 delta、tool_call 和 done JSONL 事件。
+- `agent-ts` 执行 memory、RAG、web 和 MCP 上下文编排；工具调用由 TS 执行后回传第二轮 Rust 请求。
+- Rust 核心不可用或在产生输出前失败时，TS 自动回退到原有 OpenAI 客户端。
+- SSE 客户端断开会沿 AbortSignal 终止 Rust 子进程，避免后台请求泄漏。
 
 ### ai-gateway
 
