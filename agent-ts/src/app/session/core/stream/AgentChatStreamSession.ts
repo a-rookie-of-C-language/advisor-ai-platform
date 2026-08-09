@@ -1,4 +1,6 @@
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
+import type { AgentCoreClient } from "../../../../core/client/AgentCoreClient.js";
 import type { OpenAIChatClient } from "../../../../openai/chat/core/client/OpenAIChatClient.js";
 import { AgentStreamEventWriter } from "../../../../protocol/events/stream/writer/AgentStreamEventWriter.js";
 import type { SseWriter } from "../../../../protocol/sse/writer/SseWriter.js";
@@ -15,6 +17,8 @@ export class AgentChatStreamSession {
 
   constructor(
     private readonly openAiApiKey: string,
+    private readonly config: AgentConfig,
+    private readonly core: AgentCoreClient,
     private readonly contextPipeline: AgentContextPipeline,
     private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter,
     private readonly openAiClient: OpenAIChatClient,
@@ -30,8 +34,23 @@ export class AgentChatStreamSession {
       const modelMessages = await this.contextPipeline.build(chatRequest);
       const tools = await this.openAiToolFacade.listTools();
       const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
-      for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
-        await eventWriter.write(event);
+      if (this.openAiApiKey && tools.length === 0 && this.core.canStream()) {
+        const rustMessages = modelMessages.map(({ role, content }) => ({ role, content }));
+        for await (const event of this.core.streamChat({
+          url: `${this.config.openAiBaseUrl}/chat/completions`,
+          apiKey: this.config.openAiApiKey,
+          model: this.config.openAiModel,
+          temperature: this.config.openAiTemperature,
+          messages: rustMessages
+        })) {
+          if (event.type === "delta") {
+            await eventWriter.write(event);
+          }
+        }
+      } else {
+        for await (const event of this.openAiClient.streamChatEvents(modelMessages, tools, toolExecutor)) {
+          await eventWriter.write(event);
+        }
       }
 
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {

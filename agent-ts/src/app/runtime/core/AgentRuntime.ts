@@ -34,6 +34,7 @@ export class AgentRuntime {
   ) {
     this.components = new AgentRuntimeComponents(
       config,
+      this.core,
       this.openAiClient,
       memoryContextBuilder,
       memoryTaskSubmitter,

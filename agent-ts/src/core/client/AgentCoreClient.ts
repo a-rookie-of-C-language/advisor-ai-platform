@@ -35,6 +35,10 @@ export class AgentCoreClient {
     return this.healthReporter.report();
   }
 
+  canStream(): boolean {
+    return this.processRunner !== undefined;
+  }
+
   async *streamChat(request: AgentCoreStreamChatRequest): AsyncGenerator<AgentCoreStreamEvent> {
     if (!this.processRunner) {
       throw new Error("agent-core executable not found");

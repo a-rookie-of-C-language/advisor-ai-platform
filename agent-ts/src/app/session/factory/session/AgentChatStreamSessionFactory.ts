@@ -1,4 +1,5 @@
 import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
+import type { AgentCoreClient } from "../../../../core/client/AgentCoreClient.js";
 import type { MemoryContextBuilder } from "../../../../memory/context/core/MemoryContextBuilder.js";
 import type { MemoryTaskSubmitter } from "../../../../memory/task/submitter/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../../../openai/chat/core/client/OpenAIChatClient.js";
@@ -17,6 +18,7 @@ export class AgentChatStreamSessionFactory {
 
   create(
     config: AgentConfig,
+    core: AgentCoreClient,
     openAiClient: OpenAIChatClient,
     memoryContextBuilder?: MemoryContextBuilder,
     memoryTaskSubmitter?: MemoryTaskSubmitter,
@@ -35,6 +37,8 @@ export class AgentChatStreamSessionFactory {
     const openAiToolComponents = this.openAiToolComponentsFactory.create(config.openAiApiKey, openAiToolRegistry);
     return new AgentChatStreamSession(
       config.openAiApiKey,
+      config,
+      core,
       contextPipeline,
       memoryTaskCompletionSubmitter,
       openAiClient,
