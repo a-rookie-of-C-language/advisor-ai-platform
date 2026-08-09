@@ -38,7 +38,7 @@ export class OpenAIChatEventStreamer {
       return;
     }
 
-    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor!)) {
+    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor!, signal)) {
       yield event;
     }
 

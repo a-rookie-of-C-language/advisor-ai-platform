@@ -112,8 +112,10 @@ export class AgentChatStreamSession {
 
     this.toolConversationAppender.appendAssistantToolCalls(conversation, toolCalls);
     for (const toolCall of toolCalls) {
+      throwIfAborted(signal);
       const toolArgs = OpenAIToolArgumentParser.parse(toolCall.function.arguments);
-      const toolResult = await toolExecutor(toolCall.function.name, toolArgs);
+      const toolResult = await toolExecutor(toolCall.function.name, toolArgs, signal);
+      throwIfAborted(signal);
       await eventWriter.write({
         type: "tool_result",
         toolCallId: toolCall.id,
@@ -158,5 +160,11 @@ export class AgentChatStreamSession {
       messages,
       tools
     }, signal);
+  }
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new Error("Agent stream aborted");
   }
 }

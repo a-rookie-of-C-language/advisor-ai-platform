@@ -21,8 +21,12 @@ export class AgentOpenAiToolFacade {
   async executeTool(
     chatRequest: ChatStreamRequest,
     toolName: string,
-    toolArgs: JsonObject
+    toolArgs: JsonObject,
+    signal?: AbortSignal
   ): Promise<OpenAiToolExecutionResult> {
+    if (signal?.aborted) {
+      throw new Error("Agent stream aborted");
+    }
     return this.openAiToolRegistry
       ? this.openAiToolRegistry.executeTool(chatRequest, toolName, toolArgs)
       : OpenAiToolResultFactory.error(`未知工具: ${toolName}`);

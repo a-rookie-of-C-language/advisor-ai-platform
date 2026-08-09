@@ -11,6 +11,7 @@ export class AgentToolExecutorFactory {
     if (tools.length === 0) {
       return undefined;
     }
-    return (toolName: string, toolArgs: JsonObject) => this.openAiToolFacade.executeTool(chatRequest, toolName, toolArgs);
+    return (toolName: string, toolArgs: JsonObject, signal?: AbortSignal) =>
+      this.openAiToolFacade.executeTool(chatRequest, toolName, toolArgs, signal);
   }
 }
