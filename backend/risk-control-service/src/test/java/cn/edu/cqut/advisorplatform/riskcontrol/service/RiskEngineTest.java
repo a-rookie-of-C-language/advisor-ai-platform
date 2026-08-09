@@ -11,6 +11,7 @@ import cn.edu.cqut.advisorplatform.riskcontrol.dao.UserViolationDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
+import cn.edu.cqut.advisorplatform.riskcontrol.service.filter.RiskFilter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;

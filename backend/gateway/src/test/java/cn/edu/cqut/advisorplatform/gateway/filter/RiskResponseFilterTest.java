@@ -3,6 +3,8 @@ package cn.edu.cqut.advisorplatform.gateway.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import cn.edu.cqut.advisorplatform.gateway.filter.risk.RiskResponseFilter;
+import cn.edu.cqut.advisorplatform.gateway.filter.risk.RiskResponseSupport;
 import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
