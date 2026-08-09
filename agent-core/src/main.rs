@@ -5,6 +5,7 @@ use command::runner::CoreCommandRunner;
 mod command;
 mod protocol;
 mod sse;
+mod stream;
 
 fn main() -> Result<()> {
     let command = CoreCommandReader::read()?;
