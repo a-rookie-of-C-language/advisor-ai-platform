@@ -212,6 +212,65 @@ test("AgentChatStreamSession aborts a running TS fallback stream", async () => {
   }
 });
 
+test("AgentChatStreamSession stops before the final model round when a tool aborts", async () => {
+  const requests = [];
+  const controller = new AbortController();
+  const server = createServer((request, response) => {
+    const chunks = [];
+    request.on("data", chunk => chunks.push(chunk));
+    request.on("end", () => {
+      requests.push(Buffer.concat(chunks).toString("utf8"));
+      response.writeHead(200, { "Content-Type": "text/event-stream" });
+      response.end(
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"search","arguments":"{}"}}]}}]}' +
+          "\n\n" +
+          'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\n' +
+          "data: [DONE]\n\n"
+      );
+    });
+  });
+  await listen(server);
+
+  try {
+    const address = server.address();
+    assert.notEqual(typeof address, "string");
+    assert.ok(address);
+    const config = {
+      openAiApiKey: "integration-key",
+      openAiBaseUrl: "http://127.0.0.1:" + address.port,
+      openAiModel: "integration-model",
+      openAiTemperature: 0.2,
+      requestTimeoutMs: 1_000
+    };
+    const writes = [];
+    const tool = { type: "function", function: { name: "search", description: "search", parameters: {} } };
+    const session = new AgentChatStreamSession(
+      config.openAiApiKey,
+      config,
+      { canStream() { return false; } },
+      { async build() { return [{ role: "user", content: "hello" }]; } },
+      { async submit() {} },
+      new OpenAIChatClient(config),
+      { async listTools() { return [tool]; } },
+      { create() { return async () => { setTimeout(() => controller.abort(), 10); await new Promise(resolve => setTimeout(resolve, 30)); return { output: "unused", success: true }; }; } }
+    );
+    const writer = {
+      signal: controller.signal,
+      async start() {},
+      async write(event, source, payload) { writes.push({ event, source, payload }); },
+      async done(reason) { writes.push({ event: "done", reason }); },
+      async error(code, message, retryable) { throw new Error(code + ": " + message + ": " + retryable); }
+    };
+
+    await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
+
+    assert.equal(requests.length, 1);
+    assert.equal(writes.some(({ event }) => event === "done"), false);
+  } finally {
+    server.close();
+  }
+});
+
 function listen(server) {
   return new Promise((resolve, reject) => {
     server.once("error", reject);
