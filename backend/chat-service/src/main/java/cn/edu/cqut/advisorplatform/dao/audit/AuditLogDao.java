@@ -1,8 +1,8 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.dao.audit;
 
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;

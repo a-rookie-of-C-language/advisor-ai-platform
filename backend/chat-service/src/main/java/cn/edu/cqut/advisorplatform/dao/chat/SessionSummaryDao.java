@@ -1,6 +1,6 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.dao.chat;
 
-import cn.edu.cqut.advisorplatform.entity.SessionSummaryDO;
+import cn.edu.cqut.advisorplatform.entity.chat.SessionSummaryDO;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

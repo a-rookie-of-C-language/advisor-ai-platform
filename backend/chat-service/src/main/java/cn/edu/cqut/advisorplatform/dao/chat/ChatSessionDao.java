@@ -1,6 +1,6 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.dao.chat;
 
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,6 +1,6 @@
-package cn.edu.cqut.advisorplatform.dao;
+package cn.edu.cqut.advisorplatform.dao.user;
 
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

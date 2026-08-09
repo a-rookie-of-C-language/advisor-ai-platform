@@ -2,6 +2,7 @@ package cn.edu.cqut.advisorplatform.dao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cn.edu.cqut.advisorplatform.dao.memory.UserMemoryDao;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.Query;
