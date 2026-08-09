@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
 
 export class AgentCoreProcessRunner {
   constructor(private readonly executablePath: string) {}
@@ -24,5 +25,38 @@ export class AgentCoreProcessRunner {
 
       child.stdin.end(input);
     });
+  }
+
+  async *runLines(command: string, input: string): AsyncGenerator<string> {
+    const child = spawn(this.executablePath, [command], {
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    const stderr: Buffer[] = [];
+    let processError: Error | undefined;
+    const closePromise = new Promise<number | null>((resolve) => {
+      child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+      child.once("error", (error) => {
+        processError = error;
+        resolve(null);
+      });
+      child.once("close", resolve);
+    });
+    const lines = createInterface({ input: child.stdout });
+
+    child.stdin.end(input);
+    try {
+      for await (const line of lines) {
+        yield line;
+      }
+      const code = await closePromise;
+      if (processError) {
+        throw processError;
+      }
+      if (code !== 0) {
+        throw new Error(Buffer.concat(stderr).toString("utf8") || `agent-core exited with ${code}`);
+      }
+    } finally {
+      lines.close();
+    }
   }
 }

@@ -1,4 +1,6 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
+import type { AgentCoreStreamEvent } from "../model/AgentCoreStreamEvent.js";
+import type { AgentCoreStreamChatRequest } from "../model/AgentCoreStreamChatRequest.js";
 import type { ProtocolEvent } from "../../protocol/events/model/protocol/ProtocolEvent.js";
 import { AgentCoreHealthReporter } from "../health/AgentCoreHealthReporter.js";
 import { AgentCoreExecutableLocator } from "../process/locator/AgentCoreExecutableLocator.js";
@@ -31,6 +33,24 @@ export class AgentCoreClient {
 
   async health(): Promise<JsonObject> {
     return this.healthReporter.report();
+  }
+
+  async *streamChat(request: AgentCoreStreamChatRequest): AsyncGenerator<AgentCoreStreamEvent> {
+    if (!this.processRunner) {
+      throw new Error("agent-core executable not found");
+    }
+
+    const input = JSON.stringify({
+      url: request.url,
+      api_key: request.apiKey,
+      model: request.model,
+      temperature: request.temperature,
+      messages: request.messages,
+      tools: request.tools ?? []
+    });
+    for await (const line of this.processRunner.runLines("stream-chat", input)) {
+      yield JSON.parse(line) as AgentCoreStreamEvent;
+    }
   }
 
   private runCore(command: string, input: string): Promise<string> {
