@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
+use std::time::Duration;
 
 #[derive(Debug, Deserialize)]
 struct StreamChatRequest {
@@ -11,6 +12,7 @@ struct StreamChatRequest {
     api_key: String,
     model: String,
     temperature: f64,
+    request_timeout_ms: u64,
     messages: Vec<Value>,
     #[serde(default)]
     tools: Vec<Value>,
@@ -46,7 +48,11 @@ impl OpenAiStreamRunner {
         let request: StreamChatRequest =
             serde_json::from_str(input).context("invalid stream-chat request")?;
         let body = Self::request_body(&request);
-        let response = Client::new()
+        let client = Client::builder()
+            .timeout(Duration::from_millis(request.request_timeout_ms))
+            .build()
+            .context("failed to build OpenAI HTTP client")?;
+        let response = client
             .post(&request.url)
             .bearer_auth(&request.api_key)
             .json(&body)
@@ -222,6 +228,7 @@ mod tests {
             api_key: "key".to_owned(),
             model: "model".to_owned(),
             temperature: 0.2,
+            request_timeout_ms: 10_000,
             messages: Vec::new(),
             tools: vec![json!({"type": "function"})],
         };
