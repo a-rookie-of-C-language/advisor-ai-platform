@@ -27,12 +27,21 @@ export class AgentCoreProcessRunner {
     });
   }
 
-  async *runLines(command: string, input: string): AsyncGenerator<string> {
+  async *runLines(command: string, input: string, signal?: AbortSignal): AsyncGenerator<string> {
+    if (signal?.aborted) {
+      throw new Error("agent-core stream aborted");
+    }
     const child = spawn(this.executablePath, [command], {
       stdio: ["pipe", "pipe", "pipe"]
     });
     const stderr: Buffer[] = [];
     let processError: Error | undefined;
+    let aborted = false;
+    const abortHandler = () => {
+      aborted = true;
+      child.kill();
+    };
+    signal?.addEventListener("abort", abortHandler, { once: true });
     const closePromise = new Promise<number | null>((resolve) => {
       child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
       child.once("error", (error) => {
@@ -48,6 +57,9 @@ export class AgentCoreProcessRunner {
       for await (const line of lines) {
         yield line;
       }
+      if (aborted) {
+        throw new Error("agent-core stream aborted");
+      }
       const code = await closePromise;
       if (processError) {
         throw processError;
@@ -57,6 +69,7 @@ export class AgentCoreProcessRunner {
       }
     } finally {
       lines.close();
+      signal?.removeEventListener("abort", abortHandler);
     }
   }
 }

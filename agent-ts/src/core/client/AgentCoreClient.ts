@@ -41,7 +41,7 @@ export class AgentCoreClient {
     return this.processRunner !== undefined;
   }
 
-  async *streamChat(request: AgentCoreStreamChatRequest): AsyncGenerator<AgentCoreStreamEvent> {
+  async *streamChat(request: AgentCoreStreamChatRequest, signal?: AbortSignal): AsyncGenerator<AgentCoreStreamEvent> {
     if (!this.processRunner) {
       throw new Error("agent-core executable not found");
     }
@@ -55,7 +55,7 @@ export class AgentCoreClient {
       messages: request.messages,
       tools: request.tools ?? []
     });
-    for await (const line of this.processRunner.runLines("stream-chat", input)) {
+    for await (const line of this.processRunner.runLines("stream-chat", input, signal)) {
       yield JSON.parse(line) as AgentCoreStreamEvent;
     }
   }

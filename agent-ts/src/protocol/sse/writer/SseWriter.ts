@@ -3,11 +3,19 @@ import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";
 
 export class SseWriter {
+  private readonly abortController = new AbortController();
+
   constructor(
     private readonly response: ServerResponse,
     private readonly core: AgentCoreClient,
     private readonly traceId: string
-  ) {}
+  ) {
+    this.response.once("close", () => this.abortController.abort());
+  }
+
+  get signal(): AbortSignal {
+    return this.abortController.signal;
+  }
 
   async start(): Promise<void> {
     this.response.writeHead(200, {

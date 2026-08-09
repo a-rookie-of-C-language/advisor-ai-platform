@@ -116,6 +116,40 @@ test("AgentChatStreamSession executes Rust tool calls and sends a second round",
   }
 });
 
+test("AgentCoreClient aborts a running Rust stream", async () => {
+  const server = createServer((request, response) => {
+    request.resume();
+    response.writeHead(200, { "Content-Type": "text/event-stream" });
+  });
+  await listen(server);
+
+  try {
+    const address = server.address();
+    assert.notEqual(typeof address, "string");
+    assert.ok(address);
+    const controller = new AbortController();
+    const client = new AgentCoreClient(executablePath);
+    const stream = client.streamChat({
+      url: "http://127.0.0.1:" + address.port + "/chat/completions",
+      apiKey: "integration-key",
+      model: "integration-model",
+      temperature: 0.2,
+      requestTimeoutMs: 10_000,
+      messages: []
+    }, controller.signal);
+
+    const consuming = (async () => {
+      for await (const _event of stream) {
+        // The mock deliberately does not emit events.
+      }
+    })();
+    setTimeout(() => controller.abort(), 50);
+    await assert.rejects(consuming, /aborted|exited/);
+  } finally {
+    server.close();
+  }
+});
+
 function listen(server) {
   return new Promise((resolve, reject) => {
     server.once("error", reject);

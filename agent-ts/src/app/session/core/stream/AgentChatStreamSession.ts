@@ -45,8 +45,11 @@ export class AgentChatStreamSession {
       if (this.openAiApiKey && this.core.canStream()) {
         const rustState: RustStreamState = { emitted: false };
         try {
-          await this.streamWithRust(modelMessages, tools, chatRequest, eventWriter, rustState);
+          await this.streamWithRust(modelMessages, tools, chatRequest, eventWriter, rustState, writer.signal);
         } catch (error) {
+          if (writer.signal?.aborted) {
+            return;
+          }
           if (rustState.emitted) {
             throw error;
           }
@@ -63,6 +66,9 @@ export class AgentChatStreamSession {
       await writer.done("stream_finished");
       await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, eventWriter.answer);
     } catch (error) {
+      if (writer.signal?.aborted) {
+        return;
+      }
       await writer.error("internal_error", this.streamErrorMessageResolver.resolve(error), true);
     }
   }
@@ -72,13 +78,14 @@ export class AgentChatStreamSession {
     tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
     chatRequest: ChatStreamRequest,
     eventWriter: AgentStreamEventWriter,
-    state: RustStreamState
+    state: RustStreamState,
+    signal: AbortSignal
   ): Promise<void> {
     const conversation = modelMessages.map(({ role, content }) => ({ role, content }));
     const toolExecutor = this.toolExecutorFactory.create(chatRequest, tools);
     const toolCalls: OpenAIToolCall[] = [];
 
-    for await (const event of this.streamRustRound(conversation, tools)) {
+    for await (const event of this.streamRustRound(conversation, tools, signal)) {
       if (event.type === "delta") {
         state.emitted = true;
         await eventWriter.write(event);
@@ -117,7 +124,7 @@ export class AgentChatStreamSession {
       this.toolConversationAppender.appendToolResult(conversation, toolCall, toolResult.output);
     }
 
-    for await (const event of this.streamRustRound(conversation, [])) {
+    for await (const event of this.streamRustRound(conversation, [], signal)) {
       if (event.type === "delta") {
         state.emitted = true;
         await eventWriter.write(event);
@@ -138,7 +145,8 @@ export class AgentChatStreamSession {
 
   private streamRustRound(
     messages: Parameters<AgentCoreClient["streamChat"]>[0]["messages"],
-    tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>
+    tools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
+    signal?: AbortSignal
   ) {
     return this.core.streamChat({
       url: `${this.config.openAiBaseUrl}/chat/completions`,
@@ -148,6 +156,6 @@ export class AgentChatStreamSession {
       requestTimeoutMs: this.config.requestTimeoutMs,
       messages,
       tools
-    });
+    }, signal);
   }
 }
