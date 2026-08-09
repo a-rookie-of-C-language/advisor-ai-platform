@@ -9,6 +9,8 @@ import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.RiskRule;
 import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
+import cn.edu.cqut.advisorplatform.riskcontrol.service.filter.ContentSafetyFilter;
+import cn.edu.cqut.advisorplatform.riskcontrol.service.filter.RiskPatternSupport;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;

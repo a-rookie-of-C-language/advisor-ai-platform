@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import cn.edu.cqut.advisorplatform.riskcontrol.dao.RateLimitDao;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
+import cn.edu.cqut.advisorplatform.riskcontrol.service.filter.RateLimitFilter;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

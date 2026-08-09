@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import cn.edu.cqut.advisorplatform.gateway.filter.risk.RiskCheckResponse;
+import cn.edu.cqut.advisorplatform.gateway.filter.risk.RiskControlFilter;
+import cn.edu.cqut.advisorplatform.gateway.filter.risk.RiskControlSupport;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
