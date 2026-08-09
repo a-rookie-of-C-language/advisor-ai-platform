@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.annotation;
 
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
 import java.lang.annotation.*;
 
 @Target(ElementType.METHOD)

@@ -1,15 +1,15 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.service.AuditService;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
+import cn.edu.cqut.advisorplatform.service.audit.AuditService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;

@@ -1,10 +1,10 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
-import cn.edu.cqut.advisorplatform.service.AuditService;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
+import cn.edu.cqut.advisorplatform.service.audit.AuditService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;

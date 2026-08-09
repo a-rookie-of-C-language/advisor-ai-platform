@@ -1,7 +1,7 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;

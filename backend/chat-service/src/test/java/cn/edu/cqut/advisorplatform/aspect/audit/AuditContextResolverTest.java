@@ -1,9 +1,9 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;

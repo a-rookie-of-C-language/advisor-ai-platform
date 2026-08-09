@@ -1,8 +1,8 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import cn.edu.cqut.advisorplatform.annotation.Auditable;
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
 
 class AuditAspectTestController {
 

@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

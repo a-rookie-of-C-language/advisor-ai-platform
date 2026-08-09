@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.aspect;
+package cn.edu.cqut.advisorplatform.aspect.audit;
 
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import jakarta.servlet.http.HttpServletRequest;
