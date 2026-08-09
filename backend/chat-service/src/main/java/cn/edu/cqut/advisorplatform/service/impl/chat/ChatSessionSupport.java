@@ -1,13 +1,13 @@
 package cn.edu.cqut.advisorplatform.service.impl.chat;
 
-import cn.edu.cqut.advisorplatform.client.RagServiceClient;
+import cn.edu.cqut.advisorplatform.client.rag.RagServiceClient;
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
-import cn.edu.cqut.advisorplatform.entity.UserRole;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserRole;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;

@@ -8,11 +8,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatMessageDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;

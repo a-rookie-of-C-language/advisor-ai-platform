@@ -1,11 +1,11 @@
 package cn.edu.cqut.advisorplatform.service.impl.chat;
 
-import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.SourceReference;
-import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatMessageDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.chat.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.chat.StreamEventRecord;
 import cn.edu.cqut.advisorplatform.utils.LogTraceUtil;
 import java.time.LocalDateTime;
 import java.util.List;

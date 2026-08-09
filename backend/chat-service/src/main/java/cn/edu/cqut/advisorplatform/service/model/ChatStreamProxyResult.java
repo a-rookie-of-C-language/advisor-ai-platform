@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.model;
 
-import cn.edu.cqut.advisorplatform.entity.SourceReference;
-import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
+import cn.edu.cqut.advisorplatform.entity.chat.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.chat.StreamEventRecord;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;

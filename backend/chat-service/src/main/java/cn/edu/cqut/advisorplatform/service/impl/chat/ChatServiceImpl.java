@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.impl.chat;
 
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.service.ChatService;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatMessageDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.service.chat.ChatService;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;

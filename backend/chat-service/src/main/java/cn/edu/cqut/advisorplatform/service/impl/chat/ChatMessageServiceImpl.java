@@ -1,11 +1,11 @@
 package cn.edu.cqut.advisorplatform.service.impl.chat;
 
-import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
-import cn.edu.cqut.advisorplatform.entity.ChatMessageDO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.SourceReference;
-import cn.edu.cqut.advisorplatform.entity.StreamEventRecord;
-import cn.edu.cqut.advisorplatform.service.ChatMessageService;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatMessageDao;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatMessageDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.chat.SourceReference;
+import cn.edu.cqut.advisorplatform.entity.chat.StreamEventRecord;
+import cn.edu.cqut.advisorplatform.service.chat.ChatMessageService;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;

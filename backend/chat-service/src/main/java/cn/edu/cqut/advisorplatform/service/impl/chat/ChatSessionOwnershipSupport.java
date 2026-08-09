@@ -2,8 +2,8 @@ package cn.edu.cqut.advisorplatform.service.impl.chat;
 
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.exception.NotFoundException;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

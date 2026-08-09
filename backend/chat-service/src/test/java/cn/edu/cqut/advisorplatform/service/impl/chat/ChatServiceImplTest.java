@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.client.RagServiceClient;
+import cn.edu.cqut.advisorplatform.client.rag.RagServiceClient;
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.dao.ChatMessageDao;
-import cn.edu.cqut.advisorplatform.dao.ChatSessionDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatMessageDao;
+import cn.edu.cqut.advisorplatform.dao.chat.ChatSessionDao;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.ChatSessionDO;
-import cn.edu.cqut.advisorplatform.entity.UserDO;
+import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
