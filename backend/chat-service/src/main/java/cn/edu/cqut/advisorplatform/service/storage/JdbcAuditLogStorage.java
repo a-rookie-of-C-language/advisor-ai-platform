@@ -1,10 +1,10 @@
 package cn.edu.cqut.advisorplatform.service.storage;
 
-import cn.edu.cqut.advisorplatform.dao.AuditLogDao;
+import cn.edu.cqut.advisorplatform.dao.audit.AuditLogDao;
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.AuditAction;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
-import cn.edu.cqut.advisorplatform.entity.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

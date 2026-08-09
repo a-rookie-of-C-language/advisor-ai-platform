@@ -1,8 +1,8 @@
 package cn.edu.cqut.advisorplatform.service.storage;
 
 import cn.edu.cqut.advisorplatform.common.retry.FixedBackoffRetryExecutor;
-import cn.edu.cqut.advisorplatform.dao.AuditLogDao;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.dao.audit.AuditLogDao;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -4,8 +4,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import cn.edu.cqut.advisorplatform.client.AuditServiceClient;
-import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import cn.edu.cqut.advisorplatform.client.audit.AuditServiceClient;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
 import cn.edu.cqut.advisorplatform.service.storage.AuditLogStorage;
 import java.util.List;
 import org.junit.jupiter.api.Test;

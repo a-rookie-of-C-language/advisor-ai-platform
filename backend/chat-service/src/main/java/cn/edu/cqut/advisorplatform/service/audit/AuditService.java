@@ -1,4 +1,4 @@
-package cn.edu.cqut.advisorplatform.service.storage;
+package cn.edu.cqut.advisorplatform.service.audit;
 
 import cn.edu.cqut.advisorplatform.dto.response.PageResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
@@ -8,17 +8,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 
-public interface AuditLogStorage {
+public interface AuditService {
 
-  String storeType();
+  void saveAuditLog(AuditLogDO auditLog);
 
-  void save(AuditLogDO auditLog);
+  void saveAuditLogAsync(AuditLogDO auditLog);
 
-  void saveAsync(AuditLogDO auditLog);
+  void saveAuditLogsAsync(List<AuditLogDO> auditLogs);
 
-  void saveBatch(List<AuditLogDO> auditLogs);
-
-  PageResponseDTO<AuditLogDO> search(
+  PageResponseDTO<AuditLogDO> queryAuditLogs(
       Long userId,
       AuditModule module,
       AuditAction action,
@@ -26,7 +24,16 @@ public interface AuditLogStorage {
       LocalDateTime endTime,
       Pageable pageable);
 
-  AuditLogDO findById(Long id);
+  PageResponseDTO<AuditLogDO> queryAuditLogs(
+      Long userId,
+      AuditModule module,
+      AuditAction action,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      int page,
+      int size);
+
+  AuditLogDO getAuditLogById(Long id);
 
   long countByUserAndModule(Long userId, AuditModule module);
 
