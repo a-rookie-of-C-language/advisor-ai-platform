@@ -1,7 +1,9 @@
 package cn.edu.cqut.advisorplatform.service.storage;
 
+import cn.edu.cqut.advisorplatform.common.retry.FixedBackoffRetryExecutor;
 import cn.edu.cqut.advisorplatform.dao.AuditLogDao;
 import cn.edu.cqut.advisorplatform.entity.AuditLogDO;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,35 +18,38 @@ public class AuditLogRetryWriter {
 
   private static final int MAX_RETRY_ATTEMPTS = 3;
   private static final long RETRY_BACKOFF_MS = 120L;
+  private static final FixedBackoffRetryExecutor RETRY_EXECUTOR =
+      new FixedBackoffRetryExecutor(MAX_RETRY_ATTEMPTS, RETRY_BACKOFF_MS);
 
   private final AuditLogDao auditLogDao;
   private final PlatformTransactionManager transactionManager;
 
   public void saveWithRetryAndFallback(AuditLogDO auditLog) {
-    Exception lastError = null;
-    for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-      try {
-        saveInNewTransaction(auditLog);
-        log.debug(
-            "Async audit log saved: userId={}, module={}, action={}, traceId={}, attempt={}",
-            auditLog.getUserId(),
-            auditLog.getModule(),
-            auditLog.getAction(),
-            auditLog.getTraceId(),
-            attempt);
-        return;
-      } catch (Exception e) {
-        lastError = e;
-        log.warn(
-            "Async audit save retry failed: attempt={}/{}, traceId={}, module={}, action={}, reason={}",
-            attempt,
-            MAX_RETRY_ATTEMPTS,
-            auditLog.getTraceId(),
-            auditLog.getModule(),
-            auditLog.getAction(),
-            e.getMessage());
-        sleepBackoff();
-      }
+    AtomicInteger successAttempt = new AtomicInteger();
+    Exception lastError =
+        RETRY_EXECUTOR.execute(
+            () -> {
+              successAttempt.incrementAndGet();
+              saveInNewTransaction(auditLog);
+            },
+            (attempt, maxAttempts, error) ->
+                log.warn(
+                    "Async audit save retry failed: attempt={}/{}, traceId={}, module={}, action={}, reason={}",
+                    attempt,
+                    maxAttempts,
+                    auditLog.getTraceId(),
+                    auditLog.getModule(),
+                    auditLog.getAction(),
+                    error.getMessage()));
+    if (lastError == null) {
+      log.debug(
+          "Async audit log saved: userId={}, module={}, action={}, traceId={}, attempt={}",
+          auditLog.getUserId(),
+          auditLog.getModule(),
+          auditLog.getAction(),
+          auditLog.getTraceId(),
+          successAttempt.get());
+      return;
     }
 
     try {
@@ -66,13 +71,5 @@ public class AuditLogRetryWriter {
     TransactionTemplate template = new TransactionTemplate(transactionManager);
     template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     template.executeWithoutResult(status -> auditLogDao.save(auditLog));
-  }
-
-  private void sleepBackoff() {
-    try {
-      Thread.sleep(RETRY_BACKOFF_MS);
-    } catch (InterruptedException ex) {
-      Thread.currentThread().interrupt();
-    }
   }
 }

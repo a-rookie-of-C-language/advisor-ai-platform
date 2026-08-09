@@ -16,7 +16,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -31,9 +31,9 @@ spring:
 
 advisor:
   internal:
-    token: ${INTERNAL_SERVICE_TOKEN:arookieofc}
+    token: ${INTERNAL_SERVICE_TOKEN:}
   jwt:
-    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:}}
     expiration: ${JWT_EXPIRE_MS:86400000}
 
 management:

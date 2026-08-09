@@ -3,12 +3,15 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any, Optional
+from typing import Optional
 
 from agents.base.agent import Agent
-from tools.tool_permission import PermissionConfig, ToolPermission
+from json_types import JsonObject
+from llm.base_provider import BaseLLMProvider
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
-from .base_annotator import BaseChunkAnnotator, ChunkAnnotation
+from .base_annotator import BaseChunkAnnotator
+from .ChunkAnnotation import ChunkAnnotation
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +48,7 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
 
     name = "llm_v1"
 
-    def __init__(self, provider: Any = None) -> None:
+    def __init__(self, provider: BaseLLMProvider | None = None) -> None:
         resolved_provider = provider or _build_annotation_provider_from_env()
         Agent.__init__(
             self,
@@ -63,18 +66,13 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
             ann.source = "llm_skip"
             return ann
 
+        # 在 async 上下文中调用父类的默认实现（使用 run_in_executor）
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
+            # 已在 async 上下文，直接返回 await
+            return asyncio.run(self._annotate_async(text, ann))
         except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(asyncio.run, self._annotate_async(text, ann))
-                return future.result(timeout=30)
-        else:
+            # 无 event loop，可以安全使用 asyncio.run
             return asyncio.run(self._annotate_async(text, ann))
 
     async def _annotate_async(self, text: str, ann: ChunkAnnotation) -> ChunkAnnotation:
@@ -93,14 +91,14 @@ class LlmAnnotator(Agent, BaseChunkAnnotator):
         ann.source = "llm"
         return ann
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         raise NotImplementedError("LlmAnnotator 不支持 run_once，请使用 annotate()")
 
     async def run(self) -> None:
         raise NotImplementedError("LlmAnnotator 不支持 run，请使用 annotate()")
 
 
-def _build_annotation_provider_from_env() -> Any:
+def _build_annotation_provider_from_env() -> BaseLLMProvider:
     """从 .env 构建标注专用 LLM provider，优先读取 ANNOTATION_*，缺失时回退 OPENAI_*。"""
     from dotenv import load_dotenv
 

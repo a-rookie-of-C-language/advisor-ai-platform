@@ -54,6 +54,18 @@ public class UserMemoryDO {
 
   private LocalDateTime updatedAt;
 
+  @Column(nullable = false, length = 20)
+  private String memoryType = "semantic";
+
+  private LocalDateTime validUntil;
+
+  private Long supersedesId;
+
+  private Long mergedIntoId;
+
+  @Column(nullable = false)
+  private Boolean isCore = false;
+
   @Column(nullable = false)
   private Integer accessCount = 0;
 

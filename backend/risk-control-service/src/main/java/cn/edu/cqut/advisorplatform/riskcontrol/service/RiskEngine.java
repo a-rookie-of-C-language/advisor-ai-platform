@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckRequest;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.RiskCheckResponse;
 import cn.edu.cqut.advisorplatform.riskcontrol.dto.TrackingEventMessage;
 import cn.edu.cqut.advisorplatform.riskcontrol.entity.UserViolation;
+import cn.edu.cqut.advisorplatform.riskcontrol.service.filter.RiskFilter;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.LocalDateTime;

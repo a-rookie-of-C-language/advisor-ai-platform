@@ -5,23 +5,23 @@ import RAGPage from './RAGPage'
 
 vi.mock('../../api/ragApi', () => ({
   ragApi: {
-    listKnowledgeBases: vi.fn().mockResolvedValue([]),
+    listKnowledgeBases: vi.fn().mockResolvedValue({ data: [] }),
     createKnowledgeBase: vi.fn(),
     deleteKnowledgeBase: vi.fn(),
-    listDocuments: vi.fn().mockResolvedValue([]),
+    listDocuments: vi.fn().mockResolvedValue({ data: [] }),
     uploadDocument: vi.fn(),
     deleteDocument: vi.fn(),
   },
 }))
 
 describe('RAGPage', () => {
-  it('should render rag page', () => {
+  it('should render rag page', async () => {
     render(
       <BrowserRouter>
         <RAGPage />
       </BrowserRouter>
     )
 
-    expect(screen.getByText(/知识库|RAG/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '知识库管理' })).toBeInTheDocument()
   })
 })

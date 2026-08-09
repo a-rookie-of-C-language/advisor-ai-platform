@@ -1,0 +1,10 @@
+package cn.edu.cqut.advisorplatform.dao.chat;
+
+import cn.edu.cqut.advisorplatform.entity.chat.SessionSummaryDO;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface SessionSummaryDao extends JpaRepository<SessionSummaryDO, Long> {
+
+  Optional<SessionSummaryDO> findBySessionId(Long sessionId);
+}

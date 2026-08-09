@@ -34,9 +34,9 @@ logging:
 
 advisor:
   jwt:
-    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:}}
   memory:
-    api-token: ${MEMORY_API_TOKEN:${INTERNAL_SERVICE_TOKEN:arookieofc}}
+    api-token: ${MEMORY_API_TOKEN:${INTERNAL_SERVICE_TOKEN:}}
     vector-store: pgvector
   embedding:
     model: bge-m3
@@ -45,11 +45,11 @@ advisor:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
   agent:
     base-url: ${AGENT_BASE_URL:http://127.0.0.1:8001}
-    api-token: ${AGENT_API_TOKEN:${INTERNAL_SERVICE_TOKEN:arookieofc}}
+    api-token: ${AGENT_API_TOKEN:${INTERNAL_SERVICE_TOKEN:}}
     timeout-ms: 600000
     debug-stream: false
   ai-gateway:
     enabled: ${AI_GATEWAY_ENABLED:false}
     base-url: ${AI_GATEWAY_BASE_URL:http://127.0.0.1:8090}
-    api-key: ${AI_GATEWAY_API_KEY:dev-key}
+    api-key: ${AI_GATEWAY_API_KEY:}
     model: ${AI_GATEWAY_MODEL:gpt-4.1-mini}

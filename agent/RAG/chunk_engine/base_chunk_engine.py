@@ -1,24 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
+from json_types import JsonObject
+
+from .ChunkResult import ChunkResult
 from .file_profile import FileProfile
-
-
-@dataclass
-class ChunkResult:
-    """切片结果，包含文本内容和结构化元数据。"""
-
-    text: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    # metadata 关键字段:
-    #   page_number: int     — 页码
-    #   type: str            — 数据类型 (product / policy / general)
-    #   authority: str       — 权威性 (official / secondary)
-    #   effective_date: str  — 生效日期 (ISO 格式)
 
 
 class BaseChunkEngine(ABC):
@@ -39,7 +28,7 @@ class BaseChunkEngine(ABC):
         text: str,
         chunk_size: int = 800,
         overlap: int = 120,
-        base_metadata: Dict[str, Any] | None = None,
+        base_metadata: JsonObject | None = None,
     ) -> List[ChunkResult]:
         clean = (text or "").strip()
         if not clean:

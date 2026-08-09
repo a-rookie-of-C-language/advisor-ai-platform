@@ -1,15 +1,34 @@
 from __future__ import annotations
 
-import hashlib
-import json
-import re
+import asyncio
+import logging
 from typing import Awaitable, Callable
 
+from context.compaction.compaction_transforms import (
+    apply_autocompact,
+    apply_keep_last,
+    estimate_tokens,
+    to_transcript_text,
+)
+from context.compaction.micro_compactor import MicroCompactor
 from llm.chat_message import ChatMessage
+
+logger = logging.getLogger(__name__)
 
 
 class ContextCompactor:
-    """分层上下文压缩器（Level 1 + 2 + 3 + 4）。"""
+    """分层上下文压缩器（Level 1 + 2 + 3 + 4）。
+
+    特性：
+    - LRU 缓存：限制 _micro_cache 最大容量，避免内存泄漏
+    - 角色判别：仅依赖 message.role 判断工具结果，避免误判
+    - 异步摘要支持：auto_compact 可配置为异步执行
+    """
+
+    # 最大缓存容量（防止内存泄漏）
+    MAX_MICRO_CACHE_SIZE = 100
+    # 摘要超时时间（秒），超时后跳过摘要继续流程
+    SUMMARIZE_TIMEOUT_SECONDS = 30.0
 
     def __init__(
         self,
@@ -33,7 +52,8 @@ class ContextCompactor:
         self._collapse_keep_last = max(collapse_keep_last, 1)
         self._auto_trigger_tokens = max(auto_trigger_tokens, 1)
         self._auto_keep_last = max(auto_keep_last, 1)
-        self._micro_cache: dict[str, str] = {}
+
+        self._micro_compactor = MicroCompactor(self.MAX_MICRO_CACHE_SIZE)
 
     async def compact_for_model(
         self,
@@ -70,7 +90,24 @@ class ContextCompactor:
             if persist_transcript_fn is not None:
                 transcript_path = persist_transcript_fn(session_id, projected)
             transcript_text = self._to_transcript_text(projected)
-            summary = (await summarize_fn(transcript_text)).strip()
+
+            # 🚀 优化5: 添加摘要超时保护，避免阻塞用户请求
+            summary = ""
+            try:
+                summary = await asyncio.wait_for(
+                    summarize_fn(transcript_text),
+                    timeout=self.SUMMARIZE_TIMEOUT_SECONDS,
+                )
+                summary = summary.strip()
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "autocompact_summarize_timeout session_id=%s timeout=%.1f",
+                    session_id,
+                    self.SUMMARIZE_TIMEOUT_SECONDS,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("autocompact_summarize_failed session_id=%s err=%s", session_id, exc)
+
             if summary:
                 projected = self._apply_autocompact(projected, summary, self._auto_keep_last)
                 auto_compacted = True
@@ -92,18 +129,11 @@ class ContextCompactor:
 
     @staticmethod
     def _estimate_tokens(messages: list[ChatMessage]) -> int:
-        total = 0
-        for message in messages:
-            # 经验估算：中文/英文混合场景下用 4 字符近似 1 token。
-            total += (len(message.content) // 4) + 1
-        return total
+        return estimate_tokens(messages)
 
     @staticmethod
     def _apply_keep_last(messages: list[ChatMessage], keep_last_non_system: int) -> list[ChatMessage]:
-        system_messages = [message for message in messages if message.role == "system"]
-        non_system = [message for message in messages if message.role != "system"]
-        tail = non_system[-keep_last_non_system:]
-        return system_messages + tail
+        return apply_keep_last(messages, keep_last_non_system)
 
     def _apply_microcompact(
         self,
@@ -111,67 +141,15 @@ class ContextCompactor:
         *,
         replace_before_rounds: int,
     ) -> tuple[list[ChatMessage], int]:
-        system_messages = [message for message in messages if message.role == "system"]
-        non_system = [message for message in messages if message.role != "system"]
-        if len(non_system) <= replace_before_rounds:
-            return messages, 0
-
-        unchanged_tail = non_system[-replace_before_rounds:]
-        candidates = non_system[:-replace_before_rounds]
-        replaced_count = 0
-        compacted_candidates: list[ChatMessage] = []
-        for message in candidates:
-            if not self._looks_like_tool_result(message):
-                compacted_candidates.append(message)
-                continue
-            replaced = self._replacement_for_tool_result(message.content)
-            compacted_candidates.append(ChatMessage(role=message.role, content=replaced))
-            replaced_count += 1
-        return system_messages + compacted_candidates + unchanged_tail, replaced_count
-
-    def _replacement_for_tool_result(self, content: str) -> str:
-        key = hashlib.sha1(content.encode("utf-8")).hexdigest()
-        cached = self._micro_cache.get(key)
-        if cached is not None:
-            return cached
-        tool_name = "tool"
-        stripped = content.strip()
-        if stripped.startswith("{") and stripped.endswith("}"):
-            try:
-                payload = json.loads(stripped)
-                tool_name = str(payload.get("tool") or payload.get("tool_name") or tool_name)
-            except Exception:  # noqa: BLE001
-                tool_name = "tool"
-        else:
-            matched = re.search(r'"tool"\s*:\s*"([^"]+)"', content)
-            if matched is not None:
-                tool_name = matched.group(1)
-        replaced = f"[Previous: used {tool_name}]"
-        self._micro_cache[key] = replaced
-        return replaced
-
-    @staticmethod
-    def _looks_like_tool_result(message: ChatMessage) -> bool:
-        if message.role == "tool":
-            return True
-        text = message.content.strip()
-        if text.startswith("{") and text.endswith("}"):
-            return '"items"' in text and ('"status"' in text or '"tool"' in text)
-        return False
+        return self._micro_compactor.compact(
+            messages,
+            replace_before_rounds=replace_before_rounds,
+        )
 
     @staticmethod
     def _to_transcript_text(messages: list[ChatMessage]) -> str:
-        lines: list[str] = []
-        for message in messages:
-            lines.append(f"{message.role}: {message.content}")
-        return "\n".join(lines).strip()
+        return to_transcript_text(messages)
 
     @staticmethod
     def _apply_autocompact(messages: list[ChatMessage], summary: str, keep_last_non_system: int) -> list[ChatMessage]:
-        non_system = [message for message in messages if message.role != "system"]
-        tail = non_system[-keep_last_non_system:]
-        summary_message = ChatMessage(
-            role="system",
-            content="Context summary (autocompact):\n" + summary,
-        )
-        return [summary_message] + tail
+        return apply_autocompact(messages, summary, keep_last_non_system)

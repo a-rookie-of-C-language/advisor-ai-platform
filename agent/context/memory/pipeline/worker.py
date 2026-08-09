@@ -10,13 +10,6 @@ from context.memory.core.governance import MemoryGovernance
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
 
-warnings.warn(
-    "memory.pipeline.worker.MemoryWorkerAgent is deprecated, "
-    "use agents.MemoryWorkerSubAgent instead",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
 logger = logging.getLogger(__name__)
 
 Extractor = Callable[[str, str], list | Awaitable[list]]
@@ -34,6 +27,12 @@ class MemoryWorkerAgent:
         batch_size: int = 10,
         max_retries: int = 3,
     ) -> None:
+        warnings.warn(
+            "memory.pipeline.worker.MemoryWorkerAgent is deprecated, "
+            "use agents.MemoryWorkerSubAgent instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._api_client = api_client
         self._governance = governance or MemoryGovernance()
         self._writeback = MemoryWriteback(governance=self._governance)
@@ -137,4 +136,3 @@ class MemoryWorkerAgent:
 
     def stop(self) -> None:
         self._running = False
-

@@ -3,7 +3,7 @@ param(
   [string]$Profile = "smoke",
 
   [string]$BaseUrl = "http://127.0.0.1:8080",
-  [string]$MemoryToken = "arookieofc",
+  [string]$MemoryToken = $env:MEMORY_API_TOKEN,
   [int]$KbId = 1,
   [string]$AuthPassword = "Test@123456",
   [string]$JMeterBin = $env:JMETER_BIN,
@@ -20,6 +20,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($MemoryToken)) {
+  throw "Memory token is required. Pass -MemoryToken or set MEMORY_API_TOKEN."
+}
 
 function Get-ProfileConfig {
   param([string]$Name)

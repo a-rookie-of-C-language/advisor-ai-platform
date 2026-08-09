@@ -1,6 +1,10 @@
 package cn.edu.cqut.advisorplatform.controller;
 
 import cn.edu.cqut.advisorplatform.dto.request.MemoryCandidateUpsertRequestDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryConfidenceUpdateDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryContentUpdateDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryInvalidateSupersedeDTO;
+import cn.edu.cqut.advisorplatform.dto.request.MemoryMarkMergedDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemorySearchRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.request.MemoryTaskSubmitDTO;
 import cn.edu.cqut.advisorplatform.dto.request.SessionSummaryUpdateRequestDTO;
@@ -35,10 +39,50 @@ public class MemoryController {
     return ApiResponseDTO.success(memoryService.searchLongTerm(request));
   }
 
+  @GetMapping("/long-term/core")
+  public ApiResponseDTO<List<MemoryItemResponseDTO>> getCoreMemories(
+      @RequestParam("userId") Long userId, @RequestParam("kbId") Long kbId) {
+    return ApiResponseDTO.success(memoryService.getCoreMemories(userId, kbId));
+  }
+
   @PostMapping("/long-term/candidates")
   public ApiResponseDTO<MemoryCandidateUpsertResponseDTO> upsertCandidates(
       @Valid @RequestBody MemoryCandidateUpsertRequestDTO request) {
     return ApiResponseDTO.success(memoryService.upsertCandidates(request));
+  }
+
+  @PostMapping("/long-term/{id}/invalidate")
+  public ApiResponseDTO<Void> invalidateMemory(@PathVariable("id") Long id) {
+    memoryService.invalidateMemory(id);
+    return ApiResponseDTO.success();
+  }
+
+  @PostMapping("/long-term/{id}/invalidate-and-supersede")
+  public ApiResponseDTO<Void> invalidateAndSupersede(
+      @PathVariable("id") Long id, @Valid @RequestBody MemoryInvalidateSupersedeDTO request) {
+    memoryService.invalidateAndSupersede(id, request.getNewMemoryId());
+    return ApiResponseDTO.success();
+  }
+
+  @PostMapping("/long-term/{id}/mark-merged")
+  public ApiResponseDTO<Void> markAsMerged(
+      @PathVariable("id") Long id, @Valid @RequestBody MemoryMarkMergedDTO request) {
+    memoryService.markAsMerged(id, request.getTargetMemoryId());
+    return ApiResponseDTO.success();
+  }
+
+  @PostMapping("/long-term/{id}/confidence")
+  public ApiResponseDTO<Void> updateConfidence(
+      @PathVariable("id") Long id, @Valid @RequestBody MemoryConfidenceUpdateDTO request) {
+    memoryService.updateConfidence(id, request.getConfidence());
+    return ApiResponseDTO.success();
+  }
+
+  @PostMapping("/long-term/{id}/content")
+  public ApiResponseDTO<Void> updateContent(
+      @PathVariable("id") Long id, @Valid @RequestBody MemoryContentUpdateDTO request) {
+    memoryService.updateContent(id, request.getContent(), request.getConfidence());
+    return ApiResponseDTO.success();
   }
 
   @GetMapping("/session-summary/{sessionId}")

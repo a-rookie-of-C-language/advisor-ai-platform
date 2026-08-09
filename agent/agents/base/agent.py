@@ -1,46 +1,40 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from typing import Awaitable, Callable
 
-from context.memory.core.schema import MemoryCandidate, MemoryItem, WritebackResult
-from tools.tool_permission import PermissionConfig, ToolPermission
+from agents.base.agent_llm_support import (
+    call_llm_json_response,
+    call_llm_text,
+    call_registered_tool,
+)
+from agents.base.agent_memory_operations import AgentMemoryOperations
+from agents.base.agent_memory_support import (
+    read_memory_with_policy,
+    submit_memory_task_with_policy,
+    write_memory_with_policy,
+)
+from agents.base.AgentContext import AgentContext
+from agents.base.AgentState import AgentState
+from agents.base.ToolCallResult import ToolCallResult
+from context.memory.api.memory_api_client import MemoryApiClient
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.MemoryItem import MemoryItem
+from context.memory.core.WritebackResult import WritebackResult
+from json_types import JsonObject, JsonValue
+from llm.base_provider import BaseLLMProvider
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
-
-
-class AgentState(Enum):
-    CREATED = "created"
-    RUNNING = "running"
-    PAUSED = "paused"
-    STOPPED = "stopped"
-
-
-@dataclass
-class AgentContext:
-    user_id: int | None = None
-    session_id: int | None = None
-    kb_id: int | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class ToolCallResult:
-    tool_name: str
-    success: bool
-    result: str
-    error: str | None = None
 
 
 class Agent:
     def __init__(
         self,
         name: str,
-        llm_provider: Any = None,
-        memory_client: Any = None,
-        tools: dict[str, Any] | None = None,
+        llm_provider: BaseLLMProvider | None = None,
+        memory_client: MemoryApiClient | None = None,
+        tools: dict[str, Callable[..., Awaitable[JsonValue]]] | None = None,
         permission_config: PermissionConfig | None = None,
     ) -> None:
         self._name = name
@@ -50,6 +44,12 @@ class Agent:
         self._tools = tools or {}
         self._context = AgentContext()
         self._permission = permission_config or PermissionConfig()
+        self._memory_operations = AgentMemoryOperations(
+            memory_client=self._memory_client,
+            ensure_can_tool=self.ensure_can_tool,
+            ensure_can_read=self.ensure_can_read,
+            ensure_can_write=self.ensure_can_write,
+        )
         logger.debug("agent_created name=%s", name)
 
     @property
@@ -124,47 +124,36 @@ class Agent:
     async def read_memory(
         self, user_id: int, kb_id: int, query: str, top_k: int = 10
     ) -> list[MemoryItem]:
-        if not self.check_tool(ToolPermission.MEMORY_READ):
-            logger.warning("agent_read_memory_denied name=%s", self._name)
-            return []
-        if self._memory_client is None:
-            return []
-        try:
-            return await self._memory_client.search_long_term(
-                user_id=user_id, kb_id=kb_id, query=query, top_k=top_k
-            )
-        except Exception as exc:
-            logger.warning("agent_read_memory_failed name=%s err=%s", self._name, exc)
-            return []
+        return await read_memory_with_policy(
+            self._memory_client,
+            agent_name=self._name,
+            allowed=self.check_tool(ToolPermission.MEMORY_READ),
+            user_id=user_id,
+            kb_id=kb_id,
+            query=query,
+            top_k=top_k,
+            logger=logger,
+        )
 
     async def write_memory(
         self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
     ) -> WritebackResult:
-        if not self.check_tool(ToolPermission.MEMORY_WRITE):
-            logger.warning("agent_write_memory_denied name=%s", self._name)
-            return WritebackResult(accepted=0, rejected=0, message="permission_denied")
-        if self._memory_client is None:
-            return WritebackResult(accepted=0, rejected=0, message="no_memory_client")
-        try:
-            return await self._memory_client.upsert_candidates(
-                user_id=user_id, kb_id=kb_id, candidates=candidates
-            )
-        except Exception as exc:
-            logger.warning("agent_write_memory_failed name=%s err=%s", self._name, exc)
-            return WritebackResult(accepted=0, rejected=len(candidates), message=str(exc))
+        return await write_memory_with_policy(
+            self._memory_client,
+            agent_name=self._name,
+            allowed=self.check_tool(ToolPermission.MEMORY_WRITE),
+            user_id=user_id,
+            kb_id=kb_id,
+            candidates=candidates,
+            logger=logger,
+        )
 
     async def call_llm(self, messages: list[dict[str, str]], **kwargs) -> str:
         if not self.check_tool(ToolPermission.LLM):
             raise PermissionError(f"Agent '{self._name}' has no permission to use LLM")
         if self._llm_provider is None:
             raise RuntimeError("no_llm_provider")
-        from llm.chat_message import ChatMessage
-
-        chat_messages = [ChatMessage(role=m["role"], content=m["content"]) for m in messages]
-        chunks: list[str] = []
-        async for chunk in self._llm_provider.stream_chat(chat_messages, **kwargs):
-            chunks.append(chunk)
-        return "".join(chunks)
+        return await call_llm_text(self._llm_provider, messages, **kwargs)
 
     async def call_llm_json(
         self,
@@ -172,7 +161,7 @@ class Agent:
         *,
         max_retries: int = 2,
         **kwargs,
-    ) -> dict[str, Any]:
+    ) -> JsonObject:
         """调用 LLM 并解析 JSON 响应，解析失败时自动重试（FSM 模式）。
 
         Args:
@@ -186,49 +175,25 @@ class Agent:
         Raises:
             RuntimeError: 超过最大重试次数仍解析失败
         """
-        import json
-
-        kwargs.setdefault("response_format", {"type": "json_object"})
-        last_error = ""
-        chat_messages = list(messages)
-
-        for attempt in range(max_retries + 1):
-            raw = await self.call_llm(chat_messages, **kwargs)
-            try:
-                data = json.loads(raw)
-                if isinstance(data, dict):
-                    return data
-                last_error = f"期望 JSON 对象，实际类型: {type(data).__name__}"
-            except json.JSONDecodeError as exc:
-                last_error = f"JSON 解析失败: {exc}"
-
-            logger.warning(
-                "agent_call_llm_json: 解析失败 attempt=%d/%d, name=%s, error=%s",
-                attempt + 1,
-                max_retries + 1,
-                self._name,
-                last_error,
-            )
-
-            if attempt < max_retries:
-                chat_messages = list(messages) + [
-                    {"role": "user", "content": f"上次输出格式错误：{last_error}，请严格返回 JSON 格式。"},
-                ]
-
-        raise RuntimeError(f"LLM JSON 解析失败，已重试 {max_retries} 次: {last_error}")
+        return await call_llm_json_response(
+            self.call_llm,
+            messages,
+            agent_name=self._name,
+            logger=logger,
+            max_retries=max_retries,
+            **kwargs,
+        )
 
     async def call_tool(self, tool_name: str, **kwargs) -> ToolCallResult:
-        tool = self._tools.get(tool_name)
-        if tool is None:
-            return ToolCallResult(tool_name=tool_name, success=False, result="", error="tool_not_found")
-        try:
-            result = await tool(**kwargs)
-            return ToolCallResult(tool_name=tool_name, success=True, result=str(result))
-        except Exception as exc:
-            logger.warning("agent_tool_call_failed name=%s tool=%s err=%s", self._name, tool_name, exc)
-            return ToolCallResult(tool_name=tool_name, success=False, result="", error=str(exc))
+        return await call_registered_tool(
+            self._tools,
+            agent_name=self._name,
+            tool_name=tool_name,
+            logger=logger,
+            **kwargs,
+        )
 
-    def register_tool(self, name: str, tool: Any) -> None:
+    def register_tool(self, name: str, tool: Callable[..., Awaitable[JsonValue]]) -> None:
         self._tools[name] = tool
 
     async def submit_task(
@@ -240,66 +205,41 @@ class Agent:
         user_text: str | None = None,
         assistant_text: str | None = None,
         recent_messages: list[dict[str, str]] | None = None,
-    ) -> dict[str, Any]:
-        if not self.check_tool(ToolPermission.TASK_SUBMIT):
-            logger.warning("agent_submit_task_denied name=%s", self._name)
-            return {}
-        if self._memory_client is None:
-            return {}
-        try:
-            return await self._memory_client.submit_memory_task(
-                user_id=user_id,
-                kb_id=kb_id,
-                session_id=session_id,
-                turn_id=turn_id,
-                user_text=user_text,
-                assistant_text=assistant_text,
-                recent_messages=recent_messages,
-            )
-        except Exception as exc:
-            logger.warning("agent_submit_task_failed name=%s err=%s", self._name, exc)
-            return {}
+    ) -> JsonObject:
+        return await submit_memory_task_with_policy(
+            self._memory_client,
+            agent_name=self._name,
+            allowed=self.check_tool(ToolPermission.TASK_SUBMIT),
+            user_id=user_id,
+            kb_id=kb_id,
+            session_id=session_id,
+            turn_id=turn_id,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            recent_messages=recent_messages,
+            logger=logger,
+        )
 
-    async def fetch_pending_tasks(self, limit: int = 10) -> list[dict[str, Any]]:
-        self.ensure_can_tool(ToolPermission.MEMORY_READ)
-        self.ensure_can_read("memory")
-        if self._memory_client is None:
-            raise RuntimeError("no_memory_client")
-        return await self._memory_client.fetch_pending_tasks(limit=limit)
+    async def fetch_pending_tasks(self, limit: int = 10) -> list[JsonObject]:
+        return await self._memory_operations.fetch_pending_tasks(limit=limit)
 
     async def upsert_candidates(
         self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
     ) -> WritebackResult:
-        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
-        self.ensure_can_write("memory")
-        if self._memory_client is None:
-            raise RuntimeError("no_memory_client")
-        return await self._memory_client.upsert_candidates(
+        return await self._memory_operations.upsert_candidates(
             user_id=user_id, kb_id=kb_id, candidates=candidates
         )
 
     async def save_session_summary(self, session_id: int, summary: str) -> None:
-        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
-        self.ensure_can_write("memory")
-        if self._memory_client is None:
-            raise RuntimeError("no_memory_client")
-        await self._memory_client.save_session_summary(session_id=session_id, summary=summary)
+        await self._memory_operations.save_session_summary(session_id=session_id, summary=summary)
 
     async def mark_task_done(self, task_id: int) -> None:
-        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
-        self.ensure_can_write("memory")
-        if self._memory_client is None:
-            raise RuntimeError("no_memory_client")
-        await self._memory_client.mark_task_done(task_id)
+        await self._memory_operations.mark_task_done(task_id)
 
     async def mark_task_failed(self, task_id: int, error: str | None = None) -> None:
-        self.ensure_can_tool(ToolPermission.MEMORY_WRITE)
-        self.ensure_can_write("memory")
-        if self._memory_client is None:
-            raise RuntimeError("no_memory_client")
-        await self._memory_client.mark_task_failed(task_id, error)
+        await self._memory_operations.mark_task_failed(task_id, error)
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         raise NotImplementedError
 
     async def run(self) -> None:

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+
+from json_types import JsonObject
+from llm.base_provider import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +36,8 @@ async def e2e_judge_score(
     query: str,
     expected_answer: str,
     actual_answer: str,
-    llm_provider: Any = None,
-) -> dict[str, Any]:
+    llm_provider: BaseLLMProvider | None = None,
+) -> JsonObject:
     """使用 LLM-as-Judge 对端到端回答质量打分。
 
     Args:
@@ -62,7 +64,7 @@ async def e2e_judge_score(
 
     try:
         from agents.base.agent import Agent
-        from tools.tool_permission import PermissionConfig, ToolPermission
+        from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
         # 创建临时 agent 用于调用 LLM
         agent = Agent(
@@ -94,7 +96,7 @@ async def e2e_judge_score(
         return {"error": str(exc), "avg_score": 0.0}
 
 
-def _build_eval_provider_from_env() -> Any:
+def _build_eval_provider_from_env() -> BaseLLMProvider:
     """从 .env 构建评估专用 LLM provider，优先读取 EVAL_*，缺失时回退 OPENAI_*。"""
     try:
         from dotenv import load_dotenv
@@ -124,3 +126,68 @@ def _build_eval_provider_from_env() -> Any:
         base_url=base_url,
         temperature=temperature,
     )
+
+
+def e2e_deepeval_score(
+    query: str,
+    expected_answer: str,
+    actual_answer: str,
+    retrieval_context: list[str] | None = None,
+) -> JsonObject:
+    """使用 DeepEval 进行端到端评估。
+
+    评估维度：
+    - RAG 质量：忠实度、答案相关性、上下文精度、上下文召回
+    - 安全性：幻觉、偏见、毒性
+    - 回答质量：相关性、连贯性
+
+    Args:
+        query: 用户问题
+        expected_answer: 期望答案
+        actual_answer: 实际答案
+        retrieval_context: RAG 检索到的上下文列表（可选）
+
+    Returns:
+        包含各指标评分和加权总分的字典
+    """
+    try:
+        from .deepeval_metrics import DeepEvalMetrics
+
+        metrics = DeepEvalMetrics()
+        test_case = metrics.create_test_case(
+            input_query=query,
+            actual_output=actual_answer,
+            expected_output=expected_answer,
+            retrieval_context=retrieval_context,
+        )
+
+        results = metrics.evaluate_all(test_case)
+
+        # 计算加权平均分
+        weights = {
+            "Faithfulness": 0.20,
+            "Answer Relevancy": 0.20,
+            "Relevance": 0.20,
+            "Coherence": 0.15,
+            "Hallucination": 0.10,
+            "Bias": 0.075,
+            "Toxicity": 0.075,
+        }
+
+        weighted_sum = 0.0
+        total_weight = 0.0
+        for name, weight in weights.items():
+            if name in results:
+                weighted_sum += results[name]["score"] * weight
+                total_weight += weight
+
+        avg_score = weighted_sum / total_weight if total_weight > 0 else 0.0
+
+        return {
+            "metrics": results,
+            "avg_score": round(avg_score, 4),
+            "method": "deepeval",
+        }
+    except Exception as exc:
+        logger.warning("DeepEval 评估失败: %s", exc)
+        return {"error": str(exc), "avg_score": 0.0, "method": "deepeval"}

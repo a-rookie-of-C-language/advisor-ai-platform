@@ -1,0 +1,75 @@
+import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
+
+export class AgentCoreProcessRunner {
+  constructor(private readonly executablePath: string) {}
+
+  run(command: string, input: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(this.executablePath, [command], {
+        stdio: ["pipe", "pipe", "pipe"]
+      });
+      const stdout: Buffer[] = [];
+      const stderr: Buffer[] = [];
+
+      child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
+      child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) {
+          resolve(Buffer.concat(stdout).toString("utf8"));
+          return;
+        }
+        reject(new Error(Buffer.concat(stderr).toString("utf8") || `agent-core exited with ${code}`));
+      });
+
+      child.stdin.end(input);
+    });
+  }
+
+  async *runLines(command: string, input: string, signal?: AbortSignal): AsyncGenerator<string> {
+    if (signal?.aborted) {
+      throw new Error("agent-core stream aborted");
+    }
+    const child = spawn(this.executablePath, [command], {
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    const stderr: Buffer[] = [];
+    let processError: Error | undefined;
+    let aborted = false;
+    const abortHandler = () => {
+      aborted = true;
+      child.kill();
+    };
+    signal?.addEventListener("abort", abortHandler, { once: true });
+    const closePromise = new Promise<number | null>((resolve) => {
+      child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+      child.once("error", (error) => {
+        processError = error;
+        resolve(null);
+      });
+      child.once("close", resolve);
+    });
+    const lines = createInterface({ input: child.stdout });
+
+    child.stdin.end(input);
+    try {
+      for await (const line of lines) {
+        yield line;
+      }
+      if (aborted) {
+        throw new Error("agent-core stream aborted");
+      }
+      const code = await closePromise;
+      if (processError) {
+        throw processError;
+      }
+      if (code !== 0) {
+        throw new Error(Buffer.concat(stderr).toString("utf8") || `agent-core exited with ${code}`);
+      }
+    } finally {
+      lines.close();
+      signal?.removeEventListener("abort", abortHandler);
+    }
+  }
+}

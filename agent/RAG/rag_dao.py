@@ -3,10 +3,12 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
+
+from json_types import JsonObject
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ class PgVectorDAO:
         kb_id: int,
         top_k: int,
         doc_ids: Optional[List[int]] = None,
-    ) -> Dict[str, Any]:
+    ) -> JsonObject:
         """执行 pgvector 检索，返回 Chroma 兼容格式。"""
         vector_str = "[" + ",".join(str(v) for v in query_vector) + "]"
 
@@ -81,7 +83,7 @@ class PgVectorDAO:
             docs.append(content)
             distances.append(float(distance))
 
-            meta: Dict[str, Any] = {
+            meta: JsonObject = {
                 "document_id": str(doc_id),
                 "source": file_name,
                 "source_type": file_type,

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from openai import AsyncOpenAI
 
-from context.memory.core.schema import MemoryCandidate
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from json_types import JsonObject
 
 
 class OpenAILLMExtractor:
@@ -28,10 +28,13 @@ class OpenAILLMExtractor:
             "2. Ignore temporary, one-off, or already-resolved issues.\n"
             "3. Each memory must include confidence in [0,1].\n"
             "4. Use tags.type in preference/goal/constraint/identity/other.\n"
-            "5. Return at most 8 items sorted by importance.\n"
+            "5. Classify each memory as one of:\n"
+            "   - semantic: facts, preferences, user profile, identity info\n"
+            "   - episodic: past events, experiences, specific cases that happened\n"
+            "6. Return at most 8 items sorted by importance.\n"
             "\n"
             "Return strict JSON array only, no extra text:\n"
-            "[{\"content\": \"memory text\", \"confidence\": 0.8, \"tags\": {\"type\": \"preference\"}}]\n"
+            "[{\"content\": \"memory text\", \"confidence\": 0.8, \"tags\": {\"type\": \"preference\"}, \"memoryType\": \"semantic\"}]\n"
             "\n"
             f"[User] {user_text}\n"
             f"[Assistant] {assistant_text}\n"
@@ -56,17 +59,24 @@ class OpenAILLMExtractor:
             confidence = max(0.0, min(confidence, 1.0))
             tags = item.get("tags") if isinstance(item.get("tags"), dict) else {}
             tags = {**tags, "source": "llm"}
-            candidates.append(MemoryCandidate(content=text, confidence=confidence, tags=tags))
+            memory_type = str(item.get("memoryType", "semantic")).strip().lower()
+            if memory_type not in ("semantic", "episodic"):
+                memory_type = "semantic"
+            candidates.append(MemoryCandidate(content=text, confidence=confidence, tags=tags, memory_type=memory_type))
         return candidates
 
     @staticmethod
-    def _parse_json_array(text: str) -> list[dict[str, Any]]:
+    def _parse_json_array(text: str) -> list[JsonObject]:
+        """解析 LLM 返回的 JSON 数组，增强容错能力"""
         text = text.strip()
+
+        # 去掉 markdown 代码块
         if text.startswith("```"):
             text = text.strip("`")
             if text.lower().startswith("json"):
                 text = text[4:].strip()
 
+        # 方案1: 直接解析（大多数情况）
         try:
             data = json.loads(text)
             if isinstance(data, list):
@@ -74,13 +84,39 @@ class OpenAILLMExtractor:
         except json.JSONDecodeError:
             pass
 
-        left = text.find("[")
-        right = text.rfind("]")
-        if left >= 0 and right > left:
-            try:
-                data = json.loads(text[left : right + 1])
-                if isinstance(data, list):
-                    return [item for item in data if isinstance(item, dict)]
-            except json.JSONDecodeError:
-                return []
-        return []
+        # 方案2: 流式 JSONDecoder，从头尝试解析到可解析位置
+        decoder = json.JSONDecoder()
+        try:
+            obj, _ = decoder.raw_decode(text)
+            if isinstance(obj, list):
+                return [item for item in obj if isinstance(item, dict)]
+        except json.JSONDecodeError:
+            pass
+
+        # 方案3: 提取所有完整的 JSON 对象（最宽松的兜底）
+        return OpenAILLMExtractor._extract_objects(text)
+
+    @staticmethod
+    def _extract_objects(text: str) -> list[JsonObject]:
+        """从任意文本中提取所有完整的 JSON 对象"""
+        result = []
+        depth = 0
+        start = None
+
+        for i, ch in enumerate(text):
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and start is not None:
+                    try:
+                        obj = json.loads(text[start : i + 1])
+                        if isinstance(obj, dict):
+                            result.append(obj)
+                    except json.JSONDecodeError:
+                        pass
+                    start = None
+
+        return result

@@ -11,4 +11,6 @@ public class MemoryCandidateItemDTO {
   @Nullable private Double confidence;
   @Nullable private String sourceTurnId;
   @Nullable private Map<String, Object> tags;
+  @Nullable private String memoryType;
+  @Nullable private Boolean isCore;
 }

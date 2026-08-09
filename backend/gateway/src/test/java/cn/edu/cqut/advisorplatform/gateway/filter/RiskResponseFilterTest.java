@@ -3,7 +3,6 @@ package cn.edu.cqut.advisorplatform.gateway.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,8 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -22,19 +19,16 @@ import reactor.test.StepVerifier;
 @ExtendWith(MockitoExtension.class)
 class RiskResponseFilterTest {
 
-  @Mock private WebClient.Builder webClientBuilder;
-  @Mock private WebClient webClient;
   @Mock private GatewayFilterChain chain;
+  @Mock private RiskResponseSupport support;
   @Mock private ServerWebExchange exchange;
   @Mock private ServerHttpRequest request;
-  @Mock private ServerHttpResponse response;
 
   private RiskResponseFilter riskResponseFilter;
 
   @BeforeEach
   void setUp() {
-    when(webClientBuilder.build()).thenReturn(webClient);
-    riskResponseFilter = new RiskResponseFilter(webClientBuilder, new SimpleMeterRegistry());
+    riskResponseFilter = new RiskResponseFilter(support);
   }
 
   @Test
@@ -66,18 +60,12 @@ class RiskResponseFilterTest {
     when(exchange.getRequest()).thenReturn(request);
     when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/message"));
     when(request.getMethod()).thenReturn(HttpMethod.POST);
-    when(exchange.getResponse()).thenReturn(response);
-
-    ServerWebExchange.Builder exchangeBuilder = mock(ServerWebExchange.Builder.class);
-    when(exchange.mutate()).thenReturn(exchangeBuilder);
-    when(exchangeBuilder.response(any())).thenReturn(exchangeBuilder);
-    when(exchangeBuilder.build()).thenReturn(exchange);
-    when(chain.filter(any())).thenReturn(Mono.empty());
+    when(support.filter(any(), any())).thenReturn(Mono.empty());
 
     Mono<Void> result = riskResponseFilter.filter(exchange, chain);
 
     StepVerifier.create(result).verifyComplete();
-    verify(exchangeBuilder).response(any());
+    verify(support).filter(exchange, chain);
   }
 
   @Test

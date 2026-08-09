@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   nacos:
     image: nacos/nacos-server:v2.4.2
@@ -98,7 +100,7 @@ services:
     environment:
       APP_NAME: aigateway
       HTTP_ADDR: 0.0.0.0:8080
-      MASTER_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
+      MASTER_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:?AI_GATEWAY_MASTER_API_KEY is required}
       REDIS_ADDR: redis://redis:6379
       RATE_LIMIT_PER_MIN: 120
       RATE_LIMIT_TENANT_PER_MIN: 240
@@ -118,7 +120,10 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: auth-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: auth-service
+        SERVICE_PORT: 8081
     container_name: advisor-auth-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -127,11 +132,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -144,7 +149,10 @@ services:
   chat-service:
     build:
       context: .
-      dockerfile: chat-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: chat-service
+        SERVICE_PORT: 8082
     container_name: advisor-chat-service
     environment:
       SPRING_PROFILES_ACTIVE: local
@@ -154,15 +162,15 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       AGENT_BASE_URL: http://agent:8001
       AI_GATEWAY_ENABLED: "false"
       AI_GATEWAY_BASE_URL: http://ai-gateway:8080
-      AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:-dev-key}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:?AI_GATEWAY_MASTER_API_KEY is required}
       AI_GATEWAY_MODEL: ${AI_PROVIDER_MODEL:-gpt-4.1-mini}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       PROMETHEUS_BASE_URL: http://prometheus:9090
@@ -179,11 +187,16 @@ services:
         condition: service_started
     ports:
       - "8082:8082"
+    volumes:
+      - ./chat-service/target/chat-service-patched.jar:/app/app.jar
 
   rag-service:
     build:
       context: .
-      dockerfile: rag-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: rag-service
+        SERVICE_PORT: 8083
     container_name: advisor-rag-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -192,11 +205,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -211,7 +224,10 @@ services:
   memory-service:
     build:
       context: .
-      dockerfile: memory-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: memory-service
+        SERVICE_PORT: 8084
     container_name: advisor-memory-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -220,12 +236,12 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.containers.internal:11434}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -237,32 +253,39 @@ services:
 
   agent:
     build:
-      context: ../agent
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: agent-ts/Dockerfile
     container_name: advisor-agent
-    env_file:
-      - ../agent/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/advisor_ai
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-      AGENT_MODE: all
       AGENT_API_HOST: 0.0.0.0
       AGENT_API_PORT: 8001
-      AGENT_API_TOKEN: arookieofc
-      CLI_BACKEND_BASE_URL: http://gateway:8080
-      OPENAI_TEMPERATURE: 0.2
-      OPENAI_TIMEOUT_SEC: 60
-      EMBEDDING_PROVIDER: openai
-      EMBEDDING_MODEL: BAAI/bge-m3
-      ENABLE_TOOL_USE: "true"
-      ENABLED_TOOLS: web_search,rag_search
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       MEMORY_API_BASE_URL: http://memory-service:8084
-      MEMORY_API_TOKEN: arookieofc
-      DEBUG_STREAM: "false"
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      RAG_API_BASE_URL: http://rag-service:8083
+      RAG_API_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MCP_TOOLS: ${MCP_TOOLS:-true}
+      MCP_SERVERS: ${MCP_SERVERS:-student:http:http://student-service:8091/mcp/message}
+      MCP_TOKEN_STUDENT: ${MCP_SERVER_TOKEN:?MCP_SERVER_TOKEN is required}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://www.codexapis.com/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.2}
+      OPENAI_TIMEOUT_SEC: ${OPENAI_TIMEOUT_SEC:-120}
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+      NO_PROXY: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
+      no_proxy: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
     depends_on:
       postgres:
         condition: service_healthy
       memory-service:
+        condition: service_started
+      rag-service:
+        condition: service_started
+      student-service:
         condition: service_started
     ports:
       - "8001:8001"
@@ -272,7 +295,10 @@ services:
   audit-service:
     build:
       context: .
-      dockerfile: audit-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: audit-service
+        SERVICE_PORT: 8085
     container_name: advisor-audit-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -281,11 +307,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
-      MEMORY_API_TOKEN: arookieofc
-      AGENT_API_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -298,7 +324,10 @@ services:
   risk-control-service:
     build:
       context: .
-      dockerfile: risk-control-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: risk-control-service
+        SERVICE_PORT: 8086
     container_name: advisor-risk-control-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -310,9 +339,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_SERVERS: kafka:29092
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
@@ -329,7 +358,10 @@ services:
   check-in-service:
     build:
       context: .
-      dockerfile: check-in-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: check-in-service
+        SERVICE_PORT: 8087
     container_name: advisor-check-in-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -338,14 +370,18 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       nacos:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8087:8087"
@@ -353,7 +389,10 @@ services:
   student-service:
     build:
       context: .
-      dockerfile: student-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: student-service
+        SERVICE_PORT: 8091
     container_name: advisor-student-service
     environment:
       NACOS_SERVER_ADDR: nacos:8848
@@ -362,9 +401,11 @@ services:
       DB_NAME: advisor_ai
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      FEATURE_MCP_SERVER: "true"
+      MCP_SERVER_TOKEN: ${MCP_SERVER_TOKEN:?MCP_SERVER_TOKEN is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       SERVER_PORT: 8091
     depends_on:
@@ -377,16 +418,49 @@ services:
     ports:
       - "8091:8091"
 
+  feedback-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: feedback-service
+        SERVICE_PORT: 8092
+    container_name: advisor-feedback-service
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: advisor_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_OWNER: ${GITHUB_OWNER:-a-rookie-of-C-language}
+      GITHUB_REPO: ${GITHUB_REPO:-advisor-ai-platform}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8092:8092"
+
   gateway:
     build:
       context: .
-      dockerfile: gateway/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: gateway
+        SERVICE_PORT: 8080
     container_name: advisor-gateway
     environment:
       NACOS_SERVER_ADDR: nacos:8848
-      JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      ADVISOR_JWT_SECRET: Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=
-      INTERNAL_SERVICE_TOKEN: arookieofc
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       RISK_CONTROL_SERVICE_URL: http://risk-control-service:8086
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
@@ -407,6 +481,8 @@ services:
       risk-control-service:
         condition: service_started
       check-in-service:
+        condition: service_started
+      feedback-service:
         condition: service_started
     ports:
       - "8080:8080"
@@ -470,9 +546,14 @@ services:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/lib/containers/:/var/lib/containers:ro
     ports:
       - "8088:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -Y off --quiet --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
   node-exporter:
     image: prom/node-exporter:v1.8.2

@@ -1,0 +1,25 @@
+import { JsonObjectReader } from "../../../../common/json/reader/JsonObjectReader.js";
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
+import type { McpJsonRpcRequestFactory } from "../../../jsonRpc/factory/McpJsonRpcRequestFactory.js";
+import type { McpCallToolResult } from "../../../tools/model/result/McpCallToolResult.js";
+import { McpCallToolResultMapper } from "../../../tools/mapping/result/McpCallToolResultMapper.js";
+import type { DirectHttpMcpJsonRpcClient } from "../../protocol/core/DirectHttpMcpJsonRpcClient.js";
+import type { DirectHttpMcpInitializer } from "../lifecycle/DirectHttpMcpInitializer.js";
+
+export class DirectHttpMcpToolCaller {
+  private readonly callToolResultMapper = new McpCallToolResultMapper();
+  private readonly jsonObjectReader = new JsonObjectReader();
+
+  constructor(
+    private readonly initializer: DirectHttpMcpInitializer,
+    private readonly jsonRpcClient: DirectHttpMcpJsonRpcClient,
+    private readonly requestFactory: McpJsonRpcRequestFactory,
+  ) {}
+
+  async callTool(name: string, args: JsonObject): Promise<McpCallToolResult> {
+    await this.initializer.ensureInitialized();
+    const response = await this.jsonRpcClient.post(this.requestFactory.createCallToolRequest(name, args));
+    const result = this.jsonObjectReader.asObject(response.result);
+    return this.callToolResultMapper.mapResult(result);
+  }
+}

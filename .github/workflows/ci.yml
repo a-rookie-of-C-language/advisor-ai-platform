@@ -89,6 +89,60 @@ jobs:
       - name: Build
         run: npm run build
 
+  build-agent:
+    name: Agent (TypeScript + Rust Build)
+    runs-on: ubuntu-latest
+    needs: [encoding-guard]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: agent-ts/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: Install Agent TypeScript dependencies
+        working-directory: agent-ts
+        run: npm ci
+
+      - name: Check Agent TypeScript
+        working-directory: agent-ts
+        run: npm run check
+
+      - name: Build Agent TypeScript
+        working-directory: agent-ts
+        run: npm run build
+
+      - name: Check Rust formatting
+        working-directory: agent-core
+        run: cargo fmt --all -- --check
+
+      - name: Check Rust core
+        working-directory: agent-core
+        run: cargo check
+
+      - name: Build Rust debug core
+        working-directory: agent-core
+        run: cargo build
+
+      - name: Test Rust core
+        working-directory: agent-core
+        run: cargo test
+
+      - name: Build Rust release core
+        working-directory: agent-core
+        run: cargo build --release
+
+      - name: Run Agent integration tests
+        working-directory: agent-ts
+        run: npm run test:integration
+
   build-python:
     name: Python (.venv + compile + test)
     runs-on: ubuntu-latest
@@ -173,6 +227,27 @@ jobs:
         image: jaegertracing/all-in-one:1.57
         ports:
           - 4318:4318
+      kafka:
+        image: apache/kafka:3.7.1
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+          KAFKA_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://kafka:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+        ports:
+          - 9092:9092
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
 
     env:
       DB_HOST: 127.0.0.1
@@ -201,6 +276,10 @@ jobs:
       NACOS_SERVER_ADDR: 127.0.0.1:8848
       E2E_AUTH_BASE_URL: http://localhost:8081
       OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318/v1/traces
+      KAFKA_SERVERS: 127.0.0.1:9092
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      RATE_LIMIT_REQUESTS_PER_MINUTE: 1000
 
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -282,6 +361,40 @@ jobs:
             sleep 2
           done
 
+      - name: Wait for Kafka ready
+        shell: bash
+        run: |
+          set -e
+          echo "Waiting Kafka (9092)..."
+          for i in {1..60}; do
+            if (echo > /dev/tcp/127.0.0.1/9092) >/dev/null 2>&1; then
+              echo "kafka is ready"
+              break
+            fi
+            if [ "$i" = "60" ]; then
+              echo "kafka not ready"
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Wait for Redis ready
+        shell: bash
+        run: |
+          set -e
+          echo "Waiting Redis (6379)..."
+          for i in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/6379) >/dev/null 2>&1; then
+              echo "redis is ready"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "redis not ready"
+              exit 1
+            fi
+            sleep 1
+          done
+
       - name: Start auth-service
         shell: bash
         run: |
@@ -316,7 +429,13 @@ jobs:
         shell: bash
         run: |
           cd backend/gateway
-          nohup env SERVER_PORT=8080 ADVISOR_JWT_SECRET=${JWT_SECRET} mvn -q spring-boot:run > ../../gateway-e2e.log 2>&1 &
+          nohup env SERVER_PORT=8080 ADVISOR_JWT_SECRET=${JWT_SECRET} RISK_CONTROL_SERVICE_URL=http://127.0.0.1:8086 mvn -q spring-boot:run > ../../gateway-e2e.log 2>&1 &
+
+      - name: Start risk-control-service
+        shell: bash
+        run: |
+          cd backend/risk-control-service
+          nohup env SERVER_PORT=8086 SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8086 ADVISOR_JWT_SECRET=${JWT_SECRET} KAFKA_SERVERS=127.0.0.1:9092 REDIS_HOST=127.0.0.1 REDIS_PORT=6379 mvn -q spring-boot:run > ../../risk-control-e2e.log 2>&1 &
 
       - name: Start agent (.venv)
         shell: bash
@@ -413,6 +532,22 @@ jobs:
             sleep 2
           done
 
+          echo "Waiting risk-control-service..."
+          for i in {1..120}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8086/actuator/health || true)
+            if [ "$code" = "200" ]; then
+              echo "risk-control-service is ready"
+              break
+            fi
+            if [ "$i" = "120" ]; then
+              echo "risk-control-service not ready (last http=$code)"
+              echo "===== risk-control-e2e.log (tail 200) ====="
+              tail -n 200 risk-control-e2e.log || true
+              exit 1
+            fi
+            sleep 2
+          done
+
           echo "Warming gateway -> auth-service route..."
           for i in {1..60}; do
             code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/auth/__ready__ || true)
@@ -465,6 +600,8 @@ jobs:
           tail -n 300 audit-e2e.log || true
           echo "===== memory-e2e.log (tail 300) ====="
           tail -n 300 memory-e2e.log || true
+          echo "===== risk-control-e2e.log (tail 300) ====="
+          tail -n 300 risk-control-e2e.log || true
           echo "===== agent-e2e.log (tail 300) ====="
           tail -n 300 agent-e2e.log || true
 
@@ -480,4 +617,5 @@ jobs:
             rag-e2e.log
             audit-e2e.log
             memory-e2e.log
+            risk-control-e2e.log
             agent-e2e.log

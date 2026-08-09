@@ -19,6 +19,7 @@ pytest**/
 **cache**/
 .tmp/
 agent/tests/reports/*.json
+agent/.deepeval/*
 scripts/jmeter/results/
 jmeter/
 .claude/

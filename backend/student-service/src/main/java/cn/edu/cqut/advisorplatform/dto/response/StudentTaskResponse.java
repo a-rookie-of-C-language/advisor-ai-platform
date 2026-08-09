@@ -35,7 +35,7 @@ public class StudentTaskResponse {
     TaskType tt = TaskType.fromCode(entity.getTaskType());
     response.setTaskTypeText(tt.getDescription());
     response.setTaskStatus(entity.getTaskStatus());
-    TaskStatus ts = TaskStatus.fromCode(entity.getTaskStatus());
+    TaskStatus ts = taskStatus(entity.getTaskStatus());
     response.setTaskStatusText(ts.getDescription());
     response.setAssigneeNo(entity.getAssigneeNo());
     response.setAssigneeName(entity.getAssigneeName());
@@ -45,6 +45,13 @@ public class StudentTaskResponse {
     response.setCreatedAt(entity.getCreatedAt());
     response.setUpdatedAt(entity.getUpdatedAt());
     return response;
+  }
+
+  private static TaskStatus taskStatus(Integer code) {
+    if (code == null) {
+      return TaskStatus.PENDING;
+    }
+    return TaskStatus.fromCode(code);
   }
 
   public Long getId() {

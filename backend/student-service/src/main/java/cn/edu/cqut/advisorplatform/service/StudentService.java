@@ -5,6 +5,7 @@ import cn.edu.cqut.advisorplatform.dto.request.StudentQueryRequest;
 import cn.edu.cqut.advisorplatform.dto.request.StudentUpdateRequest;
 import cn.edu.cqut.advisorplatform.dto.response.StudentDetailResponse;
 import cn.edu.cqut.advisorplatform.entity.StudentProfile;
+import java.util.List;
 import org.springframework.data.domain.Page;
 
 public interface StudentService {
@@ -22,6 +23,8 @@ public interface StudentService {
   StudentProfile getStudentEntityById(Long id);
 
   StudentProfile getStudentEntityByStudentNo(String studentNo);
+
+  List<StudentProfile> listStudentEntitiesByClassCode(String classCode);
 
   void calculateAndUpdateInfoCompleteness(StudentProfile profile);
 }

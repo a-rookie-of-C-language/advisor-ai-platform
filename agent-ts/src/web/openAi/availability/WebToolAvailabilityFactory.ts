@@ -1,0 +1,11 @@
+import type { WebFetchClient } from "../../fetch/core/WebFetchClient.js";
+import type { WebSearchClient } from "../../search/core/WebSearchClient.js";
+
+export class WebToolAvailabilityFactory {
+  create(webFetchClient?: WebFetchClient, webSearchClient?: WebSearchClient): { webFetchEnabled: boolean; webSearchEnabled: boolean } {
+    return {
+      webFetchEnabled: Boolean(webFetchClient),
+      webSearchEnabled: Boolean(webSearchClient)
+    };
+  }
+}

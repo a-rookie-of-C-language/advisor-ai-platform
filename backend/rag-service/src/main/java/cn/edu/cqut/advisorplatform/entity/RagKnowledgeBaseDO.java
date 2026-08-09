@@ -36,9 +36,4 @@ public class RagKnowledgeBaseDO {
   private LocalDateTime createdAt;
 
   private LocalDateTime updatedAt;
-
-  public enum KnowledgeBaseStatus {
-    READY,
-    INDEXING
-  }
 }

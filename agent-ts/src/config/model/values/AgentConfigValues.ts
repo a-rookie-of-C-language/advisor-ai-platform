@@ -1,0 +1,26 @@
+export interface AgentConfigValues {
+  host: string;
+  port: number;
+  token: string;
+  openAiApiKey: string;
+  openAiBaseUrl: string;
+  openAiModel: string;
+  openAiTemperature: number;
+  requestTimeoutMs: number;
+  rustCoreEnabled: boolean;
+  rustCorePath: string | undefined;
+  workspaceBasePath: string;
+  memoryApiBaseUrl: string;
+  memoryApiToken: string;
+  memoryTopK: number;
+  ragApiBaseUrl: string;
+  ragApiToken: string;
+  webFetchEnabled: boolean;
+  webFetchMaxContentLength: number;
+  webSearchEnabled: boolean;
+  webSearchApiKey: string;
+  webSearchUrl: string;
+  webSearchMaxResults: number;
+  mcpToolsEnabled: boolean;
+  mcpServers: string;
+}

@@ -1,7 +1,8 @@
 package cn.edu.cqut.advisorplatform.common.exception;
 
-import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -12,37 +13,43 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Order(Ordered.LOWEST_PRECEDENCE)
 @Slf4j
 public class GlobalExceptionHandler {
 
   @ExceptionHandler(BadRequestException.class)
   public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException e) {
-    ErrorResponse error = new ErrorResponse(400, e.getMessage(), LocalDateTime.now());
-    return ResponseEntity.badRequest().body(error);
+    log.warn("BadRequest: {}", e.getMessage());
+    return ResponseEntity.badRequest()
+        .body(ErrorResponse.of(ErrorCode.BAD_REQUEST_400, e.getMessage()));
   }
 
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException e) {
-    ErrorResponse error = new ErrorResponse(404, e.getMessage(), LocalDateTime.now());
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    log.warn("NotFound: {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ErrorResponse.of(ErrorCode.NOT_FOUND_404, e.getMessage()));
   }
 
   @ExceptionHandler(ForbiddenException.class)
   public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException e) {
-    ErrorResponse error = new ErrorResponse(403, e.getMessage(), LocalDateTime.now());
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    log.warn("Forbidden: {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body(ErrorResponse.of(ErrorCode.FORBIDDEN_403, e.getMessage()));
   }
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
-    ErrorResponse error = new ErrorResponse(403, "Access denied", LocalDateTime.now());
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    log.warn("AccessDenied: {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body(ErrorResponse.of(ErrorCode.FORBIDDEN_403));
   }
 
   @ExceptionHandler(BadCredentialsException.class)
   public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException e) {
-    ErrorResponse error = new ErrorResponse(401, "Invalid credentials", LocalDateTime.now());
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    log.warn("BadCredentials: {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body(ErrorResponse.of(ErrorCode.AUTH_INVALID_CREDENTIALS_1001));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -51,15 +58,15 @@ public class GlobalExceptionHandler {
     String message =
         fieldError != null
             ? fieldError.getField() + ": " + fieldError.getDefaultMessage()
-            : "Validation failed";
-    ErrorResponse error = new ErrorResponse(400, message, LocalDateTime.now());
-    return ResponseEntity.badRequest().body(error);
+            : "参数校验失败";
+    log.warn("Validation: {}", message);
+    return ResponseEntity.badRequest().body(ErrorResponse.of(ErrorCode.BAD_REQUEST_400, message));
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneral(Exception e) {
     log.error("系统异常", e);
-    ErrorResponse error = new ErrorResponse(500, "Internal server error", LocalDateTime.now());
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(ErrorResponse.of(ErrorCode.INTERNAL_ERROR_500));
   }
 }

@@ -1,6 +1,21 @@
 #[allow(non_snake_case)]
-pub mod MockChatGateway;
+#[path = "routing/DefaultProviderRouter.rs"]
+pub mod DefaultProviderRouter;
 #[allow(non_snake_case)]
+#[path = "model/request/OpenAIChatCompletionRequest.rs"]
+pub mod OpenAIChatCompletionRequest;
+#[allow(non_snake_case)]
+#[path = "gateway/OpenAICompatibleGateway.rs"]
 pub mod OpenAICompatibleGateway;
 #[allow(non_snake_case)]
-pub mod DefaultProviderRouter;
+#[path = "parsing/completion/OpenAICompletionResponseParser.rs"]
+pub mod OpenAICompletionResponseParser;
+#[allow(non_snake_case)]
+#[path = "model/body/OpenAIRequestBody.rs"]
+pub mod OpenAIRequestBody;
+#[allow(non_snake_case)]
+#[path = "parsing/stream/response/OpenAIStreamResponseReader.rs"]
+pub mod OpenAIStreamResponseReader;
+#[allow(non_snake_case)]
+#[path = "parsing/stream/usage/OpenAIStreamUsageParser.rs"]
+pub mod OpenAIStreamUsageParser;

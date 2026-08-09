@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
-
 from agents.base.subagent import SubAgent
-from tools.tool_permission import PermissionConfig, ToolPermission
+from json_types import JsonObject
+from llm.base_provider import BaseLLMProvider
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 
 class ContextCompactionSubAgent(SubAgent):
-    def __init__(self, llm_provider: Any) -> None:
+    MODEL_ENV_PREFIX = "CONTEXT_COMPACTION"
+    DEFAULT_MODEL: str | None = None
+
+    def __init__(self, llm_provider: BaseLLMProvider) -> None:
         super().__init__(
             name="context_compaction_subagent",
             llm_provider=llm_provider,
@@ -31,9 +34,8 @@ class ContextCompactionSubAgent(SubAgent):
             ]
         )
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         return {}
 
     async def run(self) -> None:
         return None
-

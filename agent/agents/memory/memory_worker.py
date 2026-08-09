@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from agents.base.subagent import SubAgent
 from context.memory.api.memory_api_client import MemoryApiClient
 from context.memory.core.governance import MemoryGovernance
-from context.memory.core.schema import MemoryCandidate, WritebackResult
+from context.memory.core.MemoryCandidate import MemoryCandidate
+from context.memory.core.WritebackResult import WritebackResult
 from context.memory.pipeline.session_memory import SessionMemory
 from context.memory.pipeline.writeback import MemoryWriteback
-from tools.tool_permission import PermissionConfig, ToolPermission
+from json_types import JsonObject, JsonValue
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 
 logger = logging.getLogger(__name__)
 
-Extractor = Callable[[str, str], list | Awaitable[list]]
+Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 
 
 class MemoryWorkerSubAgent(SubAgent):
@@ -28,7 +30,7 @@ class MemoryWorkerSubAgent(SubAgent):
         poll_interval_sec: float = 5.0,
         batch_size: int = 10,
         max_retries: int = 3,
-        **kwargs: Any,
+        **kwargs: JsonValue,
     ) -> None:
         super().__init__(
             name="memory_worker",
@@ -49,13 +51,13 @@ class MemoryWorkerSubAgent(SubAgent):
         self._max_retries = max(max_retries, 0)
         self._running = False
 
-    async def run_once(self) -> dict[str, Any]:
+    async def run_once(self) -> JsonObject:
         """Execute one polling iteration and return processing stats."""
         stats: dict[str, int] = {"fetched": 0, "processed": 0, "done": 0, "failed": 0}
         try:
             tasks = await self.fetch_pending_tasks(limit=self._batch_size)
             stats["fetched"] = len(tasks)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — 后台 worker 需要容忍网络/API 异常
             logger.error("memory_worker_fetch_failed err=%s", exc)
             return stats
 
@@ -108,7 +110,7 @@ class MemoryWorkerSubAgent(SubAgent):
                     session_id,
                     len(candidates),
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — 单个任务失败不应阻断批次
                 error_text = str(exc)
                 logger.warning(
                     "memory_worker_task_failed id=%s session=%s err=%s",
@@ -118,18 +120,47 @@ class MemoryWorkerSubAgent(SubAgent):
                 )
                 try:
                     await self.mark_task_failed(task_id, error_text)
-                except PermissionError:
-                    # Fallback: ensure task is marked failed when permission is misconfigured.
-                    try:
-                        if self._memory_client is not None:
-                            await self._memory_client.mark_task_failed(task_id, error_text)
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+                except PermissionError as permission_error:
+                    logger.warning(
+                        "memory_worker_mark_failed_permission_denied id=%s session=%s err=%s",
+                        task_id,
+                        session_id,
+                        permission_error,
+                    )
+                    await self._mark_task_failed_direct(task_id, session_id, error_text)
+                except Exception as mark_error:  # noqa: BLE001 — 标记失败是兜底逻辑
+                    logger.warning(
+                        "memory_worker_mark_failed_error id=%s session=%s err=%s",
+                        task_id,
+                        session_id,
+                        mark_error,
+                    )
                 stats["failed"] += 1
 
         return stats
+
+    async def _mark_task_failed_direct(
+        self,
+        task_id: int,
+        session_id: int | None,
+        error_text: str,
+    ) -> None:
+        if self._memory_client is None:
+            logger.warning(
+                "memory_worker_mark_failed_fallback_skipped id=%s session=%s reason=no_client",
+                task_id,
+                session_id,
+            )
+            return
+        try:
+            await self._memory_client.mark_task_failed(task_id, error_text)
+        except Exception as fallback_error:  # noqa: BLE001 — 兜底写入失败不应中断流程
+            logger.warning(
+                "memory_worker_mark_failed_fallback_error id=%s session=%s err=%s",
+                task_id,
+                session_id,
+                fallback_error,
+            )
 
     async def run(self) -> None:
         """Run polling loop continuously until stopped."""
@@ -156,7 +187,7 @@ class MemoryWorkerSubAgent(SubAgent):
                     )
             except asyncio.CancelledError:
                 break
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — 主循环需要容忍未知异常并继续运行
                 logger.error("memory_worker_loop_error name=%s err=%s", self._name, exc)
                 await asyncio.sleep(self._poll_interval)
 

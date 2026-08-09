@@ -9,7 +9,10 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication(scanBasePackages = "cn.edu.cqut.advisorplatform")
 @EnableDiscoveryClient
 @EnableFeignClients
-@MapperScan("cn.edu.cqut.advisorplatform.checkin.mapper")
+@MapperScan({
+  "cn.edu.cqut.advisorplatform.checkin.mapper",
+  "cn.edu.cqut.advisorplatform.checkin.attendance.mapper"
+})
 public class CheckInServiceApplication {
   public static void main(String[] args) {
     SpringApplication.run(CheckInServiceApplication.class, args);

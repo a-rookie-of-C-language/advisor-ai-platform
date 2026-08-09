@@ -1,7 +1,7 @@
 package cn.edu.cqut.advisorplatform.controller;
 
-import cn.edu.cqut.advisorplatform.dao.UserIdentityDao;
 import cn.edu.cqut.advisorplatform.dto.response.UserIdentityResponse;
+import cn.edu.cqut.advisorplatform.service.InternalIdentityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,14 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/identity")
 @RequiredArgsConstructor
 public class InternalIdentityController {
-  private final UserIdentityDao userIdentityDao;
+  private final InternalIdentityService internalIdentityService;
 
   @GetMapping("/user/{userId}")
   public UserIdentityResponse getIdentity(
       @PathVariable("userId") Long userId, @RequestParam("type") String identityType) {
-    return userIdentityDao
-        .findByUserIdAndIdentityType(userId, identityType)
-        .map(UserIdentityResponse::from)
-        .orElse(null);
+    return internalIdentityService.getIdentity(userId, identityType);
   }
 }

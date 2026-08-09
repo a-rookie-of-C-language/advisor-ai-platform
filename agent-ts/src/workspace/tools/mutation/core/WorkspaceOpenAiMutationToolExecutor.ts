@@ -1,0 +1,29 @@
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
+import type { WorkspaceManager } from "../../../core/manager/WorkspaceManager.js";
+import { WorkspaceOpenAiMutationToolDispatcher } from "../execution/WorkspaceOpenAiMutationToolDispatcher.js";
+import { WorkspaceMutationToolNameMatcher } from "../matching/WorkspaceMutationToolNameMatcher.js";
+import { WorkspaceCreateDirOpenAiToolExecutor } from "../operation/directory/WorkspaceCreateDirOpenAiToolExecutor.js";
+import { WorkspaceEditOpenAiToolExecutor } from "../operation/file/edit/WorkspaceEditOpenAiToolExecutor.js";
+import { WorkspaceWriteOpenAiToolExecutor } from "../operation/file/write/WorkspaceWriteOpenAiToolExecutor.js";
+
+export class WorkspaceOpenAiMutationToolExecutor {
+  private readonly dispatcher: WorkspaceOpenAiMutationToolDispatcher;
+  private readonly toolNameMatcher = new WorkspaceMutationToolNameMatcher();
+
+  constructor(workspaceManager: WorkspaceManager) {
+    this.dispatcher = new WorkspaceOpenAiMutationToolDispatcher(
+      new WorkspaceCreateDirOpenAiToolExecutor(workspaceManager),
+      new WorkspaceEditOpenAiToolExecutor(workspaceManager),
+      new WorkspaceWriteOpenAiToolExecutor(workspaceManager)
+    );
+  }
+
+  canExecute(toolName: string): boolean {
+    return this.toolNameMatcher.matches(toolName);
+  }
+
+  async execute(request: ChatStreamRequest, toolName: string, args: JsonObject): Promise<JsonObject> {
+    return this.dispatcher.dispatch(request, toolName, args);
+  }
+}

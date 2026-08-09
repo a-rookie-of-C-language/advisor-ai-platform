@@ -1,6 +1,6 @@
 package cn.edu.cqut.advisorplatform.client;
 
-import cn.edu.cqut.advisorplatform.config.feign.InternalTokenFeignConfig;
+import cn.edu.cqut.advisorplatform.common.config.InternalTokenFeignConfig;
 import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInDetailResponse;
 import cn.edu.cqut.advisorplatform.dto.response.StudentCheckInSummaryResponse;
 import java.util.List;

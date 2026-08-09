@@ -16,7 +16,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   flyway:
     enabled: true
@@ -24,6 +24,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     table: flyway_schema_history_check_in
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 mybatis:
   mapper-locations: classpath:cn/edu/cqut/advisorplatform/checkin/mapper/*.xml
@@ -32,7 +36,9 @@ mybatis:
 
 advisor:
   internal:
-    token: ${INTERNAL_SERVICE_TOKEN:arookieofc}
+    token: ${INTERNAL_SERVICE_TOKEN:}
   jwt:
-    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:Y25FZHVDcXV0QWR2aXNvckFpUGxhdGZvcm1Bcm9va2llb2ZjbGFuZ3VhZ2U=}}
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:}}
     expiration: ${JWT_EXPIRE_MS:86400000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}

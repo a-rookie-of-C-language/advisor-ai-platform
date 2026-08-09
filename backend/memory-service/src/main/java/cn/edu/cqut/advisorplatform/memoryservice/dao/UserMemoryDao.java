@@ -18,7 +18,9 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             WHERE m.userId = :userId
               AND (:kbId = 0 OR m.kbId = :kbId)
               AND m.isDeleted = false
+              AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
               AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
             ORDER BY m.updatedAt DESC
             """)
@@ -27,6 +29,27 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       @Param("kbId") Long kbId,
       @Param("query") String query,
       @Param("now") LocalDateTime now,
+      Pageable pageable);
+
+  @Query(
+      """
+            SELECT m FROM UserMemoryDO m
+            WHERE m.userId = :userId
+              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND m.isDeleted = false
+              AND m.mergedIntoId IS NULL
+              AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
+              AND (:memoryType IS NULL OR m.memoryType = :memoryType)
+              AND (:query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
+            ORDER BY m.updatedAt DESC
+            """)
+  List<UserMemoryDO> searchByScopeAndType(
+      @Param("userId") Long userId,
+      @Param("kbId") Long kbId,
+      @Param("query") String query,
+      @Param("now") LocalDateTime now,
+      @Param("memoryType") String memoryType,
       Pageable pageable);
 
   @Query(
@@ -57,6 +80,8 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
                     WHERE user_id = :userId
                       AND (:kbId = 0 OR kb_id = :kbId)
                       AND is_deleted = false
+                      AND merged_into_id IS NULL
+                      AND (valid_until IS NULL OR valid_until > NOW())
                       AND embedding IS NOT NULL
                     ORDER BY embedding <=> CAST(:embedding AS vector)
                     LIMIT :topK
@@ -67,6 +92,29 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       @Param("kbId") Long kbId,
       @Param("embedding") String embedding,
       @Param("topK") Integer topK);
+
+  @Query(
+      value =
+          """
+                    SELECT *
+                    FROM user_memory
+                    WHERE user_id = :userId
+                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND is_deleted = false
+                      AND merged_into_id IS NULL
+                      AND (valid_until IS NULL OR valid_until > NOW())
+                      AND memory_type = :memoryType
+                      AND embedding IS NOT NULL
+                    ORDER BY embedding <=> CAST(:embedding AS vector)
+                    LIMIT :topK
+                    """,
+      nativeQuery = true)
+  List<UserMemoryDO> searchByVectorAndType(
+      @Param("userId") Long userId,
+      @Param("kbId") Long kbId,
+      @Param("embedding") String embedding,
+      @Param("topK") Integer topK,
+      @Param("memoryType") String memoryType);
 
   @Modifying
   @Query(
@@ -86,9 +134,26 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             WHERE m.userId = :userId
               AND m.kbId = :kbId
               AND m.isDeleted = false
+              AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
             """)
   long countActiveByUserAndKb(
+      @Param("userId") Long userId, @Param("kbId") Long kbId, @Param("now") LocalDateTime now);
+
+  @Query(
+      """
+            SELECT m FROM UserMemoryDO m
+            WHERE m.userId = :userId
+              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND m.isDeleted = false
+              AND m.isCore = true
+              AND m.mergedIntoId IS NULL
+              AND (m.expiresAt IS NULL OR m.expiresAt > :now)
+              AND (m.validUntil IS NULL OR m.validUntil > :now)
+            ORDER BY m.confidence DESC, m.updatedAt DESC
+            """)
+  List<UserMemoryDO> findCoreMemories(
       @Param("userId") Long userId, @Param("kbId") Long kbId, @Param("now") LocalDateTime now);
 
   @Query(

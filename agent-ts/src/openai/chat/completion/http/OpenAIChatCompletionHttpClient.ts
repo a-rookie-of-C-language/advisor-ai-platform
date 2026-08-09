@@ -1,0 +1,34 @@
+import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
+import type { OpenAIChatCompletionRequest } from "../model/OpenAIChatCompletionRequest.js";
+
+export class OpenAIChatCompletionHttpClient {
+  constructor(private readonly config: AgentConfig) {}
+
+  async fetchStream<T>(
+    buildRequest: (signal: AbortSignal) => OpenAIChatCompletionRequest,
+    consumeBody: (body: ReadableStream<Uint8Array>) => Promise<T>,
+    externalSignal?: AbortSignal
+  ): Promise<T> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
+    const abortExternalRequest = () => controller.abort();
+    externalSignal?.addEventListener("abort", abortExternalRequest, { once: true });
+    if (externalSignal?.aborted) {
+      controller.abort();
+    }
+
+    try {
+      const request = buildRequest(controller.signal);
+      const response = await fetch(request.url, request.init);
+
+      if (!response.ok || !response.body) {
+        throw new Error(`OpenAI compatible stream failed: HTTP ${response.status}`);
+      }
+
+      return consumeBody(response.body);
+    } finally {
+      clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", abortExternalRequest);
+    }
+  }
+}

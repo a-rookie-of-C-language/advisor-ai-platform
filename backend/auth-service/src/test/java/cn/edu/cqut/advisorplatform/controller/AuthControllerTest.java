@@ -1,5 +1,6 @@
 package cn.edu.cqut.advisorplatform.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -11,7 +12,6 @@ import cn.edu.cqut.advisorplatform.dto.request.RegisterRequestDTO;
 import cn.edu.cqut.advisorplatform.dto.response.LoginResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.TokenPairResponseDTO;
 import cn.edu.cqut.advisorplatform.service.AuthService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,8 +24,6 @@ class AuthControllerTest {
   @InjectMocks private AuthController authController;
 
   @Mock private AuthService authService;
-
-  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Test
   void login_shouldReturnSuccess() {
@@ -40,8 +38,8 @@ class AuthControllerTest {
     when(authService.login(any(LoginRequestDTO.class))).thenReturn(response);
 
     var result = authController.login(request);
-    assert result.getCode() == 200;
-    assert result.getData().getAccessToken().equals("access-token");
+    assertThat(result.getCode()).isEqualTo(200);
+    assertThat(result.getData().getAccessToken()).isEqualTo("access-token");
   }
 
   @Test
@@ -54,7 +52,7 @@ class AuthControllerTest {
     doNothing().when(authService).register(any(RegisterRequestDTO.class));
 
     var result = authController.register(request);
-    assert result.getCode() == 200;
+    assertThat(result.getCode()).isEqualTo(200);
   }
 
   @Test
@@ -69,8 +67,8 @@ class AuthControllerTest {
     when(authService.refresh(any(RefreshTokenRequestDTO.class))).thenReturn(response);
 
     var result = authController.refresh(request);
-    assert result.getCode() == 200;
-    assert result.getData().getAccessToken().equals("new-access-token");
+    assertThat(result.getCode()).isEqualTo(200);
+    assertThat(result.getData().getAccessToken()).isEqualTo("new-access-token");
   }
 
   @Test
@@ -81,6 +79,6 @@ class AuthControllerTest {
     doNothing().when(authService).logout(any(LogoutRequestDTO.class));
 
     var result = authController.logout(request);
-    assert result.getCode() == 200;
+    assertThat(result.getCode()).isEqualTo(200);
   }
 }

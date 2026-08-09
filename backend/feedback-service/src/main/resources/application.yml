@@ -1,0 +1,70 @@
+server:
+  port: 8092
+
+spring:
+  config:
+    import: optional:nacos:advisor-ai-platform-common.yaml
+  application:
+    name: feedback-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:advisor_ai}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    table: flyway_schema_history_feedback
+    baseline-on-migrate: true
+    baseline-version: 0
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+
+advisor:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:}
+  jwt:
+    secret: ${JWT_SECRET:${ADVISOR_JWT_SECRET:}}
+    expiration: ${JWT_EXPIRE_MS:86400000}
+  github:
+    token: ${GITHUB_TOKEN:${GitHub_key:}}
+    owner: ${GITHUB_OWNER:a-rookie-of-C-language}
+    repo: ${GITHUB_REPO:advisor-ai-platform}
+    api-base-url: ${GITHUB_API_BASE_URL:https://api.github.com}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://127.0.0.1:4318/v1/traces}
+
+logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId:-} spanId=%X{spanId:-}]"
+  level:
+    cn.edu.cqut.advisorplatform: DEBUG

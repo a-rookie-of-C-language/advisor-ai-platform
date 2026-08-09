@@ -1,27 +1,13 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Any
+
+from json_types import JsonObject
+from safety.PrivacyEngine import PrivacyEngine
+from safety.PrivacyResult import PrivacyResult
+from safety.PrivacySpan import PrivacySpan
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class PrivacySpan:
-    label: str
-    start: int
-    end: int
-    text: str
-    placeholder: str
-
-
-@dataclass
-class PrivacyResult:
-    original: str
-    redacted: str
-    spans: list[PrivacySpan]
-    has_sensitive: bool
 
 
 class PrivacyFilterWrapper:
@@ -41,7 +27,7 @@ class PrivacyFilterWrapper:
         self._device = device
         self._model_path = model_path
         self._enabled = enabled
-        self._opf: Any = None
+        self._opf: PrivacyEngine | None = None
         self._loaded = False
 
     def _ensure_loaded(self) -> bool:
@@ -53,7 +39,7 @@ class PrivacyFilterWrapper:
         try:
             from opf import OPF
 
-            kwargs: dict[str, Any] = {
+            kwargs: JsonObject = {
                 "device": self._device,
                 "output_text_only": False,
             }

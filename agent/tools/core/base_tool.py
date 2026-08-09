@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+import logging
+from abc import ABC, abstractmethod
+from typing import Any, Generic, Literal, TypeVar
+
+from pydantic import BaseModel, ValidationError
+
+from json_types import JsonObject
+from llm.tool_spec import ToolSpec
+from tools.permissions.tool_permission import ToolPermission
+from tools.core.tool_result import ToolResult
+from tools.core.validation_result import ValidationResult
+
+logger = logging.getLogger(__name__)
+
+InputModelT = TypeVar("InputModelT", bound=BaseModel)
+OutputModelT = TypeVar("OutputModelT", bound=BaseModel)
+
+
+class BaseTool(Generic[InputModelT, OutputModelT], ABC):
+    """Base contract for all agent tools."""
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        input_model: type[InputModelT],
+        input_json_schema: JsonObject | None = None,
+        output_model: type[OutputModelT] | None = None,
+        required_permissions: set[ToolPermission] | None = None,
+        category: str = "general",
+    ) -> None:
+        self.name = name
+        self.description = description
+        self.input_model = input_model
+        self._input_json_schema = input_json_schema
+        self.output_model = output_model
+        self.required_permissions = required_permissions or set()
+        self.category = category
+        self._is_concurrency_safe = False
+        self._is_destructive = False
+        self._is_read_only = False
+        self._permission_matcher = self.name
+        self._should_defer = True
+        self._always_load = False
+        self._search_hint = ""
+        self._is_enabled = True
+        self._interrupt_behavior: Literal["cancel", "block"] = "block"
+        self._requires_user_interaction = False
+        self._idempotency_cache: dict[str, tuple[str, bool]] = {}
+
+    @abstractmethod
+    async def execute(self, tool_input: InputModelT, context: JsonObject) -> ToolResult:
+        """Execute tool and return normalized ToolResult."""
+
+    async def execute_with_idempotency(
+        self, tool_input: InputModelT, context: dict[str, Any]
+    ) -> ToolResult:
+        """Execute with idempotency cache for destructive tools.
+
+        If the tool is destructive and an idempotency_key is present in context,
+        returns the cached result on cache hit. On miss, executes and caches.
+        """
+        key = context.get("idempotency_key")
+        if key and self._is_destructive and key in self._idempotency_cache:
+            cached_output, cached_ok = self._idempotency_cache[key]
+            logger.debug("idempotency cache hit for tool=%s key=%s", self.name, key)
+            result = ToolResult(
+                ok=cached_ok,
+                status="cached" if cached_ok else "error",
+                message=cached_output,
+                items=[],
+                meta={"idempotency_cached": True},
+            )
+            return result
+
+        result = await self.execute(tool_input, context)
+
+        if key and self._is_destructive:
+            self._idempotency_cache[key] = (result.message, result.ok)
+
+        return result
+
+    def _validate_behavior_flags(self) -> None:
+        if self._always_load and self._should_defer:
+            raise ValueError(
+                f"Tool '{self.name}' config conflict: always_load=True and should_defer=True"
+            )
+
+    def get_is_concurrency_safe(self, tool_input: InputModelT) -> bool:
+        _ = tool_input
+        return self._is_concurrency_safe
+
+    def get_is_destructive(self, tool_input: InputModelT) -> bool:
+        _ = tool_input
+        return self._is_destructive
+
+    def get_is_read_only(self) -> bool:
+        return self._is_read_only
+
+    def get_permission_matcher(self, tool_input: InputModelT) -> str:
+        _ = tool_input
+        return self._permission_matcher
+
+    def get_should_defer(self) -> bool:
+        self._validate_behavior_flags()
+        return self._should_defer
+
+    def get_always_load(self) -> bool:
+        self._validate_behavior_flags()
+        return self._always_load
+
+    def get_search_hint(self) -> str:
+        return self._search_hint
+
+    def get_is_enabled(self) -> bool:
+        return self._is_enabled
+
+    def get_interrupt_behavior(self) -> Literal["cancel", "block"]:
+        return self._interrupt_behavior
+
+    def get_requires_user_interaction(self) -> bool:
+        return self._requires_user_interaction
+
+    def get_max_result_size_chars(self) -> int:
+        return self._max_result_size_chars
+
+    def truncate_result(self, result: str) -> str:
+        """截断过长的结果，防止上下文窗口被淹没"""
+        if len(result) <= self._max_result_size_chars:
+            return result
+        return result[: self._max_result_size_chars] + "\n... [truncated]"
+
+    async def validate_input(self, input_payload: JsonObject) -> ValidationResult[InputModelT]:
+        try:
+            parsed = self.input_model.model_validate(input_payload or {})
+            return ValidationResult(ok=True, data=parsed)
+        except ValidationError as exc:
+            errors = []
+            for issue in exc.errors():
+                location = ".".join(str(item) for item in issue.get("loc", []))
+                message = issue.get("msg", "invalid input")
+                errors.append(f"{location}: {message}" if location else message)
+            return ValidationResult(ok=False, errors=errors)
+        except Exception as exc:  # noqa: BLE001
+            return ValidationResult(ok=False, errors=[str(exc)])
+
+    def input_json_schema(self) -> JsonObject:
+        if self._input_json_schema is not None:
+            return self._input_json_schema
+        return self.input_model.model_json_schema()
+
+    def output_json_schema(self) -> JsonObject | None:
+        if self.output_model is None:
+            return None
+        return self.output_model.model_json_schema()
+
+    def get_query_patterns(self) -> list[str]:
+        """返回工具能处理的查询模式（正则表达式），用于意图路由自动选择工具。"""
+        return []
+
+    def to_tool_spec(self) -> ToolSpec:
+        return ToolSpec(
+            name=self.name,
+            description=self.description,
+            parameters=self.input_json_schema(),
+            defer_loading=self.get_should_defer(),
+            search_hint=self.get_search_hint(),
+            is_concurrency_safe=self._is_concurrency_safe,
+            is_read_only=self._is_read_only,
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name={self.name!r})"

@@ -1,15 +1,26 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import logging
 import time
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 
+from agents.search.web_search_subagent import WebSearchSubAgent
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from context.memory.memory_injector import MemoryInjector
+from context.memory.pipeline.orchestrator import MemoryOrchestrator
 from context.memory.pipeline.work_memory import WorkMemory
+from fusion.registry import SourcePriorityRegistry
+from json_types import JsonObject
+from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
+from safety.safety_pipeline import SafetyPipeline
+from skills.skill_registry import SkillRegistry
+from routing.intent_router import IntentRouter
+from tools.permissions.tool_permission import PermissionConfig
+from tools.registry.tool_registry import ToolRegistry
 
-from .nodes import GraphRuntime, reset_runtime, set_runtime
+from .runtime import GraphRuntime, reset_runtime, set_runtime
 from .workflow import build_chat_graph
 
 logger = logging.getLogger(__name__)
@@ -18,19 +29,20 @@ logger = logging.getLogger(__name__)
 class GraphRunner:
     def __init__(
         self,
-        provider: Any,
-        memory_orchestrator: Any,
-        llm_extractor: Any,
-        tools: Any,
-        tool_permission: Any,
+        provider: BaseLLMProvider,
+        memory_orchestrator: MemoryOrchestrator | None,
+        llm_extractor,
+        tools: ToolRegistry,
+        tool_permission: PermissionConfig,
         *,
         debug_stream: bool,
         enable_tool_use: bool,
-        skill_registry: Any = None,
-        intent_router: Any = None,
-        safety_pipeline: Any = None,
-        fusion_pipeline: Any = None,
-        web_search_subagent: Any = None,
+        skill_registry: SkillRegistry | None = None,
+        intent_router: IntentRouter | None = None,
+        safety_pipeline: SafetyPipeline | None = None,
+        fusion_pipeline: SourcePriorityRegistry | None = None,
+        web_search_subagent: WebSearchSubAgent | None = None,
+        task_planner_subagent: TaskPlannerSubAgent | None = None,
     ) -> None:
         self._provider = provider
         self._memory_orchestrator = memory_orchestrator
@@ -46,6 +58,7 @@ class GraphRunner:
         self._safety_pipeline = safety_pipeline
         self._fusion_pipeline = fusion_pipeline
         self._web_search_subagent = web_search_subagent
+        self._task_planner_subagent = task_planner_subagent
         self._compiled = build_chat_graph()
         self._node_order = [
             "select_skill",
@@ -56,7 +69,7 @@ class GraphRunner:
             "finalize",
         ]
 
-    def health_snapshot(self) -> dict[str, Any]:
+    def health_snapshot(self) -> JsonObject:
         return {
             "compiled": self._compiled is not None,
             "checkpoint": "inmemory",
@@ -73,10 +86,9 @@ class GraphRunner:
         kb_id: int | None = None,
         trace_id: str | None = None,
         turn_id: str | None = None,
-    ) -> AsyncIterator[dict[str, Any]]:
-        _ = kb_id
+    ) -> AsyncIterator[JsonObject]:
         started_at = time.perf_counter()
-        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        queue: asyncio.Queue[JsonObject] = asyncio.Queue()
         runtime = GraphRuntime(
             queue=queue,
             provider=self._provider,
@@ -94,12 +106,14 @@ class GraphRunner:
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
             web_search_subagent=self._web_search_subagent,
+            task_planner_subagent=self._task_planner_subagent,
         )
         state = {
             "messages": messages,
             "model_messages": messages,
             "user_id": user_id,
             "session_id": session_id,
+            "kb_id": kb_id,
             "user_query": user_query,
             "trace_id": trace_id,
             "turn_id": turn_id,

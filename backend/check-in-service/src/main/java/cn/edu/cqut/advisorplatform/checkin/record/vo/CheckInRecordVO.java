@@ -13,6 +13,10 @@ public class CheckInRecordVO {
 
   private Long studentId;
 
+  private String studentNo;
+
+  private String studentName;
+
   private String classCode;
 
   @JsonFormat(pattern = "yyyy-MM-dd")

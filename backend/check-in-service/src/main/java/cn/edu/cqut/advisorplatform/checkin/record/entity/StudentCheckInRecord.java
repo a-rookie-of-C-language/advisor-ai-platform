@@ -25,6 +25,8 @@ public class StudentCheckInRecord {
 
   private Boolean checkedIn;
 
+  private String status;
+
   private LocalDateTime checkTime;
 
   private LocalDateTime createdAt;

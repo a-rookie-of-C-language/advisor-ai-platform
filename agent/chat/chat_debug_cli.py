@@ -10,6 +10,8 @@ from pathlib import Path
 import httpx
 from dotenv import load_dotenv
 
+from json_types import JsonObject, JsonValue
+
 if __package__ and __package__.startswith("agent."):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -39,9 +41,9 @@ class ChatDebugCli:
         }
 
     @staticmethod
-    def _parse_sse_event(raw: str) -> dict[str, object]:
+    def _parse_sse_event(raw: str) -> JsonObject:
         event_name = "message"
-        data: dict[str, object] = {}
+        data: JsonObject = {}
         for line in raw.strip().split("\n"):
             if line.startswith("event:"):
                 event_name = line.split(":", 1)[1].strip()
@@ -56,7 +58,7 @@ class ChatDebugCli:
         return {"event": event_name, "data": data}
 
     @staticmethod
-    def _extract_text(data: object) -> str:
+    def _extract_text(data: JsonValue) -> str:
         if isinstance(data, str):
             return data
         if isinstance(data, dict):
@@ -74,7 +76,7 @@ class ChatDebugCli:
         return ""
 
     @staticmethod
-    def _preview_event_data(data: object, limit: int = 300) -> str:
+    def _preview_event_data(data: JsonValue, limit: int = 300) -> str:
         raw = json.dumps(data, ensure_ascii=False, default=str)
         if len(raw) <= limit:
             return raw
@@ -100,7 +102,7 @@ class ChatDebugCli:
         if not isinstance(token, str) or not token.strip():
             logger.error("CLI login failed: token missing, response=%s", data)
             raise RuntimeError("登录成功但未获取到 access token")
-        logger.info("CLI login success: token=%s", token.strip())
+        logger.info("CLI login success")
         return token.strip()
 
     async def _create_session(self, access_token: str) -> int:

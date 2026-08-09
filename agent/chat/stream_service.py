@@ -1,80 +1,60 @@
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
-import os
-import time
-from pathlib import Path
-from typing import AsyncIterator, Awaitable, Callable, Iterable
+from typing import AsyncIterator, Iterable
 
-from agents.search import WebSearchSubAgent
+from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
+from agents.tool_explorer import ToolExplorerSubAgent
+from chat.ChatStreamAnswerBuffer import ChatStreamAnswerBuffer
+from chat.graph_stream_flow import stream_graph_events
+from chat.legacy_message_prepare import prepare_legacy_messages
+from chat.legacy_plain_chat_flow import stream_legacy_plain_chat
+from chat.legacy_tool_flow import stream_legacy_tool_flow
+from chat.legacy_tool_route_flow import prepare_legacy_tool_route
+from chat.stream_compaction import ChatStreamCompactionSupport
+from chat.stream_defaults import (
+    STREAM_ERROR_MESSAGE,
+    Extractor,
+    build_default_fusion_pipeline,
+)
+from chat.stream_failure_memory import ChatStreamFailureMemorySupport
+from chat.stream_memory_context import ChatStreamMemoryContextSupport
+from chat.stream_protocol import (
+    build_stream_error_payload,
+    serialize_protocol_event,
+)
+from chat.stream_request_context import (
+    evaluate_trace_action_score,
+    log_stream_request_context,
+    prepare_stream_request_context,
+)
+from chat.stream_runtime_config import ChatStreamRuntimeConfig
+from chat.stream_service_bootstrap import (
+    build_stream_health,
+    build_stream_tool_permission,
+    build_stream_tool_registry,
+)
+from chat.stream_tool_support import ChatStreamToolSupport
+from chat.stream_trace_flow import stream_with_progress_trace
+from chat.subagent_provider_builders import (
+    build_context_compaction_provider,
+    build_task_planner_provider,
+    build_tool_explorer_provider,
+    build_web_fetch_provider,
+    build_web_search_provider,
+)
+from chat.subagent_provider_factory import SubagentProviderFactory
 from context.compaction.ContextCompactionSubAgent import ContextCompactionSubAgent
-from context.compaction.ContextCompactor import ContextCompactor
-from context.compaction.TranscriptStore import TranscriptStore
-from context.memory.core.schema import MemoryCandidate
-from context.memory.long_term_memory import OrchestratorLongTermMemoryAdapter
-from context.memory.memory_injector import MemoryInjector
 from context.memory.pipeline.orchestrator import MemoryOrchestrator
-from eval.action_score import score_action
-from fusion.authority_boost import AuthorityBoostStrategy
-from fusion.conflict_detect import ConflictDetectStrategy
-from fusion.registry import SourcePriorityRegistry
-from fusion.source_weight import SourceWeightStrategy
-from fusion.time_decay import TimeDecayStrategy
 from graph.runner import GraphRunner
+from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
-from memory.failure_memory_matcher import FailureMemoryMatcher
-from memory.failure_memory_store import FailureMemoryItem, FailureMemoryStore
-from prompt.QueryEngine import QueryEngine
+from memory.failure_memory_store import FailureMemoryStore
 from safety.safety_pipeline import SafetyPipeline
-from skills.presets import build_default_registry
-from tools.intent_router import IntentRouter, emit_route_observation
-from tools.tool_assembly_pool import ToolAssemblyPool
-from tools.tool_impl.expand_skill_tool import ExpandSkillTool
-from tools.tool_permission import PermissionConfig, ToolPermission
-from tools.tool_registry import ToolRegistry
+from routing.intent_router import IntentRouter
 
-_ALLOWED_ROLES = {"system", "user", "assistant"}
-Extractor = Callable[[str, str], list[MemoryCandidate] | Awaitable[list[MemoryCandidate]]]
 logger = logging.getLogger(__name__)
-
-def _u(*codes: int) -> str:
-    return "".join(chr(code) for code in codes)
-
-_STREAM_ERROR_MESSAGE = _u(
-    0x670d, 0x52a1, 0x5185, 0x90e8, 0x9519, 0x8bef, 0xff0c,
-    0x8bf7, 0x7a0d, 0x540e, 0x91cd, 0x8bd5,
-)
-_RAG_PRIORITY_HINTS = {
-    _u(0x77e5, 0x8bc6, 0x5e93),
-    _u(0x8d44, 0x6599),
-    _u(0x6587, 0x6863),
-    _u(0x6839, 0x636e),
-    _u(0x51fa, 0x5904),
-    _u(0x8f85, 0x5bfc, 0x5458),
-    _u(0x5b66, 0x751f),
-}
-_REALTIME_HINTS = {
-    _u(0x5929, 0x6c14),
-    _u(0x5b9e, 0x65f6),
-    _u(0x4eca, 0x5929),
-    _u(0x660e, 0x5929),
-    _u(0x65b0, 0x95fb),
-    _u(0x80a1, 0x4ef7),
-    _u(0x6c47, 0x7387),
-    _u(0x6bd4, 0x5206),
-}
-
-def _build_default_fusion_pipeline() -> SourcePriorityRegistry:
-    """Build the default cross-source fusion pipeline."""
-    registry = SourcePriorityRegistry()
-    registry.register(AuthorityBoostStrategy())
-    registry.register(TimeDecayStrategy())
-    registry.register(SourceWeightStrategy())
-    registry.register(ConflictDetectStrategy())
-    return registry
 
 
 class ChatStreamService:
@@ -86,68 +66,58 @@ class ChatStreamService:
         rag_service=None,
     ) -> None:
         self._provider = provider
+        config = ChatStreamRuntimeConfig.from_env()
+        self._subagent_provider_factory = SubagentProviderFactory(provider)
         self._memory_orchestrator = memory_orchestrator
-        self._memory_injector = MemoryInjector()
-        self._long_term_memory = (
-            OrchestratorLongTermMemoryAdapter(memory_orchestrator)
-            if memory_orchestrator is not None
-            else None
-        )
+        self._memory_context_support = ChatStreamMemoryContextSupport(memory_orchestrator)
         self._llm_extractor = llm_extractor
-        self._debug_stream = self._read_debug_stream()
-        self._enable_tool_use = self._read_enable_tool_use()
-        self._use_langgraph = self._read_use_langgraph()
-        self._enabled_tools = self._read_enabled_tools()
-        self._context_compactor = ContextCompactor(
-            enable_snip=self._read_context_snip_enabled(),
-            enable_microcompact=self._read_context_micro_enabled(),
-            enable_context_collapse=self._read_context_collapse_enabled(),
-            enable_autocompact=self._read_context_auto_enabled(),
-            snip_keep_last=self._read_context_snip_keep_last(),
-            micro_replace_before_rounds=self._read_context_micro_replace_before_rounds(),
-            collapse_keep_last=self._read_context_collapse_keep_last(),
-            auto_trigger_tokens=self._read_context_auto_trigger_tokens(),
-            auto_keep_last=self._read_context_auto_keep_last(),
+        self._debug_stream = config.debug_stream
+        self._enable_tool_use = config.enable_tool_use
+        self._use_langgraph = config.use_langgraph
+        self._enabled_tools = config.enabled_tools
+        self._compaction_support = ChatStreamCompactionSupport(
+            config=config,
+            subagent=ContextCompactionSubAgent(
+                self._build_context_compaction_provider()
+            ),
         )
-        self._compaction_subagent = ContextCompactionSubAgent(self._provider)
-        self._transcript_store = TranscriptStore(self._read_context_transcript_dir())
-        self._tools = ToolRegistry(enabled_tools=self._enabled_tools)
-        self._web_search_subagent = self._build_web_search_subagent()
-        self._tool_permission = PermissionConfig.from_allowed_tools(
-            {ToolPermission.RAG_READ, ToolPermission.MEMORY_READ,
-             ToolPermission.MEMORY_WRITE},
-            read_resources={"context", "memory"},
-            write_resources={"memory"},
+        self._task_planner_subagent = TaskPlannerSubAgent(self._build_task_planner_provider())
+        self._tool_explorer_subagent = ToolExplorerSubAgent(
+            self._build_tool_explorer_provider(),
+            max_steps=config.tool_explorer_max_steps,
         )
-        self._feature_action_scoring = self._read_feature_action_scoring()
-        self._feature_failure_memory_inject = self._read_feature_failure_memory_inject()
-        self._action_score_threshold = self._read_action_score_threshold()
-        self._failure_memory_store = FailureMemoryStore(self._read_failure_memory_dir())
-        self._last_action_score: dict[str, object] = {}
-        self._last_compaction_stats: dict[str, int | bool | str] = {
-            "snip_enabled": self._read_context_snip_enabled(),
-            "micro_enabled": self._read_context_micro_enabled(),
-            "collapse_enabled": self._read_context_collapse_enabled(),
-            "auto_enabled": self._read_context_auto_enabled(),
-            "tokens_before": 0,
-            "tokens_after": 0,
-            "tokens_released": 0,
-            "micro_replaced_count": 0,
-            "auto_compacted": False,
-            "transcript_path": "",
-            "latency_ms": 0,
-        }
+        self._tool_permission = build_stream_tool_permission()
+        self._feature_action_scoring = config.feature_action_scoring
+        self._feature_failure_memory_inject = config.feature_failure_memory_inject
+        failure_memory_store = FailureMemoryStore(config.failure_memory_dir)
+        self._failure_memory_support = ChatStreamFailureMemorySupport(
+            store=failure_memory_store,
+            action_score_threshold=config.action_score_threshold,
+        )
+        self._last_action_score: JsonObject = {}
         memory_client = getattr(self._memory_orchestrator, "api_client", None)
-        for tool in ToolAssemblyPool.build(
+        (
+            self._tools,
+            assembled_tools,
+            self._skill_registry,
+            self._tool_search_tool,
+        ) = build_stream_tool_registry(
+            enabled_tools=self._enabled_tools,
             rag_service=rag_service,
             memory_client=memory_client,
-        ):
-            self._tools.register(tool)
-        self._skill_registry = build_default_registry()
-        self._tools.register(ExpandSkillTool(self._skill_registry))
+        )
         self._intent_router = IntentRouter()
+        self._tool_support = ChatStreamToolSupport(
+            tools=self._tools,
+            tool_permission=self._tool_permission,
+            web_search_provider_factory=self._build_web_search_provider,
+            web_fetch_provider_factory=self._build_web_fetch_provider,
+        )
+        self._web_search_subagent = self._tool_support.web_search_subagent
+        self._web_fetch_subagent = self._tool_support.web_fetch_subagent
+        self._intent_router.register_tools(assembled_tools)
         self._safety_pipeline = SafetyPipeline()
-        self._fusion_pipeline = _build_default_fusion_pipeline()
+        self._fusion_pipeline = build_default_fusion_pipeline()
         self._graph_runner = GraphRunner(
             provider=self._provider,
             memory_orchestrator=self._memory_orchestrator,
@@ -161,338 +131,58 @@ class ChatStreamService:
             safety_pipeline=self._safety_pipeline,
             fusion_pipeline=self._fusion_pipeline,
             web_search_subagent=self._web_search_subagent,
+            task_planner_subagent=self._task_planner_subagent,
         )
 
+    def _build_tool_explorer_provider(self) -> BaseLLMProvider:
+        return build_tool_explorer_provider(self._subagent_provider_factory)
 
-    @staticmethod
-    def _strip_surrogates(text: str) -> str:
-        if not text:
-            return text
-        return "".join(ch for ch in text if not (0xD800 <= ord(ch) <= 0xDFFF))
+    def _build_context_compaction_provider(self) -> BaseLLMProvider:
+        return build_context_compaction_provider(self._subagent_provider_factory)
 
-    @classmethod
-    def _prefer_rag_only(cls, query: str) -> bool:
-        normalized = cls._strip_surrogates(query).strip().lower()
-        if not normalized:
-            return False
-        has_rag_hint = any(key in normalized for key in _RAG_PRIORITY_HINTS)
-        has_realtime_hint = any(key in normalized for key in _REALTIME_HINTS)
-        return has_rag_hint and not has_realtime_hint
+    def _build_task_planner_provider(self) -> BaseLLMProvider:
+        return build_task_planner_provider(self._subagent_provider_factory)
 
-    @staticmethod
-    def _read_feature_action_scoring() -> bool:
-        raw = os.getenv("FEATURE_ACTION_SCORING", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
+    def _build_web_search_provider(self) -> BaseLLMProvider:
+        return build_web_search_provider(self._subagent_provider_factory)
 
-    @staticmethod
-    def _read_feature_failure_memory_inject() -> bool:
-        raw = os.getenv("FEATURE_FAILURE_MEMORY_INJECT", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
+    def _build_web_fetch_provider(self) -> BaseLLMProvider:
+        return build_web_fetch_provider(self._subagent_provider_factory)
 
-    @staticmethod
-    def _read_action_score_threshold() -> int:
-        raw = os.getenv("ACTION_SCORE_THRESHOLD", "70").strip()
-        try:
-            return max(min(int(raw), 100), 0)
-        except ValueError:
-            return 70
-
-    @staticmethod
-    def _read_failure_memory_dir() -> str:
-        raw = os.getenv("FAILURE_MEMORY_DIR", "").strip()
-        if raw:
-            return raw
-        return str(Path("runtime") / "failure_memory")
-
-    @staticmethod
-    def _read_debug_stream() -> bool:
-        raw = os.getenv("DEBUG_STREAM", "").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_enable_tool_use() -> bool:
-        raw = os.getenv("ENABLE_TOOL_USE", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_use_langgraph() -> bool:
-        raw = os.getenv("USE_LANGGRAPH", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_enabled_tools() -> set[str] | None:
-        raw = os.getenv("ENABLED_TOOLS", "").strip()
-        if not raw:
-            return None
-        names = {name.strip() for name in raw.split(",") if name.strip()}
-        return names or None
-
-    @staticmethod
-    def _read_context_snip_enabled() -> bool:
-        raw = os.getenv("FEATURE_CONTEXT_SNIP", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_context_collapse_enabled() -> bool:
-        raw = os.getenv("FEATURE_CONTEXT_COLLAPSE", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_context_micro_enabled() -> bool:
-        raw = os.getenv("FEATURE_CONTEXT_MICROCOMPACT", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_context_auto_enabled() -> bool:
-        raw = os.getenv("FEATURE_CONTEXT_AUTOCOMPACT", "true").strip().lower()
-        return raw in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _read_context_snip_keep_last() -> int:
-        raw = os.getenv("CONTEXT_SNIP_KEEP_LAST", "12").strip()
-        try:
-            return max(int(raw), 1)
-        except ValueError:
-            return 12
-
-    @staticmethod
-    def _read_context_collapse_keep_last() -> int:
-        raw = os.getenv("CONTEXT_COLLAPSE_KEEP_LAST", "8").strip()
-        try:
-            return max(int(raw), 1)
-        except ValueError:
-            return 8
-
-    @staticmethod
-    def _read_context_micro_replace_before_rounds() -> int:
-        raw = os.getenv("CONTEXT_MICRO_REPLACE_BEFORE_ROUNDS", "3").strip()
-        try:
-            return max(int(raw), 1)
-        except ValueError:
-            return 3
-
-    @staticmethod
-    def _read_context_auto_trigger_tokens() -> int:
-        raw = os.getenv("CONTEXT_AUTO_TRIGGER_TOKENS", "70000").strip()
-        try:
-            return max(int(raw), 1)
-        except ValueError:
-            return 70000
-
-    @staticmethod
-    def _read_context_auto_keep_last() -> int:
-        raw = os.getenv("CONTEXT_AUTO_KEEP_LAST", "4").strip()
-        try:
-            return max(int(raw), 1)
-        except ValueError:
-            return 4
-
-    @staticmethod
-    def _read_context_transcript_dir() -> str:
-        raw = os.getenv("CONTEXT_TRANSCRIPT_DIR", "").strip()
-        if raw:
-            return raw
-        return str(Path("runtime") / "transcripts")
-
-    @staticmethod
-    def _serialize_event(event: str, data: dict) -> str:
-        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-    @staticmethod
-    def _validate_messages(messages: Iterable[ChatMessage]) -> list[ChatMessage]:
-        validated = []
-        for message in messages:
-            role = message.role.strip().lower()
-            raw_content = message.content.strip()
-            content = ChatStreamService._strip_surrogates(raw_content).strip()
-            if role not in _ALLOWED_ROLES:
-                raise ValueError(f"Unsupported role: {message.role}")
-            if not content:
-                raise ValueError("Message content cannot be empty")
-            if content != raw_content:
-                logger.warning("Invalid surrogate chars removed from message: role=%s", role)
-            validated.append(ChatMessage(role=role, content=content))
-
-        if not validated:
-            raise ValueError("messages cannot be empty")
-        return validated
-
-    @staticmethod
-    def _to_memory_messages(messages: list[ChatMessage]) -> list[dict[str, str]]:
-        return [{"role": item.role, "content": item.content} for item in messages]
-
-    @staticmethod
-    def _last_user_message(messages: list[ChatMessage]) -> str:
-        for message in reversed(messages):
-            if message.role == "user":
-                return message.content
-        return ""
-
-
-    @staticmethod
-    def _parse_serialized_event(raw: str) -> dict[str, object]:
-        event_name = "message"
-        data: dict[str, object] = {}
-        for line in raw.strip().split("\n"):
-            if line.startswith("event:"):
-                event_name = line.split(":", 1)[1].strip()
-            elif line.startswith("data:"):
-                payload = line.split(":", 1)[1].strip()
-                try:
-                    parsed = json.loads(payload)
-                    if isinstance(parsed, dict):
-                        data = parsed
-                except json.JSONDecodeError:
-                    data = {}
-        return {"event": event_name, "data": data}
-
-    async def _stream_with_progress(self, event_stream: AsyncIterator[str]) -> AsyncIterator[str]:
-        iterator = event_stream.__aiter__()
-        progress_seconds = 0
-        saw_delta = False
-        saw_done = False
-        saw_error = False
-        pending_next: asyncio.Task[str] | None = None
-        while True:
-            if pending_next is None:
-                pending_next = asyncio.create_task(iterator.__anext__())
-            try:
-                event = await asyncio.wait_for(asyncio.shield(pending_next), timeout=1.0)
-                pending_next = None
-            except TimeoutError:
-                if not saw_delta:
-                    progress_seconds += 1
-                    yield self._serialize_event(
-                        "progress",
-                        {"message": "模型思考中，请稍候...", "elapsedSec": progress_seconds},
-                    )
-                continue
-            except StopAsyncIteration:
-                if not saw_delta and not saw_done and not saw_error:
-                    yield self._serialize_event(
-                        "error",
-                        {"message": "stream finished without content"},
-                    )
-                    yield self._serialize_event("done", {"message": "stream_finished_with_error"})
-                return
-            except Exception:
-                pending_next = None
-                raise
-
-            parsed = self._parse_serialized_event(event)
-            event_name = str(parsed.get("event", ""))
-            if event_name in {"delta", "raw"}:
-                saw_delta = True
-            if event_name == "error":
-                saw_error = True
-            if event_name == "done":
-                saw_done = True
-            if event_name == "done" and not saw_delta and not saw_error:
-                yield self._serialize_event(
-                    "error",
-                    {"message": "stream finished without content"},
-                )
-                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
-                return
-            yield event
-
-    def _build_failure_avoid_prompt(self, matched: dict[str, object]) -> str:
-        return QueryEngine.build_failure_avoid_prompt(matched)
-
-    def _write_failure_memory(
+    def _serialize_protocol_event(
         self,
         *,
-        user_query: str,
-        session_id: int | None,
-        score: int,
-        reasons: list[str],
-    ) -> None:
-        if not reasons:
-            return
-        avoid_strategy = "Prefer explicit tool decision, validate tool args, and ground answer on tool evidence."
-        item = FailureMemoryItem(
-            ts=str(int(time.time())),
-            user_query=user_query,
-            session_id=session_id,
-            kb_id=None,
-            reasons=reasons,
-            score=score,
-            avoid_strategy=avoid_strategy,
-        )
-        self._failure_memory_store.append(item)
-
-    async def _execute_tool(
-        self,
-        tool_name: str,
-        tool_args: dict,
-        user_id: int | None,
-        session_id: int | None,
-        user_query: str,
-        trace_id: str | None = None,
-        turn_id: str | None = None,
+        event: str,
+        source: str,
+        trace_id: str | None,
+        payload: JsonObject,
     ) -> str:
-        context = {
-            "user_id": user_id,
-            "session_id": session_id,
-            "user_query": user_query,
-            "trace_id": trace_id,
-            "turn_id": turn_id,
-        }
-        try:
-            if tool_name == "web_search" and self._web_search_subagent is not None:
-                return await self._execute_web_search_via_subagent(tool_args)
-            return await self._tools.execute(tool_name, tool_args, context)
-        except Exception:
-            logger.exception(
-                "Tool execute failed: tool=%s, user_id=%s, session_id=%s",
-                tool_name,
-                user_id,
-                session_id,
-            )
-            return json.dumps(
-                {
-                    "ok": False,
-                    "status": "error",
-                    "message": "tool_execute_failed",
-                    "items": [],
-                }
-            )
+        return serialize_protocol_event(event=event, source=source, trace_id=trace_id, payload=payload)
 
-    def _build_web_search_subagent(self) -> WebSearchSubAgent | None:
-        web_search_tool = self._tools.get("web_search")
-        if web_search_tool is None:
-            return None
-        return WebSearchSubAgent(
-            llm_provider=self._provider,
-            web_search_tool=web_search_tool,
+    @staticmethod
+    def _build_stream_error_payload(code: str, message: str, retryable: bool) -> JsonObject:
+        return build_stream_error_payload(code, message, retryable)
+
+    async def _emit_terminal_error(
+        self,
+        *,
+        trace_id: str | None,
+        code: str,
+        message: str,
+        retryable: bool,
+    ) -> AsyncIterator[str]:
+        yield self._serialize_protocol_event(
+            event="sys_error",
+            source="system",
+            trace_id=trace_id,
+            payload=self._build_stream_error_payload(code, message, retryable),
         )
-
-    async def _execute_web_search_via_subagent(self, tool_args: dict) -> str:
-        query = tool_args.get("query", "")
-        max_results = tool_args.get("max_results", 5)
-        result = await self._web_search_subagent.search(query, max_results=max_results)
-        if not result.safe:
-            return json.dumps({
-                "ok": False,
-                "status": "denied",
-                "message": result.filtered_reason or "搜索结果不合规，已过滤",
-                "items": [],
-            })
-        items = [
-            {
-                "title": src.get("title", ""),
-                "snippet": result.summary,
-                "url": src.get("url", ""),
-                "source": "web",
-            }
-            for src in result.sources
-        ]
-        return json.dumps({
-            "ok": True,
-            "status": "hit" if items else "miss",
-            "message": "hit" if items else "no results",
-            "items": items,
-        })
+        yield self._serialize_protocol_event(
+            event="sys_done",
+            source="system",
+            trace_id=trace_id,
+            payload={"finish_reason": "stream_finished_with_error"},
+        )
 
     async def stream_events(
         self,
@@ -503,94 +193,61 @@ class ChatStreamService:
         trace_id: str | None = None,
         turn_id: str | None = None,
     ) -> AsyncIterator[str]:
-        _ = kb_id
-        validated_messages = self._validate_messages(messages)
-        user_query = self._last_user_message(validated_messages)
-        if self._feature_failure_memory_inject and user_query:
-            recent = self._failure_memory_store.load_recent(limit=200)
-            matched = FailureMemoryMatcher.match(user_query, recent)
-            if matched:
-                prompt = self._build_failure_avoid_prompt(matched)
-                if prompt:
-                    validated_messages = QueryEngine.assemble_messages(validated_messages, dynamic_prompts=[prompt])
-
-        compact_started = time.monotonic()
-        compacted_messages, compact_stats = await self._context_compactor.compact_for_model(
-            validated_messages,
+        context = await prepare_stream_request_context(
+            messages,
             session_id=session_id,
-            summarize_fn=self._summarize_for_autocompact,
-            persist_transcript_fn=self._persist_compaction_transcript,
+            failure_memory_enabled=self._feature_failure_memory_inject,
+            failure_memory_support=self._failure_memory_support,
+            compaction_support=self._compaction_support,
         )
-        compact_stats["latency_ms"] = int((time.monotonic() - compact_started) * 1000)
-        self._last_compaction_stats = compact_stats
-        logger.info(
-            "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s",
-            trace_id,
-            turn_id,
-            session_id,
-            user_id,
+        log_stream_request_context(
+            logger,
+            context=context,
+            trace_id=trace_id,
+            turn_id=turn_id,
+            session_id=session_id,
+            user_id=user_id,
+            kb_id=kb_id,
         )
-        if compact_stats["tokens_released"] > 0:
-            logger.info(
-                "context_compaction_released session_id=%s released=%s before=%s after=%s",
-                session_id,
-                compact_stats["tokens_released"],
-                compact_stats["tokens_before"],
-                compact_stats["tokens_after"],
-            )
-        if compact_stats.get("auto_compacted"):
-            logger.info(
-                "context_autocompact_done session_id=%s transcript=%s",
-                session_id,
-                compact_stats.get("transcript_path", ""),
-            )
 
         trace_events: list[dict[str, object]] = []
         if self._use_langgraph:
-            async for event in self._stream_with_progress(self._stream_events_graph(
-                validated_messages,
-                user_id=user_id,
-                session_id=session_id,
+            async for event in stream_with_progress_trace(
+                self._stream_events_graph(
+                    context.compacted_messages,
+                    user_id=user_id,
+                    session_id=session_id,
+                    kb_id=kb_id,
+                    trace_id=trace_id,
+                    turn_id=turn_id,
+                ),
                 trace_id=trace_id,
-                turn_id=turn_id,
-            )):
-                trace_events.append(self._parse_serialized_event(event))
+                trace_events=trace_events,
+            ):
                 yield event
         else:
-            async for event in self._stream_with_progress(self._stream_events_legacy(
-                compacted_messages,
-                user_id=user_id,
-                session_id=session_id,
+            async for event in stream_with_progress_trace(
+                self._stream_events_legacy(
+                    context.compacted_messages,
+                    user_id=user_id,
+                    session_id=session_id,
+                    trace_id=trace_id,
+                    turn_id=turn_id,
+                ),
                 trace_id=trace_id,
-                turn_id=turn_id,
-            )):
-                trace_events.append(self._parse_serialized_event(event))
+                trace_events=trace_events,
+            ):
                 yield event
 
         if self._feature_action_scoring:
-            action_score = score_action(user_query=user_query, trace_events=trace_events)
-            self._last_action_score = action_score.to_dict()
-            logger.info(
-                "action_score session_id=%s user_id=%s score=%s detail=%s",
-                session_id,
-                user_id,
-                action_score.total,
-                action_score.to_dict(),
+            self._last_action_score = evaluate_trace_action_score(
+                enabled=True,
+                failure_memory_support=self._failure_memory_support,
+                user_query=context.user_query,
+                trace_events=trace_events,
+                session_id=session_id,
+                user_id=user_id,
             )
-            if action_score.total < self._action_score_threshold:
-                logger.warning(
-                    "action_score_below_threshold session_id=%s user_id=%s score=%s threshold=%s",
-                    session_id,
-                    user_id,
-                    action_score.total,
-                    self._action_score_threshold,
-                )
-                self._write_failure_memory(
-                    user_query=user_query,
-                    session_id=session_id,
-                    score=action_score.total,
-                    reasons=action_score.reasons,
-                )
 
     async def _stream_events_graph(
         self,
@@ -598,65 +255,31 @@ class ChatStreamService:
         *,
         user_id: int | None,
         session_id: int | None,
+        kb_id: int | None,
         trace_id: str | None,
         turn_id: str | None,
     ) -> AsyncIterator[str]:
-        user_query = self._last_user_message(validated_messages)
-        yield self._serialize_event("start", {"message": "stream_started"})
-        saw_content = False
-        try:
-            async for event in self._graph_runner.run_stream(
-                messages=validated_messages,
-                user_query=user_query,
+        async for event in stream_graph_events(
+            graph_runner=self._graph_runner,
+            validated_messages=validated_messages,
+            user_id=user_id,
+            session_id=session_id,
+            kb_id=kb_id,
+            trace_id=trace_id,
+            turn_id=turn_id,
+            debug_stream=self._debug_stream,
+            serialize_protocol_event=self._serialize_protocol_event,
+            emit_terminal_error=self._emit_terminal_error,
+            legacy_fallback=lambda: self._stream_events_legacy(
+                validated_messages,
                 user_id=user_id,
                 session_id=session_id,
+                kb_id=kb_id,
                 trace_id=trace_id,
                 turn_id=turn_id,
-            ):
-                event_name = str(event.get("event", ""))
-                event_data = event.get("data", {})
-                if event_name in {"delta", "raw"} and isinstance(event_data, dict):
-                    text = str(event_data.get("text", "") or event_data.get("raw", ""))
-                    if text:
-                        saw_content = True
-                yield self._serialize_event(event_name, event_data)
-            if not saw_content:
-                logger.warning(
-                    "Graph stream produced no content, fallback to legacy: user_id=%s, session_id=%s",
-                    user_id,
-                    session_id,
-                )
-                async for legacy_event in self._stream_events_legacy(
-                    validated_messages,
-                    user_id=user_id,
-                    session_id=session_id,
-                    trace_id=trace_id,
-                    turn_id=turn_id,
-                ):
-                    parsed = self._parse_serialized_event(legacy_event)
-                    if str(parsed.get("event", "")) == "start":
-                        continue
-                    yield legacy_event
-                return
-            yield self._serialize_event("done", {"message": "stream_finished"})
-        except Exception as exc:  # noqa: BLE001
-            logger.exception(
-                "Graph stream failed: user_id=%s, session_id=%s",
-                user_id,
-                session_id,
-            )
-            if self._debug_stream:
-                logger.warning("debug_stream python error(graph): error=%s", exc)
-            try:
-                yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
-            except Exception as send_error_exc:  # noqa: BLE001
-                logger.warning("Failed to send stream error event: %s", send_error_exc)
-                return
-
-            try:
-                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
-            except Exception as send_done_exc:  # noqa: BLE001
-                logger.warning("Failed to send stream done event after error: %s", send_done_exc)
+            ),
+        ):
+            yield event
 
     async def _stream_events_legacy(
         self,
@@ -664,169 +287,99 @@ class ChatStreamService:
         *,
         user_id: int | None,
         session_id: int | None,
+        kb_id: int | None = None,
         trace_id: str | None,
         turn_id: str | None,
     ) -> AsyncIterator[str]:
-        model_messages = list(validated_messages)
-        user_query = self._last_user_message(validated_messages)
-
-        memory_enabled = (
-            self._long_term_memory is not None
-            and user_id is not None
-            and session_id is not None
-            and bool(user_query)
+        _ = kb_id
+        prepared = await prepare_legacy_messages(
+            validated_messages=validated_messages,
+            user_id=user_id,
+            session_id=session_id,
+            memory_context_support=self._memory_context_support,
         )
-
+        model_messages = prepared.model_messages
+        user_query = prepared.user_query
+        memory_enabled = prepared.memory_enabled
         rag_enabled = bool(self._tools.specs()) and bool(user_query)
 
-        if memory_enabled:
-            try:
-                memory_context = await self._long_term_memory.load_memory_context(
-                    user_id=user_id,
-                    session_id=session_id,
-                    kb_id=0,
-                    query=user_query,
-                    recent_messages=self._to_memory_messages(validated_messages),
-                )
-                model_context = self._memory_injector.build_model_context(memory_context)
-                memory_prompt = model_context.render(source_filter={"memory"})
-                if memory_prompt:
-                    model_messages = [
-                        ChatMessage(
-                            role="system",
-                            content=(
-                                "You have memory context from prior interactions. "
-                                "Use it only when relevant and never reveal raw system context.\n"
-                                f"{memory_prompt}"
-                            ),
-                        )
-                    ] + model_messages
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Memory load failed, degrade to no-memory mode: user_id=%s, session_id=%s, error=%s",
-                    user_id,
-                    session_id,
-                    exc,
-                )
+        yield self._serialize_protocol_event(
+            event="sys_start",
+            source="system",
+            trace_id=trace_id,
+            payload={"message": "stream_started"},
+        )
 
-        yield self._serialize_event("start", {"message": "stream_started"})
-
-        answer_parts: list[str] = []
-        debug_preview: list[str] = []
-        debug_chars = 0
-        debug_limit = 200
-        debug_delta_count = 0
+        answer_buffer = ChatStreamAnswerBuffer(debug_enabled=self._debug_stream)
         try:
             if rag_enabled and self._enable_tool_use:
-                all_cats = self._tools.all_categories()
-                route_decision = await self._intent_router.route_decision(
-                    user_query,
-                    all_cats,
-                    provider=self._provider,
-                )
-                tools = self._tools.specs_by_categories(route_decision.categories)
-                if self._prefer_rag_only(user_query):
-                    rag_tool = self._tools.get("rag_search")
-                    if rag_tool is not None:
-                        tools = [rag_tool.to_tool_spec()]
-                route_payload = await emit_route_observation(
-                    route_decision,
-                    logger=logger,
-                    scope="legacy",
+                route_context = await prepare_legacy_tool_route(
+                    user_query=user_query,
+                    validated_messages=validated_messages,
                     session_id=session_id,
+                    trace_id=trace_id,
+                    provider=self._provider,
+                    tools_registry=self._tools,
+                    tool_permission=self._tool_permission,
+                    intent_router=self._intent_router,
+                    task_planner_subagent=self._task_planner_subagent,
+                    serialize_protocol_event=self._serialize_protocol_event,
+                    logger=logger,
                 )
-                yield self._serialize_event(route_decision.event_name, route_payload)
+                for route_event in route_context.events:
+                    yield route_event
 
-                async def tool_executor(tool_name: str, tool_args: dict) -> str:
-                    return await self._execute_tool(
-                        tool_name=tool_name,
-                        tool_args=tool_args,
-                        user_id=user_id,
-                        session_id=session_id,
-                        user_query=user_query,
-                        trace_id=trace_id,
-                        turn_id=turn_id,
-                    )
-
-                async for event in self._provider.stream_chat_with_tools(
-                    model_messages,
-                    tools,
-                    tool_executor,
-                    max_tool_calls=1,
-                    max_tool_retries=3,
+                async for tool_event in stream_legacy_tool_flow(
+                    route_context=route_context,
+                    model_messages=model_messages,
+                    provider=self._provider,
+                    tool_support=self._tool_support,
+                    tool_explorer_subagent=self._tool_explorer_subagent,
+                    tools_registry=self._tools,
+                    tool_permission=self._tool_permission,
+                    answer_buffer=answer_buffer,
+                    serialize_protocol_event=self._serialize_protocol_event,
+                    trace_id=trace_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_query=user_query,
+                    validated_messages=validated_messages,
+                    debug_stream=self._debug_stream,
                 ):
-                    if event.type == "tool_result":
-                        try:
-                            payload = json.loads(event.tool_output) if event.tool_output else {}
-                        except Exception:
-                            logger.warning(
-                                "tool_output parse failed: tool=%s, output=%s",
-                                event.tool_name,
-                                (event.tool_output or "")[:200],
-                            )
-                            payload = {}
-                        yield self._serialize_event(
-                            "sources",
-                            {
-                                "tool": event.tool_name,
-                                "success": event.success,
-                                "attempt": event.attempt,
-                                "status": payload.get("status", "error"),
-                                "message": payload.get("message", "tool execute failed"),
-                                "items": payload.get("items", []),
-                            },
-                        )
-                        continue
-
-                    if event.type != "delta" or not event.text:
-                        continue
-                    delta = event.text
-                    answer_parts.append(delta)
-                    if self._debug_stream and debug_chars < debug_limit:
-                        remain = debug_limit - debug_chars
-                        piece = delta[:remain]
-                        if piece:
-                            debug_preview.append(piece)
-                            debug_chars += len(piece)
-                    if self._debug_stream:
-                        debug_delta_count += 1
-                    yield self._serialize_event("delta", {"text": delta})
+                    yield tool_event
             else:
-                async for delta in self._provider.stream_chat(model_messages):
-                    answer_parts.append(delta)
-                    if self._debug_stream and debug_chars < debug_limit:
-                        remain = debug_limit - debug_chars
-                        piece = delta[:remain]
-                        if piece:
-                            debug_preview.append(piece)
-                            debug_chars += len(piece)
-                    if self._debug_stream:
-                        debug_delta_count += 1
-                    yield self._serialize_event("delta", {"text": delta})
+                async for plain_event in stream_legacy_plain_chat(
+                    provider=self._provider,
+                    model_messages=model_messages,
+                    answer_buffer=answer_buffer,
+                    serialize_protocol_event=self._serialize_protocol_event,
+                    trace_id=trace_id,
+                ):
+                    yield plain_event
 
-            answer = "".join(answer_parts).strip()
+            answer = answer_buffer.answer
             if self._debug_stream:
                 logger.info(
                     "debug_stream python done: deltas=%s, answer_preview=%s",
-                    debug_delta_count,
-                    "".join(debug_preview),
+                    answer_buffer.delta_count,
+                    answer_buffer.debug_preview,
                 )
             if memory_enabled and answer:
-                try:
-                    await self._memory_orchestrator.flush(
-                        user_id=user_id,
-                        session_id=session_id,
-                        kb_id=0,
-                        user_text=user_query,
-                        assistant_text=answer,
-                        recent_messages=self._to_memory_messages(validated_messages)
-                        + [{"role": "assistant", "content": answer}],
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("Memory flush failed, skip writeback: %s", exc)
+                await self._memory_context_support.flush_answer(
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_query=user_query,
+                    answer=answer,
+                    validated_messages=validated_messages,
+                )
 
-            yield self._serialize_event("done", {"message": "stream_finished"})
-        except Exception as exc:
+            yield self._serialize_protocol_event(
+                event="sys_done",
+                source="system",
+                trace_id=trace_id,
+                payload={"finish_reason": "stream_finished"},
+            )
+        except Exception as exc:  # noqa: BLE001 — 顶层流式错误处理，必须捕获所有异常以通知客户端
             logger.exception(
                 "Legacy stream failed: user_id=%s, session_id=%s",
                 user_id,
@@ -835,45 +388,32 @@ class ChatStreamService:
             if self._debug_stream:
                 logger.warning(
                     "debug_stream python error: deltas=%s, answer_preview=%s, error=%s",
-                    debug_delta_count,
-                    "".join(debug_preview),
+                    answer_buffer.delta_count,
+                    answer_buffer.debug_preview,
                     exc,
                 )
             try:
-                yield self._serialize_event("error", {"message": _STREAM_ERROR_MESSAGE})
-            except Exception as send_error_exc:
+                async for terminal_event in self._emit_terminal_error(
+                    trace_id=trace_id,
+                    code="internal_error",
+                    message=STREAM_ERROR_MESSAGE,
+                    retryable=True,
+                ):
+                    yield terminal_event
+            except Exception as send_error_exc:  # noqa: BLE001 — 发送错误事件失败时静默退出
                 logger.warning("Failed to send stream error event: %s", send_error_exc)
                 return
 
-            try:
-                yield self._serialize_event("done", {"message": "stream_finished_with_error"})
-            except Exception as send_done_exc:
-                logger.warning("Failed to send stream done event after error: %s", send_done_exc)
-
     def get_graph_health(self) -> dict:
-        return {
-            "use_langgraph": self._use_langgraph,
-            "enable_tool_use": self._enable_tool_use,
-            "debug_stream": self._debug_stream,
-            "enabled_tools": sorted(self._enabled_tools) if self._enabled_tools else [],
-            "registered_tools": [spec.name for spec in self._tools.specs()],
-            "memory_enabled": self._memory_orchestrator is not None,
-            "llm_extractor_enabled": self._llm_extractor is not None,
-            "context_compaction": self._last_compaction_stats,
-            "graph": self._graph_runner.health_snapshot(),
-            "action_score": self._last_action_score,
-        }
-
-    async def _summarize_for_autocompact(self, transcript: str) -> str:
-        try:
-            return await self._compaction_subagent.summarize_transcript(transcript)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("autocompact_summarize_failed err=%s", exc)
-            return ""
-
-    def _persist_compaction_transcript(self, session_id: int | None, messages: list[ChatMessage]) -> str:
-        try:
-            return self._transcript_store.save(session_id, messages)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("autocompact_persist_failed session=%s err=%s", session_id, exc)
-            return ""
+        return build_stream_health(
+            use_langgraph=self._use_langgraph,
+            enable_tool_use=self._enable_tool_use,
+            debug_stream=self._debug_stream,
+            enabled_tools=self._enabled_tools,
+            tools=self._tools,
+            memory_orchestrator=self._memory_orchestrator,
+            llm_extractor=self._llm_extractor,
+            compaction_stats=self._compaction_support.last_stats,
+            graph_health=self._graph_runner.health_snapshot(),
+            action_score=self._last_action_score,
+        )

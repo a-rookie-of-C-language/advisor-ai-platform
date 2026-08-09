@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from .base_annotator import BaseChunkAnnotator, ChunkAnnotation
+from .base_annotator import BaseChunkAnnotator
+from .ChunkAnnotation import ChunkAnnotation
 
 logger = logging.getLogger(__name__)
 

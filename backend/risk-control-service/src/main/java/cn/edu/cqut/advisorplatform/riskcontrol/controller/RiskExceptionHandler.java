@@ -30,6 +30,4 @@ public class RiskExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(new ValidationErrorResponse(400, message));
   }
-
-  public record ValidationErrorResponse(int code, String message) {}
 }

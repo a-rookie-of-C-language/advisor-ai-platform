@@ -1,4 +1,5 @@
-from .base_chunk_engine import BaseChunkEngine, ChunkResult
+from .base_chunk_engine import BaseChunkEngine
+from .ChunkResult import ChunkResult
 from .docx_chunk_engine import DocxChunkEngine
 from .hybrid_pdf_chunk_engine import HybridPDFChunkEngine
 from .ocr_chunk_engine import OCRChunkEngine

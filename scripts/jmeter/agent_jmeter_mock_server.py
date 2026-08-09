@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from agent.types import JsonObject, JsonValue
 import argparse
 import asyncio
 import json
@@ -12,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from starlette.responses import StreamingResponse
 
 
-def _serialize_sse(event: str, data: dict[str, Any]) -> str:
+def _serialize_sse(event: str, data: JsonObject) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
@@ -23,7 +24,7 @@ def _resolve_token(request: Request) -> str:
     return request.headers.get("X-Agent-Token", "").strip()
 
 
-async def _stream_response(payload: dict[str, Any], latency_ms: int) -> AsyncIterator[str]:
+async def _stream_response(payload: JsonObject, latency_ms: int) -> AsyncIterator[str]:
     messages = payload.get("messages", [])
     question = ""
     if messages and isinstance(messages[-1], dict):
@@ -52,7 +53,7 @@ def create_app(token: str, latency_ms: int) -> FastAPI:
         return {"status": "ok"}
 
     @app.get("/graph/health")
-    async def graph_health() -> dict[str, Any]:
+    async def graph_health() -> JsonObject:
         return {
             "status": "ok",
             "graph_health": {

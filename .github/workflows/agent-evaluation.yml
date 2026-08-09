@@ -1,0 +1,64 @@
+name: Agent Evaluation CI
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'agent/**'
+  push:
+    branches: [master, main]
+    paths:
+      - 'agent/**'
+
+jobs:
+  evaluation:
+    name: DeepEval Agent Evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: agent/requirements.txt
+
+      - name: Install dependencies
+        working-directory: agent
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run DeepEval evaluation tests
+        working-directory: agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE: 300
+        run: |
+          python -m pytest tests/test_evaluation.py -v --tb=short --junitxml=evaluation-report.xml
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: |
+            agent/.deepeval/.latest_run_full.json
+            agent/evaluation-report.xml
+
+      - name: Check evaluation results
+        if: failure()
+        run: |
+          echo "❌ Agent evaluation tests failed. Please fix the issues before merging."
+          echo ""
+          echo "Common issues:"
+          echo "  - Contextual Recall below threshold: Add more retrieval context"
+          echo "  - Coherence below threshold: Improve answer structure"
+          echo "  - Hallucination detected: Check for factual accuracy"
+          exit 1

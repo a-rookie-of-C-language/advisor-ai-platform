@@ -6,7 +6,7 @@ param(
   [string]$Profile = "smoke",
 
   [string]$BaseUrl = "",
-  [string]$Token = "arookieofc",
+  [string]$Token = $env:AGENT_API_TOKEN,
   [string]$JMeterBin = $env:JMETER_BIN,
   [int]$MockPort = 18001,
   [int]$MockLatencyMs = 25,
@@ -14,6 +14,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($Token)) {
+  throw "Agent token is required. Pass -Token or set AGENT_API_TOKEN."
+}
 
 function Get-ProfileConfig {
   param([string]$Name)

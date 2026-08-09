@@ -11,6 +11,8 @@ import cn.edu.cqut.advisorplatform.riskcontrol.entity.RiskRule;
 import cn.edu.cqut.advisorplatform.riskcontrol.enums.RiskDirection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +24,7 @@ class ContentSafetyFilterTest {
 
   @Mock private RiskRuleDao riskRuleDao;
   @Mock private RiskActionDecider riskActionDecider;
+  @Mock private RiskPatternSupport riskPatternSupport;
 
   @InjectMocks private ContentSafetyFilter contentSafetyFilter;
 
@@ -60,6 +63,8 @@ class ContentSafetyFilterTest {
     when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(rule));
+    when(riskPatternSupport.compile(eq("test-rule"), eq("forbidden")))
+        .thenReturn(Optional.of(Pattern.compile("forbidden", Pattern.CASE_INSENSITIVE)));
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()
@@ -88,6 +93,8 @@ class ContentSafetyFilterTest {
     when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(rule));
+    when(riskPatternSupport.compile(eq("sensitive-word"), eq("forbidden|sensitive")))
+        .thenReturn(Optional.of(Pattern.compile("forbidden|sensitive", Pattern.CASE_INSENSITIVE)));
     when(riskActionDecider.decideAction(rule, "reject")).thenReturn("reject");
 
     RiskCheckRequest request =
@@ -138,6 +145,7 @@ class ContentSafetyFilterTest {
     when(riskRuleDao.findByRuleTypeAndDirectionEnabled(
             eq("content_safety"), eq(RiskDirection.INPUT)))
         .thenReturn(List.of(badRule));
+    when(riskPatternSupport.compile(eq("bad-regex"), eq("[invalid("))).thenReturn(Optional.empty());
 
     RiskCheckRequest request =
         RiskCheckRequest.builder()

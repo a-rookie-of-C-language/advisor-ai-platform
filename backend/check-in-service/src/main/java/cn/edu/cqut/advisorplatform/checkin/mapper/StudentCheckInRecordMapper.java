@@ -10,6 +10,7 @@ import cn.edu.cqut.advisorplatform.checkin.record.vo.CheckInRecordVO;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -28,6 +29,12 @@ public interface StudentCheckInRecordMapper {
   Long countCheckInRecords(
       @Param("studentId") Long studentId,
       @Param("checkInId") String checkInId,
+      @Param("teacherUserId") Long teacherUserId,
+      @Param("beginDate") LocalDate begin,
+      @Param("endDate") LocalDate end,
+      @Param("status") String status);
+
+  List<Map<String, Object>> selectClassAttendanceStatistics(
       @Param("teacherUserId") Long teacherUserId,
       @Param("beginDate") LocalDate begin,
       @Param("endDate") LocalDate end);
@@ -56,4 +63,15 @@ public interface StudentCheckInRecordMapper {
       @Param("classCode") String classCode,
       @Param("studentId") Long studentId,
       @Param("now") LocalDateTime now);
+
+  List<CheckInRecordVO> selectCheckInRecordsByClass(
+      @Param("classCode") String classCode,
+      @Param("teacherUserId") Long teacherUserId,
+      @Param("beginDate") LocalDate begin,
+      @Param("endDate") LocalDate end);
+
+  int updateRecordStatus(
+      @Param("checkInId") String checkInId,
+      @Param("studentId") Long studentId,
+      @Param("status") String status);
 }

@@ -1,19 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Dict, List
 
 from .BaseRerankStrategy import BaseRerankStrategy
+from .DocBucket import DocBucket
 from .RetrievalCandidate import RetrievalCandidate
-
-
-@dataclass
-class _DocBucket:
-    key: str
-    doc_score: float
-    first_recall_index: int
-    candidates: List[RetrievalCandidate]
 
 
 class ChunkDocTwoStageRerankStrategy(BaseRerankStrategy):
@@ -37,13 +29,13 @@ class ChunkDocTwoStageRerankStrategy(BaseRerankStrategy):
         return f"chunk:{candidate.hit.chunk_id}"
 
     @classmethod
-    def _build_doc_bucket(cls, key: str, candidates: List[RetrievalCandidate]) -> _DocBucket:
+    def _build_doc_bucket(cls, key: str, candidates: List[RetrievalCandidate]) -> DocBucket:
         sorted_candidates = sorted(candidates, key=lambda row: (-row.score, row.recall_index))
         max_score = sorted_candidates[0].score
         second_score = sorted_candidates[1].score if len(sorted_candidates) > 1 else 0.0
         doc_score = round(max_score + cls.SECONDARY_WEIGHT * second_score, 6)
         first_recall_index = min(row.recall_index for row in sorted_candidates)
-        return _DocBucket(
+        return DocBucket(
             key=key,
             doc_score=doc_score,
             first_recall_index=first_recall_index,
@@ -58,7 +50,7 @@ class ChunkDocTwoStageRerankStrategy(BaseRerankStrategy):
         for candidate in candidates:
             grouped[self._doc_key(candidate)].append(candidate)
 
-        buckets: List[_DocBucket] = []
+        buckets: List[DocBucket] = []
         for key, rows in grouped.items():
             buckets.append(self._build_doc_bucket(key, rows))
 

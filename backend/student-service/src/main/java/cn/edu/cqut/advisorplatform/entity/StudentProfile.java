@@ -259,34 +259,10 @@ public class StudentProfile {
   }
 
   public boolean isInfoMissing() {
-    boolean hasPhone = phone != null && !phone.isBlank();
-    boolean hasEmail = email != null && !email.isBlank();
-    boolean hasDormitory = dormitory != null && !dormitory.isBlank();
-    boolean hasEmergency = emergencyContact != null && !emergencyContact.isBlank();
-    return !hasPhone && !hasEmail && !hasDormitory && !hasEmergency;
+    return StudentProfileCompleteness.isInfoMissing(phone, email, dormitory, emergencyContact);
   }
 
   public InfoCompleteness calculateInfoCompleteness() {
-    int filledCount = 0;
-    if (phone != null && !phone.isBlank()) {
-      filledCount++;
-    }
-    if (email != null && !email.isBlank()) {
-      filledCount++;
-    }
-    if (dormitory != null && !dormitory.isBlank()) {
-      filledCount++;
-    }
-    if (emergencyContact != null && !emergencyContact.isBlank()) {
-      filledCount++;
-    }
-
-    if (filledCount == 0) {
-      return InfoCompleteness.SEVERE_MISSING;
-    } else if (filledCount <= 2) {
-      return InfoCompleteness.PARTIAL_MISSING;
-    } else {
-      return InfoCompleteness.COMPLETE;
-    }
+    return StudentProfileCompleteness.calculate(phone, email, dormitory, emergencyContact);
   }
 }

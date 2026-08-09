@@ -1,0 +1,23 @@
+import type { JsonObject } from "../../../../../common/json/types/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../../../common/model/ChatStreamRequest.js";
+import { OpenAiToolArgumentReader } from "../../../../../openai/tools/arguments/core/reader/OpenAiToolArgumentReader.js";
+import type { WorkspaceManager } from "../../../../core/manager/WorkspaceManager.js";
+import { WorkspaceRequestIdentityResolver } from "../../../../path/identity/WorkspaceRequestIdentityResolver.js";
+
+export class WorkspaceCreateDirOpenAiToolExecutor {
+  private readonly identityResolver = new WorkspaceRequestIdentityResolver();
+
+  constructor(private readonly workspaceManager: WorkspaceManager) {}
+
+  async execute(request: ChatStreamRequest, args: JsonObject): Promise<JsonObject> {
+    const identity = this.identityResolver.resolve(request);
+    return {
+      result: await this.workspaceManager.createDir(
+        identity.userId,
+        identity.sessionId,
+        OpenAiToolArgumentReader.readRequiredString(args, "path"),
+        OpenAiToolArgumentReader.readOptionalBoolean(args, "is_final", false)
+      )
+    };
+  }
+}

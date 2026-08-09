@@ -15,6 +15,8 @@ public interface MemoryService {
 
   List<MemoryItemResponseDTO> searchLongTerm(MemorySearchRequestDTO request);
 
+  List<MemoryItemResponseDTO> getCoreMemories(Long userId, Long kbId);
+
   MemoryCandidateUpsertResponseDTO upsertCandidates(MemoryCandidateUpsertRequestDTO request);
 
   SessionSummaryResponseDTO getSessionSummary(Long sessionId);
@@ -32,4 +34,14 @@ public interface MemoryService {
   void markTaskDone(Long taskId);
 
   void markTaskFailed(Long taskId, String error);
+
+  void invalidateMemory(Long memoryId);
+
+  void invalidateAndSupersede(Long oldMemoryId, Long newMemoryId);
+
+  void markAsMerged(Long memoryId, Long targetMemoryId);
+
+  void updateConfidence(Long memoryId, Double confidence);
+
+  void updateContent(Long memoryId, String content, Double confidence);
 }

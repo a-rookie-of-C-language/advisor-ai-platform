@@ -1,0 +1,129 @@
+package cn.edu.cqut.advisorplatform.aspect.audit;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import cn.edu.cqut.advisorplatform.entity.audit.AuditAction;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditLogDO;
+import cn.edu.cqut.advisorplatform.entity.audit.AuditModule;
+import cn.edu.cqut.advisorplatform.entity.user.UserDO;
+import cn.edu.cqut.advisorplatform.service.audit.AuditService;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+@ExtendWith(MockitoExtension.class)
+class AuditAspectTest {
+
+  @Mock private AuditService auditService;
+
+  @Mock private ProceedingJoinPoint joinPoint;
+
+  @Mock private MethodSignature methodSignature;
+
+  private AuditAspect auditAspect;
+
+  @BeforeEach
+  void setUp() {
+    auditAspect = new AuditAspect(new AuditLogSupport(auditService));
+  }
+
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
+    RequestContextHolder.resetRequestAttributes();
+  }
+
+  @Test
+  void audit_shouldIncludeRequiredMethodFieldWhenSavingAuditLog() throws Throwable {
+    UserDO user = new UserDO();
+    user.setId(1L);
+    user.setUsername("tester");
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+
+    when(joinPoint.getSignature()).thenReturn(methodSignature);
+    when(methodSignature.getMethod())
+        .thenReturn(AuditAspectTestController.class.getMethod("search", String.class));
+    when(joinPoint.proceed()).thenReturn("ok");
+
+    auditAspect.audit(joinPoint);
+
+    ArgumentCaptor<AuditLogDO> captor = ArgumentCaptor.forClass(AuditLogDO.class);
+    verify(auditService).saveAuditLogAsync(captor.capture());
+
+    AuditLogDO saved = captor.getValue();
+    assertThat(saved.getModule()).isEqualTo(AuditModule.MEMORY);
+    assertThat(saved.getAction()).isEqualTo(AuditAction.SEARCH);
+    assertThat(saved.getResponseStatus()).isEqualTo("SUCCESS");
+    assertThat(saved.getMethod()).isNotBlank();
+    assertThat(saved.getDescription()).isEqualTo("memory_search");
+  }
+
+  @Test
+  void audit_shouldSaveFailedStatusAndErrorMessageWhenBusinessThrows() throws Throwable {
+    UserDO user = new UserDO();
+    user.setId(2L);
+    user.setUsername("tester2");
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+
+    when(joinPoint.getSignature()).thenReturn(methodSignature);
+    when(methodSignature.getMethod())
+        .thenReturn(AuditAspectTestController.class.getMethod("failingSearch", String.class));
+    when(joinPoint.proceed()).thenThrow(new IllegalStateException("boom"));
+
+    assertThatThrownBy(() -> auditAspect.audit(joinPoint))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("boom");
+
+    ArgumentCaptor<AuditLogDO> captor = ArgumentCaptor.forClass(AuditLogDO.class);
+    verify(auditService).saveAuditLogAsync(captor.capture());
+
+    AuditLogDO saved = captor.getValue();
+    assertThat(saved.getResponseStatus()).isEqualTo("FAILED");
+    assertThat(saved.getErrorMessage()).contains("IllegalStateException").contains("boom");
+    assertThat(saved.getMethod()).isEqualTo("AuditAspectTestController.failingSearch");
+  }
+
+  @Test
+  void audit_shouldAllowAnonymousAndPersistTraceContext() throws Throwable {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("X-Trace-Id", "trace-header-001");
+    request.setRequestURI("/api/auth/login");
+    request.setAttribute("auditSessionId", 1001L);
+    request.setAttribute("auditTurnId", "turn-xyz");
+    RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+    when(joinPoint.getSignature()).thenReturn(methodSignature);
+    when(methodSignature.getMethod())
+        .thenReturn(AuditAspectTestController.class.getMethod("search", String.class));
+    when(joinPoint.proceed()).thenReturn("ok");
+
+    auditAspect.audit(joinPoint);
+
+    ArgumentCaptor<AuditLogDO> captor = ArgumentCaptor.forClass(AuditLogDO.class);
+    verify(auditService).saveAuditLogAsync(captor.capture());
+
+    AuditLogDO saved = captor.getValue();
+    assertThat(saved.getUserId()).isNull();
+    assertThat(saved.getTraceId()).isEqualTo("trace-header-001");
+    assertThat(saved.getSessionId()).isEqualTo(1001L);
+    assertThat(saved.getTurnId()).isEqualTo("turn-xyz");
+  }
+}
