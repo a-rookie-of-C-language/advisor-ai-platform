@@ -127,6 +127,10 @@ jobs:
         working-directory: agent-core
         run: cargo check
 
+      - name: Build Rust debug core
+        working-directory: agent-core
+        run: cargo build
+
       - name: Test Rust core
         working-directory: agent-core
         run: cargo test
@@ -134,6 +138,10 @@ jobs:
       - name: Build Rust release core
         working-directory: agent-core
         run: cargo build --release
+
+      - name: Run Agent integration tests
+        working-directory: agent-ts
+        run: npm run test:integration
 
   build-python:
     name: Python (.venv + compile + test)
