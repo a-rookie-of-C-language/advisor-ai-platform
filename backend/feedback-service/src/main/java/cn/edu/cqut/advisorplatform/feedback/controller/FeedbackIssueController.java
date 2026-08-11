@@ -55,4 +55,10 @@ public class FeedbackIssueController {
       @AuthenticationPrincipal UserPrincipal currentUser) {
     return ApiResponseDTO.success(feedbackIssueService.closeIssue(id, request, currentUser));
   }
+
+  @PostMapping("/{id}/github/retry")
+  public ApiResponseDTO<IssueResponseDTO> retryGitHubSync(
+      @PathVariable("id") Long id, @AuthenticationPrincipal UserPrincipal currentUser) {
+    return ApiResponseDTO.success(feedbackIssueService.retryGitHubSync(id, currentUser));
+  }
 }
