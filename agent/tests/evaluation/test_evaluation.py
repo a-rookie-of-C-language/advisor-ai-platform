@@ -26,8 +26,7 @@ load_dotenv(env_path)
 @pytest.fixture(scope="module")
 def metrics() -> DeepEvalMetrics:
     """创建 DeepEval 指标实例。"""
-    # 优先使用 DEEPEVAL_MODEL，否则使用 OPENAI_MODEL
-    model = os.getenv("DEEPEVAL_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.getenv("DEEPEVAL_MODEL", "gpt-4o-mini")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.8"))
     return DeepEvalMetrics(model=model, threshold=threshold)
 
