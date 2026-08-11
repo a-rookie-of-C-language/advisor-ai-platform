@@ -451,7 +451,7 @@ services:
       ADVISOR_JWT_SECRET: ${ADVISOR_JWT_SECRET:?ADVISOR_JWT_SECRET is required}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      GITHUB_OWNER: ${GITHUB_OWNER:-a-rookie-of-C-language}
+      GITHUB_OWNER: ${GITHUB_OWNER:-ai-cqut}
       GITHUB_REPO: ${GITHUB_REPO:-advisor-ai-platform}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
