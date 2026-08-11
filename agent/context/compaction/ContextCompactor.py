@@ -82,11 +82,7 @@ class ContextCompactor:
             projected = self._apply_keep_last(projected, self._collapse_keep_last)
 
         after_level3_tokens = self._estimate_tokens(projected)
-        if (
-            self._enable_autocompact
-            and after_level3_tokens >= self._auto_trigger_tokens
-            and summarize_fn is not None
-        ):
+        if self._enable_autocompact and after_level3_tokens >= self._auto_trigger_tokens and summarize_fn is not None:
             if persist_transcript_fn is not None:
                 transcript_path = persist_transcript_fn(session_id, projected)
             transcript_text = self._to_transcript_text(projected)

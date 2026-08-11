@@ -29,11 +29,7 @@ class ToolResult:
             except Exception:
                 pass
         if hasattr(item, "__dict__"):
-            raw = {
-                key: value
-                for key, value in vars(item).items()
-                if not key.startswith("_")
-            }
+            raw = {key: value for key, value in vars(item).items() if not key.startswith("_")}
             if raw:
                 return raw
         return {"value": str(item)}

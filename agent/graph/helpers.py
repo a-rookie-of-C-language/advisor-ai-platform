@@ -77,7 +77,6 @@ def _build_rag_context_prompt(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
-
 def _build_route_reasoning(
     *,
     route_categories: list[str],
@@ -137,6 +136,7 @@ def _build_delegate_reasoning(agent_name: str, purpose: str = "") -> str:
 def _extract_first_url(text: str) -> str:
     match = _URL_PATTERN.search(text or "")
     return match.group(0) if match else ""
+
 
 def _parse_skill_names(text: str, known_names: list[str] | None = None) -> list[str]:
     match = re.search(r"\[.*?\]", text, re.DOTALL)

@@ -98,13 +98,25 @@ class MemoryWriteback:
 
         elapsed_ms = (time.monotonic() - t0) * 1000
         logger.debug(
-            "Writeback done: user=%d kb=%d total=%d accepted=%d ignored=%d updated=%d merged=%d invalidated=%d elapsed_ms=%.1f",
-            user_id, kb_id, len(filtered), accepted, ignored, updated, merged, invalidated, elapsed_ms
+            "Writeback done: user=%d kb=%d total=%d accepted=%d ignored=%d "
+            "updated=%d merged=%d invalidated=%d elapsed_ms=%.1f",
+            user_id,
+            kb_id,
+            len(filtered),
+            accepted,
+            ignored,
+            updated,
+            merged,
+            invalidated,
+            elapsed_ms,
         )
         return WritebackResult(
             accepted=accepted,
             rejected=ignored,
-            message=f"add={accepted - updated - merged - invalidated}, update={updated}, merge={merged}, invalidate={invalidated}, ignore={ignored}",
+            message=(
+                f"add={accepted - updated - merged - invalidated}, update={updated}, "
+                f"merge={merged}, invalidate={invalidated}, ignore={ignored}"
+            ),
         )
 
     async def _find_similar(self, api_client, user_id: int, kb_id: int, candidate: MemoryCandidate):
@@ -157,7 +169,7 @@ class MemoryWriteback:
                         max(candidate.confidence, 0.8),
                     )
                     # Write new memory and mark as merged into target
-                    result = await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
+                    await api_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=[candidate])
                     # Note: The new memory ID is not returned by upsert_candidates,
                     # so we rely on the target memory being updated with merged content
 
@@ -232,11 +244,22 @@ class MemoryWriteback:
     def _estimate_confidence(sentence: str) -> float:
         lowered = sentence.lower()
         strong_patterns = [
-            "i like", "i dislike", "i prefer", "i am", "i work",
-            "my preference", "must", "cannot", "remember", "long term",
+            "i like",
+            "i dislike",
+            "i prefer",
+            "i am",
+            "i work",
+            "my preference",
+            "must",
+            "cannot",
+            "remember",
+            "long term",
         ]
         weak_patterns = [
-            "i want", "please", "usually", "often",
+            "i want",
+            "please",
+            "usually",
+            "often",
         ]
 
         for pattern in strong_patterns:
@@ -260,10 +283,29 @@ class MemoryWriteback:
         lowered = sentence.lower()
         # Episodic markers: past tense references, specific events, temporal words
         episodic_markers = [
-            "上次", "之前", "曾经", "那次", "昨天", "上周", "上个月",
-            "去年", "前天", "那天", "那次", "当时", "后来",
-            "last time", "previously", "once", "yesterday", "last week",
-            "last month", "last year", "ago", "then", "after that",
+            "上次",
+            "之前",
+            "曾经",
+            "那次",
+            "昨天",
+            "上周",
+            "上个月",
+            "去年",
+            "前天",
+            "那天",
+            "那次",
+            "当时",
+            "后来",
+            "last time",
+            "previously",
+            "once",
+            "yesterday",
+            "last week",
+            "last month",
+            "last year",
+            "ago",
+            "then",
+            "after that",
         ]
         for marker in episodic_markers:
             if marker in lowered:

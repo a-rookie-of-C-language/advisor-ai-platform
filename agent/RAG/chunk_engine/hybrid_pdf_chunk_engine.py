@@ -78,21 +78,27 @@ class HybridPDFChunkEngine(BaseChunkEngine):
         for idx, page in enumerate(reader.pages):
             text = (page.extract_text() or "").strip()
             if len(text) >= self.min_text_chars:
-                out.append(ChunkResult(
-                    text=f"[page:{idx + 1}] {text}",
-                    metadata={"page_number": idx + 1},
-                ))
+                out.append(
+                    ChunkResult(
+                        text=f"[page:{idx + 1}] {text}",
+                        metadata={"page_number": idx + 1},
+                    )
+                )
                 continue
 
             ocr_text = self._ocr_page(file_path=file_path, page_index=idx)
             if ocr_text:
-                out.append(ChunkResult(
-                    text=f"[page:{idx + 1}] {ocr_text}",
-                    metadata={"page_number": idx + 1, "ocr": True},
-                ))
+                out.append(
+                    ChunkResult(
+                        text=f"[page:{idx + 1}] {ocr_text}",
+                        metadata={"page_number": idx + 1, "ocr": True},
+                    )
+                )
             elif text:
-                out.append(ChunkResult(
-                    text=f"[page:{idx + 1}] {text}",
-                    metadata={"page_number": idx + 1},
-                ))
+                out.append(
+                    ChunkResult(
+                        text=f"[page:{idx + 1}] {text}",
+                        metadata={"page_number": idx + 1},
+                    )
+                )
         return out

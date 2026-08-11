@@ -26,10 +26,7 @@ async def route_by_llm(
     llm_confidence_threshold: float,
     rule_decision: RouteDecision,
 ) -> RouteDecision | None:
-    category_descriptions = [
-        f"{category}: {describe_category(category)}"
-        for category in sorted(all_categories)
-    ]
+    category_descriptions = [f"{category}: {describe_category(category)}" for category in sorted(all_categories)]
     prompt = PromptBuilder.build_intent_routing_prompt(category_descriptions, query)
     messages = [ChatMessage(role="user", content=prompt)]
     response_text = ""

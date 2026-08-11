@@ -14,4 +14,3 @@ class ChromaDefaultEmbeddingEngine(BaseEmbeddingEngine):
 
     def embed_texts(self, texts: List[str]) -> Optional[List[List[float]]]:
         return None
-

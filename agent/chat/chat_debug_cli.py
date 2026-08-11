@@ -94,11 +94,7 @@ class ChatDebugCli:
             response = await client.post(url, json=payload)
             response.raise_for_status()
             data = response.json()
-        token = (
-            data.get("data", {}).get("accessToken")
-            or data.get("data", {}).get("token")
-            or ""
-        )
+        token = data.get("data", {}).get("accessToken") or data.get("data", {}).get("token") or ""
         if not isinstance(token, str) or not token.strip():
             logger.error("CLI login failed: token missing, response=%s", data)
             raise RuntimeError("登录成功但未获取到 access token")

@@ -6,9 +6,7 @@ from json_types import JsonObject
 def allowed_tool_categories(runtime) -> set[str]:
     allowed_categories = getattr(runtime.tools, "allowed_categories", None)
     return (
-        allowed_categories(runtime.tool_permission)
-        if callable(allowed_categories)
-        else runtime.tools.all_categories()
+        allowed_categories(runtime.tool_permission) if callable(allowed_categories) else runtime.tools.all_categories()
     )
 
 

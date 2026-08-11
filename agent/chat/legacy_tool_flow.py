@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import AsyncIterator, Callable, Awaitable
+from typing import AsyncIterator, Awaitable, Callable
 
 from agents.tool_explorer import ToolExplorerSubAgent
 from chat.ChatStreamAnswerBuffer import ChatStreamAnswerBuffer
@@ -15,7 +15,6 @@ from chat.legacy_tool_chat_flow import stream_legacy_tool_chat_events
 from chat.legacy_tool_explorer_flow import prepare_legacy_tool_explorer_context
 from chat.legacy_tool_route_flow import LegacyToolRouteContext
 from chat.stream_tool_support import ChatStreamToolSupport
-from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from prompt.PromptBuilder import PromptBuilder

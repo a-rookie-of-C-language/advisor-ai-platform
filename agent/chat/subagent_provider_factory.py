@@ -38,8 +38,8 @@ class SubagentProviderFactory:
                 )
                 return self._provider
             try:
-                from llm.openai_provider import OpenAIProvider
                 from config.environment import read_float_env, read_int_env
+                from llm.openai_provider import OpenAIProvider
                 from llm.thinking_config import ThinkingConfig
 
                 return OpenAIProvider(

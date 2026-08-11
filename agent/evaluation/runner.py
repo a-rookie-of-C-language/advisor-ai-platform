@@ -87,13 +87,9 @@ class EvalRunner:
 
             # 端到端评估（如果有期望答案）
             if case.expected_answer:
-                case_result["e2e"] = await self._eval_e2e(
-                    case.query, case.expected_answer
-                )
+                case_result["e2e"] = await self._eval_e2e(case.query, case.expected_answer)
                 # DeepEval 评估（RAG 质量 + 安全性 + 回答质量）
-                case_result["e2e_deepeval"] = await self._eval_e2e_deepeval(
-                    case.query, case.expected_answer
-                )
+                case_result["e2e_deepeval"] = await self._eval_e2e_deepeval(case.query, case.expected_answer)
 
             report.add_case_result(case_result)
 
@@ -152,9 +148,7 @@ class EvalRunner:
             llm_provider=self._llm_provider,
         )
 
-    async def _eval_e2e_deepeval(
-        self, query: str, expected_answer: str
-    ) -> JsonObject:
+    async def _eval_e2e_deepeval(self, query: str, expected_answer: str) -> JsonObject:
         """使用 DeepEval 评估端到端回答质量。
 
         评估维度包括：
@@ -203,14 +197,16 @@ class EvalRunner:
             from RAG.schema import RAGSearchRequest, SearchMode
 
             rag = self._get_rag_service()
-            response = rag.rag_search(RAGSearchRequest(
-                query=query,
-                kb_id=self._kb_id,
-                top_k=self._top_k,
-                mode=SearchMode.dense,
-                use_rerank=True,
-                rewrite_query=False,
-            ))
+            response = rag.rag_search(
+                RAGSearchRequest(
+                    query=query,
+                    kb_id=self._kb_id,
+                    top_k=self._top_k,
+                    mode=SearchMode.dense,
+                    use_rerank=True,
+                    rewrite_query=False,
+                )
+            )
             return [hit.chunk_id for hit in response.items] if response.ok else []
         except Exception as exc:
             logger.warning("RAG 检索失败: %s", exc)
@@ -228,14 +224,16 @@ class EvalRunner:
             from RAG.schema import RAGSearchRequest, SearchMode
 
             rag = self._get_rag_service()
-            response = rag.rag_search(RAGSearchRequest(
-                query=query,
-                kb_id=self._kb_id,
-                top_k=1,  # 只取第一个切片做标注评估
-                mode=SearchMode.dense,
-                use_rerank=True,
-                rewrite_query=False,
-            ))
+            response = rag.rag_search(
+                RAGSearchRequest(
+                    query=query,
+                    kb_id=self._kb_id,
+                    top_k=1,  # 只取第一个切片做标注评估
+                    mode=SearchMode.dense,
+                    use_rerank=True,
+                    rewrite_query=False,
+                )
+            )
 
             if not response.ok or not response.items:
                 return {"type": "general", "authority": "secondary", "effective_date": ""}
@@ -256,9 +254,7 @@ class EvalRunner:
             logger.warning("标注评估失败: %s", exc)
             return {"type": "general", "authority": "secondary", "effective_date": ""}
 
-    async def _run_fusion_comparison(
-        self, query: str
-    ) -> tuple[list[JsonObject], list[JsonObject]]:
+    async def _run_fusion_comparison(self, query: str) -> tuple[list[JsonObject], list[JsonObject]]:
         """运行融合前后对比，返回（融合前候选, 融合后候选）。"""
         from RAG.schema import RAGSearchRequest, SearchMode
 
@@ -266,21 +262,25 @@ class EvalRunner:
         candidates_before: list[JsonObject] = []
         try:
             rag = self._get_rag_service()
-            response = rag.rag_search(RAGSearchRequest(
-                query=query,
-                kb_id=self._kb_id,
-                top_k=self._top_k,
-                mode=SearchMode.dense,
-                use_rerank=True,
-                rewrite_query=False,
-            ))
+            response = rag.rag_search(
+                RAGSearchRequest(
+                    query=query,
+                    kb_id=self._kb_id,
+                    top_k=self._top_k,
+                    mode=SearchMode.dense,
+                    use_rerank=True,
+                    rewrite_query=False,
+                )
+            )
             if response.ok:
                 for hit in response.items:
-                    candidates_before.append({
-                        "content": hit.text,
-                        "source": "rag",
-                        "score": hit.score,
-                    })
+                    candidates_before.append(
+                        {
+                            "content": hit.text,
+                            "source": "rag",
+                            "score": hit.score,
+                        }
+                    )
         except Exception as exc:
             logger.warning("融合前检索失败: %s", exc)
 
@@ -298,11 +298,13 @@ class EvalRunner:
             fusion_result = await run_fusion_pipeline(state, query, [])
             if fusion_result and fusion_result.get("candidates"):
                 for c in fusion_result["candidates"]:
-                    candidates_after.append({
-                        "content": c.content,
-                        "source": c.source,
-                        "score": getattr(c, "score", 1.0),
-                    })
+                    candidates_after.append(
+                        {
+                            "content": c.content,
+                            "source": c.source,
+                            "score": getattr(c, "score", 1.0),
+                        }
+                    )
         except Exception as exc:
             logger.warning("fusion pipeline 执行失败: %s", exc)
 
@@ -338,6 +340,7 @@ def main() -> None:
         report = await runner.run_all()
 
         from .report import save_json
+
         save_json(report, args.output)
         logger.info("评估完成，报告已保存到: %s", args.output)
 

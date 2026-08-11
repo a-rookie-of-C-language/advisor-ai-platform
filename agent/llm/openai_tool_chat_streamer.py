@@ -53,9 +53,7 @@ class OpenAIToolChatStreamer:
         on_tool_result: Callable[[str, JsonObject], Awaitable[list[ToolSpec] | None]] | None = None,
     ) -> AsyncIterator[LLMStreamEvent]:
         active_tools = list(tools)
-        conversation: list[dict[str, Any]] = [
-            self._build_message_payload(message) for message in messages
-        ]
+        conversation: list[dict[str, Any]] = [self._build_message_payload(message) for message in messages]
         tool_payload = self._to_tool_payload(active_tools)
         tool_call_count = 0
         max_tokens_bumped = False

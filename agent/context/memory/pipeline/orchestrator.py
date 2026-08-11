@@ -46,6 +46,7 @@ class MemoryOrchestrator:
 
         # Parallel load: regular retrieval + core memories
         import asyncio
+
         long_term_task = self._retrieval.retrieve(
             api_client=self._api_client,
             user_id=user_id,

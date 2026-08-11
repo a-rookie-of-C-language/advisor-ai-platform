@@ -121,9 +121,7 @@ class Agent:
         self._state = AgentState.RUNNING
         await self._on_resume()
 
-    async def read_memory(
-        self, user_id: int, kb_id: int, query: str, top_k: int = 10
-    ) -> list[MemoryItem]:
+    async def read_memory(self, user_id: int, kb_id: int, query: str, top_k: int = 10) -> list[MemoryItem]:
         return await read_memory_with_policy(
             self._memory_client,
             agent_name=self._name,
@@ -135,9 +133,7 @@ class Agent:
             logger=logger,
         )
 
-    async def write_memory(
-        self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
-    ) -> WritebackResult:
+    async def write_memory(self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]) -> WritebackResult:
         return await write_memory_with_policy(
             self._memory_client,
             agent_name=self._name,
@@ -223,12 +219,8 @@ class Agent:
     async def fetch_pending_tasks(self, limit: int = 10) -> list[JsonObject]:
         return await self._memory_operations.fetch_pending_tasks(limit=limit)
 
-    async def upsert_candidates(
-        self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
-    ) -> WritebackResult:
-        return await self._memory_operations.upsert_candidates(
-            user_id=user_id, kb_id=kb_id, candidates=candidates
-        )
+    async def upsert_candidates(self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]) -> WritebackResult:
+        return await self._memory_operations.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=candidates)
 
     async def save_session_summary(self, session_id: int, summary: str) -> None:
         await self._memory_operations.save_session_summary(session_id=session_id, summary=summary)

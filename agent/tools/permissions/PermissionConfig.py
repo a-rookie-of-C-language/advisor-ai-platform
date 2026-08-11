@@ -43,9 +43,8 @@ class PermissionConfig:
                 return False
             if mode == "ask" and other_mode == "deny":
                 return False
-        return (
-            self.read_resources.issubset(other.read_resources)
-            and self.write_resources.issubset(other.write_resources)
+        return self.read_resources.issubset(other.read_resources) and self.write_resources.issubset(
+            other.write_resources
         )
 
     @classmethod

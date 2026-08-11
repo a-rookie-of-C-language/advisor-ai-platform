@@ -56,8 +56,7 @@ class WebSearchSubAgent(WebToolSubAgent):
 
     async def _judge_search(self, query: str, sources: list[JsonObject]) -> JsonObject:
         sources_text = "\n".join(
-            f"- [{item.get('title', '')}]({item.get('url', '')}): {item.get('snippet', '')}"
-            for item in sources
+            f"- [{item.get('title', '')}]({item.get('url', '')}): {item.get('snippet', '')}" for item in sources
         )
         user_content = f"用户查询：{query}\n\n搜索结果：\n{sources_text}"
         return await self._judge(user_content)

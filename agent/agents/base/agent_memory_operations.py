@@ -28,14 +28,10 @@ class AgentMemoryOperations:
         self._ensure_can_read("memory")
         return await self._require_client().fetch_pending_tasks(limit=limit)
 
-    async def upsert_candidates(
-        self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
-    ) -> WritebackResult:
+    async def upsert_candidates(self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]) -> WritebackResult:
         self._ensure_can_tool(ToolPermission.MEMORY_WRITE)
         self._ensure_can_write("memory")
-        return await self._require_client().upsert_candidates(
-            user_id=user_id, kb_id=kb_id, candidates=candidates
-        )
+        return await self._require_client().upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=candidates)
 
     async def save_session_summary(self, session_id: int, summary: str) -> None:
         self._ensure_can_tool(ToolPermission.MEMORY_WRITE)

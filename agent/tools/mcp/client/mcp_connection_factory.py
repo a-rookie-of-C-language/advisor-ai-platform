@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 
-from tools.mcp.direct.DirectHttpMcpClient import DirectHttpMcpClient
 from tools.mcp.config.mcp_config_parser import parse_stdio_env
-from tools.mcp.protocol.McpClientProtocol import McpClientProtocol
 from tools.mcp.config.McpServerConfig import McpServerConfig
+from tools.mcp.direct.DirectHttpMcpClient import DirectHttpMcpClient
+from tools.mcp.protocol.McpClientProtocol import McpClientProtocol
 
 
 class McpConnectionFactory:

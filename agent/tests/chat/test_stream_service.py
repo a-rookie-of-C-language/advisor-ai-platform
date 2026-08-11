@@ -199,8 +199,7 @@ async def test_legacy_stream_tool_route_prefers_search_for_latest_query(monkeypa
         ChatMessage(
             role="user",
             content="".join(
-                chr(c)
-                for c in [0x5e2e, 0x6211, 0x67e5, 0x4e00, 0x4e0b, 0x6700, 0x65b0, 0x653f, 0x7b56, 0x6d88, 0x606f]
+                chr(c) for c in [0x5E2E, 0x6211, 0x67E5, 0x4E00, 0x4E0B, 0x6700, 0x65B0, 0x653F, 0x7B56, 0x6D88, 0x606F]
             ),
         )
     ]
@@ -228,8 +227,7 @@ async def test_stream_tool_route_prefers_search_for_latest_query(monkeypatch: py
         ChatMessage(
             role="user",
             content="".join(
-                chr(c)
-                for c in [0x5e2e, 0x6211, 0x67e5, 0x4e00, 0x4e0b, 0x6700, 0x65b0, 0x653f, 0x7b56, 0x6d88, 0x606f]
+                chr(c) for c in [0x5E2E, 0x6211, 0x67E5, 0x4E00, 0x4E0B, 0x6700, 0x65B0, 0x653F, 0x7B56, 0x6D88, 0x606F]
             ),
         )
     ]

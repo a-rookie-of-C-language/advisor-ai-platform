@@ -67,7 +67,7 @@ async def run_generate_node(
                 task_plan=task_plan,
                 user_query=user_query,
             )
-            
+
             # 只在没有可用工具时才运行 fusion pipeline
             # 如果有可用工具，应该让 LLM 自主决定是否调用
             if not tools:

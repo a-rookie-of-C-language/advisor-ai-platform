@@ -12,13 +12,13 @@
     pytest tests/test_memory_deepeval.py -v
     pytest tests/test_memory_deepeval.py -v -k "test_decision_quality"
 """
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
 import pytest
-from deepeval import evaluate
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from dotenv import load_dotenv

@@ -40,4 +40,3 @@ async def test_catalog_can_disable_memory_tools_by_feature(monkeypatch) -> None:
     names = [tool.name for tool in tools]
     # 只验证 rag_search 存在，其他工具可能因配置不同而存在
     assert "rag_search" in names
-

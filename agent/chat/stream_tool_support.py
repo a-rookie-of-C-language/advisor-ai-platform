@@ -114,9 +114,7 @@ class ChatStreamToolSupport:
             user_id,
             fallback_query[:120],
         )
-        return await self._execute_web_search_via_subagent(
-            {"query": fallback_query, "max_results": 5}
-        )
+        return await self._execute_web_search_via_subagent({"query": fallback_query, "max_results": 5})
 
     def _build_web_search_subagent(self) -> WebSearchSubAgent | None:
         web_search_tool = self._tools.get("web_search")

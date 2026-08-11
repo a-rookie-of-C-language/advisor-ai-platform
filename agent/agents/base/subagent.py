@@ -68,9 +68,7 @@ class SubAgent(Agent):
         if self._parent is None:
             return
         if not self._permission.is_subset_of(self._parent.permission):
-            raise PermissionError(
-                f"SubAgent '{self._name}' permissions must be a subset of parent agent permissions"
-            )
+            raise PermissionError(f"SubAgent '{self._name}' permissions must be a subset of parent agent permissions")
 
     async def run_once(self) -> JsonObject:
         raise NotImplementedError

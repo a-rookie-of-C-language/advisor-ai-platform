@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
 from tools.core.base_tool import BaseTool
-from tools.permissions.tool_permission import ToolPermission
 from tools.core.tool_result import ToolResult
+from tools.permissions.tool_permission import ToolPermission
 from tools.tool_search.ToolSearchInput import ToolSearchInput
 
 
@@ -59,17 +59,15 @@ class ToolSearchTool(BaseTool[ToolSearchInput, BaseModel]):
 
         items = []
         for _, spec in top:
-            schema_text = (
-                f"工具名称: {spec.name}\n"
-                f"描述: {spec.description}\n"
-                f"输入参数 (JSON Schema):\n{spec.parameters}"
+            schema_text = f"工具名称: {spec.name}\n描述: {spec.description}\n输入参数 (JSON Schema):\n{spec.parameters}"
+            items.append(
+                {
+                    "tool_name": spec.name,
+                    "description": spec.description,
+                    "parameters": spec.parameters,
+                    "schema_text": schema_text,
+                }
             )
-            items.append({
-                "tool_name": spec.name,
-                "description": spec.description,
-                "parameters": spec.parameters,
-                "schema_text": schema_text,
-            })
 
         return ToolResult(
             ok=True,

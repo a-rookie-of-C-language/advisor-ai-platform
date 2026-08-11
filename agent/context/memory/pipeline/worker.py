@@ -28,8 +28,7 @@ class MemoryWorkerAgent:
         max_retries: int = 3,
     ) -> None:
         warnings.warn(
-            "memory.pipeline.worker.MemoryWorkerAgent is deprecated, "
-            "use agents.MemoryWorkerSubAgent instead",
+            "memory.pipeline.worker.MemoryWorkerAgent is deprecated, use agents.MemoryWorkerSubAgent instead",
             DeprecationWarning,
             stacklevel=2,
         )

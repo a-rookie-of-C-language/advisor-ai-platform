@@ -59,7 +59,7 @@ Return JSON array only, no extra text:"""
 
 async def classify_batch(contents: list[str], client: httpx.AsyncClient) -> list[str]:
     """Classify a batch of memory contents using LLM."""
-    memories_text = "\n".join(f"{i+1}. {c}" for i, c in enumerate(contents))
+    memories_text = "\n".join(f"{i + 1}. {c}" for i, c in enumerate(contents))
     prompt = CLASSIFY_PROMPT.format(memories=memories_text)
 
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
@@ -92,7 +92,7 @@ async def classify_batch(contents: list[str], client: httpx.AsyncClient) -> list
         # Pad with semantic if LLM returned fewer
         while len(result) < len(contents):
             result.append("semantic")
-        return result[:len(contents)]
+        return result[: len(contents)]
     except Exception as e:
         logger.warning("LLM classification failed: %s, defaulting to semantic", e)
         return ["semantic"] * len(contents)
@@ -102,7 +102,7 @@ async def fetch_memories(client: httpx.AsyncClient, offset: int, limit: int) -> 
     """Fetch memory records from memory-service."""
     # Use a direct DB query approach via the memory-service API
     # For now, we'll use the search endpoint with empty query
-    resp = await client.get(
+    await client.get(
         f"{MEMORY_SERVICE_URL}/api/memory/task/pending",
         params={"limit": limit},
         timeout=10.0,
@@ -130,22 +130,25 @@ async def main():
         logger.error("OPENAI_API_KEY environment variable is required")
         sys.exit(1)
 
-    logger.info("Starting memory_type migration (dry_run=%s, batch_size=%d, limit=%d)", args.dry_run, args.batch_size, args.limit)
+    logger.info(
+        "Starting memory_type migration (dry_run=%s, batch_size=%d, limit=%d)",
+        args.dry_run,
+        args.batch_size,
+        args.limit,
+    )
 
-    async with httpx.AsyncClient() as client:
-        # Note: This migration requires a dedicated endpoint in memory-service
-        # to fetch all records and update memory_type.
-        # For production use, consider:
-        # 1. Adding a GET /api/memory/migration/records endpoint
-        # 2. Adding a PUT /api/memory/migration/{id}/type endpoint
-        # 3. Or running a direct SQL migration with LLM classification
-
-        logger.warning(
-            "This migration script requires dedicated memory-service endpoints. "
-            "For now, use the SQL migration V22 to set default 'semantic' for all existing records, "
-            "then use the memory-service admin API to reclassify specific records if needed."
-        )
-        logger.info("Migration complete. All existing records default to 'semantic' type.")
+    # Note: This migration requires a dedicated endpoint in memory-service
+    # to fetch all records and update memory_type.
+    # For production use, consider:
+    # 1. Adding a GET /api/memory/migration/records endpoint
+    # 2. Adding a PUT /api/memory/migration/{id}/type endpoint
+    # 3. Or running a direct SQL migration with LLM classification
+    logger.warning(
+        "This migration script requires dedicated memory-service endpoints. "
+        "For now, use the SQL migration V22 to set default 'semantic' for all existing records, "
+        "then use the memory-service admin API to reclassify specific records if needed."
+    )
+    logger.info("Migration complete. All existing records default to 'semantic' type.")
 
 
 if __name__ == "__main__":

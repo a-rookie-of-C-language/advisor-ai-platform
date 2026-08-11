@@ -115,9 +115,7 @@ class PgVectorDAO:
         )
         return {row[0]: row[1] for row in rows}
 
-    def get_doc_category_and_title_map(
-        self, doc_ids: List[int]
-    ) -> tuple[Dict[int, Set[int]], Dict[int, str]]:
+    def get_doc_category_and_title_map(self, doc_ids: List[int]) -> tuple[Dict[int, Set[int]], Dict[int, str]]:
         """项目无文档分类，category map 固定返回空。"""
         return {}, self.get_doc_title_map(doc_ids)
 

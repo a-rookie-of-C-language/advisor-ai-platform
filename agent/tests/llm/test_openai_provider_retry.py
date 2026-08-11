@@ -263,10 +263,7 @@ async def test_stream_chat_with_tools_retries_llm_call(monkeypatch):
     async def tool_executor(tool_name: str, tool_args: JsonObject) -> str:
         return "unused"
 
-    events = [
-        event
-        async for event in provider.stream_chat_with_tools(messages, [sample_tool()], tool_executor)
-    ]
+    events = [event async for event in provider.stream_chat_with_tools(messages, [sample_tool()], tool_executor)]
 
     assert [event.text for event in events] == ["tool answer"]
     assert len(completions.calls) == 2
@@ -287,10 +284,7 @@ async def test_stream_chat_with_tools_does_not_retry_auth_error(monkeypatch):
         return "unused"
 
     with pytest.raises(StatusError):
-        _ = [
-            event
-            async for event in provider.stream_chat_with_tools(messages, [sample_tool()], tool_executor)
-        ]
+        _ = [event async for event in provider.stream_chat_with_tools(messages, [sample_tool()], tool_executor)]
 
     assert len(completions.calls) == 1
 

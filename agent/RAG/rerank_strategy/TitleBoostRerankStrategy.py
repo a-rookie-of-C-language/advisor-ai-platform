@@ -9,15 +9,27 @@ from .RetrievalCandidate import RetrievalCandidate
 
 try:
     import jieba
+
     jieba.initialize()
     _JIEBA_AVAILABLE = True
 except ImportError:
     _JIEBA_AVAILABLE = False
 
 _DEFAULT_BOOST_KEYWORDS = {
-    "安防", "井盖", "密码检查", "密码井盖",
-    "安全", "监控", "预警", "检测", "规范",
-    "标准", "技术规程", "施工", "养护", "设计",
+    "安防",
+    "井盖",
+    "密码检查",
+    "密码井盖",
+    "安全",
+    "监控",
+    "预警",
+    "检测",
+    "规范",
+    "标准",
+    "技术规程",
+    "施工",
+    "养护",
+    "设计",
 }
 
 
@@ -71,7 +83,7 @@ class TitleBoostRerankStrategy(BaseRerankStrategy):
                 if _JIEBA_AVAILABLE:
                     tokens.update(jieba.cut(chunk, cut_all=False))
                 else:
-                    tokens.update(chunk[i:i+2] for i in range(len(chunk) - 1))
+                    tokens.update(chunk[i : i + 2] for i in range(len(chunk) - 1))
             else:
                 tokens.add(chunk)
         return tokens

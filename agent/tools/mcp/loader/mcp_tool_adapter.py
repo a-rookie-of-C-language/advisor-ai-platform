@@ -4,13 +4,13 @@ import re
 
 from json_types import JsonObject
 from tools.core.base_tool import BaseTool
+from tools.core.tool_result import ToolResult
 from tools.mcp.client.mcp_client_pool import McpClientPool, McpServerConfig
 from tools.mcp.loader.mcp_tool_routing_hints import (
     get_mcp_tool_query_patterns,
     get_mcp_tool_semantic_keywords,
 )
 from tools.mcp.loader.McpToolInputModel import McpToolInputModel
-from tools.core.tool_result import ToolResult
 
 MAX_MCP_DESCRIPTION_LENGTH = 2048
 

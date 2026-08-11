@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-from tools.core.base_tool import BaseTool
 from routing.intent_router_support import (
     apply_structured_student_query_boost,
     extract_first_url,
@@ -18,6 +17,7 @@ from routing.intent_router_tool_matching import (
     match_tools_by_semantics,
 )
 from routing.RouteDecision import RouteDecision
+from tools.core.base_tool import BaseTool
 
 
 def route_by_rules_and_scores(

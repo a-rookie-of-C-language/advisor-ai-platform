@@ -84,10 +84,12 @@ async function consumeMonitorStream(
   const reader = body.getReader()
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
+  let streamDone = false
 
-  while (true) {
+  while (!streamDone) {
     const { done, value } = await reader.read()
     if (done) {
+      streamDone = true
       break
     }
     buffer += decoder.decode(value, { stream: true }).replace(/\r/g, '')

@@ -39,6 +39,4 @@ class BaseChunkAnnotator(ABC):
         """
         import asyncio
 
-        return asyncio.get_event_loop().run_in_executor(
-            None, lambda: self.annotate(text, existing)
-        )
+        return asyncio.get_event_loop().run_in_executor(None, lambda: self.annotate(text, existing))

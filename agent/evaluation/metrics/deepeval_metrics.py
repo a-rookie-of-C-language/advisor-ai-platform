@@ -2,6 +2,7 @@
 
 提供 RAG 质量评估和安全评估的统一接口。
 """
+
 from __future__ import annotations
 
 import logging
@@ -109,7 +110,7 @@ class DeepEvalMetrics:
                 "识别输入中的核心问题或意图",
                 "评估实际输出是否直接回应了输入中的核心问题",
                 "检查实际输出中是否存在与问题无关的内容",
-                "综合判断回答的相关程度"
+                "综合判断回答的相关程度",
             ],
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
             model=self.model,
@@ -122,7 +123,7 @@ class DeepEvalMetrics:
                 "检查语句是否通顺，语法正确，无断句或生硬表达",
                 "评估逻辑连贯性，观点之间是否有合理的过渡和推理",
                 "审查结构清晰度，内容组织是否有序，如分段、层次分明",
-                "综合判断回答的整体连贯性"
+                "综合判断回答的整体连贯性",
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             model=self.model,
@@ -135,9 +136,13 @@ class DeepEvalMetrics:
                 "识别问题涉及的所有方面",
                 "检查回答是否覆盖了每个方面",
                 "评估是否有遗漏的重要信息",
-                "综合判断回答的完整程度"
+                "综合判断回答的完整程度",
             ],
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.EXPECTED_OUTPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[
+                LLMTestCaseParams.INPUT,
+                LLMTestCaseParams.EXPECTED_OUTPUT,
+                LLMTestCaseParams.ACTUAL_OUTPUT,
+            ],
             model=self.model,
             threshold=self.threshold,
         )

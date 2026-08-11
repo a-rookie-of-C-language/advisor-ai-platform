@@ -21,6 +21,7 @@ def __getattr__(name: str):
         return RAG_service
     raise AttributeError(f"module 'RAG' has no attribute {name!r}")
 
+
 __all__ = [
     "DocumentIndexer",
     "RAG_service",

@@ -51,10 +51,7 @@ class EvalReport:
                 if key in ret:
                     retrieval_metrics[key].append(ret[key])
 
-        self.summary["retrieval"] = {
-            k: round(sum(v) / len(v), 4) if v else 0.0
-            for k, v in retrieval_metrics.items()
-        }
+        self.summary["retrieval"] = {k: round(sum(v) / len(v), 4) if v else 0.0 for k, v in retrieval_metrics.items()}
 
         # 标注指标汇总
         annotation_metrics = {"type_correct": [], "authority_correct": [], "effective_date_correct": []}
@@ -64,10 +61,7 @@ class EvalReport:
                 if key in ann:
                     annotation_metrics[key].append(1.0 if ann[key] else 0.0)
 
-        self.summary["annotation"] = {
-            k: round(sum(v) / len(v), 4) if v else 0.0
-            for k, v in annotation_metrics.items()
-        }
+        self.summary["annotation"] = {k: round(sum(v) / len(v), 4) if v else 0.0 for k, v in annotation_metrics.items()}
 
         # 融合指标汇总
         fusion_scores = []
@@ -131,10 +125,7 @@ class EvalReport:
 
         self.summary["deepeval"] = {
             "avg_score": round(sum(deepeval_avg_scores) / len(deepeval_avg_scores), 4) if deepeval_avg_scores else 0.0,
-            **{
-                k: round(sum(v) / len(v), 4) if v else 0.0
-                for k, v in deepeval_metrics.items()
-            },
+            **{k: round(sum(v) / len(v), 4) if v else 0.0 for k, v in deepeval_metrics.items()},
         }
 
 

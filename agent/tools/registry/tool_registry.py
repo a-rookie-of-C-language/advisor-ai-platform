@@ -5,9 +5,9 @@ import uuid
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
 from tools.core.base_tool import BaseTool
-from tools.registry.tool_hooks import AfterHook, BeforeHook
-from tools.permissions.tool_permission import PermissionConfig
 from tools.core.tool_result import ToolResult
+from tools.permissions.tool_permission import PermissionConfig
+from tools.registry.tool_hooks import AfterHook, BeforeHook
 
 
 class ToolRegistry:
@@ -44,19 +44,13 @@ class ToolRegistry:
     def allowed_categories(self, permission: PermissionConfig | None) -> set[str]:
         if permission is None:
             return self.all_categories()
-        return {
-            tool.category
-            for tool in self._tools.values()
-            if permission.allows_all(tool.required_permissions)
-        }
+        return {tool.category for tool in self._tools.values() if permission.allows_all(tool.required_permissions)}
 
     def allowed_specs(self, permission: PermissionConfig | None) -> list[ToolSpec]:
         if permission is None:
             return self.specs()
         return [
-            tool.to_tool_spec()
-            for tool in self._tools.values()
-            if permission.allows_all(tool.required_permissions)
+            tool.to_tool_spec() for tool in self._tools.values() if permission.allows_all(tool.required_permissions)
         ]
 
     def add_before_hook(self, hook: BeforeHook) -> None:

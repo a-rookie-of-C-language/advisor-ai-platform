@@ -78,12 +78,14 @@ class ConflictDetectStrategy(BaseSourcePriorityStrategy):
                 web_has_pos = pos in web_text and neg not in web_text
 
             if (rag_has_pos and web_has_neg) or (rag_has_neg and web_has_pos):
-                conflicts.append({
-                    "keyword_positive": pos,
-                    "keyword_negative": neg,
-                    "rag_source": rag_items[0].metadata.get("source", "知识库"),
-                    "web_source": web_items[0].metadata.get("source", "网络"),
-                })
+                conflicts.append(
+                    {
+                        "keyword_positive": pos,
+                        "keyword_negative": neg,
+                        "rag_source": rag_items[0].metadata.get("source", "知识库"),
+                        "web_source": web_items[0].metadata.get("source", "网络"),
+                    }
+                )
 
         return conflicts
 

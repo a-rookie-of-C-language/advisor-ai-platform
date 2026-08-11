@@ -7,5 +7,4 @@ from query_engine.EngineEvent import EngineEvent
 
 
 class EngineStrategy(Protocol):
-    async def run(self, context: EngineContext) -> AsyncIterator[EngineEvent]:
-        ...
+    async def run(self, context: EngineContext) -> AsyncIterator[EngineEvent]: ...

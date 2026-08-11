@@ -27,13 +27,15 @@ def fusion_score_comparison(
     for i, (content, source, _score) in enumerate(after_top):
         old_rank = before_contents.get(content, -1)
         if old_rank >= 0:
-            rank_changes.append({
-                "content": content[:50],
-                "source": source,
-                "old_rank": old_rank + 1,
-                "new_rank": i + 1,
-                "rank_change": old_rank - i,  # 正数表示排名提升
-            })
+            rank_changes.append(
+                {
+                    "content": content[:50],
+                    "source": source,
+                    "old_rank": old_rank + 1,
+                    "new_rank": i + 1,
+                    "rank_change": old_rank - i,  # 正数表示排名提升
+                }
+            )
 
     # 来源分布变化
     before_sources = {}

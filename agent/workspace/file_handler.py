@@ -95,9 +95,7 @@ class AttachmentInfo:
 
     __slots__ = ("id", "file_name", "file_type", "file_path")
 
-    def __init__(
-        self, id: int, file_name: str, file_type: str, file_path: str
-    ) -> None:
+    def __init__(self, id: int, file_name: str, file_type: str, file_path: str) -> None:
         self.id = id
         self.file_name = file_name
         self.file_type = file_type

@@ -41,9 +41,7 @@ def build_message_payload(
                 image_parts.append(
                     {
                         "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{get_mime_type(file_type)};base64,{read_image_base64(file_path)}"
-                        },
+                        "image_url": {"url": f"data:{get_mime_type(file_type)};base64,{read_image_base64(file_path)}"},
                     }
                 )
             except Exception as exc:  # noqa: BLE001

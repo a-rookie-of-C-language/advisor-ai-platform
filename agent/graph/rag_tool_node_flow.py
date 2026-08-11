@@ -25,7 +25,7 @@ async def run_rag_tool_node(
         state.get("user_id"),
         state.get("kb_id"),
     )
-    
+
     context = {
         "user_id": state.get("user_id"),
         "session_id": state.get("session_id"),
@@ -34,10 +34,10 @@ async def run_rag_tool_node(
         "trace_id": state.get("trace_id"),
         "turn_id": state.get("turn_id"),
     }
-    
+
     user_query = state.get("user_query", "")
     has_web_search = runtime.tools.get("web_search") is not None
-    
+
     # 并行执行 rag_search 和 web_search
     async def do_rag_search():
         try:
@@ -50,7 +50,7 @@ async def run_rag_tool_node(
         except Exception as exc:
             logger.warning("rag_search failed: %s", exc)
             return {"status": "error", "message": str(exc), "items": []}
-    
+
     async def do_web_search():
         try:
             payload = await runtime.tools.execute(
@@ -62,7 +62,7 @@ async def run_rag_tool_node(
         except Exception as exc:
             logger.warning("web_search failed: %s", exc)
             return {"status": "error", "message": str(exc), "items": []}
-    
+
     # 并行执行两个搜索
     if has_web_search:
         rag_result, web_result = await asyncio.gather(
@@ -72,32 +72,35 @@ async def run_rag_tool_node(
     else:
         rag_result = await do_rag_search()
         web_result = {"status": "skipped", "items": []}
-    
+
     # 发送 rag_search 结果
     await emit("sources", build_rag_sources_payload(rag_result))
-    
+
     # 发送 web_search 结果
     if has_web_search:
-        await emit("sources", {
-            "tool": "web_search",
-            "success": web_result.get("status") not in ("error",),
-            "attempt": 1,
-            "status": web_result.get("status", "error"),
-            "message": web_result.get("message", "web search completed"),
-            "items": web_result.get("items", []),
-        })
-    
+        await emit(
+            "sources",
+            {
+                "tool": "web_search",
+                "success": web_result.get("status") not in ("error",),
+                "attempt": 1,
+                "status": web_result.get("status", "error"),
+                "message": web_result.get("message", "web search completed"),
+                "items": web_result.get("items", []),
+            },
+        )
+
     # 合并结果：优先使用有结果的那个
     rag_items = rag_result.get("items", []) if isinstance(rag_result, dict) else []
     web_items = web_result.get("items", []) if isinstance(web_result, dict) else []
-    
+
     # 合并两个来源的结果
     combined_items = []
     if rag_items:
         combined_items.extend(rag_items)
     if web_items:
         combined_items.extend(web_items)
-    
+
     # 构建合并后的结果
     if combined_items:
         parsed = {
@@ -111,7 +114,7 @@ async def run_rag_tool_node(
             "message": "no results from rag_search or web_search",
             "items": [],
         }
-    
+
     model_messages = list(state.get("model_messages", state.get("messages", [])))
     model_messages = append_rag_context(model_messages, parsed)
     return {"model_messages": model_messages}

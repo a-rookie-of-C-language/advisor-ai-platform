@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from json_types import JsonObject
-
 from eval.ActionScore import ActionScore
+from json_types import JsonObject
 
 _TOOL_EXPECTATION_TERMS = (
     "知识库",

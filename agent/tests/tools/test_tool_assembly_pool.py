@@ -4,9 +4,9 @@ import pytest
 from pydantic import BaseModel
 
 from tools.core.base_tool import BaseTool
+from tools.core.tool_result import ToolResult
 from tools.registry.tool_assembly_pool import ToolAssemblyPool
 from tools.registry.tool_catalog import ToolCatalog
-from tools.core.tool_result import ToolResult
 
 
 class _DummyInput(BaseModel):
@@ -86,4 +86,3 @@ async def test_conflict_policy_error(monkeypatch) -> None:
     )
     with pytest.raises(ValueError, match="duplicate tool name"):
         ToolAssemblyPool.build(conflict_policy="error")
-

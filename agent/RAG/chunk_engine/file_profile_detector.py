@@ -63,4 +63,3 @@ class FileProfileDetector:
             return ratio, page_count
         except Exception:
             return 0.0, None
-

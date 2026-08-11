@@ -6,15 +6,15 @@
 - 多目标失效：target_memory_ids
 - 核心记忆判断：is_core
 """
+
 from __future__ import annotations
 
 import pytest
 
 from context.memory.core.MemoryCandidate import MemoryCandidate
-from context.memory.core.MemoryDecision import DecisionType, MemoryDecision
+from context.memory.core.MemoryDecision import DecisionType
 from context.memory.core.MemoryItem import MemoryItem
 from context.memory.pipeline.decision_engine import DecisionEngine
-
 
 # ── 规则快速判断测试 ──
 
@@ -104,7 +104,9 @@ class TestParseDecision:
     def test_parse_merge_decision(self) -> None:
         engine = DecisionEngine()
         similar = [MemoryItem(id=20, user_id=1, kb_id=1, content="old", confidence=0.7)]
-        response = '{"decision": "merge", "reason": "same meaning", "target_memory_id": 20, "merged_content": "merged text"}'
+        response = (
+            '{"decision": "merge", "reason": "same meaning", "target_memory_id": 20, "merged_content": "merged text"}'
+        )
         result = engine._parse_decision(response, similar)
         assert result is not None
         assert result.decision == DecisionType.MERGE

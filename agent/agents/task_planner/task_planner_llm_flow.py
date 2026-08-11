@@ -61,12 +61,14 @@ async def plan_with_llm(
         available_tools=available_tools,
         route_context=route_context,
     )
+
     def fallback_plan():
         return build_fallback_plan(
             user_query=user_query,
             available_tools=available_tools,
             route_context=route_context,
         )
+
     try:
         raw = await call_llm_json(
             [
