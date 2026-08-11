@@ -36,13 +36,13 @@ public class FeedbackIssueController {
 
   @GetMapping("/{id}")
   public ApiResponseDTO<IssueResponseDTO> getIssue(
-      @PathVariable Long id, @AuthenticationPrincipal UserPrincipal currentUser) {
+      @PathVariable("id") Long id, @AuthenticationPrincipal UserPrincipal currentUser) {
     return ApiResponseDTO.success(feedbackIssueService.getIssue(id, currentUser));
   }
 
   @PostMapping("/{id}/comments")
   public ApiResponseDTO<IssueCommentResponseDTO> createComment(
-      @PathVariable Long id,
+      @PathVariable("id") Long id,
       @Valid @RequestBody CreateCommentRequestDTO request,
       @AuthenticationPrincipal UserPrincipal currentUser) {
     return ApiResponseDTO.success(feedbackIssueService.createComment(id, request, currentUser));
@@ -50,7 +50,7 @@ public class FeedbackIssueController {
 
   @PostMapping("/{id}/close")
   public ApiResponseDTO<IssueResponseDTO> closeIssue(
-      @PathVariable Long id,
+      @PathVariable("id") Long id,
       @Valid @RequestBody CloseIssueRequestDTO request,
       @AuthenticationPrincipal UserPrincipal currentUser) {
     return ApiResponseDTO.success(feedbackIssueService.closeIssue(id, request, currentUser));
