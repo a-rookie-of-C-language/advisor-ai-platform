@@ -41,7 +41,7 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE: 300
         run: |
-          python -m pytest tests/test_evaluation.py -v --tb=short --junitxml=evaluation-report.xml
+          python -m pytest tests/evaluation/test_evaluation.py -v --tb=short --junitxml=evaluation-report.xml
 
       - name: Upload evaluation report
         if: always()
