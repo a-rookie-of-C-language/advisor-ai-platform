@@ -21,6 +21,13 @@ export interface IssueCommentDTO {
   createdAt: string
 }
 
+export interface GitHubPullRequestDTO {
+  number: number
+  title: string
+  state: string
+  url: string
+}
+
 export interface IssueDTO {
   id: number
   title: string
@@ -42,6 +49,7 @@ export interface IssueDTO {
   closedAt?: string
   canClose: boolean
   comments?: IssueCommentDTO[]
+  githubPullRequests?: GitHubPullRequestDTO[]
 }
 
 export const feedbackApi = {
