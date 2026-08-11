@@ -1,9 +1,9 @@
 package cn.edu.cqut.advisorplatform.controller.monitor;
 
+import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
+import cn.edu.cqut.advisorplatform.common.security.UserRole;
 import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.dto.response.monitor.MonitorRealtimeResponseDTO;
-import cn.edu.cqut.advisorplatform.entity.user.UserDO;
-import cn.edu.cqut.advisorplatform.entity.user.UserRole;
 import cn.edu.cqut.advisorplatform.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.service.monitor.MonitorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +34,7 @@ public class MonitorController {
   public ApiResponseDTO<MonitorRealtimeResponseDTO> getRealtime(
       @RequestParam(value = "minutes", defaultValue = "15") int minutes,
       @RequestParam(value = "stepSeconds", defaultValue = "10") int stepSeconds,
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     if (currentUser == null || currentUser.getRole() != UserRole.ADMIN) {
       throw new ForbiddenException("仅管理员可访问监控数据");
     }
@@ -45,7 +45,7 @@ public class MonitorController {
   public StreamingResponseBody streamRealtime(
       @RequestParam(value = "minutes", defaultValue = "15") int minutes,
       @RequestParam(value = "stepSeconds", defaultValue = "10") int stepSeconds,
-      @AuthenticationPrincipal @Nullable UserDO currentUser) {
+      @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
     if (currentUser == null || currentUser.getRole() != UserRole.ADMIN) {
       throw new ForbiddenException("仅管理员可访问监控数据");
     }
