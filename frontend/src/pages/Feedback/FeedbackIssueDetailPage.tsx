@@ -104,10 +104,6 @@ export default function FeedbackIssueDetailPage() {
     return <Empty description="反馈不存在" />
   }
 
-  const hasPendingGitHubSync =
-    issue.githubSyncStatus !== 'SYNCED'
-    || issue.comments?.some((item) => item.githubSyncStatus !== 'SYNCED')
-
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -131,13 +127,13 @@ export default function FeedbackIssueDetailPage() {
           </Space>
         </div>
         <Space>
-          {hasPendingGitHubSync ? (
+          {issue.canClose ? (
             <Button
               icon={<ReloadOutlined />}
               loading={retrying}
               onClick={handleRetryGitHubSync}
             >
-              重试 GitHub 同步
+              刷新 GitHub 数据
             </Button>
           ) : null}
           {issue.status === 'OPEN' && issue.canClose ? (
