@@ -1,4 +1,4 @@
-﻿-- V11: memory storage optimization (access heat + cleanup indexes)
+-- V11: memory storage optimization (access heat + cleanup indexes)
 
 -- 1) access heat fields
 ALTER TABLE user_memory

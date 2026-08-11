@@ -124,6 +124,9 @@ foreach ($file in $targetFiles) {
 
   try {
     $text = $utf8StrictNoBom.GetString($bytes)
+    if ($hadBom) {
+      $text = $text.TrimStart([char]0xFEFF)
+    }
   }
   catch {
     $text = $gb18030.GetString($bytes)

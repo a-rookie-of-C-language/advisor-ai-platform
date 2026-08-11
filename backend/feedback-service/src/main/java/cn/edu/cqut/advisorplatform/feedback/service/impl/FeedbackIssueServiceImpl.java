@@ -139,7 +139,7 @@ public class FeedbackIssueServiceImpl
     }
     try {
       return gitHubClient.getIssueTimeline(issue.getGithubIssueNumber()).stream()
-          .filter(event -> "cross-referenced".equals(event.getEvent()))
+          .filter(this::isPullRequestReference)
           .map(GitHubTimelineEventResponse::getSource)
           .filter(source -> source != null && source.getIssue() != null)
           .map(source -> source.getIssue())
@@ -158,6 +158,11 @@ public class FeedbackIssueServiceImpl
       log.warn("Find GitHub pull requests failed, localIssueId={}", issue.getId(), ex);
       return List.of();
     }
+  }
+
+  private boolean isPullRequestReference(GitHubTimelineEventResponse event) {
+    return event != null
+        && ("cross-referenced".equals(event.getEvent()) || "connected".equals(event.getEvent()));
   }
 
   private FeedbackIssueDO syncGitHubStateIfPossible(FeedbackIssueDO issue) {

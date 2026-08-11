@@ -35,7 +35,12 @@ public class GitHubClient {
   public List<GitHubTimelineEventResponse> getIssueTimeline(Long issueNumber) {
     return restClient()
         .get()
-        .uri(repoPath("/issues/" + issueNumber + "/timeline"))
+        .uri(
+            uriBuilder ->
+                uriBuilder
+                    .path(repoPath("/issues/" + issueNumber + "/timeline"))
+                    .queryParam("per_page", 100)
+                    .build())
         .retrieve()
         .body(new org.springframework.core.ParameterizedTypeReference<>() {});
   }
