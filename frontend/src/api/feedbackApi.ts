@@ -57,4 +57,7 @@ export const feedbackApi = {
 
   closeIssue: (id: number, params: { reason: string }) =>
     request.post<unknown, ApiResponse<IssueDTO>>(`/issues/${id}/close`, params),
+
+  retryGitHubSync: (id: number) =>
+    request.post<unknown, ApiResponse<IssueDTO>>(`/issues/${id}/github/retry`),
 }

@@ -106,6 +106,31 @@ public class FeedbackIssueServiceImpl
     return mapper.toIssueResponse(issue, comments, currentUser);
   }
 
+  @Override
+  @Transactional
+  public IssueResponseDTO retryGitHubSync(Long issueId, UserPrincipal currentUser) {
+    FeedbackIssueDO issue = findIssue(issueId);
+    if (!canClose(issue, currentUser)) {
+      throw new ForbiddenException("只有管理员或 issue 发起人可以重试 GitHub 同步");
+    }
+    UserDO user = findCurrentUser(currentUser);
+    if (issue.getGithubIssueNumber() == null) {
+      syncCreatedIssue(issue, user);
+    } else if (issue.getStatus() == FeedbackIssueStatus.CLOSED
+        && !"closed".equalsIgnoreCase(issue.getGithubState())) {
+      syncClosedIssue(issue, user, issue.getCloseReason());
+    } else {
+      syncGitHubStateIfPossible(issue);
+    }
+    List<FeedbackIssueCommentDO> comments = commentDao.findByIssueIdOrderByCreatedAtAsc(issueId);
+    for (FeedbackIssueCommentDO comment : comments) {
+      if (comment.getGithubSyncStatus() != GitHubSyncStatus.SYNCED) {
+        syncCreatedComment(issue, comment, comment.getCreatedBy());
+      }
+    }
+    return mapper.toIssueResponse(issue, comments, currentUser);
+  }
+
   private FeedbackIssueDO syncGitHubStateIfPossible(FeedbackIssueDO issue) {
     if (!gitHubClient.isConfigured() || issue.getGithubIssueNumber() == null) {
       return issue;

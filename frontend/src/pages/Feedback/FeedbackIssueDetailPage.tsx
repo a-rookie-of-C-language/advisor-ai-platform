@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, Descriptions, Empty, Input, message, Space, Spin, Tag, Typography } from 'antd'
-import { GithubOutlined, RollbackOutlined } from '@ant-design/icons'
+import { GithubOutlined, ReloadOutlined, RollbackOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { feedbackApi, type GitHubSyncStatus, type IssueDTO } from '../../api/feedbackApi'
@@ -29,6 +29,7 @@ export default function FeedbackIssueDetailPage() {
   const [commenting, setCommenting] = useState(false)
   const [closeOpen, setCloseOpen] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   const loadIssue = async () => {
     if (!Number.isFinite(issueId)) {
@@ -82,6 +83,19 @@ export default function FeedbackIssueDetailPage() {
     }
   }
 
+  const handleRetryGitHubSync = async () => {
+    setRetrying(true)
+    try {
+      const res = await feedbackApi.retryGitHubSync(issueId)
+      setIssue(res.data)
+      message.success('GitHub 同步已重试')
+    } catch (error) {
+      message.error(String(error))
+    } finally {
+      setRetrying(false)
+    }
+  }
+
   if (loading && !issue) {
     return <Spin />
   }
@@ -89,6 +103,10 @@ export default function FeedbackIssueDetailPage() {
   if (!issue) {
     return <Empty description="反馈不存在" />
   }
+
+  const hasPendingGitHubSync =
+    issue.githubSyncStatus !== 'SYNCED'
+    || issue.comments?.some((item) => item.githubSyncStatus !== 'SYNCED')
 
   return (
     <div className={styles.page}>
@@ -112,11 +130,22 @@ export default function FeedbackIssueDetailPage() {
             ) : null}
           </Space>
         </div>
-        {issue.status === 'OPEN' && issue.canClose ? (
-          <Button danger onClick={() => setCloseOpen(true)}>
-            关闭反馈
-          </Button>
-        ) : null}
+        <Space>
+          {hasPendingGitHubSync ? (
+            <Button
+              icon={<ReloadOutlined />}
+              loading={retrying}
+              onClick={handleRetryGitHubSync}
+            >
+              重试 GitHub 同步
+            </Button>
+          ) : null}
+          {issue.status === 'OPEN' && issue.canClose ? (
+            <Button danger onClick={() => setCloseOpen(true)}>
+              关闭反馈
+            </Button>
+          ) : null}
+        </Space>
       </div>
 
       <div className={styles.detailLayout}>

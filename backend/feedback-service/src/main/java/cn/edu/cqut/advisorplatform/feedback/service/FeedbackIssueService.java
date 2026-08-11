@@ -21,4 +21,6 @@ public interface FeedbackIssueService {
 
   IssueResponseDTO closeIssue(
       Long issueId, CloseIssueRequestDTO request, UserPrincipal currentUser);
+
+  IssueResponseDTO retryGitHubSync(Long issueId, UserPrincipal currentUser);
 }
