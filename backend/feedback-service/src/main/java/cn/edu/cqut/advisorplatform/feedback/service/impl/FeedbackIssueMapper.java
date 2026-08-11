@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.feedback.service.impl;
 
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
+import cn.edu.cqut.advisorplatform.feedback.dto.GitHubPullRequestDTO;
 import cn.edu.cqut.advisorplatform.feedback.dto.IssueCommentResponseDTO;
 import cn.edu.cqut.advisorplatform.feedback.dto.IssueResponseDTO;
 import cn.edu.cqut.advisorplatform.feedback.entity.FeedbackIssueCommentDO;
@@ -13,7 +14,10 @@ import org.springframework.stereotype.Component;
 public class FeedbackIssueMapper {
 
   public IssueResponseDTO toIssueResponse(
-      FeedbackIssueDO issue, List<FeedbackIssueCommentDO> comments, UserPrincipal currentUser) {
+      FeedbackIssueDO issue,
+      List<FeedbackIssueCommentDO> comments,
+      List<GitHubPullRequestDTO> githubPullRequests,
+      UserPrincipal currentUser) {
     UserDO createdBy = issue.getCreatedBy();
     UserDO closedBy = issue.getClosedBy();
     return IssueResponseDTO.builder()
@@ -37,6 +41,7 @@ public class FeedbackIssueMapper {
         .closedAt(issue.getClosedAt())
         .canClose(canClose(issue, currentUser))
         .comments(comments == null ? null : comments.stream().map(this::toCommentResponse).toList())
+        .githubPullRequests(githubPullRequests)
         .build();
   }
 

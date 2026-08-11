@@ -31,4 +31,5 @@ public class IssueResponseDTO {
   private LocalDateTime closedAt;
   private boolean canClose;
   private List<IssueCommentResponseDTO> comments;
+  private List<GitHubPullRequestDTO> githubPullRequests;
 }

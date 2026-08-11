@@ -154,6 +154,25 @@ export default function FeedbackIssueDetailPage() {
             <div className={styles.contentText}>{issue.content}</div>
           </Card>
 
+          <Card title="关联 Pull Request">
+            {(issue.githubPullRequests || []).length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无关联 Pull Request" />
+            ) : (
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {issue.githubPullRequests?.map((pullRequest) => (
+                  <Space key={pullRequest.number}>
+                    <Tag color={pullRequest.state === 'open' ? 'blue' : 'default'}>
+                      {pullRequest.state === 'open' ? '开放' : '已关闭'}
+                    </Tag>
+                    <Typography.Link href={pullRequest.url} target="_blank" rel="noreferrer">
+                      #{pullRequest.number} {pullRequest.title}
+                    </Typography.Link>
+                  </Space>
+                ))}
+              </Space>
+            )}
+          </Card>
+
           <Card title="评论">
             <div className={styles.commentList}>
               {(issue.comments || []).length === 0 ? (

@@ -1,6 +1,7 @@
 package cn.edu.cqut.advisorplatform.feedback.github;
 
 import cn.edu.cqut.advisorplatform.feedback.config.GitHubProperties;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -29,6 +30,14 @@ public class GitHubClient {
         .uri(repoPath("/issues/" + issueNumber))
         .retrieve()
         .body(GitHubIssueResponse.class);
+  }
+
+  public List<GitHubTimelineEventResponse> getIssueTimeline(Long issueNumber) {
+    return restClient()
+        .get()
+        .uri(repoPath("/issues/" + issueNumber + "/timeline"))
+        .retrieve()
+        .body(new org.springframework.core.ParameterizedTypeReference<>() {});
   }
 
   public GitHubCommentResponse createComment(Long issueNumber, String body) {

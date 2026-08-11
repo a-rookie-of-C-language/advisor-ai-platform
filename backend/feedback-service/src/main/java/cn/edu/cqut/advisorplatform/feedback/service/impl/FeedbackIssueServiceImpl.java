@@ -10,6 +10,7 @@ import cn.edu.cqut.advisorplatform.feedback.dao.UserDao;
 import cn.edu.cqut.advisorplatform.feedback.dto.CloseIssueRequestDTO;
 import cn.edu.cqut.advisorplatform.feedback.dto.CreateCommentRequestDTO;
 import cn.edu.cqut.advisorplatform.feedback.dto.CreateIssueRequestDTO;
+import cn.edu.cqut.advisorplatform.feedback.dto.GitHubPullRequestDTO;
 import cn.edu.cqut.advisorplatform.feedback.dto.IssueCommentResponseDTO;
 import cn.edu.cqut.advisorplatform.feedback.dto.IssueResponseDTO;
 import cn.edu.cqut.advisorplatform.feedback.entity.FeedbackIssueCommentDO;
@@ -20,6 +21,7 @@ import cn.edu.cqut.advisorplatform.feedback.entity.UserDO;
 import cn.edu.cqut.advisorplatform.feedback.github.GitHubClient;
 import cn.edu.cqut.advisorplatform.feedback.github.GitHubCommentResponse;
 import cn.edu.cqut.advisorplatform.feedback.github.GitHubIssueResponse;
+import cn.edu.cqut.advisorplatform.feedback.github.GitHubTimelineEventResponse;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,7 +46,7 @@ public class FeedbackIssueServiceImpl
   public List<IssueResponseDTO> listIssues(UserPrincipal currentUser) {
     return issueDao.findAllByOrderByUpdatedAtDesc().stream()
         .map(this::syncGitHubStateIfPossible)
-        .map(issue -> mapper.toIssueResponse(issue, null, currentUser))
+        .map(issue -> mapper.toIssueResponse(issue, null, null, currentUser))
         .toList();
   }
 
@@ -53,7 +55,7 @@ public class FeedbackIssueServiceImpl
   public IssueResponseDTO getIssue(Long id, UserPrincipal currentUser) {
     FeedbackIssueDO issue = syncGitHubStateIfPossible(findIssue(id));
     List<FeedbackIssueCommentDO> comments = commentDao.findByIssueIdOrderByCreatedAtAsc(id);
-    return mapper.toIssueResponse(issue, comments, currentUser);
+    return mapper.toIssueResponse(issue, comments, findPullRequests(issue), currentUser);
   }
 
   @Override
@@ -66,7 +68,7 @@ public class FeedbackIssueServiceImpl
     issue.setCreatedBy(user);
     issue = issueDao.save(issue);
     syncCreatedIssue(issue, user);
-    return mapper.toIssueResponse(issue, List.of(), currentUser);
+    return mapper.toIssueResponse(issue, List.of(), List.of(), currentUser);
   }
 
   @Override
@@ -103,7 +105,7 @@ public class FeedbackIssueServiceImpl
     issue.setClosedAt(LocalDateTime.now());
     syncClosedIssue(issue, user, reason);
     List<FeedbackIssueCommentDO> comments = commentDao.findByIssueIdOrderByCreatedAtAsc(issueId);
-    return mapper.toIssueResponse(issue, comments, currentUser);
+    return mapper.toIssueResponse(issue, comments, findPullRequests(issue), currentUser);
   }
 
   @Override
@@ -128,7 +130,34 @@ public class FeedbackIssueServiceImpl
         syncCreatedComment(issue, comment, comment.getCreatedBy());
       }
     }
-    return mapper.toIssueResponse(issue, comments, currentUser);
+    return mapper.toIssueResponse(issue, comments, findPullRequests(issue), currentUser);
+  }
+
+  private List<GitHubPullRequestDTO> findPullRequests(FeedbackIssueDO issue) {
+    if (!gitHubClient.isConfigured() || issue.getGithubIssueNumber() == null) {
+      return List.of();
+    }
+    try {
+      return gitHubClient.getIssueTimeline(issue.getGithubIssueNumber()).stream()
+          .filter(event -> "cross-referenced".equals(event.getEvent()))
+          .map(GitHubTimelineEventResponse::getSource)
+          .filter(source -> source != null && source.getIssue() != null)
+          .map(source -> source.getIssue())
+          .filter(item -> item.getPullRequest() != null && item.getNumber() != null)
+          .map(
+              item ->
+                  GitHubPullRequestDTO.builder()
+                      .number(item.getNumber())
+                      .title(item.getTitle())
+                      .state(item.getState())
+                      .url(item.getHtmlUrl())
+                      .build())
+          .distinct()
+          .toList();
+    } catch (RuntimeException ex) {
+      log.warn("Find GitHub pull requests failed, localIssueId={}", issue.getId(), ex);
+      return List.of();
+    }
   }
 
   private FeedbackIssueDO syncGitHubStateIfPossible(FeedbackIssueDO issue) {
