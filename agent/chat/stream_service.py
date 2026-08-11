@@ -51,8 +51,8 @@ from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
 from memory.failure_memory_store import FailureMemoryStore
-from safety.safety_pipeline import SafetyPipeline
 from routing.intent_router import IntentRouter
+from safety.safety_pipeline import SafetyPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +77,7 @@ class ChatStreamService:
         self._enabled_tools = config.enabled_tools
         self._compaction_support = ChatStreamCompactionSupport(
             config=config,
-            subagent=ContextCompactionSubAgent(
-                self._build_context_compaction_provider()
-            ),
+            subagent=ContextCompactionSubAgent(self._build_context_compaction_provider()),
         )
         self._task_planner_subagent = TaskPlannerSubAgent(self._build_task_planner_provider())
         self._tool_explorer_subagent = ToolExplorerSubAgent(

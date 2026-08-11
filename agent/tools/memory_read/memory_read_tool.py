@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from context.memory.api.memory_api_client import MemoryApiClient
 from json_types import JsonObject
 from tools.core.base_tool import BaseTool
+from tools.core.tool_result import ToolResult
 from tools.memory_read.MemoryReadInput import MemoryReadInput
 from tools.permissions.tool_permission import ToolPermission
-from tools.core.tool_result import ToolResult
 
 
 class MemoryReadTool(BaseTool[MemoryReadInput, BaseModel]):

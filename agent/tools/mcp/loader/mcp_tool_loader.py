@@ -110,9 +110,7 @@ class McpToolLoader:
 
         return tools
 
-    def _adapt_tool(
-        self, config: McpServerConfig, mcp_tool: McpToolDescriptorProtocol
-    ) -> BaseTool | None:
+    def _adapt_tool(self, config: McpServerConfig, mcp_tool: McpToolDescriptorProtocol) -> BaseTool | None:
         """将 MCP 工具适配为内部 BaseTool 格式"""
         try:
             # 获取工具元数据

@@ -78,8 +78,7 @@ def build_fallback_plan(
         or any(name == "rag_search" for name in matched_tools)
     )
     web_needed = "web_search" in tool_names and (
-        "search" in route_categories
-        or looks_like_realtime_query(normalized_query)
+        "search" in route_categories or looks_like_realtime_query(normalized_query)
     )
 
     if rag_needed:

@@ -26,9 +26,7 @@ async def read_memory_with_policy(
     if memory_client is None:
         return []
     try:
-        return await memory_client.search_long_term(
-            user_id=user_id, kb_id=kb_id, query=query, top_k=top_k
-        )
+        return await memory_client.search_long_term(user_id=user_id, kb_id=kb_id, query=query, top_k=top_k)
     except Exception as exc:
         logger.warning("agent_read_memory_failed name=%s err=%s", agent_name, exc)
         return []
@@ -50,9 +48,7 @@ async def write_memory_with_policy(
     if memory_client is None:
         return WritebackResult(accepted=0, rejected=0, message="no_memory_client")
     try:
-        return await memory_client.upsert_candidates(
-            user_id=user_id, kb_id=kb_id, candidates=candidates
-        )
+        return await memory_client.upsert_candidates(user_id=user_id, kb_id=kb_id, candidates=candidates)
     except Exception as exc:
         logger.warning("agent_write_memory_failed name=%s err=%s", agent_name, exc)
         return WritebackResult(accepted=0, rejected=len(candidates), message=str(exc))

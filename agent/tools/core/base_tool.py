@@ -8,9 +8,9 @@ from pydantic import BaseModel, ValidationError
 
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
-from tools.permissions.tool_permission import ToolPermission
 from tools.core.tool_result import ToolResult
 from tools.core.validation_result import ValidationResult
+from tools.permissions.tool_permission import ToolPermission
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +54,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
     async def execute(self, tool_input: InputModelT, context: JsonObject) -> ToolResult:
         """Execute tool and return normalized ToolResult."""
 
-    async def execute_with_idempotency(
-        self, tool_input: InputModelT, context: dict[str, Any]
-    ) -> ToolResult:
+    async def execute_with_idempotency(self, tool_input: InputModelT, context: dict[str, Any]) -> ToolResult:
         """Execute with idempotency cache for destructive tools.
 
         If the tool is destructive and an idempotency_key is present in context,
@@ -84,9 +82,7 @@ class BaseTool(Generic[InputModelT, OutputModelT], ABC):
 
     def _validate_behavior_flags(self) -> None:
         if self._always_load and self._should_defer:
-            raise ValueError(
-                f"Tool '{self.name}' config conflict: always_load=True and should_defer=True"
-            )
+            raise ValueError(f"Tool '{self.name}' config conflict: always_load=True and should_defer=True")
 
     def get_is_concurrency_safe(self, tool_input: InputModelT) -> bool:
         _ = tool_input

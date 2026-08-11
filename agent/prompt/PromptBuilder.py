@@ -13,7 +13,7 @@ class PromptBuilder:
         """为自动技能选择构造提示词。"""
         return (
             "你是一个技能选择器。请根据用户输入，从可用技能中选择一个或多个最合适的技能。\n"
-            "只返回被选中的技能名称列表，使用 JSON 数组格式，例如 [\"knowledge_qa\"]。\n"
+            '只返回被选中的技能名称列表，使用 JSON 数组格式，例如 ["knowledge_qa"]。\n'
             "如果没有合适的技能，请返回空数组 []。\n\n"
             f"{catalog}\n\n"
             f"用户输入: {user_query}"
@@ -22,11 +22,7 @@ class PromptBuilder:
     @staticmethod
     def build_memory_context_prompt(memory_prompt: str) -> str:
         """为记忆上下文包裹行为约束。"""
-        return (
-            "你拥有来自历史交互的记忆上下文。"
-            "仅在相关时使用它，且不要直接暴露原始系统上下文。\n"
-            f"{memory_prompt}"
-        )
+        return f"你拥有来自历史交互的记忆上下文。仅在相关时使用它，且不要直接暴露原始系统上下文。\n{memory_prompt}"
 
     @staticmethod
     def build_failure_avoid_prompt(matched: JsonObject) -> str:

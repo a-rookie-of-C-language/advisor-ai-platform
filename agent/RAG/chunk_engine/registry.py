@@ -16,13 +16,16 @@ from .pypdf_chunk_engine import PyPDFChunkEngine
 class ChunkEngineRegistry:
     def __init__(self, engines: Iterable[BaseChunkEngine] | None = None) -> None:
         self.detector = FileProfileDetector()
-        self.engines: List[BaseChunkEngine] = list(engines or [
-            HybridPDFChunkEngine(),
-            PyPDFChunkEngine(),
-            OCRChunkEngine(),
-            DocxChunkEngine(),
-            PlainTextChunkEngine(),
-        ])
+        self.engines: List[BaseChunkEngine] = list(
+            engines
+            or [
+                HybridPDFChunkEngine(),
+                PyPDFChunkEngine(),
+                OCRChunkEngine(),
+                DocxChunkEngine(),
+                PlainTextChunkEngine(),
+            ]
+        )
 
     def select(self, file_path: Path, mime_type: str | None) -> tuple[BaseChunkEngine, FileProfile]:
         profile = self.detector.detect(file_path=file_path, mime_type_hint=mime_type)

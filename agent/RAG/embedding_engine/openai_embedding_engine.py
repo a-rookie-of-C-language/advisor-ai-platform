@@ -19,4 +19,3 @@ class OpenAIEmbeddingEngine(BaseEmbeddingEngine):
             return []
         resp = self.client.embeddings.create(model=self.model, input=texts)
         return [row.embedding for row in resp.data]
-

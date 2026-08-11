@@ -5,7 +5,6 @@ import re
 
 from json_types import JsonObject, JsonValue
 from llm.base_provider import BaseLLMProvider
-from tools.core.base_tool import BaseTool
 from routing.intent_router_fallback import build_fallback_decision
 from routing.intent_router_llm_flow import route_by_llm
 from routing.intent_router_registry import build_tool_route_metadata, compile_category_rules
@@ -20,6 +19,7 @@ from routing.intent_router_tool_matching import (
     match_tools_by_patterns,
 )
 from routing.RouteDecision import INTENT_ROUTE_EVENT, RouteDecision
+from tools.core.base_tool import BaseTool
 
 logger = logging.getLogger(__name__)
 

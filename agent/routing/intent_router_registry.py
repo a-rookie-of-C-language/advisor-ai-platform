@@ -9,10 +9,7 @@ def compile_category_rules(
     rules: dict[str, dict[str, list[str]]],
 ) -> dict[str, dict[str, list[re.Pattern[str]]]]:
     return {
-        category: {
-            layer: [re.compile(pattern) for pattern in patterns]
-            for layer, patterns in layers.items()
-        }
+        category: {layer: [re.compile(pattern) for pattern in patterns] for layer, patterns in layers.items()}
         for category, layers in rules.items()
     }
 

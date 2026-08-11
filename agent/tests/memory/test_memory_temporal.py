@@ -6,16 +6,14 @@
 - TTL 过滤
 - 已失效记忆被过滤
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from context.memory.api.memory_api_mappers import to_memory_item
-from context.memory.core.MemoryItem import MemoryItem
 from context.memory.core.governance import MemoryGovernance
-
+from context.memory.core.MemoryItem import MemoryItem
 
 # ── 时态字段测试 ──
 
@@ -38,8 +36,13 @@ class TestTemporalFields:
     def test_temporal_fields_settable(self) -> None:
         now = datetime.now(timezone.utc)
         item = MemoryItem(
-            id=1, user_id=1, kb_id=1, content="test",
-            valid_until=now, supersedes_id=2, merged_into_id=3,
+            id=1,
+            user_id=1,
+            kb_id=1,
+            content="test",
+            valid_until=now,
+            supersedes_id=2,
+            merged_into_id=3,
         )
         assert item.valid_until == now
         assert item.supersedes_id == 2
@@ -54,8 +57,12 @@ class TestMemoryApiMappers:
 
     def test_parse_basic_fields(self) -> None:
         data = {
-            "id": 1, "userId": 10, "kbId": 20, "content": "test content",
-            "confidence": 0.8, "score": 0.5,
+            "id": 1,
+            "userId": 10,
+            "kbId": 20,
+            "content": "test content",
+            "confidence": 0.8,
+            "score": 0.5,
         }
         item = to_memory_item(data)
         assert item.id == 1

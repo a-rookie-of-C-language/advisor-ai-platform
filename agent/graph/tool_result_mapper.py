@@ -4,9 +4,7 @@ from json_types import JsonObject
 from safety.safety_pipeline import SafetyPipeline
 
 
-def filter_tool_result(
-    tool_name: str, payload: JsonObject, pipeline: SafetyPipeline | None
-) -> tuple[JsonObject, int]:
+def filter_tool_result(tool_name: str, payload: JsonObject, pipeline: SafetyPipeline | None) -> tuple[JsonObject, int]:
     _ = tool_name
     if pipeline is None:
         return payload, 0

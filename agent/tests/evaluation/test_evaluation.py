@@ -6,6 +6,7 @@
     pytest tests/test_evaluation.py -v
     pytest tests/test_evaluation.py -v -k "test_faithfulness"
 """
+
 from __future__ import annotations
 
 import os
@@ -76,8 +77,7 @@ def rag_test_case(metrics: DeepEvalMetrics) -> LLMTestCase:
             "7. 绿色通道：确保家庭经济困难新生顺利入学。"
         ),
         expected_output=(
-            "学生资助政策主要包括国家奖学金、国家励志奖学金、国家助学金、"
-            "国家助学贷款、勤工助学、学费减免、绿色通道等。"
+            "学生资助政策主要包括国家奖学金、国家励志奖学金、国家助学金、国家助学贷款、勤工助学、学费减免、绿色通道等。"
         ),
         retrieval_context=[
             "国家奖学金是为了激励学生勤奋学习、努力进取，在德、智、体、美等方面全面发展。",
@@ -98,25 +98,19 @@ class TestRAGQuality:
         """测试忠实度：答案是否基于检索到的上下文。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "忠实度" in scores
-        assert scores["忠实度"]["score"] >= 0.8, (
-            f"忠实度分数 {scores['忠实度']['score']} 低于阈值 0.8"
-        )
+        assert scores["忠实度"]["score"] >= 0.8, f"忠实度分数 {scores['忠实度']['score']} 低于阈值 0.8"
 
     def test_answer_relevancy(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试答案相关性：答案与问题的相关程度。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "答案相关性" in scores
-        assert scores["答案相关性"]["score"] >= 0.8, (
-            f"答案相关性分数 {scores['答案相关性']['score']} 低于阈值 0.8"
-        )
+        assert scores["答案相关性"]["score"] >= 0.8, f"答案相关性分数 {scores['答案相关性']['score']} 低于阈值 0.8"
 
     def test_contextual_precision(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试上下文精度：检索到的上下文是否与问题相关。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "上下文精度" in scores
-        assert scores["上下文精度"]["score"] >= 0.7, (
-            f"上下文精度分数 {scores['上下文精度']['score']} 低于阈值 0.7"
-        )
+        assert scores["上下文精度"]["score"] >= 0.7, f"上下文精度分数 {scores['上下文精度']['score']} 低于阈值 0.7"
 
     def test_contextual_recall(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试上下文召回：期望答案是否被检索到的上下文覆盖。"""
@@ -139,9 +133,7 @@ class TestSafety:
         scores = metrics.evaluate_safety(sample_test_case)
         assert "幻觉检测" in scores
         # 幻觉检测越低越好，success=True 表示通过阈值
-        assert scores["幻觉检测"]["success"], (
-            f"幻觉检测分数 {scores['幻觉检测']['score']} 未通过阈值"
-        )
+        assert scores["幻觉检测"]["success"], f"幻觉检测分数 {scores['幻觉检测']['score']} 未通过阈值"
 
     def test_no_bias(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无偏见：答案不应包含歧视性或偏见内容。
@@ -151,9 +143,7 @@ class TestSafety:
         scores = metrics.evaluate_safety(sample_test_case)
         assert "偏见检测" in scores
         # 偏见检测越低越好，success=True 表示通过阈值
-        assert scores["偏见检测"]["success"], (
-            f"偏见检测分数 {scores['偏见检测']['score']} 未通过阈值"
-        )
+        assert scores["偏见检测"]["success"], f"偏见检测分数 {scores['偏见检测']['score']} 未通过阈值"
 
     def test_no_toxicity(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无毒性：答案不应包含有害或攻击性内容。
@@ -163,9 +153,7 @@ class TestSafety:
         scores = metrics.evaluate_safety(sample_test_case)
         assert "毒性检测" in scores
         # 毒性检测越低越好，success=True 表示通过阈值
-        assert scores["毒性检测"]["success"], (
-            f"毒性检测分数 {scores['毒性检测']['score']} 未通过阈值"
-        )
+        assert scores["毒性检测"]["success"], f"毒性检测分数 {scores['毒性检测']['score']} 未通过阈值"
 
 
 class TestQuality:
@@ -175,18 +163,14 @@ class TestQuality:
         """测试相关性：回答是否与问题相关。"""
         scores = metrics.evaluate_quality(sample_test_case)
         assert "相关性" in scores
-        assert scores["相关性"]["score"] >= 0.8, (
-            f"相关性分数 {scores['相关性']['score']} 低于阈值 0.8"
-        )
+        assert scores["相关性"]["score"] >= 0.8, f"相关性分数 {scores['相关性']['score']} 低于阈值 0.8"
 
     def test_coherence(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试连贯性：回答是否通顺、逻辑清晰。"""
         scores = metrics.evaluate_quality(sample_test_case)
         assert "连贯性" in scores
         # 优化答案格式后，提高阈值
-        assert scores["连贯性"]["score"] >= 0.6, (
-            f"连贯性分数 {scores['连贯性']['score']} 低于阈值 0.6"
-        )
+        assert scores["连贯性"]["score"] >= 0.6, f"连贯性分数 {scores['连贯性']['score']} 低于阈值 0.6"
 
 
 class TestIntegration:

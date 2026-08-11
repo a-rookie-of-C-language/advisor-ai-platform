@@ -32,9 +32,7 @@ def subagent(mock_provider, mock_web_search_tool):
 class TestWebSearchSubAgent:
     @pytest.mark.asyncio
     async def test_search_returns_empty_when_no_results(self, subagent):
-        with patch.object(
-            subagent, "_execute_tool", new_callable=AsyncMock
-        ) as mock_exec:
+        with patch.object(subagent, "_execute_tool", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = ToolResult(ok=True, status="miss", message="miss", items=[])
 
             result = await subagent.search("test query")
@@ -46,12 +44,8 @@ class TestWebSearchSubAgent:
 
     @pytest.mark.asyncio
     async def test_search_returns_empty_when_tool_fails(self, subagent):
-        with patch.object(
-            subagent, "_execute_tool", new_callable=AsyncMock
-        ) as mock_exec:
-            mock_exec.return_value = ToolResult(
-                ok=False, status="error", message="network error", items=[]
-            )
+        with patch.object(subagent, "_execute_tool", new_callable=AsyncMock) as mock_exec:
+            mock_exec.return_value = ToolResult(ok=False, status="error", message="network error", items=[])
 
             result = await subagent.search("test query")
 
@@ -71,14 +65,11 @@ class TestWebSearchSubAgent:
             "key_facts": ["事实1", "事实2"],
         }
 
-        with patch.object(
-            subagent, "_execute_tool", new_callable=AsyncMock
-        ) as mock_exec, patch.object(
-            subagent, "_judge", new_callable=AsyncMock
-        ) as mock_judge:
-            mock_exec.return_value = ToolResult(
-                ok=True, status="hit", message="hit", items=search_items
-            )
+        with (
+            patch.object(subagent, "_execute_tool", new_callable=AsyncMock) as mock_exec,
+            patch.object(subagent, "_judge", new_callable=AsyncMock) as mock_judge,
+        ):
+            mock_exec.return_value = ToolResult(ok=True, status="hit", message="hit", items=search_items)
             mock_judge.return_value = judge_response
 
             result = await subagent.search("test query")
@@ -101,14 +92,11 @@ class TestWebSearchSubAgent:
             "key_facts": [],
         }
 
-        with patch.object(
-            subagent, "_execute_tool", new_callable=AsyncMock
-        ) as mock_exec, patch.object(
-            subagent, "_judge", new_callable=AsyncMock
-        ) as mock_judge:
-            mock_exec.return_value = ToolResult(
-                ok=True, status="hit", message="hit", items=search_items
-            )
+        with (
+            patch.object(subagent, "_execute_tool", new_callable=AsyncMock) as mock_exec,
+            patch.object(subagent, "_judge", new_callable=AsyncMock) as mock_judge,
+        ):
+            mock_exec.return_value = ToolResult(ok=True, status="hit", message="hit", items=search_items)
             mock_judge.return_value = judge_response
 
             result = await subagent.search("dangerous query")
@@ -123,14 +111,11 @@ class TestWebSearchSubAgent:
             {"title": "Result", "url": "https://example.com", "snippet": "Normal content"},
         ]
 
-        with patch.object(
-            subagent, "_execute_tool", new_callable=AsyncMock
-        ) as mock_exec, patch.object(
-            subagent, "call_llm_json", new_callable=AsyncMock
-        ) as mock_llm:
-            mock_exec.return_value = ToolResult(
-                ok=True, status="hit", message="hit", items=search_items
-            )
+        with (
+            patch.object(subagent, "_execute_tool", new_callable=AsyncMock) as mock_exec,
+            patch.object(subagent, "call_llm_json", new_callable=AsyncMock) as mock_llm,
+        ):
+            mock_exec.return_value = ToolResult(ok=True, status="hit", message="hit", items=search_items)
             mock_llm.side_effect = RuntimeError("LLM failed")
 
             result = await subagent.search("test query")
@@ -140,9 +125,7 @@ class TestWebSearchSubAgent:
 
     @pytest.mark.asyncio
     async def test_search_passes_max_results(self, subagent):
-        with patch.object(
-            subagent, "_execute_tool", new_callable=AsyncMock
-        ) as mock_exec:
+        with patch.object(subagent, "_execute_tool", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = ToolResult(ok=True, status="miss", message="miss", items=[])
 
             await subagent.search("query", max_results=10)

@@ -34,7 +34,8 @@ class OpenAILLMExtractor:
             "6. Return at most 8 items sorted by importance.\n"
             "\n"
             "Return strict JSON array only, no extra text:\n"
-            "[{\"content\": \"memory text\", \"confidence\": 0.8, \"tags\": {\"type\": \"preference\"}, \"memoryType\": \"semantic\"}]\n"
+            '[{"content": "memory text", "confidence": 0.8, "tags": {"type": "preference"}, '
+            '"memoryType": "semantic"}]\n'
             "\n"
             f"[User] {user_text}\n"
             f"[Assistant] {assistant_text}\n"

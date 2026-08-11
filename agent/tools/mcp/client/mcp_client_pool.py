@@ -5,13 +5,13 @@ import inspect
 import logging
 
 from json_types import JsonObject
-from tools.mcp.config.mcp_config_parser import parse_mcp_server_configs
 from tools.mcp.client.mcp_connection_factory import McpConnectionFactory
+from tools.mcp.client.McpConnection import McpConnection
+from tools.mcp.config.mcp_config_parser import parse_mcp_server_configs
+from tools.mcp.config.McpServerConfig import McpServerConfig
 from tools.mcp.loader.mcp_tool_result_parser import parse_mcp_tool_result
 from tools.mcp.protocol.McpCallToolResultProtocol import McpCallToolResultProtocol
 from tools.mcp.protocol.McpClientProtocol import McpClientProtocol
-from tools.mcp.client.McpConnection import McpConnection
-from tools.mcp.config.McpServerConfig import McpServerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class McpClientPool:
                 conn.last_used = asyncio.get_event_loop().time()
 
                 # 处理结果 - DirectHttpMcpClient 返回的是模拟的 CallToolResult
-                if hasattr(result, 'content'):
+                if hasattr(result, "content"):
                     return self._parse_tool_result(result)
                 return {"ok": True, "content": str(result)}
 

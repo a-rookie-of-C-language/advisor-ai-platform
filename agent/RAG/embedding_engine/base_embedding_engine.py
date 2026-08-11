@@ -13,4 +13,3 @@ class BaseEmbeddingEngine(ABC):
         Return embedding vectors for texts, or None to delegate embedding to vector store.
         """
         raise NotImplementedError
-

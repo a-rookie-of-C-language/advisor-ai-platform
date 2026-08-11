@@ -121,9 +121,7 @@ def has_planned_tool_steps(task_plan: JsonObject) -> bool:
     if not isinstance(raw_steps, list):
         return False
     return any(
-        isinstance(step, dict)
-        and str(step.get("action", "")).strip().lower() == "call_tool"
-        for step in raw_steps
+        isinstance(step, dict) and str(step.get("action", "")).strip().lower() == "call_tool" for step in raw_steps
     )
 
 

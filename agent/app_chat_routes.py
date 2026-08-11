@@ -26,16 +26,8 @@ def register_chat_routes(app: FastAPI, get_chat_stream_service: Callable[[], Cha
         service = get_chat_stream_service()
 
         messages = build_chat_messages(request)
-        trace_id = (
-            raw_request.headers.get("X-Trace-Id")
-            or request.traceId
-            or ""
-        )
-        turn_id = (
-            raw_request.headers.get("X-Turn-Id")
-            or request.turnId
-            or ""
-        )
+        trace_id = raw_request.headers.get("X-Trace-Id") or request.traceId or ""
+        turn_id = raw_request.headers.get("X-Turn-Id") or request.turnId or ""
         logger.info(
             "agent_chat_stream accepted: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, messages=%s",
             trace_id,

@@ -43,9 +43,7 @@ class DiversityRerank(BaseMemoryRerankStrategy):
             best_score = -1.0
 
             for candidate in remaining:
-                relevance = self._jaccard_similarity(
-                    candidate_tokens[candidate.id], query_vec
-                )
+                relevance = self._jaccard_similarity(candidate_tokens[candidate.id], query_vec)
                 if not selected:
                     score = relevance
                 else:

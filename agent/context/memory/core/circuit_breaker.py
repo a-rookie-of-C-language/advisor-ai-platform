@@ -62,7 +62,7 @@ class CircuitBreaker:
 
             # 指数退避，根据失败次数延长 OPEN 时间
             failure_penalty = min(self._failure_count - self._failure_threshold, 10)
-            adjusted_timeout = self._recovery_timeout * (2 ** failure_penalty)
+            adjusted_timeout = self._recovery_timeout * (2**failure_penalty)
             adjusted_timeout = min(adjusted_timeout, self._max_recovery_timeout)
 
             if self._last_failure_time is None:

@@ -75,11 +75,7 @@ def normalize_plan(
     if not steps:
         return fallback_plan()
 
-    required_tools = [
-        name
-        for name in coerce_names(payload.get("required_tools", []))
-        if name in allowed_tools
-    ]
+    required_tools = [name for name in coerce_names(payload.get("required_tools", [])) if name in allowed_tools]
     return {
         "mode": mode,
         "goal": goal,

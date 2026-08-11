@@ -124,14 +124,10 @@ class TestAnnotationPipeline:
         rule = RuleAnnotator()
         hanlp_mock = MagicMock()
         hanlp_mock.name = "hanlp"
-        hanlp_mock.annotate = MagicMock(
-            return_value=ChunkAnnotation(source="hanlp", confidence=0.3)
-        )
+        hanlp_mock.annotate = MagicMock(return_value=ChunkAnnotation(source="hanlp", confidence=0.3))
         llm_mock = MagicMock()
         llm_mock.name = "llm"
-        llm_mock.annotate = MagicMock(
-            return_value=ChunkAnnotation(source="llm", confidence=0.8)
-        )
+        llm_mock.annotate = MagicMock(return_value=ChunkAnnotation(source="llm", confidence=0.8))
 
         pipeline = AnnotationPipeline(
             annotators=[rule, hanlp_mock, llm_mock],
@@ -147,9 +143,7 @@ class TestAnnotationPipeline:
         rule = RuleAnnotator()
         hanlp_mock = MagicMock()
         hanlp_mock.name = "hanlp"
-        hanlp_mock.annotate = MagicMock(
-            return_value=ChunkAnnotation(source="hanlp", confidence=0.7)
-        )
+        hanlp_mock.annotate = MagicMock(return_value=ChunkAnnotation(source="hanlp", confidence=0.7))
         llm_mock = MagicMock()
         llm_mock.name = "llm"
 
@@ -168,9 +162,7 @@ class TestAnnotationPipeline:
         failing.annotate = MagicMock(side_effect=RuntimeError("boom"))
         fallback = MagicMock()
         fallback.name = "fallback"
-        fallback.annotate = MagicMock(
-            return_value=ChunkAnnotation(source="fallback", confidence=0.5)
-        )
+        fallback.annotate = MagicMock(return_value=ChunkAnnotation(source="fallback", confidence=0.5))
 
         pipeline = AnnotationPipeline(annotators=[failing, fallback])
         ann = pipeline.annotate_chunk("test text")

@@ -82,7 +82,12 @@ class MemoryRetrieval:
         latency_ms = (time.monotonic() - t0) * 1000
         logger.debug(
             "Memory retrieval: user=%d kb=%d query_len=%d query_type=%s raw=%d latency_ms=%.1f",
-            user_id, kb_id, len(query), query_type, len(items), latency_ms
+            user_id,
+            kb_id,
+            len(query),
+            query_type,
+            len(items),
+            latency_ms,
         )
         items = self._governance.apply_ttl(items)
         items = self._governance.resolve_conflicts(items)
@@ -93,7 +98,11 @@ class MemoryRetrieval:
 
         logger.debug(
             "Memory retrieval final: user=%d kb=%d after_filter=%d returned=%d strategy=%s",
-            user_id, kb_id, len(items), len(result), strategy_name
+            user_id,
+            kb_id,
+            len(items),
+            len(result),
+            strategy_name,
         )
         return result
 

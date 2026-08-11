@@ -46,9 +46,7 @@ async def _execute_tool(*, tool_name: str, tool_args: JsonObject, state: GraphSt
 
 def should_use_direct_plan(task_plan: JsonObject | None) -> bool:
     return (
-        bool(task_plan)
-        and isinstance(task_plan, dict)
-        and str(task_plan.get("mode", "")).strip().lower() == "direct"
+        bool(task_plan) and isinstance(task_plan, dict) and str(task_plan.get("mode", "")).strip().lower() == "direct"
     )
 
 

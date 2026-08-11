@@ -16,9 +16,7 @@ class ChatStreamMemoryContextSupport:
         self._memory_orchestrator = memory_orchestrator
         self._memory_injector = MemoryInjector()
         self._long_term_memory = (
-            OrchestratorLongTermMemoryAdapter(memory_orchestrator)
-            if memory_orchestrator is not None
-            else None
+            OrchestratorLongTermMemoryAdapter(memory_orchestrator) if memory_orchestrator is not None else None
         )
 
     def is_enabled(
@@ -29,10 +27,7 @@ class ChatStreamMemoryContextSupport:
         user_query: str,
     ) -> bool:
         return (
-            self._long_term_memory is not None
-            and user_id is not None
-            and session_id is not None
-            and bool(user_query)
+            self._long_term_memory is not None and user_id is not None and session_id is not None and bool(user_query)
         )
 
     async def inject_context(
@@ -95,8 +90,7 @@ class ChatStreamMemoryContextSupport:
                 kb_id=0,
                 user_text=user_query,
                 assistant_text=answer,
-                recent_messages=to_memory_messages(validated_messages)
-                + [{"role": "assistant", "content": answer}],
+                recent_messages=to_memory_messages(validated_messages) + [{"role": "assistant", "content": answer}],
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("Memory flush failed, skip writeback: %s", exc)

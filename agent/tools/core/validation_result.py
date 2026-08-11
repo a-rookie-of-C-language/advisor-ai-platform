@@ -13,4 +13,3 @@ class ValidationResult(Generic[InputModelT]):
     ok: bool
     data: InputModelT | None = None
     errors: list[str] = field(default_factory=list)
-

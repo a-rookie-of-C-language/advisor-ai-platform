@@ -67,8 +67,7 @@ def resolve_max_steps(task_plan: JsonObject | None, default_max_steps: int) -> i
     call_tool_count = sum(
         1
         for raw_step in raw_steps
-        if isinstance(raw_step, dict)
-        and str(raw_step.get("action", "")).strip().lower() == "call_tool"
+        if isinstance(raw_step, dict) and str(raw_step.get("action", "")).strip().lower() == "call_tool"
     )
     return max(default_max_steps, call_tool_count + 1)
 

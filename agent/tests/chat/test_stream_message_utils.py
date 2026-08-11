@@ -16,10 +16,12 @@ from llm.chat_message import ChatMessage
 
 
 def test_validate_messages_normalizes_roles_and_strips_surrogates():
-    messages = validate_messages([
-        ChatMessage(role=" USER ", content=" hello\ud800 "),
-        ChatMessage(role="assistant", content="ok"),
-    ])
+    messages = validate_messages(
+        [
+            ChatMessage(role=" USER ", content=" hello\ud800 "),
+            ChatMessage(role="assistant", content="ok"),
+        ]
+    )
 
     assert messages == [
         ChatMessage(role="user", content="hello"),
@@ -53,8 +55,7 @@ def test_prefer_rag_only_respects_realtime_hints():
 
 def test_parse_serialized_event_unwraps_protocol_payload():
     parsed = parse_serialized_event(
-        'event: sys_reasoning\n'
-        'data: {"payload": {"message": "thinking"}, "source": "system"}\n\n'
+        'event: sys_reasoning\ndata: {"payload": {"message": "thinking"}, "source": "system"}\n\n'
     )
 
     assert parsed == {"event": "sys_reasoning", "data": {"message": "thinking"}}
@@ -68,9 +69,7 @@ class _Outcome:
 
 
 def test_build_explorer_context_contains_evidence_payload():
-    context = build_explorer_context(
-        _Outcome(summary="done", evidence=["a"], tool_calls=[{"name": "rag_search"}])
-    )
+    context = build_explorer_context(_Outcome(summary="done", evidence=["a"], tool_calls=[{"name": "rag_search"}]))
 
     assert "read-only tool explorer" in context
     assert '"summary": "done"' in context

@@ -68,9 +68,7 @@ class ToolExplorerSubAgent(SubAgent):
         tool_executor: ToolExecutor,
         task_plan: JsonObject | None = None,
     ) -> ToolExplorerOutcome:
-        read_only_tools = dedupe_tools(
-            [tool for tool in available_tools if tool.is_read_only]
-        )
+        read_only_tools = dedupe_tools([tool for tool in available_tools if tool.is_read_only])
         if not read_only_tools:
             return ToolExplorerOutcome(used=False, sufficient=False)
 

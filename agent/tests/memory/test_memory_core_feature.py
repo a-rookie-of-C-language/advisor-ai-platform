@@ -6,14 +6,12 @@
 - MemoryContext 包含 core_memories
 - 核心记忆按 confidence 排序
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from context.memory.core.MemoryContext import MemoryContext
 from context.memory.core.MemoryItem import MemoryItem
 from context.memory.memory_injector import MemoryInjector
-
 
 # ── 核心记忆渲染测试 ──
 
@@ -40,7 +38,7 @@ class TestCoreMemoryRendering:
             MemoryItem(id=3, user_id=1, kb_id=1, content="中置信度", confidence=0.7, is_core=True),
         ]
         result = injector._render_core_memories(memories)
-        lines = [l for l in result.split("\n") if l.startswith("- ")]
+        lines = [line for line in result.split("\n") if line.startswith("- ")]
         assert lines[0] == "- 高置信度"
         assert lines[1] == "- 中置信度"
         assert lines[2] == "- 低置信度"
@@ -49,11 +47,13 @@ class TestCoreMemoryRendering:
         injector = MemoryInjector()
         # Create many memories with moderate content
         memories = [
-            MemoryItem(id=i, user_id=1, kb_id=1, content=f"这是第{i}条核心记忆内容", confidence=0.9 - i * 0.03, is_core=True)
+            MemoryItem(
+                id=i, user_id=1, kb_id=1, content=f"这是第{i}条核心记忆内容", confidence=0.9 - i * 0.03, is_core=True
+            )
             for i in range(20)
         ]
         result = injector._render_core_memories(memories, max_tokens=50)
-        lines = [l for l in result.split("\n") if l.startswith("- ")]
+        lines = [line for line in result.split("\n") if line.startswith("- ")]
         # Should not include all 20 memories due to token budget
         assert len(lines) < 20
         assert len(lines) > 0

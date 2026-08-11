@@ -14,9 +14,9 @@ from fusion.registry import SourcePriorityRegistry
 from json_types import JsonObject
 from llm.base_provider import BaseLLMProvider
 from llm.chat_message import ChatMessage
+from routing.intent_router import IntentRouter
 from safety.safety_pipeline import SafetyPipeline
 from skills.skill_registry import SkillRegistry
-from routing.intent_router import IntentRouter
 from tools.permissions.tool_permission import PermissionConfig
 from tools.registry.tool_registry import ToolRegistry
 

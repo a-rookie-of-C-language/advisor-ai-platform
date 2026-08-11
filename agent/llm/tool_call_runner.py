@@ -81,9 +81,7 @@ async def run_tool_call(
             ],
         )
 
-    events = [
-        build_tool_call_event(tool_name, fsm.context.tool_args)
-    ]
+    events = [build_tool_call_event(tool_name, fsm.context.tool_args)]
     last_error = ""
     tool_output = ""
     success = False

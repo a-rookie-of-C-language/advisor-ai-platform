@@ -17,9 +17,7 @@ class MemoryRerankRegistry:
         strategy = self._strategies.get(name)
         if strategy is None:
             available = ", ".join(self.list_names()) or "(none)"
-            raise ValueError(
-                f"memory rerank strategy not found: {name!r}, available: {available}"
-            )
+            raise ValueError(f"memory rerank strategy not found: {name!r}, available: {available}")
         return strategy
 
     def list_names(self) -> List[str]:

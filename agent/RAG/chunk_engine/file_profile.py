@@ -15,4 +15,3 @@ class FileProfile:
     has_images: bool = False
     page_count: Optional[int] = None
     avg_dpi: Optional[int] = None
-

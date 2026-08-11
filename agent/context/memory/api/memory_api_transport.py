@@ -61,7 +61,7 @@ async def request_memory_api(
 
         if attempt >= max_retries:
             break
-        backoff = retry_backoff_sec * (2 ** attempt)
+        backoff = retry_backoff_sec * (2**attempt)
         logger.warning(
             "Memory API retry %d/%d after %.1fs: %s %s",
             attempt + 1,

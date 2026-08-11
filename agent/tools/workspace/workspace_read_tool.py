@@ -4,8 +4,8 @@ import logging
 
 from json_types import JsonObject
 from tools.core.base_tool import BaseTool
-from tools.permissions.tool_permission import ToolPermission
 from tools.core.tool_result import ToolResult
+from tools.permissions.tool_permission import ToolPermission
 from tools.workspace.workspace_manager import (
     BinaryFileError,
     FileSizeLimitError,

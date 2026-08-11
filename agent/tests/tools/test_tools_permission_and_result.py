@@ -10,11 +10,11 @@ from context.memory.core.MemoryItem import MemoryItem
 from context.memory.core.WritebackResult import WritebackResult
 from json_types import JsonObject
 from tools.core.base_tool import BaseTool
+from tools.core.tool_result import ToolResult
 from tools.memory_read import MemoryReadTool
 from tools.memory_write import MemoryWriteTool
 from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 from tools.registry.tool_registry import ToolRegistry
-from tools.core.tool_result import ToolResult
 
 
 class _DummyInput(BaseModel):
@@ -47,9 +47,7 @@ class _FakeMemoryClient:
         _ = top_k
         return [MemoryItem(id=1, user_id=1, kb_id=1, content="记忆", confidence=0.9, score=0.8)]
 
-    async def upsert_candidates(
-        self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]
-    ) -> WritebackResult:
+    async def upsert_candidates(self, user_id: int, kb_id: int, candidates: list[MemoryCandidate]) -> WritebackResult:
         _ = user_id
         _ = kb_id
         self.last_upsert_count = len(candidates)
@@ -80,9 +78,14 @@ async def test_tool_registry_denies_without_permission() -> None:
     payload = await registry.execute(
         "dummy",
         {"text": "x"},
-        {"permission_config": PermissionConfig(
-            tool_modes={}, default_mode="deny", read_resources=set(), write_resources=set(),
-        )},
+        {
+            "permission_config": PermissionConfig(
+                tool_modes={},
+                default_mode="deny",
+                read_resources=set(),
+                write_resources=set(),
+            )
+        },
     )
     body = json.loads(payload)
     assert body["ok"] is False

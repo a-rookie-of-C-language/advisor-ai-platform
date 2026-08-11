@@ -17,9 +17,7 @@ class ProviderOk:
         self._chunks = chunks
         self.last_messages: list[ChatMessage] = []
 
-    async def stream_chat(
-        self, messages: Iterable[ChatMessage], **kwargs: JsonValue
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         self.last_messages = list(messages)
         for chunk in self._chunks:
             yield chunk
@@ -39,9 +37,7 @@ class ProviderOk:
 
 
 class ProviderError:
-    async def stream_chat(
-        self, messages: Iterable[ChatMessage], **kwargs: JsonValue
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         raise RuntimeError("provider boom")
@@ -60,9 +56,7 @@ class ProviderError:
 
 
 class ProviderToolUse:
-    async def stream_chat(
-        self, messages: Iterable[ChatMessage], **kwargs: JsonValue
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -100,9 +94,7 @@ class ProviderRouteCapture:
     def __init__(self) -> None:
         self.last_tools: list[ToolSpec] = []
 
-    async def stream_chat(
-        self, messages: Iterable[ChatMessage], **kwargs: JsonValue
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if False:
             yield ""
         return
@@ -127,9 +119,7 @@ class ProviderRouteCapture:
 
 
 class ProviderRouteJsonThenAnswer:
-    async def stream_chat(
-        self, messages: Iterable[ChatMessage], **kwargs: JsonValue
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         if kwargs.get("response_format"):
             yield json.dumps({"categories": [], "confidence": 0.0, "reason": "fallback"})
             return
@@ -185,9 +175,7 @@ class CapturingOpenAIProvider:
         self.model = model
         CapturingOpenAIProvider.instances.append(self)
 
-    async def stream_chat(
-        self, messages: Iterable[ChatMessage], **kwargs: JsonValue
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: Iterable[ChatMessage], **kwargs: JsonValue) -> AsyncIterator[str]:
         _ = messages
         _ = kwargs
         if False:

@@ -141,8 +141,8 @@ async def run_fusion_pipeline(
 
 
 def inject_fusion_context(model_messages: list, fusion_context: JsonObject) -> list:
-    from prompt.PromptBuilder import PromptBuilder
     from fusion.source_candidate import SourceCandidate
+    from prompt.PromptBuilder import PromptBuilder
 
     candidates = fusion_context.get("candidates", [])
     if not isinstance(candidates, list):

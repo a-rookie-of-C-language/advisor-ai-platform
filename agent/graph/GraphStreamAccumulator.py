@@ -65,11 +65,7 @@ class GraphStreamAccumulator:
         safety_result = self._safety_pipeline.filter_text(raw_answer)
         final_answer = safety_result.redacted if safety_result.has_sensitive else raw_answer
         total_regex_matches = self._safety_regex_matches + len(safety_result.regex_matches)
-        total_privacy_spans = (
-            len(safety_result.privacy_result.spans)
-            if safety_result.privacy_result
-            else 0
-        )
+        total_privacy_spans = len(safety_result.privacy_result.spans) if safety_result.privacy_result else 0
         if total_regex_matches > 0 or total_privacy_spans > 0:
             await self._emit(
                 "safety_warning",

@@ -6,16 +6,14 @@
 - 类型权重计算
 - 冲突解决按类型隔离
 """
+
 from __future__ import annotations
 
-import pytest
-
+from context.memory.core.governance import MemoryGovernance
 from context.memory.core.MemoryCandidate import MemoryCandidate
 from context.memory.core.MemoryItem import MemoryItem
-from context.memory.core.governance import MemoryGovernance
 from context.memory.pipeline.retrieval import _compute_type_weights, _infer_query_type
 from context.memory.pipeline.writeback import MemoryWriteback
-
 
 # ── 查询类型推断测试 ──
 
@@ -160,11 +158,18 @@ class TestMemoryItemModel:
 
     def test_all_fields_settable(self) -> None:
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
         item = MemoryItem(
-            id=1, user_id=1, kb_id=1, content="test",
-            memory_type="episodic", is_core=True,
-            valid_until=now, supersedes_id=2, merged_into_id=3,
+            id=1,
+            user_id=1,
+            kb_id=1,
+            content="test",
+            memory_type="episodic",
+            is_core=True,
+            valid_until=now,
+            supersedes_id=2,
+            merged_into_id=3,
         )
         assert item.memory_type == "episodic"
         assert item.is_core is True
@@ -186,8 +191,6 @@ class TestMemoryCandidateModel:
         assert candidate.confidence == 0.5
 
     def test_custom_fields(self) -> None:
-        candidate = MemoryCandidate(
-            content="test", confidence=0.9, memory_type="episodic", is_core=True
-        )
+        candidate = MemoryCandidate(content="test", confidence=0.9, memory_type="episodic", is_core=True)
         assert candidate.memory_type == "episodic"
         assert candidate.is_core is True

@@ -81,7 +81,7 @@ async def e2e_judge_score(
         fluency = float(data.get("fluency", 3))
 
         # 加权平均（relevance 和 accuracy 权重更高）
-        avg_score = (relevance * 0.3 + completeness * 0.25 + accuracy * 0.3 + fluency * 0.15)
+        avg_score = relevance * 0.3 + completeness * 0.25 + accuracy * 0.3 + fluency * 0.15
 
         return {
             "relevance": relevance,
@@ -100,6 +100,7 @@ def _build_eval_provider_from_env() -> BaseLLMProvider:
     """从 .env 构建评估专用 LLM provider，优先读取 EVAL_*，缺失时回退 OPENAI_*。"""
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass

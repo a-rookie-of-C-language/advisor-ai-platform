@@ -33,6 +33,7 @@ _TEMPORAL_NO_VALUE = re.compile(
 _AMBIGUOUS_REFERENCES = ["这个", "那个", "它", "他", "她", "他们", "这个东西", "那个东西", "this", "that", "it", "they"]
 
 # Decision prompt for LLM
+# ruff: noqa: E501
 _DECISION_PROMPT = """你是一个记忆管理专家。根据候选记忆和已有相似记忆，决定如何处理这条候选记忆。
 
 决策类型：

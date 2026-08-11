@@ -27,4 +27,3 @@ class TranscriptStore:
                 )
                 file.write("\n")
         return str(target)
-

@@ -6,12 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from tools.mcp.client.mcp_client_pool import McpClientPool
+from tools.mcp.client.McpConnection import McpConnection
+from tools.mcp.config.mcp_config_parser import parse_stdio_env
+from tools.mcp.config.McpServerConfig import McpServerConfig
 from tools.mcp.direct.DirectMcpCallToolResult import DirectMcpCallToolResult
 from tools.mcp.direct.DirectMcpToolListResult import DirectMcpToolListResult
-from tools.mcp.client.mcp_client_pool import McpClientPool
-from tools.mcp.config.mcp_config_parser import parse_stdio_env
-from tools.mcp.client.McpConnection import McpConnection
-from tools.mcp.config.McpServerConfig import McpServerConfig
 
 
 def test_parse_env_config_reads_servers_and_token(monkeypatch):

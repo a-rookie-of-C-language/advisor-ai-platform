@@ -37,8 +37,7 @@ def append_rag_context(
             role="system",
             content=(
                 "You have retrieved context from rag_search. "
-                "Use it only when relevant and do not fabricate citations.\n"
-                + "\n".join(snippets)
+                "Use it only when relevant and do not fabricate citations.\n" + "\n".join(snippets)
             ),
         )
     ]

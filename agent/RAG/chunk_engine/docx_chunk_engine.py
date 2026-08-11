@@ -13,9 +13,7 @@ class DocxChunkEngine(BaseChunkEngine):
     name = "docx"
 
     _DOCX_SUFFIX = {".docx"}
-    _DOCX_MIME_KEYWORDS = (
-        "wordprocessingml.document",
-    )
+    _DOCX_MIME_KEYWORDS = ("wordprocessingml.document",)
 
     def can_handle(self, profile: FileProfile) -> float:
         if profile.extension in self._DOCX_SUFFIX:

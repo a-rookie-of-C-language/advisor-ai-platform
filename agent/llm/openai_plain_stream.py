@@ -47,9 +47,7 @@ async def stream_plain_chat(
                     except StopAsyncIteration:
                         break
                     except asyncio.TimeoutError as timeout_exc:
-                        raise StreamIdleError(
-                            f"流空闲超过 {stream_idle_timeout_sec:.0f} 秒，自动重试"
-                        ) from timeout_exc
+                        raise StreamIdleError(f"流空闲超过 {stream_idle_timeout_sec:.0f} 秒，自动重试") from timeout_exc
                     if chunk.choices:
                         choice = chunk.choices[0]
                         if hasattr(choice, "finish_reason") and choice.finish_reason:
