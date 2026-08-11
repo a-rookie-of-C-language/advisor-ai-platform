@@ -43,7 +43,7 @@ advisor:
     expiration: ${JWT_EXPIRE_MS:86400000}
   github:
     token: ${GITHUB_TOKEN:${GitHub_key:}}
-    owner: ${GITHUB_OWNER:a-rookie-of-C-language}
+    owner: ${GITHUB_OWNER:ai-cqut}
     repo: ${GITHUB_REPO:advisor-ai-platform}
     api-base-url: ${GITHUB_API_BASE_URL:https://api.github.com}
 
