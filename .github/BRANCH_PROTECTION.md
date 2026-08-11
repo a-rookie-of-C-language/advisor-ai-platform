@@ -88,7 +88,7 @@
 ```bash
 cd agent
 source .venv/Scripts/activate
-DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=300 python -m pytest tests/test_evaluation.py -v
+DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=300 python -m pytest tests/evaluation/test_evaluation.py -v
 ```
 
 ---

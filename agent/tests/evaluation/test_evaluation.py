@@ -3,8 +3,8 @@
 使用 DeepEval 框架对 Agent 的 RAG 质量和安全性进行评估。
 
 使用方法：
-    pytest tests/test_evaluation.py -v
-    pytest tests/test_evaluation.py -v -k "test_faithfulness"
+    pytest tests/evaluation/test_evaluation.py -v
+    pytest tests/evaluation/test_evaluation.py -v -k "test_faithfulness"
 """
 
 from __future__ import annotations
