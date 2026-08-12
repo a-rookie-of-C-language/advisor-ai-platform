@@ -6,7 +6,7 @@ from json_types import JsonObject
 from llm.tool_spec import ToolSpec
 from tools.core.base_tool import BaseTool
 from tools.core.tool_result import ToolResult
-from tools.permissions.tool_permission import PermissionConfig
+from tools.permissions.tool_permission import PermissionConfig, ToolPermission
 from tools.registry.tool_hooks import AfterHook, BeforeHook
 
 
@@ -110,7 +110,8 @@ class ToolRegistry:
 
         permission = context.get("permission_config")
         if permission is not None and not isinstance(permission, PermissionConfig):
-            raise TypeError("permission_config must be PermissionConfig")
+            permission = self._coerce_permission_config(permission)
+            context["permission_config"] = permission
 
         # 三态权限检查
         if permission is not None:
@@ -142,6 +143,32 @@ class ToolRegistry:
         for key, value in safety_meta.items():
             result.meta[key] = value
         return result.to_json()
+
+    @staticmethod
+    def _coerce_permission_config(permission: object) -> PermissionConfig:
+        if isinstance(permission, dict):
+            tool_modes_raw = permission.get("tool_modes", {})
+            tool_modes: dict[ToolPermission, str] = {}
+            if isinstance(tool_modes_raw, dict):
+                for name, mode in tool_modes_raw.items():
+                    try:
+                        tool_modes[ToolPermission(str(name))] = str(mode)
+                    except ValueError:
+                        continue
+            read_resources_raw = permission.get("read_resources", [])
+            write_resources_raw = permission.get("write_resources", [])
+            read_resources = {str(item) for item in read_resources_raw if isinstance(item, (str, int, float))}
+            write_resources = {str(item) for item in write_resources_raw if isinstance(item, (str, int, float))}
+            default_mode = str(permission.get("default_mode", "deny"))
+            if default_mode not in {"allow", "ask", "deny"}:
+                default_mode = "deny"
+            return PermissionConfig(
+                tool_modes=tool_modes,
+                default_mode=default_mode if default_mode in {"allow", "ask", "deny"} else "deny",
+                read_resources=read_resources,
+                write_resources=write_resources,
+            )
+        raise TypeError("permission_config must be PermissionConfig")
 
     async def confirm_execute(self, callback_id: str, confirmed: bool) -> str:
         """客户端确认/拒绝 pending 的工具调用。

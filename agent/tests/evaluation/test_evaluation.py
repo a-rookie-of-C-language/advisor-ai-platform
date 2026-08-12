@@ -27,16 +27,20 @@ def _has_openai_credentials() -> bool:
     return bool(os.getenv("OPENAI_API_KEY", "").strip())
 
 
+def _should_run_deepeval() -> bool:
+    return os.getenv("RUN_DEEPEVAL_TESTS", "").strip().lower() in {"1", "true", "yes"}
+
+
 requires_openai = pytest.mark.skipif(
-    not _has_openai_credentials(),
-    reason="OPENAI_API_KEY 未配置，跳过 DeepEval 评估测试",
+    not (_has_openai_credentials() and _should_run_deepeval()),
+    reason="未显式启用 RUN_DEEPEVAL_TESTS 或未配置 OPENAI_API_KEY，跳过 DeepEval 评估测试",
 )
 
 
 @pytest.fixture(scope="module")
 def metrics() -> DeepEvalMetrics:
     """创建 DeepEval 指标实例。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
+    model = os.getenv("DEEPEVAL_MODEL", "").strip() or os.getenv("OPENAI_MODEL", "").strip() or "gpt-5.5"
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.8"))
     return DeepEvalMetrics(model=model, threshold=threshold)
 
