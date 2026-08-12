@@ -173,7 +173,7 @@ services:
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       MEMORY_API_TOKEN: ${MEMORY_API_TOKEN:?MEMORY_API_TOKEN is required}
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:?AGENT_API_TOKEN is required}
-      AGENT_BASE_URL: http://agent:8001
+      AGENT_BASE_URL: http://agent-ts:8001
       AI_GATEWAY_ENABLED: "false"
       AI_GATEWAY_BASE_URL: http://ai-gateway:8080
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_MASTER_API_KEY:?AI_GATEWAY_MASTER_API_KEY is required}
@@ -189,7 +189,7 @@ services:
         condition: service_started
       ai-gateway:
         condition: service_started
-      agent:
+      agent-ts:
         condition: service_started
     ports:
       - "8082:8082"
@@ -259,11 +259,11 @@ services:
     ports:
       - "8084:8084"
 
-  agent:
+  agent-ts:
     build:
       context: ..
       dockerfile: agent-ts/Dockerfile
-    container_name: advisor-agent
+    container_name: advisor-agent-ts
     environment:
       AGENT_API_HOST: 0.0.0.0
       AGENT_API_PORT: 8001
@@ -285,8 +285,8 @@ services:
       HTTPS_PROXY: ${AGENT_HTTPS_PROXY:-http://192.168.112.1:33210}
       http_proxy: ${AGENT_HTTP_PROXY:-http://192.168.112.1:33210}
       https_proxy: ${AGENT_HTTPS_PROXY:-http://192.168.112.1:33210}
-      NO_PROXY: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
-      no_proxy: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
+      NO_PROXY: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent-ts,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
+      no_proxy: localhost,127.0.0.1,::1,postgres,nacos,redis,kafka,zookeeper,agent-ts,auth-service,chat-service,rag-service,memory-service,audit-service,risk-control-service,check-in-service,student-service,gateway,ai-gateway,prometheus,grafana
     depends_on:
       postgres:
         condition: service_healthy
