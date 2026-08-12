@@ -30,7 +30,8 @@ fn random_token() -> String {
 }
 
 fn random_free_port() -> Result<u16, String> {
-    let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| format!("bind random port failed: {e}"))?;
+    let listener =
+        TcpListener::bind("127.0.0.1:0").map_err(|e| format!("bind random port failed: {e}"))?;
     let port = listener
         .local_addr()
         .map_err(|e| format!("read local addr failed: {e}"))?
@@ -39,19 +40,21 @@ fn random_free_port() -> Result<u16, String> {
     Ok(port)
 }
 
-fn resolve_agent_paths() -> Result<(PathBuf, PathBuf), String> {
+fn resolve_agent_ts_paths() -> Result<(PathBuf, PathBuf), String> {
     let frontend_dir = std::env::current_dir().map_err(|e| format!("current_dir failed: {e}"))?;
     let repo_root = frontend_dir
         .parent()
         .ok_or_else(|| "repo root resolve failed".to_string())?;
-    let agent_dir = repo_root.join("agent");
-    let python_exe = agent_dir.join(".venv").join("Scripts").join("python.exe");
-    Ok((agent_dir, python_exe))
+    let agent_dir = repo_root.join("agent-ts");
+    let main_js = agent_dir.join("dist").join("main.js");
+    Ok((agent_dir, main_js))
 }
 
 #[tauri::command]
 fn start_agent_daemon() -> Result<AgentBootstrapResult, String> {
-    let mut guard = DAEMON_STATE.lock().map_err(|_| "daemon state lock poisoned".to_string())?;
+    let mut guard = DAEMON_STATE
+        .lock()
+        .map_err(|_| "daemon state lock poisoned".to_string())?;
 
     if let Some(existing) = guard.as_ref() {
         return Ok(AgentBootstrapResult {
@@ -61,21 +64,21 @@ fn start_agent_daemon() -> Result<AgentBootstrapResult, String> {
         });
     }
 
-    let (agent_dir, python_exe) = resolve_agent_paths()?;
-    if !python_exe.exists() {
-        return Err(format!("python executable not found: {}", python_exe.display()));
+    let (agent_dir, main_js) = resolve_agent_ts_paths()?;
+    if !main_js.exists() {
+        return Err(format!(
+            "agent-ts entry not found: {}, please run npm run build in agent-ts first",
+            main_js.display()
+        ));
     }
 
     let port = random_free_port()?;
     let token = random_token();
 
-    let mut command = Command::new(&python_exe);
+    let mut command = Command::new("node");
     command
         .current_dir(&agent_dir)
-        .arg("app.py")
-        .arg("--mode")
-        .arg("api")
-        .env("AGENT_MODE", "api")
+        .arg(&main_js)
         .env("AGENT_API_HOST", "127.0.0.1")
         .env("AGENT_API_PORT", format!("{}", port))
         .env("AGENT_API_TOKEN", &token)
@@ -91,7 +94,7 @@ fn start_agent_daemon() -> Result<AgentBootstrapResult, String> {
 
     let child = command
         .spawn()
-        .map_err(|e| format!("spawn python agent failed: {e}"))?;
+        .map_err(|e| format!("spawn agent-ts failed: {e}"))?;
 
     *guard = Some(DaemonState {
         child,
@@ -108,7 +111,9 @@ fn start_agent_daemon() -> Result<AgentBootstrapResult, String> {
 
 #[tauri::command]
 fn stop_agent_daemon() -> Result<(), String> {
-    let mut guard = DAEMON_STATE.lock().map_err(|_| "daemon state lock poisoned".to_string())?;
+    let mut guard = DAEMON_STATE
+        .lock()
+        .map_err(|_| "daemon state lock poisoned".to_string())?;
     if let Some(state) = guard.as_mut() {
         let _ = state.child.kill();
         let _ = state.child.wait();
@@ -119,7 +124,10 @@ fn stop_agent_daemon() -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![start_agent_daemon, stop_agent_daemon])
+        .invoke_handler(tauri::generate_handler![
+            start_agent_daemon,
+            stop_agent_daemon
+        ])
         .on_window_event(|_window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 let _ = stop_agent_daemon();
