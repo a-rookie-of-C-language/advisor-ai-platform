@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class RiskEngine {
 
+  private static final int REQUEST_BODY_PREVIEW_LENGTH = 2048;
+
   private final List<RiskFilter> filters;
   private final UserViolationDao userViolationDao;
   private final MeterRegistry meterRegistry;
@@ -89,7 +91,7 @@ public class RiskEngine {
               .userId(request.getUserId())
               .violationType(response.getCategory())
               .requestPath(request.getRequestPath())
-              .requestBody(request.getRequestBody())
+              .requestBody(previewRequestBody(request.getRequestBody()))
               .ipAddress(request.getIpAddress())
               .createdAt(LocalDateTime.now(ZoneOffset.UTC))
               .build();
@@ -97,6 +99,28 @@ public class RiskEngine {
     } catch (Exception e) {
       log.error("Failed to record violation: userId={}", request.getUserId(), e);
     }
+  }
+
+  private String previewRequestBody(String requestBody) {
+    if (requestBody == null || requestBody.isBlank()) {
+      return requestBody;
+    }
+    String sanitized = removeUnsupportedControlChars(requestBody);
+    if (sanitized.length() <= REQUEST_BODY_PREVIEW_LENGTH) {
+      return sanitized;
+    }
+    return sanitized.substring(0, REQUEST_BODY_PREVIEW_LENGTH) + "...[truncated]";
+  }
+
+  private String removeUnsupportedControlChars(String value) {
+    StringBuilder builder = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      char ch = value.charAt(i);
+      if (ch == '\n' || ch == '\r' || ch == '\t' || !Character.isISOControl(ch)) {
+        builder.append(ch);
+      }
+    }
+    return builder.toString();
   }
 
   private String normalizeAction(String action) {
