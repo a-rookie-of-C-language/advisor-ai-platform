@@ -44,7 +44,7 @@ requires_openai = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def decision_metric() -> GEval:
     """记忆决策质量评估指标。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-4o-mini")
+    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.6"))
     return GEval(
         name="记忆决策准确性",
@@ -68,7 +68,7 @@ def decision_metric() -> GEval:
 @pytest.fixture(scope="module")
 def type_classification_metric() -> GEval:
     """记忆类型分类准确性评估指标。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-4o-mini")
+    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.7"))
     return GEval(
         name="记忆类型分类准确性",
@@ -91,7 +91,7 @@ def type_classification_metric() -> GEval:
 @pytest.fixture(scope="module")
 def core_memory_metric() -> GEval:
     """核心记忆判断准确性评估指标。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-4o-mini")
+    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.6"))
     return GEval(
         name="核心记忆判断准确性",
