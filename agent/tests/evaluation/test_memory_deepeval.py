@@ -23,6 +23,8 @@ from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from dotenv import load_dotenv
 
+from evaluation.metrics.OpenAICompatibleDeepEvalModel import build_deepeval_model
+
 # 加载 .env 文件
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
@@ -46,6 +48,7 @@ def decision_metric() -> GEval:
     """记忆决策质量评估指标。"""
     model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.6"))
+    deepeval_model = build_deepeval_model(model)
     return GEval(
         name="记忆决策准确性",
         criteria=(
@@ -60,7 +63,7 @@ def decision_metric() -> GEval:
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
         ],
-        model=model,
+        model=deepeval_model,
         threshold=threshold,
     )
 
@@ -70,6 +73,7 @@ def type_classification_metric() -> GEval:
     """记忆类型分类准确性评估指标。"""
     model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.7"))
+    deepeval_model = build_deepeval_model(model)
     return GEval(
         name="记忆类型分类准确性",
         criteria=(
@@ -83,7 +87,7 @@ def type_classification_metric() -> GEval:
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
         ],
-        model=model,
+        model=deepeval_model,
         threshold=threshold,
     )
 
@@ -93,6 +97,7 @@ def core_memory_metric() -> GEval:
     """核心记忆判断准确性评估指标。"""
     model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.6"))
+    deepeval_model = build_deepeval_model(model)
     return GEval(
         name="核心记忆判断准确性",
         criteria=(
@@ -107,7 +112,7 @@ def core_memory_metric() -> GEval:
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
         ],
-        model=model,
+        model=deepeval_model,
         threshold=threshold,
     )
 
