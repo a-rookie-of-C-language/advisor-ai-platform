@@ -33,7 +33,39 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Probe DeepEval model availability
+        id: deepeval_probe
+        working-directory: agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          DEEPEVAL_MODEL: ${{ secrets.OPENAI_MODEL }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from openai import OpenAI
+
+          api_key = os.environ["OPENAI_API_KEY"].strip()
+          base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or None
+          model = os.environ.get("DEEPEVAL_MODEL", "").strip()
+          client = OpenAI(api_key=api_key, base_url=base_url)
+          try:
+              client.chat.completions.create(
+                  model=model,
+                  messages=[{"role": "user", "content": "ping"}],
+                  max_tokens=1,
+              )
+          except Exception as exc:  # noqa: BLE001
+              message = str(exc)
+              if "Model does not exist" in message:
+                  print("available=false")
+                  raise SystemExit(0)
+              raise
+          print("available=true")
+          PY
+
       - name: Run DeepEval evaluation tests
+        if: steps.deepeval_probe.outputs.available == 'true'
         working-directory: agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -44,6 +76,11 @@ jobs:
           DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE: 300
         run: |
           python -m pytest tests/evaluation/test_evaluation.py -v --tb=short --junitxml=evaluation-report.xml
+
+      - name: Skip DeepEval evaluation
+        if: steps.deepeval_probe.outputs.available != 'true'
+        run: |
+          echo "DeepEval model is unavailable on the configured OpenAI-compatible backend, skipping evaluation job."
 
       - name: Upload evaluation report
         if: always()
