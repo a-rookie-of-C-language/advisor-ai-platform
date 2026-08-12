@@ -36,7 +36,7 @@ requires_openai = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def metrics() -> DeepEvalMetrics:
     """创建 DeepEval 指标实例。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-4o-mini")
+    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.8"))
     return DeepEvalMetrics(model=model, threshold=threshold)
 
