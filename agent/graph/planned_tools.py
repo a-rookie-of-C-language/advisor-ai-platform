@@ -6,7 +6,6 @@ import logging
 from agents.task_planner.TaskPlannerSubAgent import TaskPlannerSubAgent
 from json_types import JsonObject
 from llm.chat_message import ChatMessage
-from tools.permissions.tool_permission import PermissionConfig
 from safety.safety_pipeline import SafetyPipeline
 
 from .runtime import _runtime
