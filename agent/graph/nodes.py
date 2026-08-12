@@ -9,7 +9,6 @@ from .generation_node_flow import run_generate_node
 from .memory_flush_node_flow import run_flush_memory_node
 from .memory_node_flow import load_graph_memory
 from .node_runtime import runtime as _runtime
-from .permission_config_utils import permission_config_to_json
 from .rag_tool_node_flow import run_rag_tool_node
 from .skill_selection_flow import select_graph_skills
 from .state import GraphState
@@ -38,7 +37,7 @@ async def _execute_tool(*, tool_name: str, tool_args: dict[str, Any], state: Gra
             "user_query": state.get("user_query", ""),
             "trace_id": state.get("trace_id"),
             "turn_id": state.get("turn_id"),
-            "permission_config": permission_config_to_json(runtime.tool_permission),
+            "permission_config": runtime.tool_permission,
         },
     )
 
