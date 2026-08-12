@@ -34,9 +34,13 @@ def _has_openai_credentials() -> bool:
     return bool(os.getenv("OPENAI_API_KEY", "").strip())
 
 
+def _should_run_deepeval() -> bool:
+    return os.getenv("RUN_DEEPEVAL_TESTS", "").strip().lower() in {"1", "true", "yes"}
+
+
 requires_openai = pytest.mark.skipif(
-    not _has_openai_credentials(),
-    reason="OPENAI_API_KEY 未配置，跳过 DeepEval 评估测试",
+    not (_has_openai_credentials() and _should_run_deepeval()),
+    reason="未显式启用 RUN_DEEPEVAL_TESTS 或未配置 OPENAI_API_KEY，跳过 DeepEval 评估测试",
 )
 
 
@@ -46,7 +50,7 @@ requires_openai = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def decision_metric() -> GEval:
     """记忆决策质量评估指标。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
+    model = os.getenv("DEEPEVAL_MODEL", "").strip() or os.getenv("OPENAI_MODEL", "").strip() or "gpt-5.5"
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.6"))
     deepeval_model = build_deepeval_model(model)
     return GEval(
@@ -71,7 +75,7 @@ def decision_metric() -> GEval:
 @pytest.fixture(scope="module")
 def type_classification_metric() -> GEval:
     """记忆类型分类准确性评估指标。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
+    model = os.getenv("DEEPEVAL_MODEL", "").strip() or os.getenv("OPENAI_MODEL", "").strip() or "gpt-5.5"
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.7"))
     deepeval_model = build_deepeval_model(model)
     return GEval(
@@ -95,7 +99,7 @@ def type_classification_metric() -> GEval:
 @pytest.fixture(scope="module")
 def core_memory_metric() -> GEval:
     """核心记忆判断准确性评估指标。"""
-    model = os.getenv("DEEPEVAL_MODEL", "gpt-5.5")
+    model = os.getenv("DEEPEVAL_MODEL", "").strip() or os.getenv("OPENAI_MODEL", "").strip() or "gpt-5.5"
     threshold = float(os.getenv("DEEPEVAL_THRESHOLD", "0.6"))
     deepeval_model = build_deepeval_model(model)
     return GEval(

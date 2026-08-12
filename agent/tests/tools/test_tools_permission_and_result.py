@@ -102,6 +102,27 @@ async def test_tool_registry_denies_without_permission() -> None:
 
 
 @pytest.mark.asyncio
+async def test_tool_registry_accepts_permission_config_dict() -> None:
+    registry = ToolRegistry()
+    registry.register(_DummyTool())
+    payload = await registry.execute(
+        "dummy",
+        {"text": "x"},
+        {
+            "permission_config": {
+                "tool_modes": {"rag_read": "allow"},
+                "default_mode": "deny",
+                "read_resources": ["context"],
+                "write_resources": [],
+            }
+        },
+    )
+    body = json.loads(payload)
+    assert body["ok"] is True
+    assert body["status"] == "ok"
+
+
+@pytest.mark.asyncio
 async def test_memory_read_tool_returns_hit() -> None:
     registry = ToolRegistry()
     registry.register(MemoryReadTool(memory_client=_FakeMemoryClient()))  # type: ignore[arg-type]

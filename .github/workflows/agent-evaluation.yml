@@ -39,7 +39,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          DEEPEVAL_MODEL: gpt-5.5
+          DEEPEVAL_MODEL: ${{ secrets.OPENAI_MODEL }}
+          RUN_DEEPEVAL_TESTS: true
           DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE: 300
         run: |
           python -m pytest tests/evaluation/test_evaluation.py -v --tb=short --junitxml=evaluation-report.xml

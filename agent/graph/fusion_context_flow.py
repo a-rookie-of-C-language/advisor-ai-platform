@@ -30,7 +30,8 @@ async def run_fusion_pipeline(
         "session_id": state.get("session_id"),
         "kb_id": state.get("kb_id"),
         "user_query": user_query,
-        "permission_config": permission_config_to_json(runtime.tool_permission),
+        "permission_config": runtime.tool_permission,
+        "permission_config_json": permission_config_to_json(runtime.tool_permission),
     }
 
     async def _exec_rag() -> list[SourceCandidate]:
