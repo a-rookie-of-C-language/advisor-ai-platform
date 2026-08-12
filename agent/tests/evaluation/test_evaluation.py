@@ -23,6 +23,16 @@ env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
 
+def _has_openai_credentials() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY", "").strip())
+
+
+requires_openai = pytest.mark.skipif(
+    not _has_openai_credentials(),
+    reason="OPENAI_API_KEY 未配置，跳过 DeepEval 评估测试",
+)
+
+
 @pytest.fixture(scope="module")
 def metrics() -> DeepEvalMetrics:
     """创建 DeepEval 指标实例。"""
@@ -93,24 +103,28 @@ def rag_test_case(metrics: DeepEvalMetrics) -> LLMTestCase:
 class TestRAGQuality:
     """RAG 质量测试。"""
 
+    @requires_openai
     def test_faithfulness(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试忠实度：答案是否基于检索到的上下文。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "忠实度" in scores
         assert scores["忠实度"]["score"] >= 0.8, f"忠实度分数 {scores['忠实度']['score']} 低于阈值 0.8"
 
+    @requires_openai
     def test_answer_relevancy(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试答案相关性：答案与问题的相关程度。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "答案相关性" in scores
         assert scores["答案相关性"]["score"] >= 0.8, f"答案相关性分数 {scores['答案相关性']['score']} 低于阈值 0.8"
 
+    @requires_openai
     def test_contextual_precision(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试上下文精度：检索到的上下文是否与问题相关。"""
         scores = metrics.evaluate_rag(rag_test_case)
         assert "上下文精度" in scores
         assert scores["上下文精度"]["score"] >= 0.7, f"上下文精度分数 {scores['上下文精度']['score']} 低于阈值 0.7"
 
+    @requires_openai
     def test_contextual_recall(self, metrics: DeepEvalMetrics, rag_test_case: LLMTestCase) -> None:
         """测试上下文召回：期望答案是否被检索到的上下文覆盖。"""
         scores = metrics.evaluate_rag(rag_test_case)
@@ -124,6 +138,7 @@ class TestRAGQuality:
 class TestSafety:
     """安全性测试。"""
 
+    @requires_openai
     def test_no_hallucination(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无幻觉：答案不应包含未在上下文中出现的信息。
 
@@ -134,6 +149,7 @@ class TestSafety:
         # 幻觉检测越低越好，success=True 表示通过阈值
         assert scores["幻觉检测"]["success"], f"幻觉检测分数 {scores['幻觉检测']['score']} 未通过阈值"
 
+    @requires_openai
     def test_no_bias(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无偏见：答案不应包含歧视性或偏见内容。
 
@@ -144,6 +160,7 @@ class TestSafety:
         # 偏见检测越低越好，success=True 表示通过阈值
         assert scores["偏见检测"]["success"], f"偏见检测分数 {scores['偏见检测']['score']} 未通过阈值"
 
+    @requires_openai
     def test_no_toxicity(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试无毒性：答案不应包含有害或攻击性内容。
 
@@ -158,12 +175,14 @@ class TestSafety:
 class TestQuality:
     """回答质量测试。"""
 
+    @requires_openai
     def test_relevance(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试相关性：回答是否与问题相关。"""
         scores = metrics.evaluate_quality(sample_test_case)
         assert "相关性" in scores
         assert scores["相关性"]["score"] >= 0.8, f"相关性分数 {scores['相关性']['score']} 低于阈值 0.8"
 
+    @requires_openai
     def test_coherence(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试连贯性：回答是否通顺、逻辑清晰。"""
         scores = metrics.evaluate_quality(sample_test_case)
@@ -175,6 +194,7 @@ class TestQuality:
 class TestIntegration:
     """集成测试。"""
 
+    @requires_openai
     def test_evaluate_all(self, metrics: DeepEvalMetrics, sample_test_case: LLMTestCase) -> None:
         """测试全量评估（12 个指标）。"""
         scores = metrics.evaluate_all(sample_test_case)
@@ -205,6 +225,7 @@ class TestIntegration:
             assert "score" in metric_data, f"指标 {metric_name} 缺少 score 字段"
             assert "reason" in metric_data, f"指标 {metric_name} 缺少 reason 字段"
 
+    @requires_openai
     def test_create_test_case(self, metrics: DeepEvalMetrics) -> None:
         """测试创建测试用例。"""
         test_case = metrics.create_test_case(
