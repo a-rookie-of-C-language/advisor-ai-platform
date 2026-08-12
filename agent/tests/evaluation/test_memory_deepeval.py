@@ -28,6 +28,16 @@ env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
 
+def _has_openai_credentials() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY", "").strip())
+
+
+requires_openai = pytest.mark.skipif(
+    not _has_openai_credentials(),
+    reason="OPENAI_API_KEY 未配置，跳过 DeepEval 评估测试",
+)
+
+
 # ── 记忆决策质量指标 ──
 
 
@@ -108,6 +118,7 @@ def core_memory_metric() -> GEval:
 class TestDecisionQuality:
     """记忆决策质量 DeepEval 测试。"""
 
+    @requires_openai
     def test_add_core_preference(self, decision_metric: GEval) -> None:
         """测试：用户核心偏好应该 ADD 且 is_core=true。"""
         test_case = LLMTestCase(
@@ -119,6 +130,7 @@ class TestDecisionQuality:
             f"决策准确性分数 {decision_metric.score} 低于阈值: {decision_metric.reason}"
         )
 
+    @requires_openai
     def test_ignore_casual_chat(self, decision_metric: GEval) -> None:
         """测试：闲聊应该 IGNORE。"""
         test_case = LLMTestCase(
@@ -130,6 +142,7 @@ class TestDecisionQuality:
             f"决策准确性分数 {decision_metric.score} 低于阈值: {decision_metric.reason}"
         )
 
+    @requires_openai
     def test_invalidate_contradiction(self, decision_metric: GEval) -> None:
         """测试：矛盾信息应该 INVALIDATE。"""
         test_case = LLMTestCase(
@@ -141,6 +154,7 @@ class TestDecisionQuality:
             f"决策准确性分数 {decision_metric.score} 低于阈值: {decision_metric.reason}"
         )
 
+    @requires_openai
     def test_add_new_info(self, decision_metric: GEval) -> None:
         """测试：新信息应该 ADD。"""
         test_case = LLMTestCase(
@@ -159,6 +173,7 @@ class TestDecisionQuality:
 class TestTypeClassification:
     """记忆类型分类 DeepEval 测试。"""
 
+    @requires_openai
     def test_semantic_preference(self, type_classification_metric: GEval) -> None:
         """测试：用户偏好应该分类为 semantic。"""
         test_case = LLMTestCase(
@@ -170,6 +185,7 @@ class TestTypeClassification:
             f"类型分类准确性分数 {type_classification_metric.score} 低于阈值: {type_classification_metric.reason}"
         )
 
+    @requires_openai
     def test_episodic_past_event(self, type_classification_metric: GEval) -> None:
         """测试：过去事件应该分类为 episodic。"""
         test_case = LLMTestCase(
@@ -181,6 +197,7 @@ class TestTypeClassification:
             f"类型分类准确性分数 {type_classification_metric.score} 低于阈值: {type_classification_metric.reason}"
         )
 
+    @requires_openai
     def test_episodic_temporal_marker(self, type_classification_metric: GEval) -> None:
         """测试：包含时间标记应该分类为 episodic。"""
         test_case = LLMTestCase(
@@ -192,6 +209,7 @@ class TestTypeClassification:
             f"类型分类准确性分数 {type_classification_metric.score} 低于阈值: {type_classification_metric.reason}"
         )
 
+    @requires_openai
     def test_semantic_identity(self, type_classification_metric: GEval) -> None:
         """测试：用户身份应该分类为 semantic。"""
         test_case = LLMTestCase(
@@ -210,6 +228,7 @@ class TestTypeClassification:
 class TestCoreMemoryJudgment:
     """核心记忆判断 DeepEval 测试。"""
 
+    @requires_openai
     def test_core_identity(self, core_memory_metric: GEval) -> None:
         """测试：用户身份应该判断为核心记忆。"""
         test_case = LLMTestCase(
@@ -221,6 +240,7 @@ class TestCoreMemoryJudgment:
             f"核心记忆判断准确性分数 {core_memory_metric.score} 低于阈值: {core_memory_metric.reason}"
         )
 
+    @requires_openai
     def test_core_preference(self, core_memory_metric: GEval) -> None:
         """测试：核心偏好应该判断为核心记忆。"""
         test_case = LLMTestCase(
@@ -232,6 +252,7 @@ class TestCoreMemoryJudgment:
             f"核心记忆判断准确性分数 {core_memory_metric.score} 低于阈值: {core_memory_metric.reason}"
         )
 
+    @requires_openai
     def test_non_core_event(self, core_memory_metric: GEval) -> None:
         """测试：具体事件不应该判断为核心记忆。"""
         test_case = LLMTestCase(
@@ -243,6 +264,7 @@ class TestCoreMemoryJudgment:
             f"核心记忆判断准确性分数 {core_memory_metric.score} 低于阈值: {core_memory_metric.reason}"
         )
 
+    @requires_openai
     def test_non_core_temporary(self, core_memory_metric: GEval) -> None:
         """测试：临时信息不应该判断为核心记忆。"""
         test_case = LLMTestCase(
@@ -261,16 +283,19 @@ class TestCoreMemoryJudgment:
 class TestMemoryIntegration:
     """记忆功能集成 DeepEval 测试。"""
 
+    @requires_openai
     def test_decision_metric_attributes(self, decision_metric: GEval) -> None:
         """测试决策指标属性完整性。"""
         assert decision_metric.name == "记忆决策准确性"
         assert decision_metric.threshold is not None
 
+    @requires_openai
     def test_type_metric_attributes(self, type_classification_metric: GEval) -> None:
         """测试类型分类指标属性完整性。"""
         assert type_classification_metric.name == "记忆类型分类准确性"
         assert type_classification_metric.threshold is not None
 
+    @requires_openai
     def test_core_metric_attributes(self, core_memory_metric: GEval) -> None:
         """测试核心记忆指标属性完整性。"""
         assert core_memory_metric.name == "核心记忆判断准确性"
