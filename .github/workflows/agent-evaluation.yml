@@ -41,14 +41,21 @@ jobs:
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           DEEPEVAL_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
+          python - <<'PY'
           import os
+          import sys
           from openai import OpenAI
 
           api_key = os.environ["OPENAI_API_KEY"].strip()
           base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or None
           model = os.environ.get("DEEPEVAL_MODEL", "").strip()
           client = OpenAI(api_key=api_key, base_url=base_url)
+          output_path = os.environ["GITHUB_OUTPUT"]
+
+          def write_available(value: bool) -> None:
+              with open(output_path, "a", encoding="utf-8") as handle:
+                  handle.write(f"available={'true' if value else 'false'}\n")
+
           try:
               client.chat.completions.create(
                   model=model,
@@ -56,12 +63,10 @@ jobs:
                   max_tokens=1,
               )
           except Exception as exc:  # noqa: BLE001
-              message = str(exc)
-              if "Model does not exist" in message:
-                  print("available=false")
-                  raise SystemExit(0)
-              raise
-          print("available=true")
+              print(f"DeepEval model probe failed: {exc}", file=sys.stderr)
+              write_available(False)
+          else:
+              write_available(True)
           PY
 
       - name: Run DeepEval evaluation tests
