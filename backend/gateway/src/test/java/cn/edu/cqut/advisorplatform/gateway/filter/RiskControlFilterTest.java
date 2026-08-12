@@ -79,6 +79,19 @@ class RiskControlFilterTest {
     verify(chain).filter(exchange);
   }
 
+  @Test
+  void shouldSkipRagDocumentUploadRequests() {
+    when(exchange.getRequest()).thenReturn(request);
+    when(request.getURI())
+        .thenReturn(URI.create("http://localhost/api/rag/knowledge-bases/1/documents"));
+    when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+    Mono<Void> result = riskControlFilter.filter(exchange, chain);
+
+    StepVerifier.create(result).verifyComplete();
+    verify(chain).filter(exchange);
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   void shouldCheckPostRequestsOnRiskPaths() {
