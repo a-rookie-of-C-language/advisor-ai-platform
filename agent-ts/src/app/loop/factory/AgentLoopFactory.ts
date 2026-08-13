@@ -1,0 +1,67 @@
+import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
+import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
+import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
+import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";
+import type { OpenAIChatClient } from "../../../openai/chat/core/client/OpenAIChatClient.js";
+import type { AgentOpenAiToolFacade } from "../../openAi/core/AgentOpenAiToolFacade.js";
+import type { AgentContextPipeline } from "../../session/core/pipeline/AgentContextPipeline.js";
+import { AgentLoop } from "../core/AgentLoop.js";
+import type { AgentLoopOptions } from "../model/AgentLoopOptions.js";
+
+export class AgentLoopFactory {
+  constructor(
+    private readonly config: AgentConfig,
+    private readonly core: AgentCoreClient,
+    private readonly openAiClient: OpenAIChatClient,
+    private readonly openAiToolFacade: AgentOpenAiToolFacade,
+    private readonly contextPipeline: AgentContextPipeline
+  ) {}
+
+  create(chatRequest: ChatStreamRequest, options?: Partial<AgentLoopOptions>): AgentLoop {
+    const factory = this;
+    const streamFn: AgentLoopOptions["stream"] = async function* (messages, signal) {
+      const tools = await factory.openAiToolFacade.listTools();
+      if (factory.core.canStream()) {
+        try {
+          for await (const event of factory.core.streamChat(
+            {
+              url: `${factory.config.openAiBaseUrl}/chat/completions`,
+              apiKey: factory.config.openAiApiKey,
+              model: factory.config.openAiModel,
+              temperature: factory.config.openAiTemperature,
+              requestTimeoutMs: factory.config.requestTimeoutMs,
+              messages,
+              tools
+            },
+            signal
+          )) {
+            if (event.type === "delta") {
+              yield { type: "delta", text: event.text } as const;
+            } else if (event.type === "tool_call") {
+              yield {
+                type: "tool_call",
+                toolCallId: event.tool_call_id,
+                toolName: event.tool_name,
+                toolArgs: event.tool_args
+              } as const;
+            }
+          }
+        } catch {
+          // Fall back to the TypeScript OpenAI client when agent-core streaming is unavailable.
+        }
+      }
+      for await (const event of factory.openAiClient.streamChatEvents(messages, tools, undefined, signal)) {
+        yield event;
+      }
+    };
+    const executeTool = (
+      currentChatRequest: ChatStreamRequest,
+      toolName: string,
+      args: JsonObject,
+      signal?: AbortSignal
+    ) => factory.openAiToolFacade.executeTool(currentChatRequest, toolName, args, signal);
+    const transformContext = async (messages: ChatStreamRequest["messages"], signal?: AbortSignal) =>
+      factory.contextPipeline.transform(messages, signal);
+    return new AgentLoop({ stream: streamFn, executeTool, chatRequest, transformContext, maxTurns: 3, ...options });
+  }
+}
