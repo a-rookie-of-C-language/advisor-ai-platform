@@ -42,8 +42,7 @@ export class AgentChatStreamSessionFactory {
       contextPipeline,
       memoryTaskCompletionSubmitter,
       openAiClient,
-      openAiToolComponents.openAiToolFacade,
-      openAiToolComponents.toolExecutorFactory
+      openAiToolComponents.openAiToolFacade
     );
   }
 }

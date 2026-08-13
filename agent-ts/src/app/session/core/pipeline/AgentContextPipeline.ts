@@ -28,4 +28,24 @@ export class AgentContextPipeline {
     }
     return messages;
   }
+
+  async transform(
+    messages: ChatStreamRequest["messages"],
+    _signal?: AbortSignal
+  ): Promise<ChatStreamRequest["messages"]> {
+    let result = messages;
+    if (this.memoryContextBuilder) {
+      result = await this.memoryContextBuilder.injectMemory({ ...({ messages: result } as ChatStreamRequest), messages: result });
+    }
+    if (this.ragContextBuilder) {
+      result = await this.ragContextBuilder.injectRag({ ...({ messages: result } as ChatStreamRequest), messages: result });
+    }
+    if (this.webFetchContextBuilder) {
+      result = await this.webFetchContextBuilder.injectWebFetch({ ...({ messages: result } as ChatStreamRequest), messages: result });
+    }
+    if (this.webSearchContextBuilder) {
+      result = await this.webSearchContextBuilder.injectWebSearch({ ...({ messages: result } as ChatStreamRequest), messages: result });
+    }
+    return result;
+  }
 }

@@ -94,11 +94,10 @@ test("AgentChatStreamSession executes Rust tool calls and sends a second round",
       config.openAiApiKey,
       config,
       new AgentCoreClient(executablePath),
-      { async build() { return [{ role: "user", content: "hello" }]; } },
+      { async build() { return [{ role: "user", content: "hello" }]; }, async transform(messages) { return messages; } },
       { async submit() {} },
       { async *streamChatEvents() { throw new Error("TS OpenAI path should not be called"); } },
-      { async listTools() { return [tool]; } },
-      { create() { return async () => ({ output: "search-result", success: true }); } }
+      { async listTools() { return [tool]; }, async executeTool() { return { output: "search-result", success: true }; } }
     );
     const writer = {
       async start() {},
@@ -188,11 +187,10 @@ test("AgentChatStreamSession aborts a running TS fallback stream", async () => {
       config.openAiApiKey,
       config,
       { canStream() { return false; } },
-      { async build() { return [{ role: "user", content: "hello" }]; } },
+      { async build() { return [{ role: "user", content: "hello" }]; }, async transform(messages) { return messages; } },
       { async submit() {} },
       new OpenAIChatClient(config),
-      { async listTools() { return []; } },
-      { create() { return async () => ({ output: "unused", success: true }); } }
+      { async listTools() { return []; }, async executeTool() { return { output: "unused", success: true }; } }
     );
     const writer = {
       signal: controller.signal,
@@ -248,11 +246,10 @@ test("AgentChatStreamSession stops before the final model round when a tool abor
       config.openAiApiKey,
       config,
       { canStream() { return false; } },
-      { async build() { return [{ role: "user", content: "hello" }]; } },
+      { async build() { return [{ role: "user", content: "hello" }]; }, async transform(messages) { return messages; } },
       { async submit() {} },
       new OpenAIChatClient(config),
-      { async listTools() { return [tool]; } },
-      { create() { return async () => { setTimeout(() => controller.abort(), 10); await new Promise(resolve => setTimeout(resolve, 30)); return { output: "unused", success: true }; }; } }
+      { async listTools() { return [tool]; }, async executeTool() { setTimeout(() => controller.abort(), 10); await new Promise(resolve => setTimeout(resolve, 30)); return { output: "unused", success: true }; } }
     );
     const writer = {
       signal: controller.signal,

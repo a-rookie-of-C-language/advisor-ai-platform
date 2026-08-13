@@ -41,6 +41,7 @@ async def stream_graph_events(
         payload={"message": "stream_started"},
     )
     saw_content = False
+    saw_error = False
     try:
         async for event in graph_runner.run_stream(
             messages=validated_messages,
@@ -53,6 +54,8 @@ async def stream_graph_events(
         ):
             event_name = normalize_graph_event_name(str(event.get("event", "")))
             event_data = event.get("data", {})
+            if event_name == "error":
+                saw_error = True
             if graph_event_has_content(event_name):
                 saw_content = True
             text = graph_text_payload(event_name, event_data)
@@ -75,7 +78,7 @@ async def stream_graph_events(
                 trace_id=trace_id,
                 payload=graph_event_payload(event_data),
             )
-        if not saw_content:
+        if not saw_content and not saw_error:
             logger.warning(
                 "Graph stream produced no content, fallback to legacy: user_id=%s, session_id=%s",
                 user_id,

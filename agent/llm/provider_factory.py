@@ -32,7 +32,8 @@ def _read_thinking_config() -> ThinkingConfig:
 def build_provider_from_env() -> BaseLLMProvider:
     api_key = read_required_env("OPENAI_API_KEY")
     model = read_required_env("OPENAI_MODEL")
-    base_url = read_required_env("OPENAI_BASE_URL")
+    base_url_raw = read_str_env("OPENAI_BASE_URL", "")
+    base_url = base_url_raw or None
     temperature = read_float_env("OPENAI_TEMPERATURE", 0.2)
     timeout = read_float_env("OPENAI_TIMEOUT_SEC", 60.0)
     max_retries = read_int_env("OPENAI_MAX_RETRIES", 0)

@@ -1,8 +1,26 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from chat.stream_message_utils import prefer_rag_only
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
+
+
+def _prefer_retrieval_fallback(route_decision, has_rag_tool: bool):
+    if not has_rag_tool:
+        return route_decision
+    if route_decision.categories == {"retrieval"}:
+        return route_decision
+    if route_decision.matched_by in {"fallback", "strong_rule", "score"}:
+        return replace(
+            route_decision,
+            categories={"retrieval"},
+            matched_by="fallback",
+            confidence=0.2,
+            fallback_reason=route_decision.fallback_reason or "prefer_retrieval",
+        )
+    return route_decision
 
 
 def filter_matched_tools(raw_matched_tools: list[str], *, tools, allowed_categories: set[str]) -> list[str]:
@@ -20,6 +38,7 @@ def select_route_tools(
     user_query: str,
     tools,
 ) -> list[ToolSpec]:
+    route_decision = _prefer_retrieval_fallback(route_decision, tools.get("rag_search") is not None)
     if matched_tools:
         selected_tools = tools.specs_by_names(matched_tools)
     else:
