@@ -20,6 +20,7 @@ def select_route_tools(
     user_query: str,
     tools,
 ) -> list[ToolSpec]:
+    route_decision = _prefer_retrieval_fallback(route_decision, tools.get("rag_search") is not None)
     if matched_tools:
         selected_tools = tools.specs_by_names(matched_tools)
     else:
@@ -29,6 +30,19 @@ def select_route_tools(
         if rag_tool is not None:
             selected_tools = [rag_tool.to_tool_spec()]
     return selected_tools
+
+
+def _prefer_retrieval_fallback(route_decision, has_rag_tool: bool):
+    if not has_rag_tool:
+        return route_decision
+    if route_decision.categories == {"retrieval"}:
+        return route_decision
+    if route_decision.matched_by in {"fallback", "strong_rule", "score"}:
+        route_decision.categories = {"retrieval"}
+        route_decision.matched_by = "fallback"
+        route_decision.confidence = 0.2
+        route_decision.fallback_reason = route_decision.fallback_reason or "prefer_retrieval"
+    return route_decision
 
 
 def adjust_route_payload(
