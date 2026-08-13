@@ -46,6 +46,8 @@ export class AgentLoopFactory {
               } as const;
             }
           }
+          // Rust streaming succeeded: do not fall through to the TypeScript path.
+          return;
         } catch {
           // Fall back to the TypeScript OpenAI client when agent-core streaming is unavailable.
         }

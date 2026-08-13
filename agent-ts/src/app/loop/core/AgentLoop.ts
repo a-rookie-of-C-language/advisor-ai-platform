@@ -64,6 +64,9 @@ export class AgentLoop {
             toolCall.args,
             this.options.signal
           );
+          if (this.options.signal?.aborted) {
+            throw new Error("Agent stream aborted");
+          }
           result = {
             toolCallId: toolCall.id,
             toolName: toolCall.name,

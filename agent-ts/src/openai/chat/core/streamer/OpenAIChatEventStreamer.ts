@@ -2,6 +2,7 @@ import type { ChatMessageDTO } from "../../../../common/model/ChatStreamRequest.
 import type { OpenAIChatStreamEvent } from "../../../../protocol/events/model/openai/OpenAIChatStreamEvent.js";
 import { OpenAIToolRoundGate } from "../../../tools/runtime/core/gate/OpenAIToolRoundGate.js";
 import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "../../../tools/runtime/core/runner/OpenAIToolRoundRunner.js";
+import { OpenAIToolCallEventFactory } from "../../../tools/runtime/events/call/OpenAIToolCallEventFactory.js";
 import type { OpenAIChatCompletionStreamer } from "../../completion/core/OpenAIChatCompletionStreamer.js";
 import { OpenAIChatRoundEventFactory } from "../../events/round/OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatMessageMapper } from "../../mapping/OpenAIChatMessageMapper.js";
@@ -10,6 +11,7 @@ import type { OpenAIChatTool } from "../../model/tool/OpenAIChatTool.js";
 export class OpenAIChatEventStreamer {
   private readonly roundEventFactory = new OpenAIChatRoundEventFactory();
   private readonly toolRoundGate = new OpenAIToolRoundGate();
+  private readonly toolCallEventFactory = new OpenAIToolCallEventFactory();
 
   constructor(
     private readonly openAiApiKey: string,
@@ -34,11 +36,20 @@ export class OpenAIChatEventStreamer {
       yield event;
     }
 
-    if (!this.toolRoundGate.shouldRun(firstRound.toolCalls, tools, toolExecutor)) {
+    if (!this.toolRoundGate.shouldRun(firstRound.toolCalls, tools)) {
       return;
     }
 
-    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor!, signal)) {
+    if (!toolExecutor) {
+      // Event-only mode: yield tool call events but do not execute tools.
+      // The caller (AgentLoop) executes tools externally and drives further rounds.
+      for (const toolCall of firstRound.toolCalls) {
+        yield this.toolCallEventFactory.create(toolCall);
+      }
+      return;
+    }
+
+    for await (const event of this.toolRoundRunner.run(conversation, firstRound.toolCalls, toolExecutor, signal)) {
       yield event;
     }
 
