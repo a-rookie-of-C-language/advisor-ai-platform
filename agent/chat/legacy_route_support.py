@@ -1,8 +1,26 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from chat.stream_message_utils import prefer_rag_only
 from json_types import JsonObject
 from llm.tool_spec import ToolSpec
+
+
+def _prefer_retrieval_fallback(route_decision, has_rag_tool: bool):
+    if not has_rag_tool:
+        return route_decision
+    if route_decision.categories == {"retrieval"}:
+        return route_decision
+    if route_decision.matched_by in {"fallback", "strong_rule", "score"}:
+        return replace(
+            route_decision,
+            categories={"retrieval"},
+            matched_by="fallback",
+            confidence=0.2,
+            fallback_reason=route_decision.fallback_reason or "prefer_retrieval",
+        )
+    return route_decision
 
 
 def filter_matched_tools(raw_matched_tools: list[str], *, tools, allowed_categories: set[str]) -> list[str]:
@@ -30,19 +48,6 @@ def select_route_tools(
         if rag_tool is not None:
             selected_tools = [rag_tool.to_tool_spec()]
     return selected_tools
-
-
-def _prefer_retrieval_fallback(route_decision, has_rag_tool: bool):
-    if not has_rag_tool:
-        return route_decision
-    if route_decision.categories == {"retrieval"}:
-        return route_decision
-    if route_decision.matched_by in {"fallback", "strong_rule", "score"}:
-        route_decision.categories = {"retrieval"}
-        route_decision.matched_by = "fallback"
-        route_decision.confidence = 0.2
-        route_decision.fallback_reason = route_decision.fallback_reason or "prefer_retrieval"
-    return route_decision
 
 
 def adjust_route_payload(
