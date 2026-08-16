@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
+import type { ProviderErrorCode } from "./ProviderErrorCode.js";
 
 export type ProviderStreamChunk =
   | { type: "text_delta"; text: string }
@@ -9,7 +10,8 @@ export type ProviderStreamChunk =
       name?: string;
       arguments_delta: string;
     }
-  | { type: "finish"; reason: string | null };
+  | { type: "finish"; reason: string | null }
+  | { type: "error"; code: ProviderErrorCode; message: string; retryable: boolean };
 
 export interface AssembledProviderToolCall {
   id: string;
