@@ -301,6 +301,28 @@ services:
     volumes:
       - rag_uploads:/app/uploads
 
+  agent-indexer:
+    build:
+      context: ..
+      dockerfile: agent-indexer/Dockerfile
+    container_name: advisor-agent-indexer
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/advisor_ai
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-bge-m3}
+      INDEXER_BATCH_SIZE: ${INDEXER_BATCH_SIZE:-10}
+      INDEXER_CHUNK_SIZE: ${INDEXER_CHUNK_SIZE:-800}
+      INDEXER_CHUNK_OVERLAP: ${INDEXER_CHUNK_OVERLAP:-120}
+      INDEXER_EMBEDDING_BATCH_SIZE: ${INDEXER_EMBEDDING_BATCH_SIZE:-16}
+      INDEXER_RETRY_BACKOFF_SEC: ${INDEXER_RETRY_BACKOFF_SEC:-5}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rag-service:
+        condition: service_started
+    volumes:
+      - rag_uploads:/app/uploads
+
   audit-service:
     build:
       context: .
