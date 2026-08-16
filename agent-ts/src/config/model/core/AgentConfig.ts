@@ -8,6 +8,7 @@ export class AgentConfig {
   readonly openAiApiKey: string;
   readonly openAiBaseUrl: string;
   readonly openAiModel: string;
+  readonly openAiModels: string[];
   readonly openAiTemperature: number;
   readonly requestTimeoutMs: number;
   readonly rustCoreEnabled: boolean;
@@ -37,6 +38,7 @@ export class AgentConfig {
     this.openAiApiKey = values.openAiApiKey;
     this.openAiBaseUrl = values.openAiBaseUrl;
     this.openAiModel = values.openAiModel;
+    this.openAiModels = values.openAiModels;
     this.openAiTemperature = values.openAiTemperature;
     this.requestTimeoutMs = values.requestTimeoutMs;
     this.rustCoreEnabled = values.rustCoreEnabled;

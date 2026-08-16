@@ -5,6 +5,7 @@ export interface AgentConfigValues {
   openAiApiKey: string;
   openAiBaseUrl: string;
   openAiModel: string;
+  openAiModels: string[];
   openAiTemperature: number;
   requestTimeoutMs: number;
   rustCoreEnabled: boolean;
