@@ -13,7 +13,12 @@ export class FailureMemorySupport {
 
   injectAvoidancePrompt(messages: readonly ChatMessageDTO[], userQuery: string): ChatMessageDTO[] {
     if (!userQuery.trim()) return [...messages];
-    const matched = this.matcher.match(userQuery, this.store.loadRecent());
+    let matched: ReturnType<FailureMemoryMatcher["match"]>;
+    try {
+      matched = this.matcher.match(userQuery, this.store.loadRecent());
+    } catch {
+      return [...messages];
+    }
     if (!matched) return [...messages];
     return [{
       role: "system",
@@ -39,13 +44,17 @@ export class FailureMemorySupport {
       }
     }
     if (reasons.length === 0 || score >= this.scoreThreshold || !userQuery.trim()) return;
-    this.store.append({
-      timestamp: new Date().toISOString(),
-      userQuery,
-      sessionId,
-      score,
-      reasons: [...new Set(reasons)],
-      avoidStrategy: "优先选择明确的工具，校验工具参数，并以工具证据支撑回答。"
-    });
+    try {
+      this.store.append({
+        timestamp: new Date().toISOString(),
+        userQuery,
+        sessionId,
+        score,
+        reasons: [...new Set(reasons)],
+        avoidStrategy: "优先选择明确的工具，校验工具参数，并以工具证据支撑回答。"
+      });
+    } catch {
+      // Failure memory is advisory; storage errors must not fail the chat stream.
+    }
   }
 }

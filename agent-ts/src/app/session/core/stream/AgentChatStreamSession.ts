@@ -46,8 +46,8 @@ export class AgentChatStreamSession {
       config.contextKeepLastMessages
     );
     this.failureMemorySupport = new FailureMemorySupport(
-      new FailureMemoryStore(config.failureMemoryPath),
-      config.failureMemoryScoreThreshold
+      new FailureMemoryStore(config.failureMemoryPath || ".agent-data/failure-memory.jsonl"),
+      config.failureMemoryScoreThreshold ?? 7
     );
   }
 
