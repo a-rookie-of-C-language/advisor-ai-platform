@@ -2,6 +2,7 @@ use anyhow::Result;
 use command::reader::CoreCommandReader;
 use command::runner::CoreCommandRunner;
 
+mod catalog;
 mod command;
 mod protocol;
 mod provider;
