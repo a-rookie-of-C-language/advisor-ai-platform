@@ -119,6 +119,10 @@ jobs:
         working-directory: agent-ts
         run: npm run build
 
+      - name: Run Agent contract tests
+        working-directory: agent-ts
+        run: npm run test:contracts
+
       - name: Check Rust formatting
         working-directory: agent-core
         run: cargo fmt --all -- --check
