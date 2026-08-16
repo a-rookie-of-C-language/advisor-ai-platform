@@ -12,11 +12,15 @@ import { AgentMissingOpenAiApiKeyFallbackGate } from "../../support/fallback/Age
 import { AgentStreamErrorMessageResolver } from "../../support/error/AgentStreamErrorMessageResolver.js";
 import { InputSafetySanitizer } from "../../../../safety/input/InputSafetySanitizer.js";
 import { ContextCompactionService } from "../../../../context/compaction/core/ContextCompactionService.js";
+import { LatestUserQueryResolver } from "../../../../common/request/resolver/LatestUserQueryResolver.js";
+import { IntentRouter } from "../../../../routing/core/IntentRouter.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
   private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
   private readonly inputSafetySanitizer = new InputSafetySanitizer();
+  private readonly latestUserQueryResolver = new LatestUserQueryResolver();
+  private readonly intentRouter = new IntentRouter();
   private readonly contextCompactionService: ContextCompactionService;
 
   constructor(
@@ -40,7 +44,15 @@ export class AgentChatStreamSession {
     try {
       const eventWriter = new AgentStreamEventWriter(writer);
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
-      const contextMessages = await this.contextPipeline.build(safeChatRequest);
+      const route = this.intentRouter.route(this.latestUserQueryResolver.resolve(safeChatRequest), [
+        "retrieval",
+        "search",
+        "memory_read",
+        "memory_write",
+        "skill",
+        "student"
+      ]);
+      const contextMessages = await this.contextPipeline.build(safeChatRequest, route);
       const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
       await this.openAiToolFacade.listTools();
       const loop = new AgentLoopFactory(
@@ -51,7 +63,12 @@ export class AgentChatStreamSession {
         this.contextPipeline
       ).create(
         { ...safeChatRequest, messages: modelMessages },
-        { maxTurns: 3, signal: writer.signal, writer: (event) => eventWriter.write(event) }
+        {
+          maxTurns: 3,
+          signal: writer.signal,
+          writer: (event) => eventWriter.write(event),
+          transformContext: (messages, signal) => this.contextPipeline.transform(messages, signal, route)
+        }
       );
       const loopResult = await loop.run();
       await eventWriter.flushSafetyFilter();
