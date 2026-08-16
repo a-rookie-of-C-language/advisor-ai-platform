@@ -1,6 +1,7 @@
 import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
 import type { OpenAIChatStreamEvent } from "../../../protocol/events/model/openai/OpenAIChatStreamEvent.js";
+import type { TaskPlan } from "../../../planning/model/TaskPlan.js";
 
 export type AgentLoopToolCall = {
   id: string;
@@ -74,6 +75,7 @@ export interface AgentLoopOptions {
   maxTurns?: number;
   signal?: AbortSignal;
   onEvent?: (event: AgentLoopEvent) => void | Promise<void>;
+  toolPlan?: TaskPlan;
 }
 
 export interface AgentLoopResult {

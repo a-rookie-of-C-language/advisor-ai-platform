@@ -9,8 +9,11 @@ import { AgentLoop } from "../core/AgentLoop.js";
 import type { AgentLoopOptions } from "../model/AgentLoopOptions.js";
 import { ProviderError } from "../../../provider/model/ProviderError.js";
 import { isProviderErrorCode } from "../../../provider/model/ProviderErrorCode.js";
+import { TaskPlanner } from "../../../planning/core/TaskPlanner.js";
 
 export class AgentLoopFactory {
+  private readonly taskPlanner = new TaskPlanner();
+
   constructor(
     private readonly config: AgentConfig,
     private readonly core: AgentCoreClient,
@@ -22,7 +25,10 @@ export class AgentLoopFactory {
   create(chatRequest: ChatStreamRequest, options?: Partial<AgentLoopOptions>): AgentLoop {
     const factory = this;
     const streamFn: AgentLoopOptions["stream"] = async function* (messages, signal) {
-      const tools = await factory.openAiToolFacade.listTools();
+      const tools = factory.taskPlanner.prioritizeTools(
+        await factory.openAiToolFacade.listTools(),
+        options?.toolPlan
+      );
       if (factory.core.canStream()) {
         let streamStarted = false;
         try {
