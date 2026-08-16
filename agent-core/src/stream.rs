@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::Value;
 use std::io::{BufRead, BufReader, Write};
 use std::time::Duration;
 
-use crate::provider::ProviderStreamChunk;
+use crate::provider::{ProviderErrorCode, ProviderStreamChunk};
 
 #[derive(Debug, Deserialize)]
 struct StreamChatRequest {
@@ -30,18 +30,34 @@ impl OpenAiStreamRunner {
             .timeout(Duration::from_millis(request.request_timeout_ms))
             .build()
             .context("failed to build OpenAI HTTP client")?;
-        let response = client
+        let response = match client
             .post(&request.url)
             .bearer_auth(&request.api_key)
             .json(&body)
             .send()
-            .context("failed to send OpenAI stream request")?;
+        {
+            Ok(response) => response,
+            Err(error) => {
+                let code = if error.is_timeout() {
+                    ProviderErrorCode::Timeout
+                } else {
+                    ProviderErrorCode::Transport
+                };
+                Self::write_error(code, error.to_string())?;
+                return Ok(());
+            }
+        };
 
         if !response.status().is_success() {
-            return Err(anyhow!(
-                "OpenAI stream request failed: HTTP {}",
-                response.status()
-            ));
+            let status = response.status();
+            let code = match status.as_u16() {
+                401 | 403 => ProviderErrorCode::Auth,
+                408 | 429 => ProviderErrorCode::RateLimit,
+                400..=499 => ProviderErrorCode::InvalidRequest,
+                _ => ProviderErrorCode::Server,
+            };
+            Self::write_error(code, format!("OpenAI stream request failed: HTTP {status}"))?;
+            return Ok(());
         }
 
         Self::write_events(response)
@@ -64,6 +80,24 @@ impl OpenAiStreamRunner {
     fn write_events<R: std::io::Read>(reader: R) -> Result<()> {
         let mut output = io::stdout().lock();
         Self::write_events_to(BufReader::new(reader), &mut output)
+    }
+
+    fn write_error(code: ProviderErrorCode, message: String) -> Result<()> {
+        let mut output = io::stdout().lock();
+        let code_value =
+            serde_json::to_value(code).context("failed to serialize provider error code")?;
+        Self::write_event(
+            &mut output,
+            ProviderStreamChunk::Error {
+                code: code_value
+                    .as_str()
+                    .expect("provider error code is a string")
+                    .to_owned(),
+                message,
+                retryable: code.retryable(),
+            },
+        )?;
+        output.flush().context("failed to flush provider error")
     }
 
     fn write_events_to<R: BufRead, W: Write>(reader: R, output: &mut W) -> Result<()> {

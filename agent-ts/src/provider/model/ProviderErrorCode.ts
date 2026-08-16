@@ -13,6 +13,10 @@ export const PROVIDER_ERROR_CODES = [
 
 export type ProviderErrorCode = (typeof PROVIDER_ERROR_CODES)[number];
 
+export function isProviderErrorCode(value: string): value is ProviderErrorCode {
+  return (PROVIDER_ERROR_CODES as readonly string[]).includes(value);
+}
+
 export function isRetryableProviderError(code: ProviderErrorCode): boolean {
   return code === "RATE_LIMIT" || code === "SERVER" || code === "TIMEOUT" ||
     code === "TRANSPORT" || code === "EMPTY_RESPONSE";

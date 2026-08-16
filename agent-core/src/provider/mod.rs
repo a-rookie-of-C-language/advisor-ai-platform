@@ -1,6 +1,8 @@
 mod error;
 mod retry;
 
+pub(crate) use error::ProviderErrorCode;
+
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -17,5 +19,10 @@ pub(crate) enum ProviderStreamChunk {
     },
     Finish {
         reason: Option<String>,
+    },
+    Error {
+        code: String,
+        message: String,
+        retryable: bool,
     },
 }
