@@ -16,6 +16,9 @@ import { LatestUserQueryResolver } from "../../../../common/request/resolver/Lat
 import { IntentRouter } from "../../../../routing/core/IntentRouter.js";
 import { TaskPlanner } from "../../../../planning/core/TaskPlanner.js";
 import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
+import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemoryStore.js";
+import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
+import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -25,6 +28,7 @@ export class AgentChatStreamSession {
   private readonly intentRouter = new IntentRouter();
   private readonly taskPlanner = new TaskPlanner();
   private readonly toolExplorer = new ToolExplorer();
+  private readonly failureMemorySupport: FailureMemorySupport;
   private readonly contextCompactionService: ContextCompactionService;
 
   constructor(
@@ -41,14 +45,25 @@ export class AgentChatStreamSession {
       config.contextReserveTokens,
       config.contextKeepLastMessages
     );
+    this.failureMemorySupport = new FailureMemorySupport(
+      new FailureMemoryStore(config.failureMemoryPath),
+      config.failureMemoryScoreThreshold
+    );
   }
 
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
+    const traceEvents: AgentLoopEvent[] = [];
+    let failureQuery = "";
     await writer.start();
     try {
       const eventWriter = new AgentStreamEventWriter(writer);
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
-      const route = this.intentRouter.route(this.latestUserQueryResolver.resolve(safeChatRequest), [
+      failureQuery = this.latestUserQueryResolver.resolve(safeChatRequest);
+      const failureAwareChatRequest = {
+        ...safeChatRequest,
+        messages: this.failureMemorySupport.injectAvoidancePrompt(safeChatRequest.messages, failureQuery)
+      };
+      const route = this.intentRouter.route(failureQuery, [
         "retrieval",
         "search",
         "memory_read",
@@ -56,7 +71,7 @@ export class AgentChatStreamSession {
         "skill",
         "student"
       ]);
-      const contextMessages = await this.contextPipeline.build(safeChatRequest, route);
+      const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
       const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
       const availableTools = await this.openAiToolFacade.listTools();
       const exploration = this.toolExplorer.explore(
@@ -82,11 +97,13 @@ export class AgentChatStreamSession {
           maxTurns: 3,
           signal: writer.signal,
           writer: (event) => eventWriter.write(event),
+          onEvent: (event) => { traceEvents.push(event); },
           transformContext: (messages, signal) => this.contextPipeline.transform(messages, signal, route),
           toolPlan: taskPlan
         }
       );
       const loopResult = await loop.run();
+      this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       await eventWriter.flushSafetyFilter();
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, loopResult.emitted)) {
         await eventWriter.writeMissingOpenAiApiKeyFallback();
@@ -94,6 +111,7 @@ export class AgentChatStreamSession {
       await writer.done("stream_finished");
       await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, loopResult.answer);
     } catch (error) {
+      this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       if (writer.signal?.aborted) {
         return;
       }

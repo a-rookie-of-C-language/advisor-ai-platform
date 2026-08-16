@@ -37,7 +37,9 @@ export class AgentConfigFactory {
       mcpServers: this.envReader.readString("MCP_SERVERS", ""),
       contextWindowTokens: this.envReader.readInt("AGENT_CONTEXT_WINDOW_TOKENS", 12000),
       contextReserveTokens: this.envReader.readInt("AGENT_CONTEXT_RESERVE_TOKENS", 2000),
-      contextKeepLastMessages: this.envReader.readInt("AGENT_CONTEXT_KEEP_LAST_MESSAGES", 12)
+      contextKeepLastMessages: this.envReader.readInt("AGENT_CONTEXT_KEEP_LAST_MESSAGES", 12),
+      failureMemoryPath: this.envReader.readString("AGENT_FAILURE_MEMORY_PATH", ".agent-data/failure-memory.jsonl"),
+      failureMemoryScoreThreshold: this.envReader.readInt("AGENT_FAILURE_MEMORY_SCORE_THRESHOLD", 7)
     };
   }
 }
