@@ -23,6 +23,7 @@ export class AgentLoopFactory {
       const tools = await factory.openAiToolFacade.listTools();
       if (factory.core.canStream()) {
         try {
+          const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
           for await (const event of factory.core.streamChat(
             {
               url: `${factory.config.openAiBaseUrl}/chat/completions`,
@@ -35,8 +36,27 @@ export class AgentLoopFactory {
             },
             signal
           )) {
-            if (event.type === "delta") {
+            if (event.type === "text_delta" || event.type === "delta") {
               yield { type: "delta", text: event.text } as const;
+            } else if (event.type === "tool_call_delta") {
+              const current = toolCalls.get(event.index) || { id: "", name: "", arguments: "" };
+              current.id += event.id || "";
+              current.name += event.name || "";
+              current.arguments += event.arguments_delta;
+              toolCalls.set(event.index, current);
+            } else if (event.type === "finish") {
+              for (const [, toolCall] of [...toolCalls.entries()].sort(([left], [right]) => left - right)) {
+                let toolArgs: JsonObject = {};
+                if (toolCall.arguments.trim()) {
+                  toolArgs = JSON.parse(toolCall.arguments) as JsonObject;
+                }
+                yield {
+                  type: "tool_call",
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.name,
+                  toolArgs
+                } as const;
+              }
             } else if (event.type === "tool_call") {
               yield {
                 type: "tool_call",

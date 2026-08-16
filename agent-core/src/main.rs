@@ -4,6 +4,7 @@ use command::runner::CoreCommandRunner;
 
 mod command;
 mod protocol;
+mod provider;
 mod sse;
 mod stream;
 

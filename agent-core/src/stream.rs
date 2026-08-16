@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Context, Result};
 use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
-use std::collections::BTreeMap;
+use serde::Deserialize;
+use serde_json::Value;
 use std::io::{BufRead, BufReader, Write};
 use std::time::Duration;
+
+use crate::provider::ProviderStreamChunk;
 
 #[derive(Debug, Deserialize)]
 struct StreamChatRequest {
@@ -16,29 +17,6 @@ struct StreamChatRequest {
     messages: Vec<Value>,
     #[serde(default)]
     tools: Vec<Value>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum StreamEvent {
-    Delta {
-        text: String,
-    },
-    ToolCall {
-        tool_call_id: String,
-        tool_name: String,
-        tool_args: Map<String, Value>,
-    },
-    Done {
-        finish_reason: Option<String>,
-    },
-}
-
-#[derive(Default)]
-struct ToolCallAccumulator {
-    id: String,
-    name: String,
-    arguments: String,
 }
 
 pub(crate) struct OpenAiStreamRunner;
@@ -89,7 +67,6 @@ impl OpenAiStreamRunner {
     }
 
     fn write_events_to<R: BufRead, W: Write>(reader: R, output: &mut W) -> Result<()> {
-        let mut tool_calls = BTreeMap::new();
         let mut finish_reason = None;
         for line in reader.lines() {
             let line = line.context("failed to read OpenAI stream")?;
@@ -105,56 +82,50 @@ impl OpenAiStreamRunner {
                 if !text.is_empty() {
                     Self::write_event(
                         output,
-                        StreamEvent::Delta {
+                        ProviderStreamChunk::TextDelta {
                             text: text.to_owned(),
                         },
                     )?;
                 }
             }
-            Self::merge_tool_calls(&mut tool_calls, &chunk);
+            Self::write_tool_call_deltas(output, &chunk)?;
             if let Some(reason) = chunk["choices"][0]["finish_reason"].as_str() {
                 finish_reason = Some(reason.to_owned());
             }
         }
-        for (_, tool_call) in tool_calls {
-            let tool_args = if tool_call.arguments.trim().is_empty() {
-                Map::new()
-            } else {
-                serde_json::from_str(&tool_call.arguments)
-                    .context("invalid OpenAI tool call arguments")?
-            };
-            Self::write_event(
-                output,
-                StreamEvent::ToolCall {
-                    tool_call_id: tool_call.id,
-                    tool_name: tool_call.name,
-                    tool_args,
-                },
-            )?;
-        }
-        Self::write_event(output, StreamEvent::Done { finish_reason })?;
+        Self::write_event(
+            output,
+            ProviderStreamChunk::Finish {
+                reason: finish_reason,
+            },
+        )?;
         output.flush().context("failed to flush stream events")?;
         Ok(())
     }
 
-    fn merge_tool_calls(tool_calls: &mut BTreeMap<usize, ToolCallAccumulator>, chunk: &Value) {
+    fn write_tool_call_deltas(output: &mut impl Write, chunk: &Value) -> Result<()> {
         let Some(calls) = chunk["choices"][0]["delta"]["tool_calls"].as_array() else {
-            return;
+            return Ok(());
         };
         for call in calls {
             let index = call["index"].as_u64().unwrap_or(0) as usize;
-            let current = tool_calls.entry(index).or_default();
-            current.id.push_str(call["id"].as_str().unwrap_or_default());
-            current
-                .name
-                .push_str(call["function"]["name"].as_str().unwrap_or_default());
-            current
-                .arguments
-                .push_str(call["function"]["arguments"].as_str().unwrap_or_default());
+            Self::write_event(
+                output,
+                ProviderStreamChunk::ToolCallDelta {
+                    index,
+                    id: call["id"].as_str().map(str::to_owned),
+                    name: call["function"]["name"].as_str().map(str::to_owned),
+                    arguments_delta: call["function"]["arguments"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_owned(),
+                },
+            )?;
         }
+        Ok(())
     }
 
-    fn write_event(output: &mut impl Write, event: StreamEvent) -> Result<()> {
+    fn write_event(output: &mut impl Write, event: ProviderStreamChunk) -> Result<()> {
         serde_json::to_writer(&mut *output, &event).context("failed to serialize stream event")?;
         output
             .write_all(b"\n")
@@ -184,8 +155,8 @@ mod tests {
             .lines()
             .map(|line| serde_json::from_str(line).expect("output should be JSON"))
             .collect();
-        assert_eq!(events[0], json!({"type": "delta", "text": "hi"}));
-        assert_eq!(events[1], json!({"type": "done", "finish_reason": "stop"}));
+        assert_eq!(events[0], json!({"type": "text_delta", "text": "hi"}));
+        assert_eq!(events[1], json!({"type": "finish", "reason": "stop"}));
     }
 
     #[test]
@@ -209,16 +180,24 @@ mod tests {
         assert_eq!(
             events[0],
             json!({
-                "type": "tool_call",
-                "tool_call_id": "call_1",
-                "tool_name": "search",
-                "tool_args": {"q": "hello"}
+                "type": "tool_call_delta",
+                "index": 0,
+                "id": "call_",
+                "name": "search",
+                "arguments_delta": "{\"q\":\"hel"
             })
         );
         assert_eq!(
             events[1],
-            json!({"type": "done", "finish_reason": "tool_calls"})
+            json!({
+                "type": "tool_call_delta",
+                "index": 0,
+                "id": "1",
+                "name": null,
+                "arguments_delta": "lo\"}"
+            })
         );
+        assert_eq!(events[2], json!({"type": "finish", "reason": "tool_calls"}));
     }
 
     #[test]
