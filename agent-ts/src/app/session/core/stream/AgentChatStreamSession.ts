@@ -10,10 +10,12 @@ import type { AgentOpenAiToolFacade } from "../../../openAi/core/AgentOpenAiTool
 import type { AgentContextPipeline } from "../pipeline/AgentContextPipeline.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "../../support/fallback/AgentMissingOpenAiApiKeyFallbackGate.js";
 import { AgentStreamErrorMessageResolver } from "../../support/error/AgentStreamErrorMessageResolver.js";
+import { InputSafetySanitizer } from "../../../../safety/input/InputSafetySanitizer.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
   private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
+  private readonly inputSafetySanitizer = new InputSafetySanitizer();
 
   constructor(
     private readonly openAiApiKey: string,
@@ -29,7 +31,8 @@ export class AgentChatStreamSession {
     await writer.start();
     try {
       const eventWriter = new AgentStreamEventWriter(writer);
-      const modelMessages = await this.contextPipeline.build(chatRequest);
+      const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
+      const modelMessages = await this.contextPipeline.build(safeChatRequest);
       await this.openAiToolFacade.listTools();
       const loop = new AgentLoopFactory(
         this.config,
@@ -38,10 +41,11 @@ export class AgentChatStreamSession {
         this.openAiToolFacade,
         this.contextPipeline
       ).create(
-        { ...chatRequest, messages: modelMessages },
+        { ...safeChatRequest, messages: modelMessages },
         { maxTurns: 3, signal: writer.signal, writer: (event) => eventWriter.write(event) }
       );
       const loopResult = await loop.run();
+      await eventWriter.flushSafetyFilter();
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, loopResult.emitted)) {
         await eventWriter.writeMissingOpenAiApiKeyFallback();
       }
