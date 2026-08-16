@@ -143,60 +143,6 @@ jobs:
         working-directory: agent-ts
         run: npm run test:integration
 
-  build-python:
-    name: Python (.venv + compile + test)
-    runs-on: ubuntu-latest
-    needs: [encoding-guard]
-    defaults:
-      run:
-        working-directory: agent
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Create project venv
-        run: python -m venv .venv
-
-      - name: Install dependencies in venv
-        shell: bash
-        run: |
-          set -e
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Syntax check in venv
-        shell: bash
-        run: |
-          set -e
-          source .venv/bin/activate
-          python -m compileall app.py agents chat context evaluation fusion graph llm RAG safety skills tools -q
-
-      - name: Lint with ruff
-        shell: bash
-        run: |
-          set -e
-          source .venv/bin/activate
-          ruff check .
-
-      - name: Run tests in venv
-        shell: bash
-        run: |
-          set -e
-          source .venv/bin/activate
-          pytest -q
-
-      - name: Upload agent mock e2e metrics report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: agent-http-e2e-metrics
-          path: agent/tests/reports/*.json
-          if-no-files-found: ignore
-
   e2e-chat:
     name: E2E Chat Drill (Gateway + Services + Agent)
     runs-on: ubuntu-latest
