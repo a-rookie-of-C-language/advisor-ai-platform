@@ -2,9 +2,12 @@ import type { OpenAIToolCall } from "../../../openai/tools/runtime/model/call/Op
 import { OpenAIToolConversationAppender } from "../../../openai/tools/runtime/state/conversation/OpenAIToolConversationAppender.js";
 import type { OpenAIChatStreamEvent } from "../../../protocol/events/model/openai/OpenAIChatStreamEvent.js";
 import type { AgentLoopOptions, AgentLoopResult, AgentLoopToolCall, AgentLoopToolResult } from "../model/AgentLoopOptions.js";
+import { ToolTimeoutPolicy } from "../timeout/ToolTimeoutPolicy.js";
 
 export class AgentLoop {
   constructor(private readonly options: AgentLoopOptions) {}
+
+  private readonly toolTimeoutPolicy = new ToolTimeoutPolicy();
 
   async run(): Promise<AgentLoopResult> {
     const { onEvent } = this.options;
@@ -42,44 +45,54 @@ export class AgentLoop {
         function: { name: toolCall.name, arguments: JSON.stringify(toolCall.args) }
       }));
       appender.appendAssistantToolCalls(conversation as unknown as Parameters<typeof appender.appendAssistantToolCalls>[0], openAiToolCalls);
-      for (const toolCall of toolCalls) {
-        if (this.options.signal?.aborted) {
-          throw new Error("Agent stream aborted");
-        }
-        const allowed = this.options.beforeToolCall
-          ? await this.options.beforeToolCall({ toolCall, signal: this.options.signal })
-          : true;
-        let result: AgentLoopToolResult;
-        if (allowed === false) {
-          result = {
-            toolCallId: toolCall.id,
-            toolName: toolCall.name,
-            output: JSON.stringify({ ok: false, status: "blocked", message: "tool blocked by policy", items: [] }),
-            success: false
-          };
-        } else {
-          const toolResult = await this.options.executeTool(
-            this.options.chatRequest,
-            toolCall.name,
-            toolCall.args,
-            this.options.signal
-          );
+      const results = await Promise.all(
+        toolCalls.map(async (toolCall): Promise<AgentLoopToolResult> => {
           if (this.options.signal?.aborted) {
             throw new Error("Agent stream aborted");
           }
-          result = {
-            toolCallId: toolCall.id,
-            toolName: toolCall.name,
-            output: toolResult.output,
-            success: toolResult.success
-          };
-          if (this.options.afterToolCall) {
-            const rewritten = await this.options.afterToolCall({ toolCall, result, signal: this.options.signal });
-            if (rewritten) {
-              result = rewritten;
+          const allowed = this.options.beforeToolCall
+            ? await this.options.beforeToolCall({ toolCall, signal: this.options.signal })
+            : true;
+          let result: AgentLoopToolResult;
+          if (allowed === false) {
+            result = {
+              toolCallId: toolCall.id,
+              toolName: toolCall.name,
+              output: JSON.stringify({ ok: false, status: "blocked", message: "tool blocked by policy", items: [] }),
+              success: false
+            };
+          } else {
+            const toolResult = await this.toolTimeoutPolicy.execute(
+              this.options.toolTimeoutMs?.(toolCall.name),
+              this.options.signal,
+              (toolSignal) => this.options.executeTool(
+                this.options.chatRequest,
+                toolCall.name,
+                toolCall.args,
+                toolSignal
+              )
+            );
+            if (this.options.signal?.aborted) {
+              throw new Error("Agent stream aborted");
+            }
+            result = {
+              toolCallId: toolCall.id,
+              toolName: toolCall.name,
+              output: toolResult.output,
+              success: toolResult.success
+            };
+            if (this.options.afterToolCall) {
+              const rewritten = await this.options.afterToolCall({ toolCall, result, signal: this.options.signal });
+              if (rewritten) {
+                result = rewritten;
+              }
             }
           }
-        }
+          return result;
+        })
+      );
+      for (const [index, toolCall] of toolCalls.entries()) {
+        const result = results[index];
         const openAiToolCall = openAiToolCalls.find((candidate) => candidate.id === toolCall.id);
         if (openAiToolCall) {
           appender.appendToolResult(

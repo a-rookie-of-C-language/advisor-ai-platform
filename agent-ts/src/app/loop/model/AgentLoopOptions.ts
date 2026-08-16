@@ -45,6 +45,7 @@ export interface AgentLoopOptions {
     args: JsonObject,
     signal?: AbortSignal
   ) => Promise<{ output: string; success: boolean }>;
+  toolTimeoutMs?: (toolName: string) => number | undefined;
   chatRequest: ChatStreamRequest;
   transformContext?: (
     messages: ChatStreamRequest["messages"],
