@@ -9,7 +9,6 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-$env:AGENT_MODE = "api"
 $env:AGENT_API_HOST = "127.0.0.1"
 $env:AGENT_API_PORT = "$Port"
 $env:AGENT_API_TOKEN = $Token
