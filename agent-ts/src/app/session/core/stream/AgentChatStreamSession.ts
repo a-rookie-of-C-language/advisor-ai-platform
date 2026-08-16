@@ -14,6 +14,7 @@ import { InputSafetySanitizer } from "../../../../safety/input/InputSafetySaniti
 import { ContextCompactionService } from "../../../../context/compaction/core/ContextCompactionService.js";
 import { LatestUserQueryResolver } from "../../../../common/request/resolver/LatestUserQueryResolver.js";
 import { IntentRouter } from "../../../../routing/core/IntentRouter.js";
+import { TaskPlanner } from "../../../../planning/core/TaskPlanner.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -21,6 +22,7 @@ export class AgentChatStreamSession {
   private readonly inputSafetySanitizer = new InputSafetySanitizer();
   private readonly latestUserQueryResolver = new LatestUserQueryResolver();
   private readonly intentRouter = new IntentRouter();
+  private readonly taskPlanner = new TaskPlanner();
   private readonly contextCompactionService: ContextCompactionService;
 
   constructor(
@@ -54,7 +56,12 @@ export class AgentChatStreamSession {
       ]);
       const contextMessages = await this.contextPipeline.build(safeChatRequest, route);
       const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
-      await this.openAiToolFacade.listTools();
+      const availableTools = await this.openAiToolFacade.listTools();
+      const taskPlan = this.taskPlanner.plan({
+        userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
+        availableTools,
+        routeCategories: [...route.categories]
+      });
       const loop = new AgentLoopFactory(
         this.config,
         this.core,
@@ -67,7 +74,8 @@ export class AgentChatStreamSession {
           maxTurns: 3,
           signal: writer.signal,
           writer: (event) => eventWriter.write(event),
-          transformContext: (messages, signal) => this.contextPipeline.transform(messages, signal, route)
+          transformContext: (messages, signal) => this.contextPipeline.transform(messages, signal, route),
+          toolPlan: taskPlan
         }
       );
       const loopResult = await loop.run();
