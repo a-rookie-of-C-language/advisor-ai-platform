@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { AgentLoop } from "../dist/app/loop/core/AgentLoop.js";
+import { RegexSafetyFilter } from "../dist/safety/regex/RegexSafetyFilter.js";
+import { StreamingRegexSafetyFilter } from "../dist/safety/streaming/StreamingRegexSafetyFilter.js";
 
 const request = { messages: [{ role: "user", content: "run tools" }] };
 
@@ -58,4 +60,14 @@ test("declared tool timeout returns structured TOOL_TIMEOUT", async () => {
   await loop.run();
   assert.equal(results.length, 2);
   assert.ok(results.every((result) => result.code === "TOOL_TIMEOUT"));
+});
+
+test("safety filters redact PII and secrets across stream chunk boundaries", () => {
+  const filter = new RegexSafetyFilter();
+  assert.equal(filter.redact("联系 13812345678 或 test@example.com"), "联系 [MASK:PHONE] 或 [MASK:EMAIL]");
+  assert.equal(filter.redact("token=sk-test12345678901234567890"), "[MASK:SECRET]");
+
+  const streaming = new StreamingRegexSafetyFilter(filter);
+  const output = streaming.processChunk("token=sk-") + streaming.processChunk("test12345678901234567890") + streaming.flush();
+  assert.equal(output, "[MASK:SECRET]");
 });
