@@ -27,4 +27,6 @@ export interface AgentConfigValues {
   contextWindowTokens: number;
   contextReserveTokens: number;
   contextKeepLastMessages: number;
+  failureMemoryPath: string;
+  failureMemoryScoreThreshold: number;
 }

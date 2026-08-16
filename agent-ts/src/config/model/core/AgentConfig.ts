@@ -30,6 +30,8 @@ export class AgentConfig {
   readonly contextWindowTokens: number;
   readonly contextReserveTokens: number;
   readonly contextKeepLastMessages: number;
+  readonly failureMemoryPath: string;
+  readonly failureMemoryScoreThreshold: number;
 
   constructor(values: AgentConfigValues) {
     this.host = values.host;
@@ -60,6 +62,8 @@ export class AgentConfig {
     this.contextWindowTokens = values.contextWindowTokens;
     this.contextReserveTokens = values.contextReserveTokens;
     this.contextKeepLastMessages = values.contextKeepLastMessages;
+    this.failureMemoryPath = values.failureMemoryPath;
+    this.failureMemoryScoreThreshold = values.failureMemoryScoreThreshold;
   }
 
   static fromEnv(): AgentConfig {
