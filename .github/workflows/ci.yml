@@ -200,7 +200,7 @@ jobs:
   e2e-chat:
     name: E2E Chat Drill (Gateway + Services + Agent)
     runs-on: ubuntu-latest
-    needs: [build-java, build-frontend, build-python]
+    needs: [build-java, build-frontend, build-agent]
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -324,6 +324,14 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Install agent TypeScript dependencies
+        working-directory: agent-ts
+        run: npm ci
+
+      - name: Build agent TypeScript
+        working-directory: agent-ts
+        run: npm run build
+
       - name: Install backend modules to local m2
         shell: bash
         run: |
@@ -437,15 +445,11 @@ jobs:
           cd backend/risk-control-service
           nohup env SERVER_PORT=8086 SPRING_CLOUD_NACOS_DISCOVERY_IP=127.0.0.1 SPRING_CLOUD_NACOS_DISCOVERY_PORT=8086 ADVISOR_JWT_SECRET=${JWT_SECRET} KAFKA_SERVERS=127.0.0.1:9092 REDIS_HOST=127.0.0.1 REDIS_PORT=6379 mvn -q spring-boot:run > ../../risk-control-e2e.log 2>&1 &
 
-      - name: Start agent (.venv)
+      - name: Start agent (TypeScript + Rust)
         shell: bash
         run: |
-          cd agent
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          nohup .venv/bin/python app.py --mode api > ../agent-e2e.log 2>&1 &
+          cd agent-ts
+          nohup node dist/main.js > ../agent-e2e.log 2>&1 &
 
       - name: Wait for dependencies and health
         shell: bash
