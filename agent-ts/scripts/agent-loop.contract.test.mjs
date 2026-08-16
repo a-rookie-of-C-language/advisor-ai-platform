@@ -22,6 +22,7 @@ test("tool results are executed concurrently and written back in call order", as
   const bothStarted = new Promise((resolve) => { release = resolve; });
   const executionOrder = [];
   const writeOrder = [];
+  const lifecycle = [];
   const loop = new AgentLoop({
     chatRequest: request,
     maxTurns: 1,
@@ -35,12 +36,28 @@ test("tool results are executed concurrently and written back in call order", as
     },
     writer: async (event) => {
       if (event.type === "tool_result") writeOrder.push(event.toolName);
-    }
+    },
+    onEvent: async (event) => lifecycle.push(event)
   });
 
   await loop.run();
   assert.deepEqual(executionOrder.sort(), ["slow_a", "slow_b"]);
   assert.deepEqual(writeOrder, ["slow_a", "slow_b"]);
+  assert.deepEqual(
+    lifecycle.map((event) => event.type),
+    [
+      "agent_start",
+      "turn_start",
+      "provider_request_start",
+      "provider_request_end",
+      "tool_execution_start",
+      "tool_execution_start",
+      "tool_execution_end",
+      "tool_execution_end",
+      "turn_end",
+      "agent_end"
+    ]
+  );
 });
 
 test("declared tool timeout returns structured TOOL_TIMEOUT", async () => {

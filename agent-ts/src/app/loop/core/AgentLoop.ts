@@ -25,15 +25,34 @@ export class AgentLoop {
       turns++;
       await onEvent?.({ type: "turn_start", turn: turns });
       const toolCalls: AgentLoopToolCall[] = [];
-      for await (const event of this.options.stream(conversation, this.options.signal)) {
-        if (event.type === "delta") {
-          emitted = true;
-          answerText += event.text;
-          await this.options.writer?.(event);
-        } else if (event.type === "tool_call") {
-          toolCalls.push({ id: event.toolCallId, name: event.toolName, args: event.toolArgs });
-          await this.options.writer?.(event);
+      const providerStartedAt = Date.now();
+      await onEvent?.({ type: "provider_request_start", turn: turns });
+      try {
+        for await (const event of this.options.stream(conversation, this.options.signal)) {
+          if (event.type === "delta") {
+            emitted = true;
+            answerText += event.text;
+            await this.options.writer?.(event);
+          } else if (event.type === "tool_call") {
+            toolCalls.push({ id: event.toolCallId, name: event.toolName, args: event.toolArgs });
+            await this.options.writer?.(event);
+          }
         }
+        await onEvent?.({
+          type: "provider_request_end",
+          turn: turns,
+          status: "success",
+          durationMs: Date.now() - providerStartedAt
+        });
+      } catch (error) {
+        await onEvent?.({
+          type: "provider_request_end",
+          turn: turns,
+          status: this.options.signal?.aborted ? "aborted" : "error",
+          durationMs: Date.now() - providerStartedAt,
+          errorCode: this.errorCode(error)
+        });
+        throw error;
       }
       if (toolCalls.length === 0) {
         await onEvent?.({ type: "turn_end", turn: turns });
@@ -47,6 +66,15 @@ export class AgentLoop {
       appender.appendAssistantToolCalls(conversation as unknown as Parameters<typeof appender.appendAssistantToolCalls>[0], openAiToolCalls);
       const results = await Promise.all(
         toolCalls.map(async (toolCall): Promise<AgentLoopToolResult> => {
+          const toolStartedAt = Date.now();
+          await onEvent?.({
+            type: "tool_execution_start",
+            turn: turns,
+            toolCallId: toolCall.id,
+            toolName: toolCall.name
+          });
+          let toolResultForEvent: AgentLoopToolResult | undefined;
+          try {
           if (this.options.signal?.aborted) {
             throw new Error("Agent stream aborted");
           }
@@ -88,7 +116,18 @@ export class AgentLoop {
               }
             }
           }
+          toolResultForEvent = result;
           return result;
+          } finally {
+            await onEvent?.({
+              type: "tool_execution_end",
+              turn: turns,
+              toolCallId: toolCall.id,
+              toolName: toolCall.name,
+              success: toolResultForEvent?.success ?? false,
+              durationMs: Date.now() - toolStartedAt
+            });
+          }
         })
       );
       for (const [index, toolCall] of toolCalls.entries()) {
@@ -117,5 +156,11 @@ export class AgentLoop {
     }
     await onEvent?.({ type: "agent_end", turns, answer: answerText });
     return { answer: answerText, emitted, turns };
+  }
+
+  private errorCode(error: unknown): string | undefined {
+    if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+    const code = (error as { code?: unknown }).code;
+    return typeof code === "string" ? code : undefined;
   }
 }
