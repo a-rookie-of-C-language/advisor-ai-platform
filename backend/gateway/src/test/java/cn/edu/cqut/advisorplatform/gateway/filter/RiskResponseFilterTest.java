@@ -58,6 +58,20 @@ class RiskResponseFilterTest {
   }
 
   @Test
+  void shouldSkipRagDocumentUploadResponseRiskCheck() {
+    when(exchange.getRequest()).thenReturn(request);
+    when(request.getURI())
+        .thenReturn(URI.create("http://localhost/api/rag/knowledge-bases/1/documents"));
+    when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+    Mono<Void> result = riskResponseFilter.filter(exchange, chain);
+
+    StepVerifier.create(result).verifyComplete();
+    verify(chain).filter(exchange);
+    verifyNoInteractions(support);
+  }
+
+  @Test
   void shouldDecorateResponseForPostOnRiskPaths() {
     when(exchange.getRequest()).thenReturn(request);
     when(request.getURI()).thenReturn(URI.create("http://localhost/api/chat/message"));
