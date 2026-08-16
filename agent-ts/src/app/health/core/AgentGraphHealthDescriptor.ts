@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
+import { GRAPH_NODE_NAMES } from "../../../graph/model/GraphNodeName.js";
 
 export class AgentGraphHealthDescriptor {
   describe(): JsonObject {
@@ -19,6 +20,7 @@ export class AgentGraphHealthDescriptor {
         "generate",
         "finalize"
       ],
+      workflow_nodes: [...GRAPH_NODE_NAMES],
       runtime: "typescript",
       core: "rust"
     };
