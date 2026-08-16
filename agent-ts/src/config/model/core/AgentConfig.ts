@@ -26,6 +26,9 @@ export class AgentConfig {
   readonly webSearchMaxResults: number;
   readonly mcpToolsEnabled: boolean;
   readonly mcpServers: string;
+  readonly contextWindowTokens: number;
+  readonly contextReserveTokens: number;
+  readonly contextKeepLastMessages: number;
 
   constructor(values: AgentConfigValues) {
     this.host = values.host;
@@ -52,6 +55,9 @@ export class AgentConfig {
     this.webSearchMaxResults = values.webSearchMaxResults;
     this.mcpToolsEnabled = values.mcpToolsEnabled;
     this.mcpServers = values.mcpServers;
+    this.contextWindowTokens = values.contextWindowTokens;
+    this.contextReserveTokens = values.contextReserveTokens;
+    this.contextKeepLastMessages = values.contextKeepLastMessages;
   }
 
   static fromEnv(): AgentConfig {

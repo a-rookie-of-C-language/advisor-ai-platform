@@ -23,4 +23,7 @@ export interface AgentConfigValues {
   webSearchMaxResults: number;
   mcpToolsEnabled: boolean;
   mcpServers: string;
+  contextWindowTokens: number;
+  contextReserveTokens: number;
+  contextKeepLastMessages: number;
 }

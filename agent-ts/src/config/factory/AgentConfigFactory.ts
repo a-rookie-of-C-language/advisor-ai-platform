@@ -29,7 +29,10 @@ export class AgentConfigFactory {
       webSearchUrl: this.envReader.readString("TAVILY_SEARCH_URL", "https://api.tavily.com/search"),
       webSearchMaxResults: this.envReader.readInt("WEB_SEARCH_MAX_RESULTS", 5),
       mcpToolsEnabled: this.envReader.readBool("MCP_TOOLS", false),
-      mcpServers: this.envReader.readString("MCP_SERVERS", "")
+      mcpServers: this.envReader.readString("MCP_SERVERS", ""),
+      contextWindowTokens: this.envReader.readInt("AGENT_CONTEXT_WINDOW_TOKENS", 12000),
+      contextReserveTokens: this.envReader.readInt("AGENT_CONTEXT_RESERVE_TOKENS", 2000),
+      contextKeepLastMessages: this.envReader.readInt("AGENT_CONTEXT_KEEP_LAST_MESSAGES", 12)
     };
   }
 }
