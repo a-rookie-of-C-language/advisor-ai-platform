@@ -11,11 +11,13 @@ import type { AgentContextPipeline } from "../pipeline/AgentContextPipeline.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "../../support/fallback/AgentMissingOpenAiApiKeyFallbackGate.js";
 import { AgentStreamErrorMessageResolver } from "../../support/error/AgentStreamErrorMessageResolver.js";
 import { InputSafetySanitizer } from "../../../../safety/input/InputSafetySanitizer.js";
+import { ContextCompactionService } from "../../../../context/compaction/core/ContextCompactionService.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
   private readonly streamErrorMessageResolver = new AgentStreamErrorMessageResolver();
   private readonly inputSafetySanitizer = new InputSafetySanitizer();
+  private readonly contextCompactionService: ContextCompactionService;
 
   constructor(
     private readonly openAiApiKey: string,
@@ -25,14 +27,21 @@ export class AgentChatStreamSession {
     private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter,
     private readonly openAiClient: OpenAIChatClient,
     private readonly openAiToolFacade: AgentOpenAiToolFacade
-  ) {}
+  ) {
+    this.contextCompactionService = new ContextCompactionService(
+      config.contextWindowTokens,
+      config.contextReserveTokens,
+      config.contextKeepLastMessages
+    );
+  }
 
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
     await writer.start();
     try {
       const eventWriter = new AgentStreamEventWriter(writer);
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
-      const modelMessages = await this.contextPipeline.build(safeChatRequest);
+      const contextMessages = await this.contextPipeline.build(safeChatRequest);
+      const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
       await this.openAiToolFacade.listTools();
       const loop = new AgentLoopFactory(
         this.config,

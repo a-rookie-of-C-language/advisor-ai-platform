@@ -3,6 +3,7 @@ import test from "node:test";
 import { AgentLoop } from "../dist/app/loop/core/AgentLoop.js";
 import { RegexSafetyFilter } from "../dist/safety/regex/RegexSafetyFilter.js";
 import { StreamingRegexSafetyFilter } from "../dist/safety/streaming/StreamingRegexSafetyFilter.js";
+import { ContextCompactionService } from "../dist/context/compaction/core/ContextCompactionService.js";
 
 const request = { messages: [{ role: "user", content: "run tools" }] };
 
@@ -70,4 +71,21 @@ test("safety filters redact PII and secrets across stream chunk boundaries", () 
   const streaming = new StreamingRegexSafetyFilter(filter);
   const output = streaming.processChunk("token=sk-") + streaming.processChunk("test12345678901234567890") + streaming.flush();
   assert.equal(output, "[MASK:SECRET]");
+});
+
+test("context compaction preserves system and recent messages with token statistics", () => {
+  const compactor = new ContextCompactionService(20, 4, 2);
+  const result = compactor.compact([
+    { role: "system", content: "rules" },
+    { role: "user", content: "old question one with enough text" },
+    { role: "assistant", content: "old answer one with enough text" },
+    { role: "user", content: "latest question" },
+    { role: "assistant", content: "latest answer" }
+  ]);
+  assert.equal(result.compacted, true);
+  assert.equal(result.droppedMessages, 2);
+  assert.equal(result.messages[0].role, "system");
+  assert.match(result.messages[1].content, /历史上下文已压缩/);
+  assert.equal(result.messages.at(-1)?.content, "latest answer");
+  assert.ok(result.tokensReleased > 0);
 });
