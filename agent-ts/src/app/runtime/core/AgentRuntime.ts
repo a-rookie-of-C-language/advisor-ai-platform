@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
+import { ProviderModelCatalog } from "../../../provider/model/ProviderModelCatalog.js";
 import { validateChatStreamRequest } from "../../../common/request/validation/stream/validateChatStreamRequest.js";
 import type { AgentConfig } from "../../../config/model/core/AgentConfig.js";
 import type { AgentCoreClient } from "../../../core/client/AgentCoreClient.js";
@@ -20,6 +21,7 @@ export class AgentRuntime {
   private readonly graphHealthDescriptor = new AgentGraphHealthDescriptor();
   private readonly requestIdResolver = new AgentRequestIdResolver();
   private readonly sseWriterFactory = new SseWriterFactory();
+  private readonly modelCatalog = new ProviderModelCatalog();
 
   constructor(
     config: AgentConfig,
@@ -32,6 +34,15 @@ export class AgentRuntime {
     webSearchContextBuilder?: WebSearchContextBuilder,
     openAiToolRegistry?: OpenAiToolRegistry
   ) {
+    for (const model of config.openAiModels) {
+      this.modelCatalog.register({
+        provider: "openai",
+        model,
+        contextWindowTokens: config.contextWindowTokens,
+        supportsTools: true,
+        supportsReasoning: model.startsWith("o")
+      });
+    }
     this.components = new AgentRuntimeComponents(
       config,
       this.core,
@@ -51,6 +62,20 @@ export class AgentRuntime {
 
   graphHealth(): JsonObject {
     return this.graphHealthDescriptor.describe();
+  }
+
+  models(): JsonObject {
+    return {
+      object: "list",
+      data: this.modelCatalog.list("openai").map((capability) => ({
+        id: capability.model,
+        object: "model",
+        owned_by: capability.provider,
+        context_window: capability.contextWindowTokens,
+        supports_tools: capability.supportsTools,
+        supports_reasoning: capability.supportsReasoning
+      }))
+    };
   }
 
   async streamChat(body: unknown, request: IncomingMessage, response: ServerResponse): Promise<void> {

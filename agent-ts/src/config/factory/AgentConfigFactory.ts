@@ -12,6 +12,11 @@ export class AgentConfigFactory {
       openAiApiKey: this.envReader.readString("OPENAI_API_KEY", ""),
       openAiBaseUrl: this.envReader.readTrimmedUrl("OPENAI_BASE_URL", "https://api.openai.com/v1"),
       openAiModel: this.envReader.readString("OPENAI_MODEL", "gpt-4.1-mini"),
+      openAiModels: this.envReader
+        .readString("OPENAI_MODELS", "gpt-4.1-mini,gpt-4o,gpt-4.1,o4-mini")
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean),
       openAiTemperature: this.envReader.readFloat("OPENAI_TEMPERATURE", 0.2),
       requestTimeoutMs: this.envReader.readOpenAiTimeoutMs(),
       rustCoreEnabled: this.envReader.readBool("AGENT_RUST_CORE_ENABLED", true),
