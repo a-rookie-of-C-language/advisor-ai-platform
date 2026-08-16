@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
+use leptess::LepTess;
 use std::path::Path;
+use std::sync::Arc;
 use tokio::process::Command;
 
 use crate::model::Chunk;
@@ -41,10 +43,11 @@ async fn extract_text(path: &Path, file_type: &str) -> Result<String> {
         }
 
         let text = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-        if text.is_empty() {
-            return Err(anyhow::anyhow!("document contains no extractable text"));
+        if !text.is_empty() {
+            return Ok(text);
         }
-        return Ok(text);
+
+        return ocr_pdf(path).await;
     }
 
     let extension = path
@@ -68,6 +71,60 @@ async fn extract_text(path: &Path, file_type: &str) -> Result<String> {
         return Err(anyhow::anyhow!("document contains no extractable text"));
     }
     Ok(text)
+}
+
+async fn ocr_pdf(path: &Path) -> Result<String> {
+    let path = Arc::new(path.to_owned());
+    tokio::task::spawn_blocking(move || ocr_pdf_sync(path.as_ref()))
+        .await
+        .context("OCR worker task failed")?
+}
+
+fn ocr_pdf_sync(path: &Path) -> Result<String> {
+    let temp_dir = tempfile::tempdir().context("failed to create OCR temporary directory")?;
+    let prefix = temp_dir.path().join("page");
+    let output = std::process::Command::new("pdftoppm")
+        .args(["-png", "-r", "200"])
+        .arg(path)
+        .arg(&prefix)
+        .output()
+        .context("failed to start pdftoppm; ensure poppler-utils is installed")?;
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "PDF page rendering failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    let mut pages = std::fs::read_dir(temp_dir.path())
+        .context("failed to list rendered PDF pages")?
+        .filter_map(|entry| entry.ok().map(|item| item.path()))
+        .filter(|page| page.extension().and_then(|value| value.to_str()) == Some("png"))
+        .collect::<Vec<_>>();
+    pages.sort();
+
+    let mut output_text = String::new();
+    for (index, page) in pages.iter().enumerate() {
+        let mut tesseract = LepTess::new(None, "chi_sim+eng")
+            .context("failed to initialize Tesseract; ensure chi_sim language data is installed")?;
+        tesseract
+            .set_image(page)
+            .map_err(|error| anyhow::anyhow!("failed to load OCR page image: {error}"))?;
+        let text = tesseract
+            .get_utf8_text()
+            .map_err(|error| anyhow::anyhow!("failed to recognize OCR page: {error}"))?
+            .trim()
+            .to_owned();
+        if !text.is_empty() {
+            output_text.push_str(&format!("[page:{}] {}\n", index + 1, text));
+        }
+    }
+
+    let output_text = output_text.trim().to_owned();
+    if output_text.is_empty() {
+        return Err(anyhow::anyhow!("OCR produced no text"));
+    }
+    Ok(output_text)
 }
 
 pub fn split_text(text: &str, chunk_size: usize, overlap: usize) -> Vec<Chunk> {
