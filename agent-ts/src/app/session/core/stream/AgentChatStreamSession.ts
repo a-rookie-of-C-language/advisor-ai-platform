@@ -15,6 +15,7 @@ import { ContextCompactionService } from "../../../../context/compaction/core/Co
 import { LatestUserQueryResolver } from "../../../../common/request/resolver/LatestUserQueryResolver.js";
 import { IntentRouter } from "../../../../routing/core/IntentRouter.js";
 import { TaskPlanner } from "../../../../planning/core/TaskPlanner.js";
+import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -23,6 +24,7 @@ export class AgentChatStreamSession {
   private readonly latestUserQueryResolver = new LatestUserQueryResolver();
   private readonly intentRouter = new IntentRouter();
   private readonly taskPlanner = new TaskPlanner();
+  private readonly toolExplorer = new ToolExplorer();
   private readonly contextCompactionService: ContextCompactionService;
 
   constructor(
@@ -57,10 +59,16 @@ export class AgentChatStreamSession {
       const contextMessages = await this.contextPipeline.build(safeChatRequest, route);
       const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
       const availableTools = await this.openAiToolFacade.listTools();
+      const exploration = this.toolExplorer.explore(
+        this.latestUserQueryResolver.resolve(safeChatRequest),
+        availableTools,
+        route.categories
+      );
       const taskPlan = this.taskPlanner.plan({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
-        routeCategories: [...route.categories]
+        routeCategories: [...route.categories],
+        matchedTools: exploration.matchedTools
       });
       const loop = new AgentLoopFactory(
         this.config,
