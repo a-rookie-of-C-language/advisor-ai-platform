@@ -5,6 +5,7 @@ export interface AgentConfigValues {
   openAiApiKey: string;
   openAiBaseUrl: string;
   openAiModel: string;
+  openAiModels: string[];
   openAiTemperature: number;
   requestTimeoutMs: number;
   rustCoreEnabled: boolean;
@@ -23,4 +24,9 @@ export interface AgentConfigValues {
   webSearchMaxResults: number;
   mcpToolsEnabled: boolean;
   mcpServers: string;
+  contextWindowTokens: number;
+  contextReserveTokens: number;
+  contextKeepLastMessages: number;
+  failureMemoryPath: string;
+  failureMemoryScoreThreshold: number;
 }

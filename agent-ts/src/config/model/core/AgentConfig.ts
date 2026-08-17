@@ -8,6 +8,7 @@ export class AgentConfig {
   readonly openAiApiKey: string;
   readonly openAiBaseUrl: string;
   readonly openAiModel: string;
+  readonly openAiModels: string[];
   readonly openAiTemperature: number;
   readonly requestTimeoutMs: number;
   readonly rustCoreEnabled: boolean;
@@ -26,6 +27,11 @@ export class AgentConfig {
   readonly webSearchMaxResults: number;
   readonly mcpToolsEnabled: boolean;
   readonly mcpServers: string;
+  readonly contextWindowTokens: number;
+  readonly contextReserveTokens: number;
+  readonly contextKeepLastMessages: number;
+  readonly failureMemoryPath: string;
+  readonly failureMemoryScoreThreshold: number;
 
   constructor(values: AgentConfigValues) {
     this.host = values.host;
@@ -34,6 +40,7 @@ export class AgentConfig {
     this.openAiApiKey = values.openAiApiKey;
     this.openAiBaseUrl = values.openAiBaseUrl;
     this.openAiModel = values.openAiModel;
+    this.openAiModels = values.openAiModels;
     this.openAiTemperature = values.openAiTemperature;
     this.requestTimeoutMs = values.requestTimeoutMs;
     this.rustCoreEnabled = values.rustCoreEnabled;
@@ -52,6 +59,11 @@ export class AgentConfig {
     this.webSearchMaxResults = values.webSearchMaxResults;
     this.mcpToolsEnabled = values.mcpToolsEnabled;
     this.mcpServers = values.mcpServers;
+    this.contextWindowTokens = values.contextWindowTokens;
+    this.contextReserveTokens = values.contextReserveTokens;
+    this.contextKeepLastMessages = values.contextKeepLastMessages;
+    this.failureMemoryPath = values.failureMemoryPath;
+    this.failureMemoryScoreThreshold = values.failureMemoryScoreThreshold;
   }
 
   static fromEnv(): AgentConfig {

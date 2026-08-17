@@ -40,8 +40,8 @@ test("AgentCoreClient streams Rust events from an OpenAI-compatible SSE response
     }
 
     assert.deepEqual(events, [
-      { type: "delta", text: "integration" },
-      { type: "done", finish_reason: "stop" }
+      { type: "text_delta", text: "integration" },
+      { type: "finish", reason: "stop" }
     ]);
   } finally {
     server.close();

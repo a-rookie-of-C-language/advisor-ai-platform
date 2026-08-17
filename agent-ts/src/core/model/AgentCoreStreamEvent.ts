@@ -1,6 +1,7 @@
 import type { JsonObject } from "../../common/json/types/JsonObject.js";
+import type { ProviderStreamChunk } from "../../provider/model/ProviderStreamChunk.js";
 
-export type AgentCoreStreamEvent =
+export type AgentCoreStreamEvent = ProviderStreamChunk
   | {
       type: "delta";
       text: string;

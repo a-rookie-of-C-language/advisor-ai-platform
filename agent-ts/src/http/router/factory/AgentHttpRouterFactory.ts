@@ -9,6 +9,7 @@ import { AgentJsonResponseWriter } from "../../response/core/json/AgentJsonRespo
 import { AgentChatStreamRouteHandler } from "../../routes/chat/AgentChatStreamRouteHandler.js";
 import { AgentHealthRouteHandler } from "../../routes/health/AgentHealthRouteHandler.js";
 import { AgentMcpRouteHandler } from "../../routes/mcp/core/AgentMcpRouteHandler.js";
+import { AgentModelRouteHandler } from "../../routes/models/AgentModelRouteHandler.js";
 import { AgentHttpRouter } from "../core/AgentHttpRouter.js";
 import { AgentRequestAuthorizer } from "../security/AgentRequestAuthorizer.js";
 
@@ -24,6 +25,7 @@ export class AgentHttpRouterFactory {
       new AgentRequestAuthorizer(config),
       new AgentChatStreamRouteHandler(runtime),
       new AgentHealthRouteHandler(runtime),
+      new AgentModelRouteHandler(runtime),
       new AgentJsonResponseWriter(),
       new AgentMcpRouteHandler(mcpToolService, requestReader),
       new AgentRequestUrlFactory(),

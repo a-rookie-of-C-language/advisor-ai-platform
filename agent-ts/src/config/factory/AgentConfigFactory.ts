@@ -12,6 +12,11 @@ export class AgentConfigFactory {
       openAiApiKey: this.envReader.readString("OPENAI_API_KEY", ""),
       openAiBaseUrl: this.envReader.readTrimmedUrl("OPENAI_BASE_URL", "https://api.openai.com/v1"),
       openAiModel: this.envReader.readString("OPENAI_MODEL", "gpt-4.1-mini"),
+      openAiModels: this.envReader
+        .readString("OPENAI_MODELS", "gpt-4.1-mini,gpt-4o,gpt-4.1,o4-mini")
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean),
       openAiTemperature: this.envReader.readFloat("OPENAI_TEMPERATURE", 0.2),
       requestTimeoutMs: this.envReader.readOpenAiTimeoutMs(),
       rustCoreEnabled: this.envReader.readBool("AGENT_RUST_CORE_ENABLED", true),
@@ -29,7 +34,12 @@ export class AgentConfigFactory {
       webSearchUrl: this.envReader.readString("TAVILY_SEARCH_URL", "https://api.tavily.com/search"),
       webSearchMaxResults: this.envReader.readInt("WEB_SEARCH_MAX_RESULTS", 5),
       mcpToolsEnabled: this.envReader.readBool("MCP_TOOLS", false),
-      mcpServers: this.envReader.readString("MCP_SERVERS", "")
+      mcpServers: this.envReader.readString("MCP_SERVERS", ""),
+      contextWindowTokens: this.envReader.readInt("AGENT_CONTEXT_WINDOW_TOKENS", 12000),
+      contextReserveTokens: this.envReader.readInt("AGENT_CONTEXT_RESERVE_TOKENS", 2000),
+      contextKeepLastMessages: this.envReader.readInt("AGENT_CONTEXT_KEEP_LAST_MESSAGES", 12),
+      failureMemoryPath: this.envReader.readString("AGENT_FAILURE_MEMORY_PATH", ".agent-data/failure-memory.jsonl"),
+      failureMemoryScoreThreshold: this.envReader.readInt("AGENT_FAILURE_MEMORY_SCORE_THRESHOLD", 7)
     };
   }
 }

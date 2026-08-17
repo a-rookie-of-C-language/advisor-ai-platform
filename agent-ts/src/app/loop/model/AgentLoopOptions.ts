@@ -1,6 +1,7 @@
 import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import type { ChatStreamRequest } from "../../../common/model/ChatStreamRequest.js";
 import type { OpenAIChatStreamEvent } from "../../../protocol/events/model/openai/OpenAIChatStreamEvent.js";
+import type { TaskPlan } from "../../../planning/model/TaskPlan.js";
 
 export type AgentLoopToolCall = {
   id: string;
@@ -34,6 +35,23 @@ export type AgentStreamFn = (
 export type AgentLoopEvent =
   | { type: "agent_start" }
   | { type: "turn_start"; turn: number }
+  | { type: "provider_request_start"; turn: number }
+  | {
+      type: "provider_request_end";
+      turn: number;
+      status: "success" | "error" | "aborted";
+      durationMs: number;
+      errorCode?: string;
+    }
+  | { type: "tool_execution_start"; turn: number; toolCallId: string; toolName: string }
+  | {
+      type: "tool_execution_end";
+      turn: number;
+      toolCallId: string;
+      toolName: string;
+      success: boolean;
+      durationMs: number;
+    }
   | { type: "turn_end"; turn: number }
   | { type: "agent_end"; turns: number; answer: string };
 
@@ -45,6 +63,7 @@ export interface AgentLoopOptions {
     args: JsonObject,
     signal?: AbortSignal
   ) => Promise<{ output: string; success: boolean }>;
+  toolTimeoutMs?: (toolName: string) => number | undefined;
   chatRequest: ChatStreamRequest;
   transformContext?: (
     messages: ChatStreamRequest["messages"],
@@ -56,6 +75,7 @@ export interface AgentLoopOptions {
   maxTurns?: number;
   signal?: AbortSignal;
   onEvent?: (event: AgentLoopEvent) => void | Promise<void>;
+  toolPlan?: TaskPlan;
 }
 
 export interface AgentLoopResult {

@@ -5,6 +5,7 @@ import { AgentHttpRouteResultWriter } from "../../response/core/route/AgentHttpR
 import type { AgentJsonResponseWriter } from "../../response/core/json/AgentJsonResponseWriter.js";
 import type { AgentChatStreamRouteHandler } from "../../routes/chat/AgentChatStreamRouteHandler.js";
 import type { AgentHealthRouteHandler } from "../../routes/health/AgentHealthRouteHandler.js";
+import type { AgentModelRouteHandler } from "../../routes/models/AgentModelRouteHandler.js";
 import type { AgentMcpRouteHandler } from "../../routes/mcp/core/AgentMcpRouteHandler.js";
 import { AgentHttpAuthenticatedRouteDispatcher } from "../dispatch/authenticated/AgentHttpAuthenticatedRouteDispatcher.js";
 import { AgentHttpPublicRouteDispatcher } from "../dispatch/public/AgentHttpPublicRouteDispatcher.js";
@@ -19,6 +20,7 @@ export class AgentHttpRouter {
     private readonly authorizer: AgentRequestAuthorizer,
     private readonly chatStreamRouteHandler: AgentChatStreamRouteHandler,
     private readonly healthRouteHandler: AgentHealthRouteHandler,
+    private readonly modelRouteHandler: AgentModelRouteHandler,
     private readonly jsonResponseWriter: AgentJsonResponseWriter,
     private readonly mcpRouteHandler: AgentMcpRouteHandler,
     private readonly requestUrlFactory: AgentRequestUrlFactory,
@@ -28,6 +30,7 @@ export class AgentHttpRouter {
     this.authenticatedRouteDispatcher = new AgentHttpAuthenticatedRouteDispatcher(
       this.chatStreamRouteHandler,
       this.jsonResponseWriter,
+      this.modelRouteHandler,
       this.mcpRouteHandler,
       this.routeResultWriter,
       this.workspaceRouteHandler

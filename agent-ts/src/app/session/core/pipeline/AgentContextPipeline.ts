@@ -3,6 +3,7 @@ import type { MemoryContextBuilder } from "../../../../memory/context/core/Memor
 import type { RagContextBuilder } from "../../../../rag/context/core/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../../web/context/search/core/WebSearchContextBuilder.js";
+import type { IntentRouteDecision } from "../../../../routing/model/IntentRouteDecision.js";
 
 export class AgentContextPipeline {
   constructor(
@@ -12,38 +13,43 @@ export class AgentContextPipeline {
     private readonly webSearchContextBuilder?: WebSearchContextBuilder
   ) {}
 
-  async build(chatRequest: ChatStreamRequest): Promise<ChatStreamRequest["messages"]> {
+  async build(chatRequest: ChatStreamRequest, route?: IntentRouteDecision): Promise<ChatStreamRequest["messages"]> {
     let messages = chatRequest.messages;
-    if (this.memoryContextBuilder) {
+    if (this.memoryContextBuilder && this.shouldLoad(route, "memory_read", "memory_write")) {
       messages = await this.memoryContextBuilder.injectMemory({ ...chatRequest, messages });
     }
-    if (this.ragContextBuilder) {
+    if (this.ragContextBuilder && this.shouldLoad(route, "retrieval")) {
       messages = await this.ragContextBuilder.injectRag({ ...chatRequest, messages });
     }
     if (this.webFetchContextBuilder) {
       messages = await this.webFetchContextBuilder.injectWebFetch({ ...chatRequest, messages });
     }
-    if (this.webSearchContextBuilder) {
+    if (this.webSearchContextBuilder && this.shouldLoad(route, "search")) {
       messages = await this.webSearchContextBuilder.injectWebSearch({ ...chatRequest, messages });
     }
     return messages;
   }
 
+  private shouldLoad(route: IntentRouteDecision | undefined, ...categories: string[]): boolean {
+    return route === undefined || categories.some((category) => route.categories.has(category));
+  }
+
   async transform(
     messages: ChatStreamRequest["messages"],
-    _signal?: AbortSignal
+    _signal?: AbortSignal,
+    route?: IntentRouteDecision
   ): Promise<ChatStreamRequest["messages"]> {
     let result = messages;
-    if (this.memoryContextBuilder) {
+    if (this.memoryContextBuilder && this.shouldLoad(route, "memory_read", "memory_write")) {
       result = await this.memoryContextBuilder.injectMemory({ ...({ messages: result } as ChatStreamRequest), messages: result });
     }
-    if (this.ragContextBuilder) {
+    if (this.ragContextBuilder && this.shouldLoad(route, "retrieval")) {
       result = await this.ragContextBuilder.injectRag({ ...({ messages: result } as ChatStreamRequest), messages: result });
     }
     if (this.webFetchContextBuilder) {
       result = await this.webFetchContextBuilder.injectWebFetch({ ...({ messages: result } as ChatStreamRequest), messages: result });
     }
-    if (this.webSearchContextBuilder) {
+    if (this.webSearchContextBuilder && this.shouldLoad(route, "search")) {
       result = await this.webSearchContextBuilder.injectWebSearch({ ...({ messages: result } as ChatStreamRequest), messages: result });
     }
     return result;

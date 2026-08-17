@@ -7,8 +7,13 @@ import type { AgentOpenAiToolFacade } from "../../openAi/core/AgentOpenAiToolFac
 import type { AgentContextPipeline } from "../../session/core/pipeline/AgentContextPipeline.js";
 import { AgentLoop } from "../core/AgentLoop.js";
 import type { AgentLoopOptions } from "../model/AgentLoopOptions.js";
+import { ProviderError } from "../../../provider/model/ProviderError.js";
+import { isProviderErrorCode } from "../../../provider/model/ProviderErrorCode.js";
+import { TaskPlanner } from "../../../planning/core/TaskPlanner.js";
 
 export class AgentLoopFactory {
+  private readonly taskPlanner = new TaskPlanner();
+
   constructor(
     private readonly config: AgentConfig,
     private readonly core: AgentCoreClient,
@@ -20,9 +25,14 @@ export class AgentLoopFactory {
   create(chatRequest: ChatStreamRequest, options?: Partial<AgentLoopOptions>): AgentLoop {
     const factory = this;
     const streamFn: AgentLoopOptions["stream"] = async function* (messages, signal) {
-      const tools = await factory.openAiToolFacade.listTools();
+      const tools = factory.taskPlanner.prioritizeTools(
+        await factory.openAiToolFacade.listTools(),
+        options?.toolPlan
+      );
       if (factory.core.canStream()) {
+        let streamStarted = false;
         try {
+          const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
           for await (const event of factory.core.streamChat(
             {
               url: `${factory.config.openAiBaseUrl}/chat/completions`,
@@ -35,8 +45,34 @@ export class AgentLoopFactory {
             },
             signal
           )) {
-            if (event.type === "delta") {
+            if (event.type === "text_delta" || event.type === "delta") {
+              streamStarted = streamStarted || event.text.length > 0;
               yield { type: "delta", text: event.text } as const;
+            } else if (event.type === "tool_call_delta") {
+              streamStarted = true;
+              const current = toolCalls.get(event.index) || { id: "", name: "", arguments: "" };
+              current.id += event.id || "";
+              current.name += event.name || "";
+              current.arguments += event.arguments_delta;
+              toolCalls.set(event.index, current);
+            } else if (event.type === "finish") {
+              for (const [, toolCall] of [...toolCalls.entries()].sort(([left], [right]) => left - right)) {
+                let toolArgs: JsonObject = {};
+                if (toolCall.arguments.trim()) {
+                  toolArgs = JSON.parse(toolCall.arguments) as JsonObject;
+                }
+                yield {
+                  type: "tool_call",
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.name,
+                  toolArgs
+                } as const;
+              }
+            } else if (event.type === "error") {
+              if (!isProviderErrorCode(event.code)) {
+                throw new Error(`unknown provider error code: ${event.code}`);
+              }
+              throw new ProviderError(event.code, event.message, { retryable: event.retryable });
             } else if (event.type === "tool_call") {
               yield {
                 type: "tool_call",
@@ -48,8 +84,11 @@ export class AgentLoopFactory {
           }
           // Rust streaming succeeded: do not fall through to the TypeScript path.
           return;
-        } catch {
-          // Fall back to the TypeScript OpenAI client when agent-core streaming is unavailable.
+        } catch (error) {
+          const canFallback = !streamStarted &&
+            (!(error instanceof ProviderError) || error.retryable);
+          if (!canFallback) throw error;
+          // Fall back only before visible output and only for retryable provider failures.
         }
       }
       for await (const event of factory.openAiClient.streamChatEvents(messages, tools, undefined, signal)) {
