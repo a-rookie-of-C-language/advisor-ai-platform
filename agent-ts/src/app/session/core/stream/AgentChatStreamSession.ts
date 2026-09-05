@@ -113,9 +113,11 @@ export class AgentChatStreamSession {
       const taskPlan = this.taskPlanner.plan({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
-        routeCategories: [...legacyRoute.categories],
-        matchedTools: legacyRoute.matchedTools,
-        preferredTools: [...legacyRoute.preferredTools, ...(educationDomain || ragOnlyPreferred ? ["rag_search"] : [])]
+        routeContext: {
+          categories: [...legacyRoute.categories],
+          matched_tools: [...legacyRoute.matchedTools],
+          preferred_tools: [...legacyRoute.preferredTools, ...(educationDomain || ragOnlyPreferred ? ["rag_search"] : [])]
+        }
       });
       if (shouldEmitReasoning) {
         await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));

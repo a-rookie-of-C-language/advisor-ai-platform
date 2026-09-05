@@ -5,9 +5,12 @@ export class TaskPlanner {
   plan(input: TaskPlanInput): TaskPlan {
     const query = input.userQuery.trim();
     const available = new Map(input.availableTools.map((tool) => [tool.function.name, tool]));
-    const categories = new Set(input.routeCategories);
-    const matched = input.matchedTools ?? [];
-    const preferred = input.preferredTools ?? [];
+    const routeContext = input.routeContext && typeof input.routeContext === "object" && !Array.isArray(input.routeContext)
+      ? input.routeContext
+      : {};
+    const categories = new Set(this.coerceNames(routeContext.categories));
+    const matched = this.coerceNames(routeContext.matched_tools);
+    const preferred = this.coerceNames(routeContext.preferred_tools);
     const steps: TaskPlanStep[] = [];
 
     const education = /辅导员|学生|班主任|学校|学院|规章|制度|政策|教育|课程|培训|培养|核心素养/i.test(query);
@@ -41,7 +44,7 @@ export class TaskPlanner {
         sufficient: true,
         requiredTools: [],
         steps: [{ action: "final", reason: "当前问题无需工具", sufficient: true }],
-        routeCategories: input.routeCategories,
+        routeContext,
         source: "fallback"
       };
     }
@@ -54,7 +57,7 @@ export class TaskPlanner {
       sufficient: false,
       requiredTools,
       steps,
-      routeCategories: input.routeCategories,
+      routeContext,
       source: "fallback"
     };
   }
@@ -68,5 +71,10 @@ export class TaskPlanner {
     });
     const selected = new Set(prioritized.map((tool) => tool.function.name));
     return [...prioritized, ...tools.filter((tool) => !selected.has(tool.function.name))];
+  }
+
+  private coerceNames(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value.map((item) => String(item).trim()).filter(Boolean);
   }
 }

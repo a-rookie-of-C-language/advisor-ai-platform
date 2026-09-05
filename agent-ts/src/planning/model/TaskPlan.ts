@@ -18,14 +18,12 @@ export interface TaskPlan {
   readonly sufficient: boolean;
   readonly requiredTools: readonly string[];
   readonly steps: readonly TaskPlanStep[];
-  readonly routeCategories: readonly string[];
+  readonly routeContext: JsonObject;
   readonly source: "fallback";
 }
 
 export interface TaskPlanInput {
   readonly userQuery: string;
   readonly availableTools: readonly OpenAIChatTool[];
-  readonly routeCategories: readonly string[];
-  readonly matchedTools?: readonly string[];
-  readonly preferredTools?: readonly string[];
+  readonly routeContext: JsonObject;
 }

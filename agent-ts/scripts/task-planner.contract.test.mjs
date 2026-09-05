@@ -9,18 +9,19 @@ test("task planner fallback creates a constrained retrieval plan", () => {
   const plan = planner.plan({
     userQuery: "请查询学生规章",
     availableTools: [tool("web_search"), tool("rag_search")],
-    routeCategories: ["retrieval"]
+    routeContext: { categories: ["retrieval"] }
   });
   assert.equal(plan.mode, "plan_and_execute");
   assert.deepEqual(plan.requiredTools, ["rag_search"]);
   assert.equal(plan.steps[0].arguments.top_k, 5);
+  assert.deepEqual(plan.routeContext.categories, ["retrieval"]);
 });
 
 test("task planner defaults to direct generation when no tool is applicable", () => {
   const plan = new TaskPlanner().plan({
     userQuery: "你好",
     availableTools: [tool("web_search")],
-    routeCategories: ["retrieval"]
+    routeContext: { categories: ["retrieval"] }
   });
   assert.equal(plan.mode, "direct");
   assert.deepEqual(plan.requiredTools, []);
@@ -31,7 +32,7 @@ test("task planner prioritizes required tools without dropping the rest", () => 
   const plan = new TaskPlanner().plan({
     userQuery: "查文档",
     availableTools: tools,
-    routeCategories: ["retrieval"]
+    routeContext: { categories: ["retrieval"] }
   });
   assert.deepEqual(new TaskPlanner().prioritizeTools(tools, plan).map((item) => item.function.name), [
     "rag_search", "web_search", "workspace_read"
