@@ -31,6 +31,8 @@ import {
 } from "../../../../legacy/core/LegacyReasoning.js";
 import { executeLegacyForceFetch, resolveForceFetchUrl } from "../../../../legacy/core/LegacyForceFetch.js";
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
+import { AgentGraphRunner } from "../../../../graph/core/AgentGraphRunner.js";
+import type { GraphState } from "../../../../graph/model/GraphState.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -40,6 +42,7 @@ export class AgentChatStreamSession {
   private readonly intentRouter = new IntentRouter();
   private readonly taskPlanner = new TaskPlanner();
   private readonly toolExplorer = new ToolExplorer();
+  private readonly graphRunner: AgentGraphRunner;
   private readonly failureMemorySupport: FailureMemorySupport;
   private readonly contextCompactionService: ContextCompactionService;
 
@@ -62,6 +65,20 @@ export class AgentChatStreamSession {
       new FailureMemoryStore(config.failureMemoryPath || ".agent-data/failure-memory.jsonl"),
       config.failureMemoryScoreThreshold ?? 7
     );
+    this.graphRunner = new AgentGraphRunner(
+      {},
+      skillRegistry,
+      skillRegistry
+        ? async (prompt) => {
+            const messages = [{ role: "user" as const, content: prompt }];
+            let responseText = "";
+            for await (const delta of this.openAiClient.streamChat(messages, undefined)) {
+              responseText += delta;
+            }
+            return responseText;
+          }
+        : undefined
+    );
   }
 
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
@@ -76,8 +93,6 @@ export class AgentChatStreamSession {
         ...safeChatRequest,
         messages: this.failureMemorySupport.injectAvoidancePrompt(safeChatRequest.messages, failureQuery)
       };
-      const activeSkillNames = this.skillRegistry ? this.skillRegistry.listAll().map((skill) => skill.name) : [];
-      const skillPrompt = this.skillRegistry ? this.skillRegistry.briefPrompt(activeSkillNames) : "";
       const educationDomain = shouldForceEducationRag(failureQuery);
       const ragOnlyPreferred = preferRagOnly(failureQuery);
       const rawRoute = this.intentRouter.route(failureQuery, [
@@ -91,10 +106,19 @@ export class AgentChatStreamSession {
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       await writer.write("intent_route", "system", route.toEventPayload() as JsonObject);
+      const graphState: GraphState = {
+        messages: failureAwareChatRequest.messages,
+        userQuery: failureQuery,
+        traceId: chatRequest.traceId ?? null,
+        turnId
+      };
+      const selectedSkillState = this.skillRegistry
+        ? await this.graphRunner.run(graphState)
+        : graphState;
       const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
       let modelMessages = this.contextCompactionService.compact(
         PromptBuilder.assembleMessages(contextMessages, {
-          skillPrompts: skillPrompt ? [skillPrompt] : []
+          skillPrompts: selectedSkillState.skillSystemPrompt ? [selectedSkillState.skillSystemPrompt] : []
         })
       ).messages;
       const exploration = this.toolExplorer.explore(

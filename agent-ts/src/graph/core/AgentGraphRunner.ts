@@ -27,12 +27,15 @@ export class AgentGraphRunner {
         const userQuery = String(state.userQuery ?? "").trim();
         const allSkills = this.skillRegistry.listAll();
         const knownNames = allSkills.map((skill) => skill.name);
+        const catalogPrompt = this.skillRegistry.catalogPrompt();
+        const selectionPrompt = buildSkillSelectionPrompt(catalogPrompt, userQuery);
         const selectedNames = this.skillSelector
-          ? await this.selectSkills(userQuery, knownNames)
+          ? await this.selectSkills(selectionPrompt, knownNames)
           : [];
         const selected = allSkills.filter((skill) => selectedNames.includes(skill.name));
         state = {
           ...state,
+          skillSelectionPrompt: selectionPrompt,
           activeSkills: selected.map((skill) => skill.name),
           skillSystemPrompt: this.skillRegistry.briefPrompt(selected.map((skill) => skill.name))
         };
@@ -43,9 +46,7 @@ export class AgentGraphRunner {
     return state;
   }
 
-  private async selectSkills(userQuery: string, knownNames: readonly string[]): Promise<string[]> {
-    const catalogPrompt = this.skillRegistry?.catalogPrompt() ?? "";
-    const prompt = buildSkillSelectionPrompt(catalogPrompt, userQuery);
+  private async selectSkills(prompt: string, knownNames: readonly string[]): Promise<string[]> {
     try {
       const responseText = await this.skillSelector?.(prompt);
       return responseText ? parseSkillNames(responseText, knownNames) : [];

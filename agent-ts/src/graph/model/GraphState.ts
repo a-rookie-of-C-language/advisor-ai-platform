@@ -22,6 +22,7 @@ export interface GraphState {
   readonly debugDeltaCount?: number;
   readonly debugPreview?: string;
   readonly llmChunkCount?: number;
+  readonly skillSelectionPrompt?: string;
   readonly activeSkills?: readonly string[];
   readonly skillSystemPrompt?: string;
 }
