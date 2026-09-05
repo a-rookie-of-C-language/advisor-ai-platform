@@ -19,6 +19,7 @@ import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
 import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemoryStore.js";
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
 import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
+import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -63,6 +64,8 @@ export class AgentChatStreamSession {
         ...safeChatRequest,
         messages: this.failureMemorySupport.injectAvoidancePrompt(safeChatRequest.messages, failureQuery)
       };
+      const educationDomain = shouldForceEducationRag(failureQuery);
+      const ragOnlyPreferred = preferRagOnly(failureQuery);
       const route = this.intentRouter.route(failureQuery, [
         "retrieval",
         "search",
@@ -83,7 +86,8 @@ export class AgentChatStreamSession {
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
         routeCategories: [...route.categories],
-        matchedTools: exploration.matchedTools
+        matchedTools: exploration.matchedTools,
+        preferredTools: educationDomain || ragOnlyPreferred ? ["rag_search"] : []
       });
       const loop = new AgentLoopFactory(
         this.config,
