@@ -36,8 +36,8 @@ async function main(): Promise<void> {
       if (!ragClient) return [];
       const actualKbId = kbId ?? targetKbId;
       if (!actualKbId || actualKbId <= 0) return [];
-      const documents = await ragClient.listDocuments(actualKbId);
-      return documents.slice(0, requestedTopK).map((document, index) => ({
+      const documents = await ragClient.searchDocuments(actualKbId, _query, requestedTopK);
+      return documents.map((document, index) => ({
         chunkId: String(document.id),
         text: document.fileName,
         source: "rag",
