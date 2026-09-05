@@ -5,6 +5,10 @@ export interface ToolSearchSpec {
   readonly name: string;
   readonly description: string;
   readonly parameters: JsonObject;
+  readonly category?: string;
+  readonly isConcurrencySafe?: boolean;
+  readonly isReadOnly?: boolean;
+  readonly shouldDefer?: boolean;
   readonly searchHint?: string;
 }
 
@@ -72,6 +76,11 @@ export class ToolSearchTool {
         tool_name: spec.name,
         description: spec.description,
         parameters: spec.parameters,
+        category: spec.category ?? "",
+        is_concurrency_safe: Boolean(spec.isConcurrencySafe),
+        is_read_only: Boolean(spec.isReadOnly),
+        defer_loading: Boolean(spec.shouldDefer),
+        search_hint: spec.searchHint ?? "",
         schema_text: `工具名称: ${spec.name}\n描述: ${spec.description}\n输入参数 (JSON Schema):\n${JSON.stringify(spec.parameters, null, 2)}`
       }))
     };

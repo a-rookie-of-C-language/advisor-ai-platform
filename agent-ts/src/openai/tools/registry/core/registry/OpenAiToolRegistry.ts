@@ -87,6 +87,10 @@ export class OpenAiToolRegistry {
       name: tool.function.name,
       description: tool.function.description,
       parameters: tool.function.parameters,
+      category: tool.meta?.category ?? "",
+      isConcurrencySafe: Boolean(tool.meta?.concurrencySafe),
+      isReadOnly: Boolean(tool.meta?.readOnly),
+      shouldDefer: Boolean(tool.meta?.deferLoading),
       searchHint: tool.meta?.searchHint ?? ""
     }));
     if (this.skillRegistry) {
@@ -100,6 +104,10 @@ export class OpenAiToolRegistry {
           },
           required: ["skill_name"]
         },
+        category: "skills",
+        isConcurrencySafe: true,
+        isReadOnly: true,
+        shouldDefer: false,
         searchHint: skill.searchHint ?? ""
       }));
       specs.push(...skillSpecs);
@@ -115,6 +123,10 @@ export class OpenAiToolRegistry {
           },
           required: ["skill_name"]
         },
+        category: "skills",
+        isConcurrencySafe: true,
+        isReadOnly: true,
+        shouldDefer: false,
         searchHint: "技能,展开,指令,指南"
       });
     }

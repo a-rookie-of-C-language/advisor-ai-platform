@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PromptBuilder } from "../dist/prompt/PromptBuilder.js";
+import { ToolSearchTool } from "../dist/tools/search/ToolSearchTool.js";
 
 test("prompt builder mirrors python side prompt helpers", () => {
   assert.equal(
@@ -79,4 +80,23 @@ test("prompt builder assembles system prompts in python order", () => {
 
   assert.deepEqual(messages.map((message) => message.role), ["system", "system", "system", "user"]);
   assert.deepEqual(messages.map((message) => message.content), ["static", "skill", "dynamic", "hello"]);
+});
+
+test("tool search returns python-like tool metadata", async () => {
+  const search = new ToolSearchTool(() => [{
+    name: "web_search",
+    description: "search",
+    parameters: {},
+    category: "search",
+    isConcurrencySafe: true,
+    isReadOnly: true,
+    shouldDefer: false,
+    searchHint: "网页,实时"
+  }]);
+  const result = await search.execute("网页", 3);
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "hit");
+  assert.equal(result.items[0].category, "search");
+  assert.equal(result.items[0].is_read_only, true);
+  assert.equal(result.items[0].is_concurrency_safe, true);
 });
