@@ -17,6 +17,7 @@ import { LatestUserQueryResolver } from "../../../../common/request/resolver/Lat
 import { IntentRouter } from "../../../../routing/core/IntentRouter.js";
 import { TaskPlanner } from "../../../../planning/core/TaskPlanner.js";
 import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
+import { PromptBuilder } from "../../../../prompt/PromptBuilder.js";
 import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemoryStore.js";
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
 import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
@@ -91,8 +92,10 @@ export class AgentChatStreamSession {
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       await writer.write("intent_route", "system", route.toEventPayload() as JsonObject);
       const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
-      const modelMessages = this.contextCompactionService.compact(
-        skillPrompt ? [{ role: "system", content: skillPrompt }, ...contextMessages] : contextMessages
+      let modelMessages = this.contextCompactionService.compact(
+        PromptBuilder.assembleMessages(contextMessages, {
+          skillPrompts: skillPrompt ? [skillPrompt] : []
+        })
       ).messages;
       const exploration = this.toolExplorer.explore(
         this.latestUserQueryResolver.resolve(safeChatRequest),
@@ -140,7 +143,9 @@ export class AgentChatStreamSession {
           });
         }
         if (fetchResult.contextPrompt) {
-          modelMessages.unshift({ role: "system", content: fetchResult.contextPrompt });
+          modelMessages = PromptBuilder.assembleMessages(modelMessages, {
+            dynamicPrompts: [fetchResult.contextPrompt]
+          });
         }
       }
       const loop = new AgentLoopFactory(
