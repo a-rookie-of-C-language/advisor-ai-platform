@@ -165,13 +165,52 @@ test("AgentChatStreamSession force fetches web urls before the model round", asy
 
     await session.stream({ messages: [{ role: "user", content: "https://example.com 读取这个网页" }] }, "turn-1", writer);
 
-    assert.equal(writes[0].event, "tool_use");
-    assert.equal(writes[1].event, "tool_result");
+    assert.equal(writes.some(({ event }) => event === "tool_use"), true);
+    assert.equal(writes.some(({ event }) => event === "tool_result"), true);
     assert.equal(writes.some(({ event }) => event === "tool_result"), true);
     assert.equal(writes.some(({ event }) => event === "llm_delta"), true);
   } finally {
     server.close();
   }
+});
+
+test("AgentChatStreamSession emits legacy reasoning for education queries", async () => {
+  const writes = [];
+  const config = {
+    openAiApiKey: "integration-key",
+    openAiBaseUrl: "http://127.0.0.1:65535",
+    openAiModel: "integration-model",
+    openAiTemperature: 0.2,
+    requestTimeoutMs: 1_000
+  };
+  const session = new AgentChatStreamSession(
+    config.openAiApiKey,
+    config,
+    { canStream() { return false; } },
+    { async build() { return [{ role: "user", content: "请根据知识库文档解释学生工作政策" }]; }, async transform(messages) { return messages; } },
+    { async submit() {} },
+    {
+      async *streamChatEvents() {
+        yield { type: "delta", text: "ok" };
+      }
+    },
+    {
+      async listTools() { return [{ type: "function", function: { name: "rag_search", description: "rag_search", parameters: {} } }]; },
+      async executeTool() { return { output: JSON.stringify({ ok: true, status: "hit", items: [] }), success: true }; }
+    }
+  );
+  const writer = {
+    async start() {},
+    async write(event, source, payload) { writes.push({ event, source, payload }); },
+    async done(reason) { writes.push({ event: "done", reason }); },
+    async error(code, message, retryable) { throw new Error(code + ": " + message + ": " + retryable); }
+  };
+
+  await session.stream({ messages: [{ role: "user", content: "请根据知识库文档解释学生工作政策" }] }, "turn-1", writer);
+
+  assert.equal(writes.some(({ event }) => event === "sys_reasoning"), true);
+  assert.equal(writes.some(({ event }) => event === "sys_tool_plan"), true);
+  assert.equal(writes[writes.length - 1].event, "done");
 });
 
 test("AgentChatStreamSession aborts a running TS fallback stream", async () => {

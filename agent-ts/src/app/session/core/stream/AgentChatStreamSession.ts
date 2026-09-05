@@ -18,8 +18,15 @@ import { TaskPlanner } from "../../../../planning/core/TaskPlanner.js";
 import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
 import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemoryStore.js";
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
+import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
 import { buildLegacyRouteContext, preferRetrievalFallback } from "../../../../legacy/core/LegacyRouteSupport.js";
+import {
+  buildDelegateReasoningPayload,
+  buildPlanReasoningPayload,
+  buildRouteReasoningPayload,
+  shouldEmitPlanningReasoning
+} from "../../../../legacy/core/LegacyReasoning.js";
 import { executeLegacyForceFetch, resolveForceFetchUrl } from "../../../../legacy/core/LegacyForceFetch.js";
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
 
@@ -86,6 +93,10 @@ export class AgentChatStreamSession {
         route.categories
       );
       const legacyRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
+      const shouldEmitReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none");
+      if (shouldEmitReasoning) {
+        await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...legacyRoute.categories], legacyRoute.matchedTools, legacyRoute.educationDomain));
+      }
       const taskPlan = this.taskPlanner.plan({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
@@ -93,6 +104,11 @@ export class AgentChatStreamSession {
         matchedTools: legacyRoute.matchedTools,
         preferredTools: [...legacyRoute.preferredTools, ...(educationDomain || ragOnlyPreferred ? ["rag_search"] : [])]
       });
+      if (shouldEmitReasoning) {
+        await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));
+        await writer.write("sys_tool_plan", "system", taskPlan as unknown as JsonObject);
+        await writer.write("sys_reasoning", "system", buildPlanReasoningPayload(taskPlan as unknown as JsonObject));
+      }
       const forceFetchUrl = resolveForceFetchUrl(legacyRoute.matchedTools, failureQuery);
       if (forceFetchUrl) {
         const fetchResult = await executeLegacyForceFetch(forceFetchUrl, async (toolName, args) => {
