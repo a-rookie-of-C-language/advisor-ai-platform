@@ -26,11 +26,13 @@ export class EvalReportBuilder {
     const annotation = EvalReportBuilder.booleanMetrics(report.cases, "annotation", ["type_correct", "authority_correct", "effective_date_correct"]);
     const fusion = EvalReportBuilder.averageMetrics(report.cases, "fusion", ["improvement_rate"]);
     const e2e = EvalReportBuilder.averageMetrics(report.cases, "e2e", ["avg_score", "relevance", "completeness", "accuracy", "fluency"]);
+    const deepeval = EvalReportBuilder.averageMetrics(report.cases, "e2e_deepeval", ["avg_score"]);
     report.summary = {
       retrieval,
       annotation,
       fusion,
-      e2e
+      e2e,
+      deepeval
     };
     return report;
   }
