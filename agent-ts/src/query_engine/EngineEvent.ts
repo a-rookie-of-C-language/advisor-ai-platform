@@ -4,8 +4,8 @@ export interface EngineEventProps {
   readonly event: string;
   readonly source: string;
   readonly payload: JsonObject;
-  readonly traceId?: string | null;
-  readonly eventVersion?: string;
+  readonly trace_id?: string | null;
+  readonly event_version?: string;
 }
 
 export class EngineEvent {
@@ -13,9 +13,17 @@ export class EngineEvent {
     public readonly event: string,
     public readonly source: string,
     public readonly payload: JsonObject,
-    public readonly traceId: string | null = null,
-    public readonly eventVersion: string = "1.0"
+    public readonly trace_id: string | null = null,
+    public readonly event_version: string = "1.0"
   ) {}
+
+  get traceId(): string | null {
+    return this.trace_id;
+  }
+
+  get eventVersion(): string {
+    return this.event_version;
+  }
 
   static llmDelta(text: string, traceId?: string | null): EngineEvent {
     return new EngineEvent("llm_data", "llm", { text }, traceId ?? null);
@@ -52,13 +60,13 @@ export class EngineEvent {
   }
 
   toSse(): string {
-    const event: EngineEventProps = {
-      event: this.event,
+    const body = {
+      event_version: this.event_version,
+      trace_id: this.trace_id ?? "",
+      timestamp: Date.now(),
       source: this.source,
-      payload: this.payload,
-      traceId: this.traceId ?? null,
-      eventVersion: this.eventVersion
+      payload: this.payload
     };
-    return `event: ${this.event}\ndata: ${JSON.stringify(event)}\n\n`;
+    return `event: ${this.event}\ndata: ${JSON.stringify(body)}\n\n`;
   }
 }

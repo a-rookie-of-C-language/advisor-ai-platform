@@ -30,11 +30,21 @@ export function parseSseToEngineEvent(rawEvent: string): EngineEvent {
 
   const payload = typeof parsed === "object" && parsed !== null ? parsed : {};
   const record = payload as Record<string, unknown>;
+  const traceIdValue = typeof record.trace_id === "string"
+    ? record.trace_id
+    : typeof record.traceId === "string"
+      ? record.traceId
+      : null;
+  const eventVersionValue = typeof record.event_version === "string"
+    ? record.event_version
+    : typeof record.eventVersion === "string"
+      ? record.eventVersion
+      : "1.0";
   return new EngineEvent(
     eventName,
     typeof record.source === "string" ? record.source : "system",
     typeof record.payload === "object" && record.payload !== null ? (record.payload as JsonObject) : {},
-    typeof record.traceId === "string" ? record.traceId : null,
-    typeof record.eventVersion === "string" ? record.eventVersion : "1.0"
+    traceIdValue,
+    eventVersionValue
   );
 }
