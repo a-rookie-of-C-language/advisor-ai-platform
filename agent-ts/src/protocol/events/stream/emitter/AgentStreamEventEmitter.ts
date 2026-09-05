@@ -5,7 +5,7 @@ export class AgentStreamEventEmitter {
   constructor(private readonly writer: SseWriter) {}
 
   async writeDelta(text: string): Promise<void> {
-    await this.writer.write("llm_delta", "llm", { text });
+    await this.writer.write("llm_data", "llm", { text });
   }
 
   async writeToolCall(toolCallId: string, toolName: string, toolArgs: JsonObject): Promise<void> {
