@@ -19,6 +19,7 @@ export interface EvalDeepEvalConfig {
   readonly model?: string;
   readonly apiKey?: string;
   readonly baseUrl?: string;
+  readonly available?: boolean;
 }
 
 export class EvalDeepEval {
@@ -29,6 +30,13 @@ export class EvalDeepEval {
     retrievalContext: readonly string[],
     config: EvalDeepEvalConfig = {}
   ): Promise<JsonObject> {
+    if (config.available === false) {
+      return {
+        error: "no_deepeval_provider",
+        avg_score: 0,
+        method: "deepeval"
+      };
+    }
     const external = await this.tryExternalEvaluate(query, expectedAnswer, actualAnswer, retrievalContext, config);
     if (external) {
       return external;

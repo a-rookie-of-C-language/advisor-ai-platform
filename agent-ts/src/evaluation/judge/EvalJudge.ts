@@ -15,12 +15,19 @@ export interface EvalJudgeConfig {
   readonly model?: string;
   readonly apiKey?: string;
   readonly baseUrl?: string;
+  readonly available?: boolean;
 }
 
 type EvalJudgePayload = Record<string, unknown>;
 
 export class EvalJudge {
   static async judge(query: string, expectedAnswer: string, actualAnswer: string, config: EvalJudgeConfig = {}): Promise<EvalJudgeScore> {
+    if (config.available === false) {
+      return {
+        error: "no_llm_provider",
+        avg_score: 0
+      };
+    }
     const external = await this.tryExternalJudge(query, expectedAnswer, actualAnswer, config);
     if (external) {
       return external;

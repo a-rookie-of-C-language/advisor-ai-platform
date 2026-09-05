@@ -4,6 +4,7 @@ import { EvalDatasetLoader } from "./dataset/EvalDatasetLoader.js";
 import { EvalDeepEval } from "./deepeval/EvalDeepEval.js";
 import { EvalRunner } from "./runner/EvalRunner.js";
 import { EvalJudge } from "./judge/EvalJudge.js";
+import { EvalBackendProbe } from "./probe/EvalBackendProbe.js";
 import { EvalConfigFactory } from "../config/factory/EvalConfigFactory.js";
 import { AgentConfig } from "../config/model/core/AgentConfig.js";
 import { RagApiClient } from "../rag/api/core/RagApiClient.js";
@@ -40,6 +41,11 @@ async function main(): Promise<void> {
     apiKey: evalConfig.apiKey || undefined,
     baseUrl: evalConfig.baseUrl || undefined
   });
+  const probe = await EvalBackendProbe.probe(
+    evalConfig.baseUrl,
+    evalConfig.apiKey,
+    readArg("judge-model") ?? evalConfig.model
+  );
 
   const runner = new EvalRunner(dataset, topK, {
     ragSearch: async (_query, targetKbId, requestedTopK) => {
@@ -65,7 +71,13 @@ async function main(): Promise<void> {
       return answer;
     },
     judgeE2e: async (query, expectedAnswer, actualAnswer) => {
-      const score = await EvalJudge.judge(query, expectedAnswer, actualAnswer, buildEvalConfig());
+      if (!probe.available) {
+        return { error: "no_llm_provider", avg_score: 0 };
+      }
+      const score = await EvalJudge.judge(query, expectedAnswer, actualAnswer, {
+        ...buildEvalConfig(),
+        available: true
+      });
       const result: JsonObject = { avg_score: score.avg_score };
       if (score.relevance !== undefined) result.relevance = score.relevance;
       if (score.completeness !== undefined) result.completeness = score.completeness;
@@ -79,7 +91,8 @@ async function main(): Promise<void> {
       EvalDeepEval.evaluate(query, expectedAnswer, actualAnswer, retrievalContext, {
         model: readArg("deepeval-model") ?? evalConfig.model,
         apiKey: evalConfig.apiKey || undefined,
-        baseUrl: evalConfig.baseUrl || undefined
+        baseUrl: evalConfig.baseUrl || undefined,
+        available: probe.available
       })
   });
 
