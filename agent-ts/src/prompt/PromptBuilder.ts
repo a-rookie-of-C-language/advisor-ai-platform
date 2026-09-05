@@ -106,6 +106,37 @@ export class PromptBuilder {
     };
   }
 
+  static buildTaskPlanToolCatalog(tools: readonly OpenAIChatTool[]): string {
+    if (tools.length === 0) return "";
+    const lines = ["以下是可用工具目录："];
+    for (const tool of tools) {
+      const params = tool.function.parameters as JsonObject;
+      const meta: string[] = [];
+      if (typeof params.category === "string" && params.category) meta.push(`category=${params.category}`);
+      if (typeof params.read_only === "boolean" && params.read_only) meta.push("read_only=true");
+      if (typeof params.defer_loading === "boolean" && params.defer_loading) meta.push("defer_loading=true");
+      lines.push(meta.length > 0 ? `- ${tool.function.name}: ${tool.function.description} (${meta.join(", ")})` : `- ${tool.function.name}: ${tool.function.description}`);
+    }
+    return lines.join("\n");
+  }
+
+  static buildToolCatalogPrompt(tools: readonly OpenAIChatTool[]): string {
+    if (tools.length === 0) return "";
+    const lines = ["以下是可用工具目录："];
+    for (const tool of tools) {
+      const parameters = tool.function.parameters as JsonObject;
+      const category = String(parameters.category ?? "");
+      const readOnly = Boolean(parameters.read_only);
+      const deferLoading = Boolean(parameters.defer_loading);
+      const hints: string[] = [];
+      if (category) hints.push(`分类: ${category}`);
+      if (readOnly) hints.push("只读");
+      if (deferLoading) hints.push("按需加载");
+      lines.push(`- ${tool.function.name}: ${tool.function.description}${hints.length ? ` [${hints.join(", ")}]` : ""}`);
+    }
+    return lines.join("\n");
+  }
+
   static renderTaskPlanPrompt(taskPlan: JsonObject): string {
     return [
       "下面是本轮执行计划，请严格遵循计划中的步骤和工具顺序。",
@@ -120,8 +151,12 @@ export class PromptBuilder {
     availableTools: readonly OpenAIChatTool[],
     routeContext: JsonObject
   ): string {
+    const payload = this.buildTaskPlanPromptPayload(userQuery, recentMessages, availableTools, routeContext);
     return JSON.stringify(
-      this.buildTaskPlanPromptPayload(userQuery, recentMessages, availableTools, routeContext),
+      {
+        ...payload,
+        available_tool_catalog: this.buildTaskPlanToolCatalog(availableTools)
+      },
       null,
       0
     );

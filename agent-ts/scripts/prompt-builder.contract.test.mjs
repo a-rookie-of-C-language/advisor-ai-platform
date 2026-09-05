@@ -31,6 +31,10 @@ test("prompt builder mirrors python side prompt helpers", () => {
   assert.match(PromptBuilder.buildDelegateReasoningPrompt("task_planner_subagent"), /任务规划器/);
   assert.match(PromptBuilder.buildTaskPlannerSystemPrompt(), /任务规划器/);
   assert.match(PromptBuilder.buildTaskPlannerPrompt("q", [], [], { categories: [] }), /user_query/);
+  assert.match(
+    PromptBuilder.buildTaskPlannerPrompt("q", [], [{ type: "function", function: { name: "rag_search", description: "desc", parameters: {} } }], { categories: [] }),
+    /available_tool_catalog/
+  );
 });
 
 test("prompt builder assembles system prompts in python order", () => {
