@@ -31,6 +31,10 @@ export class AgentStreamEventWriter {
       }
       return;
     }
+    if (event.type === "reasoning_delta") {
+      await this.eventEmitter.writeReasoningDelta(event.text);
+      return;
+    }
     if (event.type === "tool_call") {
       await this.eventEmitter.writeToolCall(event.toolCallId, event.toolName, event.toolArgs);
       return;

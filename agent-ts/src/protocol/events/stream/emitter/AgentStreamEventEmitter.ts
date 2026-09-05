@@ -8,6 +8,10 @@ export class AgentStreamEventEmitter {
     await this.writer.write("llm_data", "llm", { text });
   }
 
+  async writeReasoningDelta(text: string): Promise<void> {
+    await this.writer.write("reasoning_delta", "llm", { text });
+  }
+
   async writeToolCall(toolCallId: string, toolName: string, toolArgs: JsonObject): Promise<void> {
     await this.writer.write("tool_call", "tool", {
       tool_call_id: toolCallId,

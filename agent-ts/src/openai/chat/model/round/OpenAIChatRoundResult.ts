@@ -2,5 +2,6 @@ import type { OpenAIToolCall } from "../../../tools/runtime/model/call/OpenAIToo
 
 export interface OpenAIChatRoundResult {
   textParts: string[];
+  reasoningParts: string[];
   toolCalls: OpenAIToolCall[];
 }

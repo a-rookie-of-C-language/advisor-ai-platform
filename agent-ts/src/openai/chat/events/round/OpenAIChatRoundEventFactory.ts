@@ -6,6 +6,9 @@ export class OpenAIChatRoundEventFactory {
   private readonly deltaEventFactory = new OpenAIChatDeltaEventFactory();
 
   create(round: OpenAIChatRoundResult): OpenAIChatStreamEvent[] {
-    return this.deltaEventFactory.create(round.textParts);
+    return [
+      ...this.deltaEventFactory.createReasoning(round.reasoningParts),
+      ...this.deltaEventFactory.create(round.textParts)
+    ];
   }
 }

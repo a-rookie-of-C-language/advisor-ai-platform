@@ -2,5 +2,6 @@ import type { OpenAIStreamToolCallDelta } from "../toolCall/OpenAIStreamToolCall
 
 export interface OpenAIParsedStreamLine {
   text: string;
+  reasoning: string;
   toolCalls: OpenAIStreamToolCallDelta[];
 }

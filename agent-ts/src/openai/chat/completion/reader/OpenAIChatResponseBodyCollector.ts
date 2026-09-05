@@ -25,6 +25,7 @@ export class OpenAIChatResponseBodyCollector {
 
     return {
       textParts,
+      reasoningParts: [],
       toolCalls: [...toolCalls.entries()].sort(([left], [right]) => left - right).map(([, value]) => value)
     };
   }

@@ -6,6 +6,10 @@ export type OpenAIChatStreamEvent =
       text: string;
     }
   | {
+      type: "reasoning_delta";
+      text: string;
+    }
+  | {
       type: "tool_call";
       toolCallId: string;
       toolName: string;
