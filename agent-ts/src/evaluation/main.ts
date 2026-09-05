@@ -58,7 +58,11 @@ async function main(): Promise<void> {
     },
     judgeE2e: async (query, expectedAnswer, actualAnswer) => EvalJudge.judge(query, expectedAnswer, actualAnswer),
     deepeval: async (query, expectedAnswer, actualAnswer, retrievalContext) =>
-      EvalDeepEval.evaluate(query, expectedAnswer, actualAnswer, retrievalContext)
+      EvalDeepEval.evaluate(query, expectedAnswer, actualAnswer, retrievalContext, {
+        model: readArg("deepeval-model") ?? config.openAiModel,
+        apiKey: config.openAiApiKey || undefined,
+        baseUrl: config.openAiBaseUrl || undefined
+      })
   });
 
   const report = await runner.runAll();
