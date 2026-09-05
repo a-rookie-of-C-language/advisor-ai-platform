@@ -8,6 +8,7 @@ export class AgentLoop {
   constructor(private readonly options: AgentLoopOptions) {}
 
   private readonly toolTimeoutPolicy = new ToolTimeoutPolicy();
+  private readonly maxToolRetries = 3;
 
   async run(): Promise<AgentLoopResult> {
     const { onEvent } = this.options;
@@ -75,51 +76,64 @@ export class AgentLoop {
           });
           let toolResultForEvent: AgentLoopToolResult | undefined;
           try {
-          if (this.options.signal?.aborted) {
-            throw new Error("Agent stream aborted");
-          }
-          const allowed = this.options.beforeToolCall
-            ? await this.options.beforeToolCall({ toolCall, signal: this.options.signal })
-            : true;
-            let result: AgentLoopToolResult;
-          if (allowed === false) {
-            result = {
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              output: JSON.stringify({ ok: false, status: "blocked", message: "tool blocked by policy", items: [] }),
-              attempt: 0,
-              success: false
-            };
-          } else {
-            const toolResult = await this.toolTimeoutPolicy.execute(
-              this.options.toolTimeoutMs?.(toolCall.name),
-              this.options.signal,
-              (toolSignal) => this.options.executeTool(
-                this.options.chatRequest,
-                toolCall.name,
-                toolCall.args,
-                toolSignal
-              )
-            );
             if (this.options.signal?.aborted) {
               throw new Error("Agent stream aborted");
             }
-            result = {
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              output: toolResult.output,
-              attempt: 1,
-              success: toolResult.success
-            };
-            if (this.options.afterToolCall) {
-              const rewritten = await this.options.afterToolCall({ toolCall, result, signal: this.options.signal });
-              if (rewritten) {
-                result = rewritten;
+            const allowed = this.options.beforeToolCall
+              ? await this.options.beforeToolCall({ toolCall, signal: this.options.signal })
+              : true;
+            let result: AgentLoopToolResult;
+            if (allowed === false) {
+              result = {
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                output: JSON.stringify({ ok: false, status: "blocked", message: "tool blocked by policy", items: [] }),
+                attempt: 0,
+                success: false
+              };
+            } else {
+              let lastResult: AgentLoopToolResult | undefined;
+              for (let attempt = 1; attempt <= this.maxToolRetries; attempt++) {
+                const toolResult = await this.toolTimeoutPolicy.execute(
+                  this.options.toolTimeoutMs?.(toolCall.name),
+                  this.options.signal,
+                  (toolSignal) => this.options.executeTool(
+                    this.options.chatRequest,
+                    toolCall.name,
+                    toolCall.args,
+                    toolSignal
+                  )
+                );
+                if (this.options.signal?.aborted) {
+                  throw new Error("Agent stream aborted");
+                }
+                lastResult = {
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.name,
+                  output: toolResult.output,
+                  attempt,
+                  success: toolResult.success
+                };
+                if (toolResult.success) {
+                  break;
+                }
+              }
+              result = lastResult ?? {
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                output: JSON.stringify({ ok: false, status: "error", message: "tool execution failed", items: [] }),
+                attempt: this.maxToolRetries,
+                success: false
+              };
+              if (this.options.afterToolCall) {
+                const rewritten = await this.options.afterToolCall({ toolCall, result, signal: this.options.signal });
+                if (rewritten) {
+                  result = rewritten;
+                }
               }
             }
-          }
-          toolResultForEvent = result;
-          return result;
+            toolResultForEvent = result;
+            return result;
           } finally {
             await onEvent?.({
               type: "tool_execution_end",

@@ -86,6 +86,37 @@ test("declared tool timeout returns structured TOOL_TIMEOUT", async () => {
   assert.ok(results.every((result) => result.code === "TOOL_TIMEOUT"));
 });
 
+test("tool execution retries until success and records final attempt", async () => {
+  const attemptsByTool = { slow_a: 0, slow_b: 0 };
+  const toolResults = [];
+  const loop = new AgentLoop({
+    chatRequest: request,
+    maxTurns: 1,
+    stream: streamWithToolCalls,
+    executeTool: async (_request, toolName) => {
+      attemptsByTool[toolName] += 1;
+      if (attemptsByTool[toolName] < 3) {
+        return { output: JSON.stringify({ ok: false, status: "error", message: "retry", items: [] }), success: false };
+      }
+      return { output: JSON.stringify({ ok: true, status: "hit", items: [] }), success: true };
+    },
+    writer: async (event) => {
+      if (event.type === "tool_result") {
+        toolResults.push(event);
+      }
+    }
+  });
+
+  await loop.run();
+  assert.equal(toolResults.length, 2);
+  assert.equal(toolResults[0].attempt, 3);
+  assert.equal(toolResults[1].attempt, 3);
+  assert.equal(toolResults[0].success, true);
+  assert.equal(toolResults[1].success, true);
+  assert.equal(attemptsByTool.slow_a, 3);
+  assert.equal(attemptsByTool.slow_b, 3);
+});
+
 test("safety filters redact PII and secrets across stream chunk boundaries", () => {
   const filter = new RegexSafetyFilter();
   assert.equal(filter.redact("联系 13812345678 或 test@example.com"), "联系 [MASK:PHONE] 或 [MASK:EMAIL]");
