@@ -215,6 +215,7 @@ test("AgentChatStreamSession downgrades strong search routing without matched to
 
 test("AgentChatStreamSession emits legacy reasoning for education queries", async () => {
   const writes = [];
+  const plans = [];
   const config = {
     openAiApiKey: "integration-key",
     openAiBaseUrl: "http://127.0.0.1:65535",
@@ -247,8 +248,10 @@ test("AgentChatStreamSession emits legacy reasoning for education queries", asyn
 
   await session.stream({ messages: [{ role: "user", content: "请根据知识库文档解释学生工作政策" }] }, "turn-1", writer);
 
+  const sysToolPlan = writes.find(({ event }) => event === "sys_tool_plan");
   assert.equal(writes.some(({ event }) => event === "sys_reasoning"), true);
   assert.equal(writes.some(({ event }) => event === "sys_tool_plan"), true);
+  assert.equal(sysToolPlan.payload.routeContext.education_domain, true);
   assert.equal(writes[writes.length - 1].event, "done");
 });
 

@@ -61,6 +61,21 @@ export function buildLegacyRouteContext(
   };
 }
 
+export function buildPlannerRouteContext(
+  routeDecision: IntentRouteDecision,
+  matchedTools: readonly string[],
+  educationDomain: boolean
+): JsonObject {
+  return {
+    categories: [...routeDecision.categories].sort(),
+    matched_tools: [...matchedTools],
+    matched_by: routeDecision.matchedBy,
+    confidence: routeDecision.confidence,
+    education_domain: educationDomain,
+    preferred_tools: educationDomain ? ["rag_search"] : []
+  };
+}
+
 export function preferRetrievalFallback(routeDecision: IntentRouteDecision, hasRagTool: boolean): IntentRouteDecision {
   if (!hasRagTool) return routeDecision;
   if (routeDecision.categories.size === 1 && routeDecision.categories.has("retrieval")) return routeDecision;

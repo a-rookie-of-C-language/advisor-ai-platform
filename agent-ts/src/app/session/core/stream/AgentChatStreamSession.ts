@@ -22,7 +22,12 @@ import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemor
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
 import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
-import { adjustRoutePayload, buildLegacyRouteContext, preferRetrievalFallback } from "../../../../legacy/core/LegacyRouteSupport.js";
+import {
+  adjustRoutePayload,
+  buildLegacyRouteContext,
+  buildPlannerRouteContext,
+  preferRetrievalFallback
+} from "../../../../legacy/core/LegacyRouteSupport.js";
 import {
   buildDelegateReasoningPayload,
   buildPlanReasoningPayload,
@@ -143,11 +148,7 @@ export class AgentChatStreamSession {
       const taskPlan = this.taskPlanner.plan({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
-        routeContext: {
-          categories: [...legacyRoute.categories],
-          matched_tools: [...legacyRoute.matchedTools],
-          preferred_tools: [...legacyRoute.preferredTools, ...(educationDomain || ragOnlyPreferred ? ["rag_search"] : [])]
-        }
+        routeContext: buildPlannerRouteContext(route, legacyRoute.matchedTools, educationDomain || ragOnlyPreferred)
       });
       if (shouldEmitReasoning) {
         await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));
