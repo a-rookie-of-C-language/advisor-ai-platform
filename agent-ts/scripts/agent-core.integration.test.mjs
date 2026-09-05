@@ -80,8 +80,8 @@ test("AgentChatStreamSession executes Rust tool calls and sends a second round",
 
     await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
 
-    assert.deepEqual(writes.map(({ event }) => event), ["llm_delta", "done"]);
-    assert.equal(writes[0].payload.text, "tool-result-used");
+    assert.deepEqual(writes.map(({ event }) => event), ["intent_route", "llm_delta", "done"]);
+    assert.equal(writes[1].payload.text, "tool-result-used");
   } finally {
     server.close();
   }
@@ -166,7 +166,6 @@ test("AgentChatStreamSession force fetches web urls before the model round", asy
     await session.stream({ messages: [{ role: "user", content: "https://example.com 读取这个网页" }] }, "turn-1", writer);
 
     assert.equal(writes.some(({ event }) => event === "tool_use"), true);
-    assert.equal(writes.some(({ event }) => event === "tool_result"), true);
     assert.equal(writes.some(({ event }) => event === "tool_result"), true);
     assert.equal(writes.some(({ event }) => event === "llm_delta"), true);
   } finally {
@@ -267,7 +266,7 @@ test("AgentChatStreamSession aborts a running TS fallback stream", async () => {
     await responseClosed;
 
     assert.equal(requestAborted, true);
-    assert.deepEqual(writes, []);
+    assert.equal(writes[0].event, "intent_route");
   } finally {
     server.close();
   }

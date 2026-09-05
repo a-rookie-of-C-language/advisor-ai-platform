@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { AgentGraphRunner } from "../dist/graph/core/AgentGraphRunner.js";
+import { buildDefaultSkillRegistry } from "../dist/skills/preset/buildDefaultSkillRegistry.js";
 
 test("graph runner executes the Python parity node order", async () => {
   const events = [];
@@ -24,4 +25,14 @@ test("graph runner stops before the next node when cancelled", async () => {
     /aborted/
   );
   assert.deepEqual(events.filter((event) => event.status === "start").map((event) => event.node), ["select_skill"]);
+});
+
+test("graph runner selects skills by parsed names before falling back", async () => {
+  const registry = buildDefaultSkillRegistry();
+  const result = await new AgentGraphRunner({}, registry).run({
+    messages: [{ role: "user", content: "展开技能 [\"web_research\"]" }],
+    userQuery: "展开技能 [\"web_research\"]"
+  });
+  assert.deepEqual(result.activeSkills, ["web_research"]);
+  assert.ok(result.skillSystemPrompt?.includes("用 web_search 搜索互联网"));
 });

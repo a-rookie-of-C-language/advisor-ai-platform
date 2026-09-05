@@ -2,6 +2,7 @@ import type { GraphNodeName } from "../model/GraphNodeName.js";
 import { GRAPH_NODE_NAMES } from "../model/GraphNodeName.js";
 import type { GraphState } from "../model/GraphState.js";
 import type { SkillRegistry } from "../../skills/core/SkillRegistry.js";
+import { parseSkillNames } from "../helpers.js";
 
 export type GraphNodeHandler = (state: GraphState, signal?: AbortSignal) => Promise<GraphState>;
 
@@ -23,9 +24,12 @@ export class AgentGraphRunner {
       onEvent?.({ node, status: "start" });
       if (node === "select_skill" && this.skillRegistry) {
         const userQuery = String(state.userQuery ?? "").trim();
-        const selected = this.skillRegistry
-          .listAll()
-          .filter((skill) => userQuery.length > 0 && (skill.description.includes(userQuery) || skill.brief.includes(userQuery)));
+        const allSkills = this.skillRegistry.listAll();
+        const knownNames = allSkills.map((skill) => skill.name);
+        const selectedNames = parseSkillNames(userQuery, knownNames);
+        const selected = selectedNames.length > 0
+          ? allSkills.filter((skill) => selectedNames.includes(skill.name))
+          : allSkills.filter((skill) => userQuery.length > 0 && (skill.description.includes(userQuery) || skill.brief.includes(userQuery)));
         state = {
           ...state,
           activeSkills: selected.map((skill) => skill.name),
