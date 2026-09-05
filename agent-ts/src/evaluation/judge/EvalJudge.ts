@@ -1,3 +1,5 @@
+import { PromptBuilder } from "../../prompt/PromptBuilder.js";
+
 export interface EvalJudgeScore {
   readonly relevance?: number;
   readonly completeness?: number;
@@ -38,23 +40,7 @@ export class EvalJudge {
       return null;
     }
 
-    const prompt = [
-      "你是一个评估专家。请对以下回答进行评分。",
-      "",
-      `问题：${query}`,
-      "",
-      `期望答案：${expectedAnswer}`,
-      "",
-      `实际答案：${actualAnswer}`,
-      "",
-      "请从以下四个维度评分（1-5分）：",
-      "- relevance（相关性）：回答是否与问题相关",
-      "- completeness（完整性）：回答是否涵盖了期望答案的要点",
-      "- accuracy（准确性）：回答是否准确无误",
-      "- fluency（流畅性）：回答是否通顺、易读",
-      "",
-      '返回 JSON 格式：{"relevance": 1-5, "completeness": 1-5, "accuracy": 1-5, "fluency": 1-5, "reasoning": "评分理由"}'
-    ].join("\n");
+    const prompt = PromptBuilder.buildE2EJudgePrompt(query, expectedAnswer, actualAnswer);
 
     try {
       const response = await fetch(`${config.baseUrl}/chat/completions`, {

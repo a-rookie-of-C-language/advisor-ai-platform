@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
+import { PromptBuilder } from "../../prompt/PromptBuilder.js";
 
 type MetricScore = {
   readonly score: number;
@@ -48,14 +49,7 @@ export class EvalDeepEval {
     if (!config.apiKey || !config.baseUrl || !config.model) {
       return null;
     }
-    const prompt = [
-      "你是一个评估专家，请严格返回 JSON。",
-      `问题: ${query}`,
-      `期望答案: ${expectedAnswer}`,
-      `实际答案: ${actualAnswer}`,
-      `检索上下文: ${retrievalContext.join(" || ")}`,
-      "请返回包含以下字段的 JSON: 忠实度, 答案相关性, 上下文精度, 上下文召回率, 上下文相关性, 幻觉检测, 偏见检测, 毒性检测, 隐私泄露检测, 相关性, 连贯性, 完整性。每个字段格式为 {\"score\": 0-1, \"reason\": \"...\", \"success\": true/false, \"threshold\": 0.8}。另外返回 avg_score 和 method。"
-    ].join("\n");
+    const prompt = PromptBuilder.buildDeepEvalPrompt(query, expectedAnswer, actualAnswer, retrievalContext);
     const body = {
       model: config.model,
       messages: [{ role: "user", content: prompt }],

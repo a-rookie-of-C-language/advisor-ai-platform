@@ -114,6 +114,37 @@ export class PromptBuilder {
     ].join("\n");
   }
 
+  static buildE2EJudgePrompt(query: string, expectedAnswer: string, actualAnswer: string): string {
+    return [
+      "你是一个评估专家。请对以下回答进行评分。",
+      "",
+      `问题：${query}`,
+      "",
+      `期望答案：${expectedAnswer}`,
+      "",
+      `实际答案：${actualAnswer}`,
+      "",
+      "请从以下四个维度评分（1-5分）：",
+      "- relevance（相关性）：回答是否与问题相关",
+      "- completeness（完整性）：回答是否涵盖了期望答案的要点",
+      "- accuracy（准确性）：回答是否准确无误",
+      "- fluency（流畅性）：回答是否通顺、易读",
+      "",
+      '返回 JSON 格式：{"relevance": 1-5, "completeness": 1-5, "accuracy": 1-5, "fluency": 1-5, "reasoning": "评分理由"}'
+    ].join("\n");
+  }
+
+  static buildDeepEvalPrompt(query: string, expectedAnswer: string, actualAnswer: string, retrievalContext: readonly string[]): string {
+    return [
+      "你是一个评估专家，请严格返回 JSON。",
+      `问题: ${query}`,
+      `期望答案: ${expectedAnswer}`,
+      `实际答案: ${actualAnswer}`,
+      `检索上下文: ${retrievalContext.join(" || ")}`,
+      "请返回包含以下字段的 JSON: 忠实度, 答案相关性, 上下文精度, 上下文召回率, 上下文相关性, 幻觉检测, 偏见检测, 毒性检测, 隐私泄露检测, 相关性, 连贯性, 完整性。每个字段格式为 {\"score\": 0-1, \"reason\": \"...\", \"success\": true/false, \"threshold\": 0.8}。另外返回 avg_score 和 method。"
+    ].join("\n");
+  }
+
   static assembleMessages(
     modelMessages: readonly ChatMessageDTO[],
     prompts: {

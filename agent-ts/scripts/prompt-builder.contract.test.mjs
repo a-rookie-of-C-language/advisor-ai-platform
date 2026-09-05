@@ -24,6 +24,8 @@ test("prompt builder mirrors python side prompt helpers", () => {
   assert.equal(taskPlanPayload.user_query, "查资料");
   assert.equal(Array.isArray(taskPlanPayload.recent_messages), true);
   assert.match(PromptBuilder.renderTaskPlanPrompt({ mode: "direct", summary: "ok" }), /执行计划/);
+  assert.match(PromptBuilder.buildE2EJudgePrompt("q", "e", "a"), /评估专家/);
+  assert.match(PromptBuilder.buildDeepEvalPrompt("q", "e", "a", ["ctx"]), /严格返回 JSON/);
 });
 
 test("prompt builder assembles system prompts in python order", () => {
