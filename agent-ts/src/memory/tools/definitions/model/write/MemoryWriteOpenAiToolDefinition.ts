@@ -29,6 +29,11 @@ export class MemoryWriteOpenAiToolDefinition {
           },
           required: ["candidates"]
         }
+      },
+      meta: {
+        category: "memory",
+        readOnly: false,
+        searchHint: "记住,保存记忆,长期记忆"
       }
     };
   }

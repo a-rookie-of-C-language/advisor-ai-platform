@@ -14,6 +14,11 @@ export class WorkspaceListOpenAiToolDefinition {
             recursive: { type: "boolean", description: "是否递归列出子目录" }
           }
         }
+      },
+      meta: {
+        category: "workspace",
+        readOnly: true,
+        searchHint: "工作区,目录,列出,文件"
       }
     };
   }

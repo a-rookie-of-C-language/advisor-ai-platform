@@ -16,6 +16,11 @@ export class WorkspaceWriteOpenAiToolDefinition {
           },
           required: ["path", "content"]
         }
+      },
+      meta: {
+        category: "workspace",
+        readOnly: false,
+        searchHint: "工作区,写入,文件,内容"
       }
     };
   }

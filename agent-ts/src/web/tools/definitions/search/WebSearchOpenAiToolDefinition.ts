@@ -14,6 +14,11 @@ export class WebSearchOpenAiToolDefinition {
           },
           required: ["query"]
         }
+      },
+      meta: {
+        category: "search",
+        readOnly: true,
+        searchHint: "搜索,网页,实时,最新,新闻,价格,政策"
       }
     };
   }

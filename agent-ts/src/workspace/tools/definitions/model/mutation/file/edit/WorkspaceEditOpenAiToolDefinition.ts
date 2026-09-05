@@ -17,6 +17,11 @@ export class WorkspaceEditOpenAiToolDefinition {
           },
           required: ["path", "old_string", "new_string"]
         }
+      },
+      meta: {
+        category: "workspace",
+        readOnly: false,
+        searchHint: "工作区,编辑,替换,文件"
       }
     };
   }

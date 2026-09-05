@@ -54,8 +54,7 @@ export class PromptBuilder {
     if (tools.length === 0) return "";
     const lines = ["以下工具支持按需加载：如需完整定义，请先调用 tool_search 并传入关键字。"];
     for (const tool of tools) {
-      const parameters = tool.function.parameters as JsonObject;
-      const hint = typeof parameters.search_hint === "string" ? ` [关键词: ${parameters.search_hint}]` : "";
+      const hint = tool.meta?.searchHint ? ` [关键词: ${tool.meta.searchHint}]` : "";
       lines.push(`- ${tool.function.name}: ${tool.function.description}${hint}`);
     }
     return lines.join("\n");
@@ -110,11 +109,10 @@ export class PromptBuilder {
     if (tools.length === 0) return "";
     const lines = ["以下是可用工具目录："];
     for (const tool of tools) {
-      const params = tool.function.parameters as JsonObject;
       const meta: string[] = [];
-      if (typeof params.category === "string" && params.category) meta.push(`category=${params.category}`);
-      if (typeof params.read_only === "boolean" && params.read_only) meta.push("read_only=true");
-      if (typeof params.defer_loading === "boolean" && params.defer_loading) meta.push("defer_loading=true");
+      if (tool.meta?.category) meta.push(`category=${tool.meta.category}`);
+      if (tool.meta?.readOnly) meta.push("read_only=true");
+      if (tool.meta?.deferLoading) meta.push("defer_loading=true");
       lines.push(meta.length > 0 ? `- ${tool.function.name}: ${tool.function.description} (${meta.join(", ")})` : `- ${tool.function.name}: ${tool.function.description}`);
     }
     return lines.join("\n");
@@ -124,10 +122,9 @@ export class PromptBuilder {
     if (tools.length === 0) return "";
     const lines = ["以下是可用工具目录："];
     for (const tool of tools) {
-      const parameters = tool.function.parameters as JsonObject;
-      const category = String(parameters.category ?? "");
-      const readOnly = Boolean(parameters.read_only);
-      const deferLoading = Boolean(parameters.defer_loading);
+      const category = tool.meta?.category ?? "";
+      const readOnly = Boolean(tool.meta?.readOnly);
+      const deferLoading = Boolean(tool.meta?.deferLoading);
       const hints: string[] = [];
       if (category) hints.push(`分类: ${category}`);
       if (readOnly) hints.push("只读");
@@ -151,12 +148,8 @@ export class PromptBuilder {
     availableTools: readonly OpenAIChatTool[],
     routeContext: JsonObject
   ): string {
-    const payload = this.buildTaskPlanPromptPayload(userQuery, recentMessages, availableTools, routeContext);
     return JSON.stringify(
-      {
-        ...payload,
-        available_tool_catalog: this.buildTaskPlanToolCatalog(availableTools)
-      },
+      this.buildTaskPlanPromptPayload(userQuery, recentMessages, availableTools, routeContext),
       null,
       0
     );
@@ -340,9 +333,9 @@ export class PromptBuilder {
     return {
       name: tool.function.name,
       description: tool.function.description.slice(0, 800),
-      category: "",
-      read_only: false,
-      defer_loading: false
+      category: tool.meta?.category ?? "",
+      read_only: Boolean(tool.meta?.readOnly),
+      defer_loading: Boolean(tool.meta?.deferLoading)
     };
   }
 

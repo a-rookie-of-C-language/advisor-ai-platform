@@ -14,6 +14,11 @@ export class RagSearchOpenAiToolDefinition {
             top_k: { type: "integer", description: "返回文档数量，默认 5，最大 10" }
           }
         }
+      },
+      meta: {
+        category: "retrieval",
+        readOnly: true,
+        searchHint: "知识库,文档,资料,政策,制度,辅导员"
       }
     };
   }

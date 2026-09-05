@@ -16,6 +16,11 @@ export class WorkspaceReadOpenAiToolDefinition {
           },
           required: ["path"]
         }
+      },
+      meta: {
+        category: "workspace",
+        readOnly: true,
+        searchHint: "工作区,读取,文件,内容"
       }
     };
   }

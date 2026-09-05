@@ -87,7 +87,7 @@ export class OpenAiToolRegistry {
       name: tool.function.name,
       description: tool.function.description,
       parameters: tool.function.parameters,
-      searchHint: String((tool.function.parameters as JsonObject).search_hint ?? "")
+      searchHint: tool.meta?.searchHint ?? ""
     }));
     if (this.skillRegistry) {
       const skillSpecs = this.skillRegistry.listAll().map((skill) => ({

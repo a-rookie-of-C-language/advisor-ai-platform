@@ -18,6 +18,11 @@ export class ExpandSkillTool {
           },
           required: ["skill_name"]
         }
+      },
+      meta: {
+        category: "skills",
+        readOnly: true,
+        searchHint: "技能,展开,指令,指南"
       }
     };
   }

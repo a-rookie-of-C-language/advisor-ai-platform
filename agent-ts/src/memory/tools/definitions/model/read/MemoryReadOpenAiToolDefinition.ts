@@ -14,6 +14,11 @@ export class MemoryReadOpenAiToolDefinition {
             top_k: { type: "integer", description: "返回记忆数量，默认使用系统配置，最大 10" }
           }
         }
+      },
+      meta: {
+        category: "memory",
+        readOnly: true,
+        searchHint: "记忆,偏好,历史信息,已保存事实"
       }
     };
   }

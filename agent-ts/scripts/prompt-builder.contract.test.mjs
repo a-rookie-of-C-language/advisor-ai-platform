@@ -18,11 +18,40 @@ test("prompt builder mirrors python side prompt helpers", () => {
   const taskPlanPayload = PromptBuilder.buildTaskPlanPromptPayload(
     "查资料",
     [{ role: "user", content: "recent", attachments: null }],
-    [{ type: "function", function: { name: "rag_search", description: "desc", parameters: {} } }],
+    [{
+      type: "function",
+      function: {
+        name: "rag_search",
+        description: "desc",
+        parameters: {}
+      },
+      meta: {
+        category: "retrieval",
+        readOnly: true,
+        deferLoading: false,
+        searchHint: "知识库"
+      }
+    }],
     { categories: ["retrieval"] }
   );
   assert.equal(taskPlanPayload.user_query, "查资料");
   assert.equal(Array.isArray(taskPlanPayload.recent_messages), true);
+  assert.equal(taskPlanPayload.available_tools[0].category, "retrieval");
+  assert.equal(taskPlanPayload.available_tools[0].read_only, true);
+  assert.match(PromptBuilder.buildTaskPlanToolCatalog([{
+    type: "function",
+    function: {
+      name: "rag_search",
+      description: "desc",
+      parameters: {}
+    },
+    meta: {
+      category: "retrieval",
+      readOnly: true,
+      deferLoading: false,
+      searchHint: "知识库"
+    }
+  }]), /category=retrieval/);
   assert.match(PromptBuilder.renderTaskPlanPrompt({ mode: "direct", summary: "ok" }), /执行计划/);
   assert.match(PromptBuilder.buildE2EJudgePrompt("q", "e", "a"), /评估专家/);
   assert.match(PromptBuilder.buildDeepEvalPrompt("q", "e", "a", ["ctx"]), /严格返回 JSON/);
@@ -31,10 +60,11 @@ test("prompt builder mirrors python side prompt helpers", () => {
   assert.match(PromptBuilder.buildDelegateReasoningPrompt("task_planner_subagent"), /任务规划器/);
   assert.match(PromptBuilder.buildTaskPlannerSystemPrompt(), /任务规划器/);
   assert.match(PromptBuilder.buildTaskPlannerPrompt("q", [], [], { categories: [] }), /user_query/);
-  assert.match(
-    PromptBuilder.buildTaskPlannerPrompt("q", [], [{ type: "function", function: { name: "rag_search", description: "desc", parameters: {} } }], { categories: [] }),
-    /available_tool_catalog/
-  );
+  assert.match(PromptBuilder.buildTaskPlannerPrompt("q", [], [{
+    type: "function",
+    function: { name: "rag_search", description: "desc", parameters: {} },
+    meta: { category: "retrieval", readOnly: true, deferLoading: false }
+  }], { categories: [] }), /available_tools/);
 });
 
 test("prompt builder assembles system prompts in python order", () => {

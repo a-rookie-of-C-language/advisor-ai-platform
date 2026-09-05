@@ -15,6 +15,11 @@ export class WorkspaceCreateDirOpenAiToolDefinition {
           },
           required: ["path"]
         }
+      },
+      meta: {
+        category: "workspace",
+        readOnly: false,
+        searchHint: "工作区,创建目录,目录"
       }
     };
   }

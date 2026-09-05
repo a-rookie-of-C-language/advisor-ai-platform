@@ -7,4 +7,11 @@ export interface OpenAIChatTool {
     description: string;
     parameters: JsonObject;
   };
+  meta?: {
+    category?: string;
+    deferLoading?: boolean;
+    searchHint?: string;
+    concurrencySafe?: boolean;
+    readOnly?: boolean;
+  };
 }

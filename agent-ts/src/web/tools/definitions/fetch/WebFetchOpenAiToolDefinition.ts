@@ -14,6 +14,11 @@ export class WebFetchOpenAiToolDefinition {
           },
           required: ["url"]
         }
+      },
+      meta: {
+        category: "web",
+        readOnly: true,
+        searchHint: "抓取,读取,链接,url,网页正文"
       }
     };
   }

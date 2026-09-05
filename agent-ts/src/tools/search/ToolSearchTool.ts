@@ -25,6 +25,12 @@ export class ToolSearchTool {
           },
           required: ["keywords"]
         }
+      },
+      meta: {
+        category: "search",
+        readOnly: true,
+        deferLoading: false,
+        searchHint: "工具,搜索,延迟加载,schema"
       }
     };
   }
