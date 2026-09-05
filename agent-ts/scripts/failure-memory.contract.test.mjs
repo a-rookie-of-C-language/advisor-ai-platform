@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { PromptBuilder } from "../dist/prompt/PromptBuilder.js";
 import { FailureMemoryStore } from "../dist/memory/failure/core/FailureMemoryStore.js";
 import { FailureMemorySupport } from "../dist/memory/failure/core/FailureMemorySupport.js";
 
@@ -19,6 +20,7 @@ test("failure memory records low-score traces and injects a matched avoidance pr
     assert.match(messages[0].content, /历史失败模式/);
     assert.match(messages[0].content, /避免重复同样的错误/);
     assert.equal(messages.at(-1).role, "user");
+    assert.equal(PromptBuilder.buildMemoryContextPrompt("x").startsWith("你拥有来自历史交互的记忆上下文"), true);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
