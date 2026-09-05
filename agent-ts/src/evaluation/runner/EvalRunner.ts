@@ -1,6 +1,7 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { EvalCase } from "../model/EvalCase.js";
 import type { EvalDataset } from "../model/EvalDataset.js";
+import { EvalJudge } from "../judge/EvalJudge.js";
 import { EvalReportBuilder } from "../report/EvalReportBuilder.js";
 import { toJsonable } from "../serialization/toJsonable.js";
 
@@ -97,7 +98,7 @@ export class EvalRunner {
 
   private async evalE2e(evalCase: EvalCase, actualAnswer: string): Promise<JsonObject> {
     if (!this.adapters.judgeE2e) {
-      return { error: "no_llm_provider", avg_score: 0 };
+      return EvalJudge.judge(evalCase.query, evalCase.expectedAnswer ?? "", actualAnswer);
     }
     return this.adapters.judgeE2e(evalCase.query, evalCase.expectedAnswer ?? "", actualAnswer);
   }

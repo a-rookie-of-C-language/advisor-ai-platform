@@ -2,6 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { argv, exit } from "node:process";
 import { EvalDatasetLoader } from "./dataset/EvalDatasetLoader.js";
 import { EvalRunner } from "./runner/EvalRunner.js";
+import { EvalJudge } from "./judge/EvalJudge.js";
 import { AgentConfig } from "../config/model/core/AgentConfig.js";
 import { RagApiClient } from "../rag/api/core/RagApiClient.js";
 import { OpenAIChatClient } from "../openai/chat/core/client/OpenAIChatClient.js";
@@ -54,10 +55,7 @@ async function main(): Promise<void> {
       }
       return answer;
     },
-    judgeE2e: async (_query, expectedAnswer, actualAnswer) => {
-      const score = expectedAnswer && actualAnswer ? 1 : 0;
-      return { relevance: score, completeness: score, accuracy: score, fluency: score, avg_score: score };
-    },
+    judgeE2e: async (query, expectedAnswer, actualAnswer) => EvalJudge.judge(query, expectedAnswer, actualAnswer),
     deepeval: async (_query, _expectedAnswer, _actualAnswer, _retrievalContext) => ({
       avg_score: 0,
       metrics: {}
