@@ -6,6 +6,8 @@ export interface IntentRouterOptions {
   readonly allowDestructiveFallback?: boolean;
 }
 
+const URL_PATTERN = /https?:\/\/[^\s)>"]+/u;
+
 export class IntentRouter {
   private lastDecision = new IntentRouteDecision(new Set(), "none", 0);
 
@@ -18,6 +20,11 @@ export class IntentRouter {
   route(query: string, categories: Iterable<string> = Object.keys(INTENT_CATEGORY_RULES)): IntentRouteDecision {
     const allowed = this.normalizeCategories(categories);
     if (!query.trim()) return this.remember(this.fallback(allowed, "empty_query"));
+
+    const url = URL_PATTERN.exec(query)?.[0] ?? "";
+    if (url && allowed.has("search")) {
+      return this.remember(new IntentRouteDecision(new Set(["search"]), "strong_rule", 0.99, "url_detected_fetch", { search: 6 }));
+    }
 
     const scores: Record<string, number> = {};
     const strongMatches = new Set<string>();

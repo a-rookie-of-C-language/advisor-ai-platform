@@ -16,6 +16,13 @@ test("legacy route support keeps retrieval preference when rag exists", () => {
   assert.deepEqual([...decision.categories], ["retrieval"]);
 });
 
+test("intent router routes url queries to search", () => {
+  const decision = new IntentRouter().route("https://example.com 看一下这个页面", ["retrieval", "search"]);
+  assert.equal(decision.categories.has("search"), true);
+  assert.equal(decision.matchedBy, "strong_rule");
+  assert.equal(decision.fallbackReason, "url_detected_fetch");
+});
+
 test("legacy route context exposes the expected shape", () => {
   const decision = new IntentRouter().route("请根据知识库文档解释", ["retrieval", "search"]);
   const context = buildLegacyRouteContext(decision, ["rag_search"], true);
