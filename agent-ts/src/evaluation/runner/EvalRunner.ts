@@ -2,6 +2,7 @@ import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { EvalCase } from "../model/EvalCase.js";
 import type { EvalDataset } from "../model/EvalDataset.js";
 import { EvalJudge } from "../judge/EvalJudge.js";
+import { EvalDeepEval } from "../deepeval/EvalDeepEval.js";
 import { EvalReportBuilder } from "../report/EvalReportBuilder.js";
 import { toJsonable } from "../serialization/toJsonable.js";
 
@@ -109,7 +110,12 @@ export class EvalRunner {
     retrievedChunks: readonly EvalRetrievedChunk[]
   ): Promise<JsonObject> {
     if (!this.adapters.deepeval) {
-      return { error: "no_deepeval_provider", avg_score: 0, method: "deepeval", metrics: {} };
+      return EvalDeepEval.evaluate(
+        evalCase.query,
+        evalCase.expectedAnswer ?? "",
+        actualAnswer,
+        retrievedChunks.map((chunk) => chunk.text ?? "").filter((text) => text.length > 0)
+      );
     }
     return this.adapters.deepeval(
       evalCase.query,

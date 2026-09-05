@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { argv, exit } from "node:process";
 import { EvalDatasetLoader } from "./dataset/EvalDatasetLoader.js";
+import { EvalDeepEval } from "./deepeval/EvalDeepEval.js";
 import { EvalRunner } from "./runner/EvalRunner.js";
 import { EvalJudge } from "./judge/EvalJudge.js";
 import { AgentConfig } from "../config/model/core/AgentConfig.js";
@@ -56,10 +57,8 @@ async function main(): Promise<void> {
       return answer;
     },
     judgeE2e: async (query, expectedAnswer, actualAnswer) => EvalJudge.judge(query, expectedAnswer, actualAnswer),
-    deepeval: async (_query, _expectedAnswer, _actualAnswer, _retrievalContext) => ({
-      avg_score: 0,
-      metrics: {}
-    })
+    deepeval: async (query, expectedAnswer, actualAnswer, retrievalContext) =>
+      EvalDeepEval.evaluate(query, expectedAnswer, actualAnswer, retrievalContext)
   });
 
   const report = await runner.runAll();
