@@ -168,6 +168,7 @@ test("AgentChatStreamSession force fetches web urls before the model round", asy
     assert.equal(writes.some(({ event }) => event === "tool_use"), true);
     assert.equal(writes.some(({ event }) => event === "tool_result"), true);
     assert.equal(writes.some(({ event }) => event === "llm_data"), true);
+    assert.equal(writes.some(({ event }) => event === "sys_done"), true);
   } finally {
     server.close();
   }

@@ -29,7 +29,16 @@ export async function executeLegacyForceFetch(
     ? { event: "tool_result", payload: { ...basePayload, ...payload } }
     : { event: "tool_error", payload: { ...basePayload, code: basePayload.status, retryable: false } };
   return {
-    events: [buildLegacyForceFetchUseEvent(url), resultEvent],
+    events: [
+      buildLegacyForceFetchUseEvent(url),
+      resultEvent,
+      {
+        event: "sys_done",
+        payload: {
+          finish_reason: "stream_finished"
+        }
+      }
+    ],
     contextPrompt: buildForceFetchContextPrompt(payload)
   };
 }
