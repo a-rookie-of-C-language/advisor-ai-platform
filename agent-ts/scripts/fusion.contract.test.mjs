@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { FusionPipeline } from "../dist/fusion/core/FusionPipeline.js";
+import { PromptBuilder } from "../dist/prompt/PromptBuilder.js";
 
 test("fusion ranks RAG and official candidates ahead of web candidates", () => {
   const result = new FusionPipeline().fuse([
@@ -8,7 +9,7 @@ test("fusion ranks RAG and official candidates ahead of web candidates", () => {
     { content: "官方制度", source: "rag", score: 1, metadata: { authority: "official" } }
   ], "policy");
   assert.equal(result.candidates[0].content, "官方制度");
-  assert.match(new FusionPipeline().renderPrompt(result), /官方来源/);
+  assert.equal(new FusionPipeline().renderPrompt(result), PromptBuilder.renderFusionPrompt(result.candidates, result.conflictHint));
 });
 
 test("fusion emits a conflict hint only when RAG and web disagree", () => {

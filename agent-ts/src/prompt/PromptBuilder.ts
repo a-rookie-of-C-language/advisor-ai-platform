@@ -145,6 +145,29 @@ export class PromptBuilder {
     ].join("\n");
   }
 
+  static renderFusionPrompt(
+    candidates: readonly {
+      readonly content: string;
+      readonly source: string;
+      readonly metadata: JsonObject;
+    }[],
+    conflictHint?: string
+  ): string {
+    const lines = ["以下是多源检索结果，供你参考："];
+    const rag = candidates.filter((candidate) => candidate.source === "rag");
+    const web = candidates.filter((candidate) => candidate.source === "web");
+    if (rag.length > 0) {
+      lines.push("", "【知识库检索结果】", ...rag.map((candidate) => this.renderFusionCandidate(candidate.content, candidate.metadata)));
+    }
+    if (web.length > 0) {
+      lines.push("", "【网络搜索结果】", ...web.map((candidate) => this.renderFusionCandidate(candidate.content, candidate.metadata)));
+    }
+    if (conflictHint) {
+      lines.push("", conflictHint);
+    }
+    return lines.join("\n");
+  }
+
   static assembleMessages(
     modelMessages: readonly ChatMessageDTO[],
     prompts: {
@@ -178,5 +201,16 @@ export class PromptBuilder {
       read_only: false,
       defer_loading: false
     };
+  }
+
+  private static renderFusionCandidate(content: string, metadata: JsonObject): string {
+    let line = `- ${content}`;
+    if (metadata.authority === "official") {
+      line += " [官方来源]";
+    }
+    if (typeof metadata.effective_date === "string" && metadata.effective_date) {
+      line += ` [日期: ${metadata.effective_date}]`;
+    }
+    return line;
   }
 }

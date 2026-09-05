@@ -1,5 +1,6 @@
 import type { FusionResult } from "../model/FusionResult.js";
 import type { SourceCandidate } from "../model/SourceCandidate.js";
+import { PromptBuilder } from "../../prompt/PromptBuilder.js";
 
 export interface FusionPipelineOptions {
   readonly sourceWeights?: Partial<Record<SourceCandidate["source"], number>>;
@@ -29,26 +30,7 @@ export class FusionPipeline {
   }
 
   renderPrompt(result: FusionResult): string {
-    const lines = ["以下是多源检索结果，供你参考："];
-    const rag = result.candidates.filter((candidate) => candidate.source === "rag");
-    const web = result.candidates.filter((candidate) => candidate.source === "web");
-    if (rag.length > 0) {
-      lines.push("", "【知识库检索结果】", ...rag.map((candidate) => this.renderCandidate(candidate)));
-    }
-    if (web.length > 0) {
-      lines.push("", "【网络搜索结果】", ...web.map((candidate) => this.renderCandidate(candidate)));
-    }
-    if (result.conflictHint) lines.push("", result.conflictHint);
-    return lines.join("\n");
-  }
-
-  private renderCandidate(candidate: SourceCandidate): string {
-    let line = `- ${candidate.content}`;
-    if (candidate.metadata.authority === "official") line += " [官方来源]";
-    if (typeof candidate.metadata.effective_date === "string" && candidate.metadata.effective_date) {
-      line += ` [日期: ${candidate.metadata.effective_date}]`;
-    }
-    return line;
+    return PromptBuilder.renderFusionPrompt(result.candidates, result.conflictHint);
   }
 
   private detectConflict(candidates: readonly SourceCandidate[]): string | undefined {
