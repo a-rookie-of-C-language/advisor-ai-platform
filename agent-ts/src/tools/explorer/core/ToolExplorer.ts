@@ -1,4 +1,5 @@
 import type { OpenAIChatTool } from "../../../openai/chat/model/tool/OpenAIChatTool.js";
+import { extractFirstUrl } from "../../../graph/helpers.js";
 import type { ToolExplorerResult } from "../model/ToolExplorerResult.js";
 
 export class ToolExplorer {
@@ -14,6 +15,7 @@ export class ToolExplorer {
         const name = tool.function.name.toLowerCase();
         const text = `${name} ${tool.function.description.toLowerCase()}`;
         return [...routeNames].some((routeName) => name.includes(routeName)) ||
+          (name.includes("web_fetch") && extractFirstUrl(query).length > 0) ||
           (normalized.length > 0 && normalized.split(/\s+/u).some((token) => token.length > 1 && text.includes(token)));
       })
       .map((tool) => tool.function.name);

@@ -20,6 +20,7 @@ import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemor
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
 import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
 import { buildLegacyRouteContext, preferRetrievalFallback } from "../../../../legacy/core/LegacyRouteSupport.js";
+import { executeLegacyForceFetch, resolveForceFetchUrl } from "../../../../legacy/core/LegacyForceFetch.js";
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
 
 export class AgentChatStreamSession {
@@ -92,6 +93,30 @@ export class AgentChatStreamSession {
         matchedTools: legacyRoute.matchedTools,
         preferredTools: [...legacyRoute.preferredTools, ...(educationDomain || ragOnlyPreferred ? ["rag_search"] : [])]
       });
+      const forceFetchUrl = resolveForceFetchUrl(legacyRoute.matchedTools, failureQuery);
+      if (forceFetchUrl) {
+        const fetchResult = await executeLegacyForceFetch(forceFetchUrl, async (toolName, args) => {
+          const result = await this.openAiToolFacade.executeTool(safeChatRequest, toolName, args, writer.signal);
+          return { output: result.output, success: result.success };
+        });
+        await writer.write("tool_use", "tool", {
+          tool_name: "web_fetch",
+          tool_call_id: "web_fetch-1",
+          input: { url: forceFetchUrl, max_content_length: 4000 }
+        });
+        for (const event of fetchResult.events) {
+          if (event.event === "tool_use") continue;
+          const eventName = String(event.event);
+          await writer.write(eventName, "tool", {
+            tool_name: "web_fetch",
+            tool_call_id: "web_fetch-1",
+            payload: event.payload
+          });
+        }
+        if (fetchResult.contextPrompt) {
+          modelMessages.unshift({ role: "system", content: fetchResult.contextPrompt });
+        }
+      }
       const loop = new AgentLoopFactory(
         this.config,
         this.core,

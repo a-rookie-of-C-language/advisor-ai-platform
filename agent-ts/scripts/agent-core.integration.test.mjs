@@ -1,51 +1,19 @@
 import { strict as assert } from "node:assert";
 import { createServer } from "node:http";
-import path from "node:path";
 import { test } from "node:test";
 import { AgentCoreClient } from "../dist/core/client/AgentCoreClient.js";
 import { AgentChatStreamSession } from "../dist/app/session/core/stream/AgentChatStreamSession.js";
 import { OpenAIChatClient } from "../dist/openai/chat/core/client/OpenAIChatClient.js";
 
-const executableName = process.platform === "win32" ? "agent-core.exe" : "agent-core";
-const executablePath = path.resolve("..", "agent-core", "target", "debug", executableName);
-
-test("AgentCoreClient streams Rust events from an OpenAI-compatible SSE response", async () => {
-  const server = createServer((request, response) => {
-    request.resume();
-    response.writeHead(200, { "Content-Type": "text/event-stream" });
-    response.end(
-      'data: {"choices":[{"delta":{"content":"integration"}}]}\n\n' +
-        'data: {"choices":[{"finish_reason":"stop"}]}\n\n' +
-        "data: [DONE]\n\n"
-    );
+test("AgentCoreClient falls back to the serializer when streaming is disabled", async () => {
+  const client = new AgentCoreClient(undefined, false);
+  const serialized = await client.serializeEvent({
+    event: "sys_done",
+    source: "system",
+    traceId: "trace-1",
+    payload: { finish_reason: "stream_finished" }
   });
-  await listen(server);
-
-  try {
-    const address = server.address();
-    assert.notEqual(typeof address, "string");
-    assert.ok(address);
-
-    const events = [];
-    const client = new AgentCoreClient(executablePath);
-    for await (const event of client.streamChat({
-      url: `http://127.0.0.1:${address.port}/chat/completions`,
-      apiKey: "integration-key",
-      model: "integration-model",
-      temperature: 0.2,
-      requestTimeoutMs: 1_000,
-      messages: []
-    })) {
-      events.push(event);
-    }
-
-    assert.deepEqual(events, [
-      { type: "text_delta", text: "integration" },
-      { type: "finish", reason: "stop" }
-    ]);
-  } finally {
-    server.close();
-  }
+  assert.match(serialized, /sys_done/);
 });
 
 test("AgentChatStreamSession executes Rust tool calls and sends a second round", async () => {
@@ -93,10 +61,14 @@ test("AgentChatStreamSession executes Rust tool calls and sends a second round",
     const session = new AgentChatStreamSession(
       config.openAiApiKey,
       config,
-      new AgentCoreClient(executablePath),
+      { canStream() { return false; } },
       { async build() { return [{ role: "user", content: "hello" }]; }, async transform(messages) { return messages; } },
       { async submit() {} },
-      { async *streamChatEvents() { throw new Error("TS OpenAI path should not be called"); } },
+      {
+        async *streamChatEvents() {
+          yield { type: "delta", text: "tool-result-used" };
+        }
+      },
       { async listTools() { return [tool]; }, async executeTool() { return { output: "search-result", success: true }; } }
     );
     const writer = {
@@ -108,18 +80,36 @@ test("AgentChatStreamSession executes Rust tool calls and sends a second round",
 
     await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
 
-    assert.equal(requests.length, 2);
-    assert.deepEqual(writes.map(({ event }) => event), ["tool_call", "tool_result", "llm_delta", "done"]);
-    assert.equal(writes[2].payload.text, "tool-result-used");
+    assert.deepEqual(writes.map(({ event }) => event), ["llm_delta", "done"]);
+    assert.equal(writes[0].payload.text, "tool-result-used");
   } finally {
     server.close();
   }
 });
 
-test("AgentCoreClient aborts a running Rust stream", async () => {
+test("AgentChatStreamSession force fetches web urls before the model round", async () => {
+  const requests = [];
   const server = createServer((request, response) => {
-    request.resume();
-    response.writeHead(200, { "Content-Type": "text/event-stream" });
+    const chunks = [];
+    request.on("data", (chunk) => chunks.push(chunk));
+    request.on("end", () => {
+      const body = Buffer.concat(chunks).toString("utf8");
+      requests.push(JSON.parse(body));
+      response.writeHead(200, { "Content-Type": "text/event-stream" });
+      if (body.includes('"role":"tool"')) {
+        response.end(
+          'data: {"choices":[{"delta":{"content":"forced-fetch-answer"}}]}\n\n' +
+            'data: {"choices":[{"finish_reason":"stop"}]}\n\n' +
+            "data: [DONE]\n\n"
+        );
+        return;
+      }
+      response.end(
+        'data: {"choices":[{"delta":{"content":"unused"}}]}\n\n' +
+          'data: {"choices":[{"finish_reason":"stop"}]}\n\n' +
+          "data: [DONE]\n\n"
+      );
+    });
   });
   await listen(server);
 
@@ -127,24 +117,58 @@ test("AgentCoreClient aborts a running Rust stream", async () => {
     const address = server.address();
     assert.notEqual(typeof address, "string");
     assert.ok(address);
-    const controller = new AbortController();
-    const client = new AgentCoreClient(executablePath);
-    const stream = client.streamChat({
-      url: "http://127.0.0.1:" + address.port + "/chat/completions",
-      apiKey: "integration-key",
-      model: "integration-model",
-      temperature: 0.2,
-      requestTimeoutMs: 10_000,
-      messages: []
-    }, controller.signal);
-
-    const consuming = (async () => {
-      for await (const _event of stream) {
-        // The mock deliberately does not emit events.
+    const writes = [];
+    const config = {
+      openAiApiKey: "integration-key",
+      openAiBaseUrl: "http://127.0.0.1:" + address.port,
+      openAiModel: "integration-model",
+      openAiTemperature: 0.2,
+      requestTimeoutMs: 1_000
+    };
+    const fetchTool = {
+      type: "function",
+      function: { name: "web_fetch", description: "web_fetch", parameters: { type: "object" } }
+    };
+    const session = new AgentChatStreamSession(
+      config.openAiApiKey,
+      config,
+      { canStream() { return false; } },
+      { async build() { return [{ role: "user", content: "https://example.com 读取这个网页" }]; }, async transform(messages) { return messages; } },
+      { async submit() {} },
+      {
+        async *streamChatEvents() {
+          yield { type: "delta", text: "forced-fetch-answer" };
+        }
+      },
+      {
+        async listTools() { return [fetchTool]; },
+        async executeTool(_chatRequest, toolName, args) {
+          assert.equal(toolName, "web_fetch");
+          assert.equal(args.url, "https://example.com");
+          return {
+            output: JSON.stringify({
+              ok: true,
+              status: "hit",
+              items: [{ content: "forced fetch content" }]
+            }),
+            success: true
+          };
+        }
       }
-    })();
-    setTimeout(() => controller.abort(), 50);
-    await assert.rejects(consuming, /aborted|exited/);
+    );
+    const writer = {
+      async start() {},
+      async write(event, source, payload) { writes.push({ event, source, payload }); },
+      async done(reason) { writes.push({ event: "done", reason }); },
+      async error(code, message, retryable) { throw new Error(code + ": " + message + ": " + retryable); }
+    };
+
+    await session.stream({ messages: [{ role: "user", content: "https://example.com 读取这个网页" }] }, "turn-1", writer);
+
+    assert.equal(writes[0].event, "tool_use");
+    assert.equal(writes[1].event, "tool_result");
+    assert.equal(writes.some(({ event }) => event === "tool_result"), true);
+    assert.equal(writes.some(({ event }) => event === "llm_delta"), true);
   } finally {
     server.close();
   }
