@@ -174,6 +174,45 @@ test("AgentChatStreamSession force fetches web urls before the model round", asy
   }
 });
 
+test("AgentChatStreamSession downgrades strong search routing without matched tools", async () => {
+  const writes = [];
+  const config = {
+    openAiApiKey: "integration-key",
+    openAiBaseUrl: "http://127.0.0.1:65535",
+    openAiModel: "integration-model",
+    openAiTemperature: 0.2,
+    requestTimeoutMs: 1_000
+  };
+  const session = new AgentChatStreamSession(
+    config.openAiApiKey,
+    config,
+    { canStream() { return false; } },
+    { async build() { return [{ role: "user", content: "https://example.com 看一下这个页面" }]; }, async transform(messages) { return messages; } },
+    { async submit() {} },
+    {
+      async *streamChatEvents() {
+        yield { type: "delta", text: "ok" };
+      }
+    },
+    {
+      async listTools() { return [{ type: "function", function: { name: "web_fetch", description: "web_fetch", parameters: {} } }]; },
+      async executeTool() { return { output: JSON.stringify({ ok: true, status: "hit", items: [] }), success: true }; }
+    }
+  );
+  const writer = {
+    async start() {},
+    async write(event, source, payload) { writes.push({ event, source, payload }); },
+    async done(reason) { writes.push({ event: "done", reason }); },
+    async error(code, message, retryable) { throw new Error(code + ": " + message + ": " + retryable); }
+  };
+
+  await session.stream({ messages: [{ role: "user", content: "https://example.com 看一下这个页面" }] }, "turn-1", writer);
+
+  const intentRoute = writes.find(({ event }) => event === "intent_route");
+  assert.ok(intentRoute);
+  assert.equal(intentRoute.payload.matched_by, "fallback");
+});
+
 test("AgentChatStreamSession emits legacy reasoning for education queries", async () => {
   const writes = [];
   const config = {

@@ -22,7 +22,7 @@ import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemor
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
 import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
-import { buildLegacyRouteContext, preferRetrievalFallback } from "../../../../legacy/core/LegacyRouteSupport.js";
+import { adjustRoutePayload, buildLegacyRouteContext, preferRetrievalFallback } from "../../../../legacy/core/LegacyRouteSupport.js";
 import {
   buildDelegateReasoningPayload,
   buildPlanReasoningPayload,
@@ -105,7 +105,6 @@ export class AgentChatStreamSession {
       ]);
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
-      await writer.write("intent_route", "system", route.toEventPayload() as JsonObject);
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
         userQuery: failureQuery,
@@ -127,6 +126,13 @@ export class AgentChatStreamSession {
         route.categories
       );
       const legacyRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
+      const routePayload = adjustRoutePayload(
+        route.toEventPayload() as JsonObject,
+        route,
+        legacyRoute.matchedTools,
+        route.matchedTools
+      );
+      await writer.write("intent_route", "system", routePayload);
       const shouldEmitReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none");
       if (exploration.reason !== "none") {
         await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("tool_explorer_subagent"));
