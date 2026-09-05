@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { IntentRouter } from "../dist/routing/core/IntentRouter.js";
+import { IntentRouteDecision } from "../dist/routing/model/IntentRouteDecision.js";
 import { AgentContextPipeline } from "../dist/app/session/core/pipeline/AgentContextPipeline.js";
 
 test("intent router accepts strong document rules", () => {
@@ -39,4 +40,11 @@ test("context pipeline only loads builders selected by the route", async () => {
     new IntentRouter().route("请根据知识库文档回答", ["retrieval", "search", "memory_read"])
   );
   assert.deepEqual(calls, ["rag", "fetch"]);
+});
+
+test("intent route decision exposes reason in event payload", () => {
+  const decision = new IntentRouteDecision(new Set(["retrieval"]), "llm", 0.91, "", { retrieval: 4 }, ["rag_search"], "llm_reason");
+  const payload = decision.toEventPayload();
+  assert.equal(payload.reason, "llm_reason");
+  assert.equal(payload.matched_by, "llm");
 });

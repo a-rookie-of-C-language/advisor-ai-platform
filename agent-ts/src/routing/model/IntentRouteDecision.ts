@@ -1,4 +1,4 @@
-export type IntentMatchMethod = "strong_rule" | "score" | "fallback" | "none";
+export type IntentMatchMethod = "strong_rule" | "score" | "fallback" | "llm" | "none";
 
 export class IntentRouteDecision {
   constructor(
@@ -7,7 +7,8 @@ export class IntentRouteDecision {
     readonly confidence: number,
     readonly fallbackReason?: string,
     readonly scores: Readonly<Record<string, number>> = {},
-    readonly matchedTools: readonly string[] = []
+    readonly matchedTools: readonly string[] = [],
+    readonly reason = ""
   ) {}
 
   toEventPayload(): Record<string, unknown> {
@@ -18,7 +19,7 @@ export class IntentRouteDecision {
       fallback_reason: this.fallbackReason || "",
       categories,
       scores: this.scores,
-      reason: "",
+      reason: this.reason,
       matched_tools: [...this.matchedTools],
       source: {
         decision: this.matchedBy,
