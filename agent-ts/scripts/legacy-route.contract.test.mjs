@@ -4,6 +4,7 @@ import { IntentRouter } from "../dist/routing/core/IntentRouter.js";
 import { buildLegacyRouteContext, preferRetrievalFallback } from "../dist/legacy/core/LegacyRouteSupport.js";
 import { LegacyToolRouter } from "../dist/legacy/core/LegacyToolRouter.js";
 import { TaskPlanner } from "../dist/planning/core/TaskPlanner.js";
+import { PromptBuilder } from "../dist/prompt/PromptBuilder.js";
 
 const tool = (name) => ({ type: "function", function: { name, description: name, parameters: {} } });
 
@@ -54,4 +55,10 @@ test("legacy reasoning keeps explorer delegation when tools are matched", () => 
   const route = new IntentRouter().route("请根据知识库文档解释", ["retrieval", "search"]);
   const payload = buildLegacyRouteContext(route, ["rag_search"], true);
   assert.deepEqual(payload.preferredTools, ["rag_search"]);
+});
+
+test("legacy reasoning prompt helpers mirror the shared prompt builder", () => {
+  assert.match(PromptBuilder.buildRouteReasoningPrompt(["retrieval"], [], true), /知识库/);
+  assert.match(PromptBuilder.buildPlanReasoningPrompt({ mode: "plan_and_execute", summary: "先检索再回答", steps: [{ action: "call_tool", tool_name: "rag_search" }] }), /rag_search/);
+  assert.match(PromptBuilder.buildDelegateReasoningPrompt("tool_explorer_subagent"), /工具探索器/);
 });
