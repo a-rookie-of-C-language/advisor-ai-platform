@@ -114,6 +114,52 @@ export class PromptBuilder {
     ].join("\n");
   }
 
+  static buildTaskPlannerPrompt(
+    userQuery: string,
+    recentMessages: readonly ChatMessageDTO[],
+    availableTools: readonly OpenAIChatTool[],
+    routeContext: JsonObject
+  ): string {
+    return JSON.stringify(
+      this.buildTaskPlanPromptPayload(userQuery, recentMessages, availableTools, routeContext),
+      null,
+      0
+    );
+  }
+
+  static buildTaskPlannerSystemPrompt(): string {
+    return [
+      "你是辅导员平台的任务规划器。你的任务不是直接回答问题，而是在执行前产出一份可执行计划。",
+      "规划原则：",
+      "- 涉及制度、政策、学生工作、辅导员理论、知识库内容时，优先考虑知识库检索，但这只是优先级，不是强制终止条件。",
+      "- 涉及课程、培训、最新资源、公开信息、时效性内容时，优先考虑 web_search。",
+      "- 混合问题通常先检索知识库，再用 web_search 补充最新信息。",
+      "- 如果 route_context 中存在 preferred_tools，请把它当作偏好工具，而不是必须覆盖其他工具。",
+      "- 如果不需要工具，直接给出 direct 计划。",
+      "- 计划要短、具体、可执行，不要编造工具名，也不要写空泛理由。",
+      "只返回严格 JSON，格式如下：",
+      "{",
+      "  \"mode\": \"direct\" | \"plan_and_execute\",",
+      "  \"goal\": \"短目标\",",
+      "  \"summary\": \"可选概述\",",
+      "  \"stop_when\": \"短停止条件\",",
+      "  \"sufficient\": false,",
+      "  \"required_tools\": [\"rag_search\", \"web_search\"],",
+      "  \"steps\": [",
+      "    {",
+      "      \"action\": \"call_tool\" | \"final\",",
+      "      \"tool_name\": \"当 action 为 call_tool 时填写\",",
+      "      \"arguments\": {},",
+      "      \"reason\": \"为什么要做这一步\",",
+      "      \"expected_outcome\": \"希望得到什么\",",
+      "      \"sufficient\": false,",
+      "      \"summary\": \"仅 final 步需要\"",
+      "    }",
+      "  ]",
+      "}"
+    ].join("\n");
+  }
+
   static buildE2EJudgePrompt(query: string, expectedAnswer: string, actualAnswer: string): string {
     return [
       "你是一个评估专家。请对以下回答进行评分。",

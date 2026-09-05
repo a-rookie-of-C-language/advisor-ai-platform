@@ -29,6 +29,8 @@ test("prompt builder mirrors python side prompt helpers", () => {
   assert.match(PromptBuilder.buildRouteReasoningPrompt(["retrieval", "search"], [], false), /知识库/);
   assert.match(PromptBuilder.buildPlanReasoningPrompt({ mode: "direct", summary: "ok" }), /ok/);
   assert.match(PromptBuilder.buildDelegateReasoningPrompt("task_planner_subagent"), /任务规划器/);
+  assert.match(PromptBuilder.buildTaskPlannerSystemPrompt(), /任务规划器/);
+  assert.match(PromptBuilder.buildTaskPlannerPrompt("q", [], [], { categories: [] }), /user_query/);
 });
 
 test("prompt builder assembles system prompts in python order", () => {
