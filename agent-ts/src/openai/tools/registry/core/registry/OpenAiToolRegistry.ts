@@ -46,6 +46,13 @@ export class OpenAiToolRegistry {
     toolName: string,
     toolArgs: JsonObject
   ): Promise<OpenAiToolExecutionResult> {
+    if (toolName === "expand_skill" && this.expandSkillTool) {
+      const skillName = String(toolArgs.skill_name ?? "").trim();
+      return {
+        output: JSON.stringify(this.expandSkillTool.execute(skillName)),
+        success: true
+      };
+    }
     return this.components.toolExecutorRouter.executeTool(chatRequest, toolName, toolArgs);
   }
 }
