@@ -23,11 +23,25 @@ export class ExpandSkillTool {
   }
 
   execute(skillName: string): JsonObject {
+    const fullPrompt = this.skillRegistry.expandSkill(skillName);
+    if (!fullPrompt) {
+      return {
+        ok: false,
+        status: "error",
+        message: `skill not found: ${skillName}`,
+        items: []
+      };
+    }
     return {
       ok: true,
-      status: "success",
-      message: "skill expanded",
-      content: this.skillRegistry.expandSkill(skillName)
+      status: "hit",
+      message: `expanded skill: ${skillName}`,
+      items: [
+        {
+          skill_name: skillName,
+          full_prompt: fullPrompt
+        }
+      ]
     };
   }
 }

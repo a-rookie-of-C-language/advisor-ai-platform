@@ -46,6 +46,8 @@ test("openai tool registry executes expand skill as a virtual tool", async () =>
   const payload = JSON.parse(result.output);
   assert.equal(result.success, true);
   assert.equal(payload.ok, true);
-  assert.equal(payload.status, "success");
-  assert.equal(payload.content, "full skill prompt");
+  assert.equal(payload.status, "hit");
+  assert.equal(payload.message, "expanded skill: knowledge_qa");
+  assert.equal(payload.items[0].skill_name, "knowledge_qa");
+  assert.equal(payload.items[0].full_prompt, "full skill prompt");
 });
