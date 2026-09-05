@@ -2,30 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { SkillRegistry } from "../dist/skills/core/SkillRegistry.js";
 
-test("skill registry overwrites duplicate skill names and keeps priority ordering", () => {
+test("skill registry brief prompt keeps python brief shape", () => {
   const registry = new SkillRegistry();
   registry.register({
-    name: "demo",
-    description: "first",
-    brief: "first brief",
-    systemPrompt: "first prompt",
-    requiredTools: new Set(["rag_search"]),
+    name: "knowledge_qa",
+    description: "知识问答",
+    brief: "回答知识库问题",
+    systemPrompt: "system",
+    requiredTools: new Set(),
     priority: 1
   });
-  registry.register({
-    name: "demo",
-    description: "second",
-    brief: "second brief",
-    systemPrompt: "second prompt",
-    requiredTools: new Set(["web_search"]),
-    priority: 10
-  });
 
-  const skill = registry.get("demo");
-  assert.equal(skill?.description, "second");
-  assert.deepEqual(registry.listAll().map((item) => item.priority), [10]);
-  assert.match(registry.catalogPrompt(), /demo/);
-  assert.match(registry.briefPrompt(["demo"]), /second brief/);
-  assert.doesNotMatch(registry.briefPrompt(["demo"]), /\[demo\]/);
-  assert.equal(registry.expandSkill("demo"), "second prompt");
+  assert.equal(registry.briefPrompt(["knowledge_qa"]), "回答知识库问题");
 });

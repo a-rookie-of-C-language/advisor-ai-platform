@@ -4,6 +4,7 @@ import { EvalDatasetLoader } from "./dataset/EvalDatasetLoader.js";
 import { EvalDeepEval } from "./deepeval/EvalDeepEval.js";
 import { EvalRunner } from "./runner/EvalRunner.js";
 import { EvalJudge } from "./judge/EvalJudge.js";
+import { EvalConfigFactory } from "../config/factory/EvalConfigFactory.js";
 import { AgentConfig } from "../config/model/core/AgentConfig.js";
 import { RagApiClient } from "../rag/api/core/RagApiClient.js";
 import { OpenAIChatClient } from "../openai/chat/core/client/OpenAIChatClient.js";
@@ -31,12 +32,13 @@ async function main(): Promise<void> {
 
   const dataset = await EvalDatasetLoader.load(datasetPath);
   const config = AgentConfig.fromEnv();
+  const evalConfig = new EvalConfigFactory().fromEnv();
   const ragClient = config.ragApiBaseUrl ? new RagApiClient(config) : undefined;
   const openAiClient = config.openAiApiKey ? new OpenAIChatClient(config) : undefined;
   const buildEvalConfig = () => ({
-    model: readArg("judge-model") ?? config.openAiModel,
-    apiKey: config.openAiApiKey || undefined,
-    baseUrl: config.openAiBaseUrl || undefined
+    model: readArg("judge-model") ?? evalConfig.model,
+    apiKey: evalConfig.apiKey || undefined,
+    baseUrl: evalConfig.baseUrl || undefined
   });
 
   const runner = new EvalRunner(dataset, topK, {
@@ -75,9 +77,9 @@ async function main(): Promise<void> {
     },
     deepeval: async (query, expectedAnswer, actualAnswer, retrievalContext) =>
       EvalDeepEval.evaluate(query, expectedAnswer, actualAnswer, retrievalContext, {
-        model: readArg("deepeval-model") ?? config.openAiModel,
-        apiKey: config.openAiApiKey || undefined,
-        baseUrl: config.openAiBaseUrl || undefined
+        model: readArg("deepeval-model") ?? evalConfig.model,
+        apiKey: evalConfig.apiKey || undefined,
+        baseUrl: evalConfig.baseUrl || undefined
       })
   });
 

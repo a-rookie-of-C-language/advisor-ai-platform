@@ -1,5 +1,6 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import { PromptBuilder } from "../../prompt/PromptBuilder.js";
+import type { EvalConfigValues } from "../../config/model/values/EvalConfigValues.js";
 
 type MetricScore = {
   readonly score: number;
@@ -116,5 +117,13 @@ export class EvalDeepEval {
 
   private static coerceNumber(value: unknown): number {
     return typeof value === "number" && Number.isFinite(value) ? value : Number(value) || 0;
+  }
+
+  static fromEvalConfig(config: EvalConfigValues): EvalDeepEvalConfig {
+    return {
+      model: config.model,
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl
+    };
   }
 }

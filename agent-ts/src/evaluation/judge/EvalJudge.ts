@@ -1,4 +1,5 @@
 import { PromptBuilder } from "../../prompt/PromptBuilder.js";
+import type { EvalConfigValues } from "../../config/model/values/EvalConfigValues.js";
 
 export interface EvalJudgeScore {
   readonly relevance?: number;
@@ -81,6 +82,14 @@ export class EvalJudge {
     } catch {
       return null;
     }
+  }
+
+  static fromEvalConfig(config: EvalConfigValues): EvalJudgeConfig {
+    return {
+      model: config.model,
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl
+    };
   }
 
   private static coerceNumber(value: unknown): number {
