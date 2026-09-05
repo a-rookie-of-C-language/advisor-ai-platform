@@ -15,6 +15,15 @@ test("prompt builder mirrors python side prompt helpers", () => {
   assert.match(PromptBuilder.buildSceneDetectionPrompt("今天政策"), /scene/);
   assert.match(PromptBuilder.buildIntentRoutingPrompt(["retrieval"], "查资料"), /retrieval/);
   assert.equal(PromptBuilder.buildConflictHintPrompt("hint"), "hint");
+  const taskPlanPayload = PromptBuilder.buildTaskPlanPromptPayload(
+    "查资料",
+    [{ role: "user", content: "recent", attachments: null }],
+    [{ type: "function", function: { name: "rag_search", description: "desc", parameters: {} } }],
+    { categories: ["retrieval"] }
+  );
+  assert.equal(taskPlanPayload.user_query, "查资料");
+  assert.equal(Array.isArray(taskPlanPayload.recent_messages), true);
+  assert.match(PromptBuilder.renderTaskPlanPrompt({ mode: "direct", summary: "ok" }), /执行计划/);
 });
 
 test("prompt builder assembles system prompts in python order", () => {

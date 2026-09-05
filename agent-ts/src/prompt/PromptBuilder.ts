@@ -92,6 +92,28 @@ export class PromptBuilder {
     return conflictHint;
   }
 
+  static buildTaskPlanPromptPayload(
+    userQuery: string,
+    recentMessages: readonly ChatMessageDTO[],
+    availableTools: readonly OpenAIChatTool[],
+    routeContext: JsonObject
+  ): JsonObject {
+    return {
+      user_query: userQuery,
+      recent_messages: this.compactMessages(recentMessages),
+      route_context: routeContext,
+      available_tools: availableTools.map((tool) => this.toPromptToolItem(tool))
+    };
+  }
+
+  static renderTaskPlanPrompt(taskPlan: JsonObject): string {
+    return [
+      "下面是本轮执行计划，请严格遵循计划中的步骤和工具顺序。",
+      "如果计划已经收集到足够证据，就直接基于证据回答；如果计划要求继续补充，再继续按 ReAct 方式调用工具。",
+      JSON.stringify(taskPlan)
+    ].join("\n");
+  }
+
   static assembleMessages(
     modelMessages: readonly ChatMessageDTO[],
     prompts: {
@@ -108,5 +130,22 @@ export class PromptBuilder {
       .filter((prompt) => prompt.trim().length > 0)
       .map((prompt) => ({ role: "system" as const, content: prompt }));
     return systemMessages.length > 0 ? [...systemMessages, ...modelMessages] : [...modelMessages];
+  }
+
+  private static compactMessages(messages: readonly ChatMessageDTO[]): JsonObject[] {
+    return messages.slice(-8).map((message) => ({
+      role: message.role,
+      content: (message.content ?? "").slice(0, 1200)
+    }));
+  }
+
+  private static toPromptToolItem(tool: OpenAIChatTool): JsonObject {
+    return {
+      name: tool.function.name,
+      description: tool.function.description.slice(0, 800),
+      category: "",
+      read_only: false,
+      defer_loading: false
+    };
   }
 }
