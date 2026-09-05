@@ -5,4 +5,5 @@ export interface Skill {
   readonly systemPrompt: string;
   readonly requiredTools: ReadonlySet<string>;
   readonly priority: number;
+  readonly searchHint?: string;
 }

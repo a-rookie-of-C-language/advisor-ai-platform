@@ -51,3 +51,66 @@ test("openai tool registry executes expand skill as a virtual tool", async () =>
   assert.equal(payload.items[0].skill_name, "knowledge_qa");
   assert.equal(payload.items[0].full_prompt, "full skill prompt");
 });
+
+test("openai tool registry executes tool search as a virtual tool", async () => {
+  const registry = new SkillRegistry();
+  registry.register({
+    name: "knowledge_qa",
+    description: "知识问答",
+    brief: "回答知识库问题",
+    systemPrompt: "full skill prompt",
+    requiredTools: new Set(),
+    priority: 1
+  });
+
+  const openAiToolRegistry = new OpenAiToolRegistry(undefined, undefined, undefined, undefined, undefined, registry);
+  const result = await openAiToolRegistry.executeTool(
+    { messages: [], userId: null, sessionId: null, kbId: null, traceId: null, turnId: null },
+    "tool_search",
+    { keywords: "知识 检索", max_results: 3 }
+  );
+  const payload = JSON.parse(result.output);
+  assert.equal(result.success, true);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.status, "hit");
+  assert.equal(payload.items[0].tool_name, "knowledge_qa");
+  assert.match(payload.items[0].schema_text, /知识问答/);
+});
+
+test("openai tool registry tool search can hit web research by search hint", async () => {
+  const registry = new SkillRegistry();
+  registry.register({
+    name: "web_research",
+    description: "联网搜索获取实时信息，适合查询最新资讯、事实核查等。",
+    brief: "用 web_search 搜索互联网，整理结果并注明来源。",
+    systemPrompt: "full skill prompt",
+    requiredTools: new Set(),
+    priority: 1,
+    searchHint: "联网,搜索,互联网,实时"
+  });
+
+  const openAiToolRegistry = new OpenAiToolRegistry(undefined, undefined, undefined, undefined, undefined, registry);
+  const result = await openAiToolRegistry.executeTool(
+    { messages: [], userId: null, sessionId: null, kbId: null, traceId: null, turnId: null },
+    "tool_search",
+    { keywords: "联网 搜索", max_results: 3 }
+  );
+  const payload = JSON.parse(result.output);
+  assert.equal(payload.status, "hit");
+  assert.equal(payload.items[0].tool_name, "web_research");
+});
+
+test("tool search rejects empty keywords", () => {
+  const registry = new SkillRegistry();
+  const tool = new OpenAiToolRegistry(undefined, undefined, undefined, undefined, undefined, registry);
+  return tool.executeTool(
+    { messages: [], userId: null, sessionId: null, kbId: null, traceId: null, turnId: null },
+    "tool_search",
+    { keywords: "" }
+  ).then((result) => {
+    const payload = JSON.parse(result.output);
+    assert.equal(result.success, true);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.status, "error");
+  });
+});
