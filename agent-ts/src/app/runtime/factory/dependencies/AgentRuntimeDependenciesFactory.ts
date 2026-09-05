@@ -5,6 +5,7 @@ import type { AgentMemoryComponents } from "../../../memory/core/AgentMemoryComp
 import type { AgentRagComponents } from "../../../rag/core/AgentRagComponents.js";
 import type { AgentWebComponents } from "../../../web/core/AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "../../../workspace/core/AgentWorkspaceComponents.js";
+import type { SkillRegistry } from "../../../../skills/core/SkillRegistry.js";
 import { AgentRuntimeDependencies } from "../../model/dependencies/AgentRuntimeDependencies.js";
 import { AgentRuntimeClientFactory } from "../client/AgentRuntimeClientFactory.js";
 
@@ -18,12 +19,13 @@ export class AgentRuntimeDependenciesFactory {
     ragComponents: AgentRagComponents,
     webComponents: AgentWebComponents,
     workspaceComponents: AgentWorkspaceComponents,
-    mcpComponents: AgentMcpComponents
+    mcpComponents: AgentMcpComponents,
+    skillRegistry?: SkillRegistry
   ): AgentRuntimeDependencies {
     return new AgentRuntimeDependencies(
       this.clientFactory.createCoreClient(config),
       this.clientFactory.createOpenAiClient(config),
-      this.openAiToolRegistryFactory.create(memoryComponents, ragComponents, webComponents, workspaceComponents, mcpComponents)
+      this.openAiToolRegistryFactory.create(memoryComponents, ragComponents, webComponents, workspaceComponents, mcpComponents, skillRegistry)
     );
   }
 }

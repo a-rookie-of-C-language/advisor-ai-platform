@@ -2,6 +2,7 @@ import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
 import type { AgentMcpComponents } from "../../../mcp/core/AgentMcpComponents.js";
 import type { AgentMemoryComponents } from "../../../memory/core/AgentMemoryComponents.js";
 import type { AgentRagComponents } from "../../../rag/core/AgentRagComponents.js";
+import type { SkillRegistry } from "../../../../skills/core/SkillRegistry.js";
 import type { AgentWebComponents } from "../../../web/core/AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "../../../workspace/core/AgentWorkspaceComponents.js";
 import { AgentRuntime } from "../../core/AgentRuntime.js";
@@ -16,7 +17,8 @@ export class AgentRuntimeFactory {
     ragComponents: AgentRagComponents,
     webComponents: AgentWebComponents,
     workspaceComponents: AgentWorkspaceComponents,
-    mcpComponents: AgentMcpComponents
+    mcpComponents: AgentMcpComponents,
+    skillRegistry?: SkillRegistry
   ): AgentRuntime {
     const dependencies = this.dependenciesFactory.create(
       config,
@@ -24,7 +26,8 @@ export class AgentRuntimeFactory {
       ragComponents,
       webComponents,
       workspaceComponents,
-      mcpComponents
+      mcpComponents,
+      skillRegistry
     );
     return new AgentRuntime(
       config,

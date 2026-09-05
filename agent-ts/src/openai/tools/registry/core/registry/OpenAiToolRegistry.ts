@@ -8,16 +8,20 @@ import type { WorkspaceOpenAiToolBridge } from "../../../../../workspace/tools/c
 import type { OpenAIChatTool } from "../../../../chat/model/tool/OpenAIChatTool.js";
 import type { OpenAiToolExecutionResult } from "../../../runtime/model/result/OpenAiToolExecutionResult.js";
 import { OpenAiToolRegistryComponents } from "../components/OpenAiToolRegistryComponents.js";
+import type { SkillRegistry } from "../../../../../skills/core/SkillRegistry.js";
+import { ExpandSkillTool } from "../../../../../skills/tools/ExpandSkillTool.js";
 
 export class OpenAiToolRegistry {
   private readonly components: OpenAiToolRegistryComponents;
+  private readonly expandSkillTool?: ExpandSkillTool;
 
   constructor(
     workspaceOpenAiToolBridge?: WorkspaceOpenAiToolBridge,
     webOpenAiToolBridge?: WebOpenAiToolBridge,
     ragOpenAiToolBridge?: RagOpenAiToolBridge,
     memoryOpenAiToolBridge?: MemoryOpenAiToolBridge,
-    mcpOpenAiToolBridge?: McpOpenAiToolBridge
+    mcpOpenAiToolBridge?: McpOpenAiToolBridge,
+    skillRegistry?: SkillRegistry
   ) {
     this.components = new OpenAiToolRegistryComponents(
       workspaceOpenAiToolBridge,
@@ -26,10 +30,15 @@ export class OpenAiToolRegistry {
       memoryOpenAiToolBridge,
       mcpOpenAiToolBridge
     );
+    this.expandSkillTool = skillRegistry ? new ExpandSkillTool(skillRegistry) : undefined;
   }
 
   async listTools(): Promise<OpenAIChatTool[]> {
-    return this.components.toolCatalogAggregator.listTools();
+    const tools = await this.components.toolCatalogAggregator.listTools();
+    if (this.expandSkillTool) {
+      tools.push(this.expandSkillTool.create());
+    }
+    return tools;
   }
 
   async executeTool(

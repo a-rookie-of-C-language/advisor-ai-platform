@@ -4,6 +4,7 @@ import type { AgentMemoryComponents } from "../../../memory/core/AgentMemoryComp
 import type { AgentRagComponents } from "../../../rag/core/AgentRagComponents.js";
 import type { AgentWebComponents } from "../../../web/core/AgentWebComponents.js";
 import type { AgentWorkspaceComponents } from "../../../workspace/core/AgentWorkspaceComponents.js";
+import type { SkillRegistry } from "../../../../skills/core/SkillRegistry.js";
 
 export class AgentOpenAiToolRegistryFactory {
   create(
@@ -11,14 +12,16 @@ export class AgentOpenAiToolRegistryFactory {
     ragComponents: AgentRagComponents,
     webComponents: AgentWebComponents,
     workspaceComponents: AgentWorkspaceComponents,
-    mcpComponents: AgentMcpComponents
+    mcpComponents: AgentMcpComponents,
+    skillRegistry?: SkillRegistry
   ): OpenAiToolRegistry {
     return new OpenAiToolRegistry(
       workspaceComponents.openAiToolBridge,
       webComponents.openAiToolBridge,
       ragComponents.openAiToolBridge,
       memoryComponents.openAiToolBridge,
-      mcpComponents.openAiToolBridge
+      mcpComponents.openAiToolBridge,
+      skillRegistry
     );
   }
 }
