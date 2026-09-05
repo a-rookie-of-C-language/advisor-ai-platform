@@ -41,7 +41,10 @@ export class ExpandSkillTool {
           skill_name: skillName,
           full_prompt: fullPrompt
         }
-      ]
+      ],
+      meta: {
+        expanded: true
+      }
     };
   }
 }
