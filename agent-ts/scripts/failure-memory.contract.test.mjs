@@ -16,7 +16,8 @@ test("failure memory records low-score traces and injects a matched avoidance pr
     ], "turn-1");
     const messages = support.injectAvoidancePrompt([{ role: "user", content: "查询学生规章" }], "查询学生规章");
     assert.equal(messages[0].role, "system");
-    assert.match(messages[0].content, /历史失败经验/);
+    assert.match(messages[0].content, /历史失败模式/);
+    assert.match(messages[0].content, /避免重复同样的错误/);
     assert.equal(messages.at(-1).role, "user");
   } finally {
     rmSync(directory, { recursive: true, force: true });

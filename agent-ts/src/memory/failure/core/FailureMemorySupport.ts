@@ -1,5 +1,6 @@
 import type { ChatMessageDTO } from "../../../common/model/ChatMessageDTO.js";
 import type { AgentLoopEvent } from "../../../app/loop/model/AgentLoopOptions.js";
+import { PromptBuilder } from "../../../prompt/PromptBuilder.js";
 import { FailureMemoryMatcher } from "./FailureMemoryMatcher.js";
 import { FailureMemoryStore } from "./FailureMemoryStore.js";
 
@@ -20,10 +21,14 @@ export class FailureMemorySupport {
       return [...messages];
     }
     if (!matched) return [...messages];
-    return [{
-      role: "system",
-      content: `历史失败经验（相似度 ${matched.similarity}）：${matched.item.avoidStrategy}`
-    }, ...messages];
+    const prompt = PromptBuilder.buildFailureAvoidPrompt({
+      memory: {
+        reasons: [...matched.item.reasons],
+        avoid_strategy: matched.item.avoidStrategy
+      }
+    });
+    if (!prompt) return [...messages];
+    return PromptBuilder.assembleMessages(messages, { dynamicPrompts: [prompt] });
   }
 
   evaluateAndRecord(userQuery: string, events: readonly AgentLoopEvent[], sessionId?: string): void {
