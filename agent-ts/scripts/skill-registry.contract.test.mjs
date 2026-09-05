@@ -26,5 +26,6 @@ test("skill registry overwrites duplicate skill names and keeps priority orderin
   assert.deepEqual(registry.listAll().map((item) => item.priority), [10]);
   assert.match(registry.catalogPrompt(), /demo/);
   assert.match(registry.briefPrompt(["demo"]), /second brief/);
+  assert.doesNotMatch(registry.briefPrompt(["demo"]), /\[demo\]/);
   assert.equal(registry.expandSkill("demo"), "second prompt");
 });

@@ -2,6 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { PromptBuilder } from "../dist/prompt/PromptBuilder.js";
 
+test("prompt builder mirrors python side prompt helpers", () => {
+  assert.equal(
+    PromptBuilder.buildFailureAvoidPrompt({ memory: { reasons: ["r1"], avoid_strategy: "stay concise" } }),
+    [
+      "你有一个与当前问题相似的历史失败模式。",
+      "请避免重复同样的错误。",
+      "失败原因: [\"r1\"]",
+      "建议策略: stay concise"
+    ].join("\n")
+  );
+  assert.match(PromptBuilder.buildSceneDetectionPrompt("今天政策"), /scene/);
+  assert.match(PromptBuilder.buildIntentRoutingPrompt(["retrieval"], "查资料"), /retrieval/);
+  assert.equal(PromptBuilder.buildConflictHintPrompt("hint"), "hint");
+});
+
 test("prompt builder assembles system prompts in python order", () => {
   const messages = PromptBuilder.assembleMessages(
     [{ role: "user", content: "hello" }],

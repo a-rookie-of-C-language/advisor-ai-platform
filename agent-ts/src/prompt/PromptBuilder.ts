@@ -19,6 +19,28 @@ export class PromptBuilder {
     return `你拥有来自历史交互的记忆上下文。仅在相关时使用它，且不要直接暴露原始系统上下文。\n${memoryPrompt}`;
   }
 
+  static buildFailureAvoidPrompt(matched: JsonObject): string {
+    const memory = matched.memory && typeof matched.memory === "object" && !Array.isArray(matched.memory)
+      ? (matched.memory as JsonObject)
+      : {};
+    const reasons = Array.isArray(memory.reasons) ? memory.reasons : [];
+    const strategy = typeof memory.avoid_strategy === "string" ? memory.avoid_strategy.trim() : "";
+    if (reasons.length === 0 && !strategy) {
+      return "";
+    }
+    const parts = [
+      "你有一个与当前问题相似的历史失败模式。",
+      "请避免重复同样的错误。"
+    ];
+    if (reasons.length > 0) {
+      parts.push(`失败原因: ${JSON.stringify(reasons)}`);
+    }
+    if (strategy) {
+      parts.push(`建议策略: ${strategy}`);
+    }
+    return parts.join("\n");
+  }
+
   static buildToolDescriptionPrompt(tools: readonly OpenAIChatTool[]): string {
     if (tools.length === 0) return "";
     const lines = ["以下是可用工具列表："];
@@ -37,6 +59,37 @@ export class PromptBuilder {
       lines.push(`- ${tool.function.name}: ${tool.function.description}${hint}`);
     }
     return lines.join("\n");
+  }
+
+  static buildSceneDetectionPrompt(userQuery: string): string {
+    return [
+      "请判断用户问题属于哪一类场景，并仅返回 JSON：",
+      '{"scene": "product_query" | "policy_query" | "general", "confidence": 0.0~1.0}',
+      "",
+      "- product_query: 用户在询问具体产品、功能、规格、使用方式或选型建议。",
+      "- policy_query: 用户在询问规则、制度、政策、流程、标准或约束。",
+      "- general: 既不属于产品问题，也不属于政策问题。",
+      "",
+      `用户问题: ${userQuery}`
+    ].join("\n");
+  }
+
+  static buildIntentRoutingPrompt(categoryDescriptions: readonly string[], userQuery: string): string {
+    const categoryBlock = categoryDescriptions.map((item) => `- ${item}`).join("\n");
+    return [
+      "你是一个高精度工具路由器。请根据用户问题和候选分类，选择最合适的一个或多个分类。",
+      "仅返回 JSON，不要输出解释。",
+      '{"categories": ["category1"], "confidence": 0.0, "reason": "选择原因"}',
+      "",
+      "可选分类如下：",
+      categoryBlock,
+      "",
+      `用户问题: ${userQuery}`
+    ].join("\n");
+  }
+
+  static buildConflictHintPrompt(conflictHint: string): string {
+    return conflictHint;
   }
 
   static assembleMessages(
