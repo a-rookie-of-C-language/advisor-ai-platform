@@ -13,12 +13,14 @@ test("eval dataset loader reads python-shaped json", async () => {
       file,
       JSON.stringify({
         name: "demo",
+        version: "1.0",
         kb_id: 12,
         cases: [
           {
             id: "case-1",
             query: "查询学生规章",
             tags: ["rag"],
+            expected_chunks: ["chunk-1"],
             expected_annotation: { type: "policy" },
             expected_answer: "答案"
           }
@@ -28,7 +30,9 @@ test("eval dataset loader reads python-shaped json", async () => {
     );
     const dataset = await EvalDatasetLoader.load(file);
     assert.equal(dataset.name, "demo");
+    assert.equal(dataset.version, "1.0");
     assert.equal(dataset.kbId, 12);
+    assert.deepEqual(dataset.cases[0].expectedChunks, ["chunk-1"]);
     assert.equal(dataset.cases[0].expectedAnswer, "答案");
     assert.equal(dataset.cases[0].expectedAnnotation.type, "policy");
   } finally {

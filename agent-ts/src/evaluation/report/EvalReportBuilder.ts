@@ -22,7 +22,8 @@ export class EvalReportBuilder {
     if (report.cases.length === 0) {
       return report;
     }
-    const retrieval = EvalReportBuilder.averageMetrics(report.cases, "retrieval", ["recall@5", "mrr", "ndcg@5"]);
+    const topK = EvalReportBuilder.resolveTopK(report);
+    const retrieval = EvalReportBuilder.averageMetrics(report.cases, "retrieval", [`recall@${topK}`, "mrr", `ndcg@${topK}`]);
     const annotation = EvalReportBuilder.booleanMetrics(report.cases, "annotation", ["type_correct", "authority_correct", "effective_date_correct"]);
     const fusion = EvalReportBuilder.averageMetrics(report.cases, "fusion", ["improvement_rate"]);
     const e2e = EvalReportBuilder.averageMetrics(report.cases, "e2e", ["avg_score", "relevance", "completeness", "accuracy", "fluency"]);
@@ -80,6 +81,12 @@ export class EvalReportBuilder {
       result[field] = values.length > 0 ? Number((total / values.length).toFixed(4)) : 0;
     }
     return result;
+  }
+
+  private static resolveTopK(report: EvalReport): number {
+    const config = typeof report.meta === "object" && report.meta !== null ? (report.meta.config as JsonObject | undefined) : undefined;
+    const value = config?.top_k;
+    return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 5;
   }
 
   private static averageNestedMetrics(cases: JsonObject[], key: string, fields: readonly string[]): JsonObject {

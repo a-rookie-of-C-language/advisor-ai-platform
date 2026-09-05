@@ -9,10 +9,12 @@ export class EvalDatasetLoader {
     const parsed = JSON.parse(raw) as {
       name?: string;
       kb_id?: number;
+      version?: string;
       cases?: Array<{
         id: string;
         query: string;
         tags?: string[];
+        expected_chunks?: string[];
         expected_annotation?: JsonObject;
         expected_answer?: string;
       }>;
@@ -20,12 +22,14 @@ export class EvalDatasetLoader {
     const cases: EvalCase[] = (parsed.cases ?? []).map((item) => ({
       id: item.id,
       query: item.query,
+      expectedChunks: item.expected_chunks ?? [],
       tags: item.tags ?? [],
       expectedAnnotation: item.expected_annotation ?? null,
       expectedAnswer: item.expected_answer ?? null
     }));
     return {
       name: parsed.name ?? "dataset",
+      version: parsed.version ?? "",
       kbId: parsed.kb_id ?? 0,
       cases
     };
