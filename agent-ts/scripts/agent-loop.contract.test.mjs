@@ -35,7 +35,10 @@ test("tool results are executed concurrently and written back in call order", as
       return { output: toolName, success: true };
     },
     writer: async (event) => {
-      if (event.type === "tool_result") writeOrder.push(event.toolName);
+      if (event.type === "tool_result") {
+        writeOrder.push(event.toolName);
+        assert.deepEqual(event.toolArgs, {});
+      }
     },
     onEvent: async (event) => lifecycle.push(event)
   });
@@ -70,7 +73,10 @@ test("declared tool timeout returns structured TOOL_TIMEOUT", async () => {
       setTimeout(() => resolve({ output: "late", success: true }), 30);
     }),
     writer: async (event) => {
-      if (event.type === "tool_result") results.push(JSON.parse(event.toolOutput));
+      if (event.type === "tool_result") {
+        assert.deepEqual(event.toolArgs, {});
+        results.push(JSON.parse(event.toolOutput));
+      }
     },
   });
 

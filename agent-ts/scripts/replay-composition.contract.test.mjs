@@ -55,6 +55,7 @@ test("replay provider drives the real AgentLoop and reproduces the session event
 
   assert.equal(result.answer, "课程安排是周一 14:00。");
   assert.deepEqual(streamEvents.map((event) => event.type), ["tool_call", "tool_result", "delta"]);
+  assert.deepEqual(streamEvents[1].toolArgs, { query: "课程安排" });
   assert.deepEqual(
     recorder.snapshot().filter((entry) => entry.kind === "lifecycle").map((entry) => entry.event.type),
     [

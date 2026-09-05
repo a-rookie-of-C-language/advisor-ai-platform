@@ -19,6 +19,7 @@ export class AgentStreamEventEmitter {
   async writeToolResult(
     toolCallId: string,
     toolName: string,
+    toolArgs: JsonObject,
     toolOutput: string,
     attempt: number,
     success: boolean
@@ -26,6 +27,7 @@ export class AgentStreamEventEmitter {
     await this.writer.write("tool_result", "tool", {
       tool_call_id: toolCallId,
       tool_name: toolName,
+      tool_args: toolArgs,
       tool_output: toolOutput,
       attempt,
       success

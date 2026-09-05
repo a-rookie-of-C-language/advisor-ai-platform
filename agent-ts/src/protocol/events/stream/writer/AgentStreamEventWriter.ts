@@ -38,6 +38,7 @@ export class AgentStreamEventWriter {
     await this.eventEmitter.writeToolResult(
       event.toolCallId,
       event.toolName,
+      event.toolArgs,
       event.toolOutput,
       event.attempt,
       event.success

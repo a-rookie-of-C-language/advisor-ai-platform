@@ -146,6 +146,7 @@ export class AgentLoop {
           type: "tool_result",
           toolCallId: toolCall.id,
           toolName: toolCall.name,
+          toolArgs: toolCall.args,
           toolOutput: result.output,
           attempt: result.attempt ?? 0,
           success: result.success
