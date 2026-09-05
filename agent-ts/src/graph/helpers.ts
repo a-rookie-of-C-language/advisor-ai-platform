@@ -76,6 +76,20 @@ export function buildPlanReasoning(taskPlan: JsonObject | undefined): string {
   return PromptBuilder.buildPlanReasoningPrompt(taskPlan);
 }
 
+export function buildExplorerContext(outcome: { summary: string; evidence: readonly JsonObject[]; toolCalls: readonly JsonObject[] }): string {
+  const payload = {
+    summary: outcome.summary,
+    evidence: outcome.evidence,
+    tool_calls: outcome.toolCalls
+  };
+  return (
+    "A read-only tool explorer has gathered evidence for the current user question. " +
+    "Use only this evidence and the visible conversation to answer. " +
+    "If the evidence is insufficient, say what is missing.\n" +
+    JSON.stringify(payload)
+  );
+}
+
 export function buildDelegateReasoning(agentName: string, purpose = ""): string {
   return PromptBuilder.buildDelegateReasoningPrompt(agentName, purpose);
 }

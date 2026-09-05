@@ -36,6 +36,7 @@ import {
 } from "../../../../legacy/core/LegacyReasoning.js";
 import { executeLegacyForceFetch, resolveForceFetchUrl } from "../../../../legacy/core/LegacyForceFetch.js";
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
+import { buildExplorerContext } from "../../../../graph/helpers.js";
 import { AgentGraphRunner } from "../../../../graph/core/AgentGraphRunner.js";
 import type { GraphState } from "../../../../graph/model/GraphState.js";
 
@@ -144,6 +145,22 @@ export class AgentChatStreamSession {
       }
       if (shouldEmitReasoning) {
         await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...legacyRoute.categories], legacyRoute.matchedTools, legacyRoute.educationDomain));
+      }
+      if (exploration.reason !== "none") {
+        const explorerEvidence = exploration.evidence.map((item) => ({
+          tool_name: item.tool_name,
+          status: item.status,
+          message: item.message,
+          items: [...item.items]
+        })) as JsonObject[];
+        const explorerToolCalls = exploration.toolCalls.map((item) => ({ ...item })) as JsonObject[];
+        modelMessages = PromptBuilder.assembleMessages(modelMessages, {
+          dynamicPrompts: [buildExplorerContext({
+            summary: exploration.summary,
+            evidence: explorerEvidence,
+            toolCalls: explorerToolCalls
+          })]
+        });
       }
       const taskPlan = this.taskPlanner.plan({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),

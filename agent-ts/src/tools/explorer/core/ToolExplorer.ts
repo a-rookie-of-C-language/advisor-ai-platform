@@ -20,10 +20,26 @@ export class ToolExplorer {
       })
       .map((tool) => tool.function.name);
 
-    if (matched.length === 0) return { matchedTools: [], reason: "none" };
+    if (matched.length === 0) {
+      return { matchedTools: [], reason: "none", summary: "", evidence: [], toolCalls: [] };
+    }
+    const toolCalls = matched.map((toolName) => ({
+      tool_name: toolName,
+      arguments: {},
+      status: "matched",
+      message: "tool explorer matched candidate"
+    }));
     return {
       matchedTools: [...new Set(matched)],
-      reason: routeNames.size > 0 ? "route_match" : "text_match"
+      reason: routeNames.size > 0 ? "route_match" : "text_match",
+      summary: matched.length > 0 ? "tool explorer matched tools" : "",
+      evidence: toolCalls.map((call) => ({
+        tool_name: call.tool_name,
+        status: call.status,
+        message: call.message,
+        items: []
+      })),
+      toolCalls
     };
   }
 }
