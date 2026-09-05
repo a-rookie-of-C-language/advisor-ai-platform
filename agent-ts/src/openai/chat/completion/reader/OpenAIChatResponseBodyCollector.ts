@@ -8,6 +8,7 @@ export class OpenAIChatResponseBodyCollector {
   async collect(body: ReadableStream<Uint8Array>): Promise<OpenAIChatRoundResult> {
     const decoder = new TextDecoder();
     const textParts: string[] = [];
+    const reasoningParts: string[] = [];
     const toolCalls = new Map<number, OpenAIToolCall>();
     let buffer = "";
 
@@ -19,13 +20,14 @@ export class OpenAIChatResponseBodyCollector {
       for (const line of lines) {
         const parsed = this.streamParser.parseDataLine(line);
         textParts.push(...(parsed.text ? [parsed.text] : []));
+        reasoningParts.push(...(parsed.reasoning ? [parsed.reasoning] : []));
         this.streamParser.mergeToolCallDeltas(toolCalls, parsed.toolCalls);
       }
     }
 
     return {
       textParts,
-      reasoningParts: [],
+      reasoningParts,
       toolCalls: [...toolCalls.entries()].sort(([left], [right]) => left - right).map(([, value]) => value)
     };
   }
