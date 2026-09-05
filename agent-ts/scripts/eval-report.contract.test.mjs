@@ -9,10 +9,18 @@ test("eval report builder aggregates deepeval scores", () => {
     annotation: { type_correct: true, authority_correct: false, effective_date_correct: true },
     fusion: { improvement_rate: 0.25 },
     e2e: { avg_score: 0.8, relevance: 0.7, completeness: 0.6, accuracy: 0.9, fluency: 1 },
-    e2e_deepeval: { avg_score: 0.9 }
+    e2e_deepeval: {
+      avg_score: 0.9,
+      metrics: {
+        忠实度: { score: 0.8 },
+        连贯性: { score: 0.75 }
+      }
+    }
   });
   EvalReportBuilder.computeSummary(report);
   assert.equal(report.summary.deepeval.avg_score, 0.9);
+  assert.equal(report.summary.deepeval.忠实度, 0.8);
+  assert.equal(report.summary.deepeval.连贯性, 0.75);
   assert.equal(report.summary.retrieval["recall@5"], 1);
   assert.equal(report.summary.annotation.type_correct, 1);
 });

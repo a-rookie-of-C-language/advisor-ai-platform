@@ -13,7 +13,7 @@ export class EvalDatasetLoader {
         id: string;
         query: string;
         tags?: string[];
-      expected_annotation?: JsonObject;
+        expected_annotation?: JsonObject;
         expected_answer?: string;
       }>;
     };

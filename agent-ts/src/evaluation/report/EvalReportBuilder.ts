@@ -27,12 +27,29 @@ export class EvalReportBuilder {
     const fusion = EvalReportBuilder.averageMetrics(report.cases, "fusion", ["improvement_rate"]);
     const e2e = EvalReportBuilder.averageMetrics(report.cases, "e2e", ["avg_score", "relevance", "completeness", "accuracy", "fluency"]);
     const deepeval = EvalReportBuilder.averageMetrics(report.cases, "e2e_deepeval", ["avg_score"]);
+    const deepevalMetrics = EvalReportBuilder.averageNestedMetrics(report.cases, "e2e_deepeval", [
+      "忠实度",
+      "答案相关性",
+      "上下文精度",
+      "上下文召回率",
+      "上下文相关性",
+      "幻觉检测",
+      "偏见检测",
+      "毒性检测",
+      "隐私泄露检测",
+      "相关性",
+      "连贯性",
+      "完整性"
+    ]);
     report.summary = {
       retrieval,
       annotation,
       fusion,
       e2e,
-      deepeval
+      deepeval: {
+        ...deepeval,
+        ...deepevalMetrics
+      }
     };
     return report;
   }
@@ -61,6 +78,23 @@ export class EvalReportBuilder {
         .map((value) => (value ? 1 : 0));
       const total = values.reduce((sum: number, value: number) => sum + value, 0);
       result[field] = values.length > 0 ? Number((total / values.length).toFixed(4)) : 0;
+    }
+    return result;
+  }
+
+  private static averageNestedMetrics(cases: JsonObject[], key: string, fields: readonly string[]): JsonObject {
+    const result: JsonObject = {};
+    for (const field of fields) {
+      const values = cases
+        .map((entry) => entry[key])
+        .filter((value): value is JsonObject => typeof value === "object" && value !== null)
+        .map((value) => value.metrics)
+        .filter((value): value is JsonObject => typeof value === "object" && value !== null)
+        .map((value) => value[field])
+        .filter((value): value is JsonObject => typeof value === "object" && value !== null)
+        .map((value) => value.score)
+        .filter((value): value is number => typeof value === "number");
+      result[field] = values.length > 0 ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(4)) : 0;
     }
     return result;
   }
