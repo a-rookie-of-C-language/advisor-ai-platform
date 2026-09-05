@@ -27,14 +27,14 @@ test("graph runner stops before the next node when cancelled", async () => {
   assert.deepEqual(events.filter((event) => event.status === "start").map((event) => event.node), ["select_skill"]);
 });
 
-test("graph runner selects skills by parsed names before falling back", async () => {
+test("graph runner leaves skills empty without a prompt selector", async () => {
   const registry = buildDefaultSkillRegistry();
   const result = await new AgentGraphRunner({}, registry).run({
     messages: [{ role: "user", content: "展开技能 [\"web_research\"]" }],
     userQuery: "展开技能 [\"web_research\"]"
   });
-  assert.deepEqual(result.activeSkills, ["web_research"]);
-  assert.ok(result.skillSystemPrompt?.includes("用 web_search 搜索互联网"));
+  assert.deepEqual(result.activeSkills, []);
+  assert.equal(result.skillSystemPrompt, "");
 });
 
 test("graph runner leaves skills empty when no skill names are parsed", async () => {

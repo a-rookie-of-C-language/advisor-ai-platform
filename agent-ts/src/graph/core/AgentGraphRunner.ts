@@ -29,7 +29,7 @@ export class AgentGraphRunner {
         const knownNames = allSkills.map((skill) => skill.name);
         const selectedNames = this.skillSelector
           ? await this.selectSkills(userQuery, knownNames)
-          : parseSkillNames(userQuery, knownNames);
+          : [];
         const selected = allSkills.filter((skill) => selectedNames.includes(skill.name));
         state = {
           ...state,
