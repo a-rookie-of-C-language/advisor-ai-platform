@@ -1,4 +1,5 @@
 import { IntentRouteDecision } from "../../routing/model/IntentRouteDecision.js";
+import type { LegacyToolRouteContext } from "../model/LegacyToolRouteContext.js";
 
 export interface LegacyRouteContext {
   readonly categories: readonly string[];
@@ -13,7 +14,7 @@ export function buildLegacyRouteContext(
   routeDecision: IntentRouteDecision,
   matchedTools: readonly string[],
   educationDomain: boolean
-): LegacyRouteContext {
+): LegacyRouteContext & LegacyToolRouteContext {
   return {
     categories: [...routeDecision.categories].sort(),
     matchedTools,

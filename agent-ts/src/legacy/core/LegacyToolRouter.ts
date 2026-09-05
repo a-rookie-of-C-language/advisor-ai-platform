@@ -1,20 +1,12 @@
-import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { AgentLoop } from "../../app/loop/core/AgentLoop.js";
+import { buildLegacyRouteContext } from "./LegacyRouteSupport.js";
 import type { TaskPlan } from "../../planning/model/TaskPlan.js";
 import type { LegacyToolRouteContext } from "../model/LegacyToolRouteContext.js";
+import type { IntentRouteDecision } from "../../routing/model/IntentRouteDecision.js";
 
 export class LegacyToolRouter {
-  route(
-    routeCategories: readonly string[],
-    matchedTools: readonly string[],
-    taskPlan: TaskPlan | undefined
-  ): LegacyToolRouteContext {
-    return {
-      matchedTools,
-      routeCategories,
-      taskPlan: (taskPlan ?? {}) as JsonObject,
-      events: []
-    };
+  route(routeDecision: IntentRouteDecision, matchedTools: readonly string[], educationDomain: boolean): LegacyToolRouteContext {
+    return buildLegacyRouteContext(routeDecision, matchedTools, educationDomain);
   }
 
   isDirectPlan(taskPlan: TaskPlan | undefined): boolean {

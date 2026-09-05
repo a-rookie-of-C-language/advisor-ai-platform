@@ -1,8 +1,8 @@
-import type { JsonObject } from "../../common/json/types/JsonTypes.js";
-
 export interface LegacyToolRouteContext {
+  readonly categories: readonly string[];
   readonly matchedTools: readonly string[];
-  readonly routeCategories: readonly string[];
-  readonly taskPlan: JsonObject;
-  readonly events: readonly string[];
+  readonly matchedBy: string;
+  readonly confidence: number;
+  readonly educationDomain: boolean;
+  readonly preferredTools: readonly string[];
 }

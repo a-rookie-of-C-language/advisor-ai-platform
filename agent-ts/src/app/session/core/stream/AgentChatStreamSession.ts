@@ -19,6 +19,7 @@ import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
 import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemoryStore.js";
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
 import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
+import { buildLegacyRouteContext, preferRetrievalFallback } from "../../../../legacy/core/LegacyRouteSupport.js";
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
 
 export class AgentChatStreamSession {
@@ -66,7 +67,7 @@ export class AgentChatStreamSession {
       };
       const educationDomain = shouldForceEducationRag(failureQuery);
       const ragOnlyPreferred = preferRagOnly(failureQuery);
-      const route = this.intentRouter.route(failureQuery, [
+      const rawRoute = this.intentRouter.route(failureQuery, [
         "retrieval",
         "search",
         "memory_read",
@@ -74,20 +75,22 @@ export class AgentChatStreamSession {
         "skill",
         "student"
       ]);
+      const availableTools = await this.openAiToolFacade.listTools();
+      const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
       const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
-      const availableTools = await this.openAiToolFacade.listTools();
       const exploration = this.toolExplorer.explore(
         this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
         route.categories
       );
+      const legacyRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
       const taskPlan = this.taskPlanner.plan({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
-        routeCategories: [...route.categories],
-        matchedTools: exploration.matchedTools,
-        preferredTools: educationDomain || ragOnlyPreferred ? ["rag_search"] : []
+        routeCategories: [...legacyRoute.categories],
+        matchedTools: legacyRoute.matchedTools,
+        preferredTools: [...legacyRoute.preferredTools, ...(educationDomain || ragOnlyPreferred ? ["rag_search"] : [])]
       });
       const loop = new AgentLoopFactory(
         this.config,
