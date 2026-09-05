@@ -4,6 +4,10 @@ export class SkillRegistry {
   private readonly skills = new Map<string, Skill>();
 
   register(skill: Skill): void {
+    if (this.skills.has(skill.name)) {
+      // 覆盖同名 skill 时保持 Python 版的可观察行为。
+      console.warn(`Overwriting existing skill: ${skill.name}`);
+    }
     this.skills.set(skill.name, skill);
   }
 

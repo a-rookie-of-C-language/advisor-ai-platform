@@ -38,7 +38,8 @@ export class AgentRuntimeFactory {
       ragComponents.contextBuilder,
       webComponents.fetchContextBuilder,
       webComponents.searchContextBuilder,
-      dependencies.openAiToolRegistry
+      dependencies.openAiToolRegistry,
+      skillRegistry
     );
   }
 }

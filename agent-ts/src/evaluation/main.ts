@@ -7,6 +7,7 @@ import { EvalJudge } from "./judge/EvalJudge.js";
 import { AgentConfig } from "../config/model/core/AgentConfig.js";
 import { RagApiClient } from "../rag/api/core/RagApiClient.js";
 import { OpenAIChatClient } from "../openai/chat/core/client/OpenAIChatClient.js";
+import type { JsonObject } from "../common/json/types/JsonTypes.js";
 
 function readArg(name: string, fallback?: string): string | undefined {
   const prefix = `--${name}=`;
@@ -32,6 +33,11 @@ async function main(): Promise<void> {
   const config = AgentConfig.fromEnv();
   const ragClient = config.ragApiBaseUrl ? new RagApiClient(config) : undefined;
   const openAiClient = config.openAiApiKey ? new OpenAIChatClient(config) : undefined;
+  const buildEvalConfig = () => ({
+    model: readArg("judge-model") ?? config.openAiModel,
+    apiKey: config.openAiApiKey || undefined,
+    baseUrl: config.openAiBaseUrl || undefined
+  });
 
   const runner = new EvalRunner(dataset, topK, {
     ragSearch: async (_query, targetKbId, requestedTopK) => {
@@ -56,7 +62,17 @@ async function main(): Promise<void> {
       }
       return answer;
     },
-    judgeE2e: async (query, expectedAnswer, actualAnswer) => EvalJudge.judge(query, expectedAnswer, actualAnswer),
+    judgeE2e: async (query, expectedAnswer, actualAnswer) => {
+      const score = await EvalJudge.judge(query, expectedAnswer, actualAnswer, buildEvalConfig());
+      const result: JsonObject = { avg_score: score.avg_score };
+      if (score.relevance !== undefined) result.relevance = score.relevance;
+      if (score.completeness !== undefined) result.completeness = score.completeness;
+      if (score.accuracy !== undefined) result.accuracy = score.accuracy;
+      if (score.fluency !== undefined) result.fluency = score.fluency;
+      if (score.reasoning !== undefined) result.reasoning = score.reasoning;
+      if (score.error !== undefined) result.error = score.error;
+      return result;
+    },
     deepeval: async (query, expectedAnswer, actualAnswer, retrievalContext) =>
       EvalDeepEval.evaluate(query, expectedAnswer, actualAnswer, retrievalContext, {
         model: readArg("deepeval-model") ?? config.openAiModel,

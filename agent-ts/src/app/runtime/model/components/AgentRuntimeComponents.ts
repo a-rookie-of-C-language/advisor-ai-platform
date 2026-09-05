@@ -5,6 +5,7 @@ import type { MemoryTaskSubmitter } from "../../../../memory/task/submitter/Memo
 import type { OpenAIChatClient } from "../../../../openai/chat/core/client/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../../../openai/tools/registry/core/registry/OpenAiToolRegistry.js";
 import type { RagContextBuilder } from "../../../../rag/context/core/RagContextBuilder.js";
+import type { SkillRegistry } from "../../../../skills/core/SkillRegistry.js";
 import type { WebFetchContextBuilder } from "../../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../../web/context/search/core/WebSearchContextBuilder.js";
 import { AgentChatStreamSession } from "../../../session/core/stream/AgentChatStreamSession.js";
@@ -23,7 +24,8 @@ export class AgentRuntimeComponents {
     ragContextBuilder?: RagContextBuilder,
     webFetchContextBuilder?: WebFetchContextBuilder,
     webSearchContextBuilder?: WebSearchContextBuilder,
-    openAiToolRegistry?: OpenAiToolRegistry
+    openAiToolRegistry?: OpenAiToolRegistry,
+    skillRegistry?: SkillRegistry
   ) {
     this.streamSession = this.streamSessionFactory.create(
       config,
@@ -34,7 +36,8 @@ export class AgentRuntimeComponents {
       ragContextBuilder,
       webFetchContextBuilder,
       webSearchContextBuilder,
-      openAiToolRegistry
+      openAiToolRegistry,
+      skillRegistry
     );
   }
 }

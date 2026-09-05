@@ -3,9 +3,19 @@ import type { EngineStrategy } from "./EngineStrategy.js";
 import { EngineEvent } from "./EngineEvent.js";
 
 export class ConversationQueryEngine {
-  constructor(private readonly strategy: EngineStrategy) {}
+  private readonly strategy: EngineStrategy;
+
+  constructor(strategy: EngineStrategy) {
+    this.strategy = strategy;
+  }
 
   async *query(context: EngineContext): AsyncIterable<string> {
+    for await (const event of this.queryEvents(context)) {
+      yield event.toSse();
+    }
+  }
+
+  async *queryEvents(context: EngineContext): AsyncIterable<EngineEvent> {
     let sawDone = false;
     let sawError = false;
 
@@ -19,12 +29,12 @@ export class ConversationQueryEngine {
       if (!event.traceId) {
         event = new EngineEvent(event.event, event.source, event.payload, context.traceId ?? null, event.eventVersion);
       }
-      yield event.toSse();
+      yield event;
     }
 
     if (!sawDone) {
       const finishReason = sawError ? "stream_finished_with_error" : "stream_finished";
-      yield EngineEvent.sysDone(finishReason, context.traceId ?? null).toSse();
+      yield EngineEvent.sysDone(finishReason, context.traceId ?? null);
     }
   }
 }

@@ -1,55 +1,104 @@
-import type { JsonObject } from "../../common/json/types/JsonTypes.js";
-
-export interface EvalJudgeScore extends JsonObject {
-  readonly relevance: number;
-  readonly completeness: number;
-  readonly accuracy: number;
-  readonly fluency: number;
+export interface EvalJudgeScore {
+  readonly relevance?: number;
+  readonly completeness?: number;
+  readonly accuracy?: number;
+  readonly fluency?: number;
   readonly avg_score: number;
-  readonly reasoning: string;
+  readonly reasoning?: string;
+  readonly error?: string;
 }
 
+export interface EvalJudgeConfig {
+  readonly model?: string;
+  readonly apiKey?: string;
+  readonly baseUrl?: string;
+}
+
+type EvalJudgePayload = Record<string, unknown>;
+
 export class EvalJudge {
-  static judge(query: string, expectedAnswer: string, actualAnswer: string): EvalJudgeScore {
-    const relevance = this.scoreOverlap(query, actualAnswer);
-    const completeness = this.scoreOverlap(expectedAnswer, actualAnswer);
-    const accuracy = this.scoreExactness(expectedAnswer, actualAnswer);
-    const fluency = this.scoreFluency(actualAnswer);
-    const avg_score = Number((relevance * 0.3 + completeness * 0.25 + accuracy * 0.3 + fluency * 0.15).toFixed(2));
+  static async judge(query: string, expectedAnswer: string, actualAnswer: string, config: EvalJudgeConfig = {}): Promise<EvalJudgeScore> {
+    const external = await this.tryExternalJudge(query, expectedAnswer, actualAnswer, config);
+    if (external) {
+      return external;
+    }
     return {
-      relevance,
-      completeness,
-      accuracy,
-      fluency,
-      avg_score,
-      reasoning: "heuristic judge"
+      error: "no_llm_provider",
+      avg_score: 0
     };
   }
 
-  private static scoreOverlap(left: string, right: string): number {
-    const leftWords = new Set(left.trim().toLowerCase().split(/\s+/).filter(Boolean));
-    const rightWords = new Set(right.trim().toLowerCase().split(/\s+/).filter(Boolean));
-    if (leftWords.size === 0 || rightWords.size === 0) {
-      return 0;
+  private static async tryExternalJudge(
+    query: string,
+    expectedAnswer: string,
+    actualAnswer: string,
+    config: EvalJudgeConfig
+  ): Promise<EvalJudgeScore | null> {
+    if (!config.apiKey || !config.baseUrl || !config.model) {
+      return null;
     }
-    let overlap = 0;
-    for (const word of leftWords) {
-      if (rightWords.has(word)) overlap++;
+
+    const prompt = [
+      "你是一个评估专家。请对以下回答进行评分。",
+      "",
+      `问题：${query}`,
+      "",
+      `期望答案：${expectedAnswer}`,
+      "",
+      `实际答案：${actualAnswer}`,
+      "",
+      "请从以下四个维度评分（1-5分）：",
+      "- relevance（相关性）：回答是否与问题相关",
+      "- completeness（完整性）：回答是否涵盖了期望答案的要点",
+      "- accuracy（准确性）：回答是否准确无误",
+      "- fluency（流畅性）：回答是否通顺、易读",
+      "",
+      '返回 JSON 格式：{"relevance": 1-5, "completeness": 1-5, "accuracy": 1-5, "fluency": 1-5, "reasoning": "评分理由"}'
+    ].join("\n");
+
+    try {
+      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0,
+          stream: false
+        })
+      });
+      if (!response.ok) {
+        return null;
+      }
+      const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string | null } }> };
+      const content = payload.choices?.[0]?.message?.content?.trim();
+      if (!content) {
+        return null;
+      }
+      const parsed = JSON.parse(content) as EvalJudgePayload;
+      const relevance = this.coerceNumber(parsed.relevance ?? 3);
+      const completeness = this.coerceNumber(parsed.completeness ?? 3);
+      const accuracy = this.coerceNumber(parsed.accuracy ?? 3);
+      const fluency = this.coerceNumber(parsed.fluency ?? 3);
+      const avg_score = Number((relevance * 0.3 + completeness * 0.25 + accuracy * 0.3 + fluency * 0.15).toFixed(2));
+      return {
+        relevance,
+        completeness,
+        accuracy,
+        fluency,
+        avg_score,
+        reasoning: String(parsed.reasoning ?? "")
+      };
+    } catch {
+      return null;
     }
-    return Number(((overlap / leftWords.size) * 5).toFixed(2));
   }
 
-  private static scoreExactness(expectedAnswer: string, actualAnswer: string): number {
-    if (!expectedAnswer.trim() || !actualAnswer.trim()) {
-      return 0;
-    }
-    return expectedAnswer.trim() === actualAnswer.trim() ? 5 : 2;
-  }
-
-  private static scoreFluency(actualAnswer: string): number {
-    if (!actualAnswer.trim()) return 0;
-    const sentences = actualAnswer.split(/[。.!?]/).filter(Boolean).length;
-    const lengthScore = Math.min(5, Math.max(1, Math.round(actualAnswer.length / 40)));
-    return Math.min(5, Math.max(1, Math.round((lengthScore + Math.min(5, sentences)) / 2)));
+  private static coerceNumber(value: unknown): number {
+    const number = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(number) ? number : 0;
   }
 }

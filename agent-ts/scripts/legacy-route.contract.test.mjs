@@ -49,3 +49,9 @@ test("preferred tools push the planner toward rag search", () => {
   assert.equal(plan.mode, "plan_and_execute");
   assert.deepEqual(plan.requiredTools, ["rag_search"]);
 });
+
+test("legacy reasoning keeps explorer delegation when tools are matched", () => {
+  const route = new IntentRouter().route("请根据知识库文档解释", ["retrieval", "search"]);
+  const payload = buildLegacyRouteContext(route, ["rag_search"], true);
+  assert.deepEqual(payload.preferredTools, ["rag_search"]);
+});

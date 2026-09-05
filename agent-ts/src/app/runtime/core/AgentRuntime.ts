@@ -12,6 +12,7 @@ import { SseWriterFactory } from "../../../protocol/sse/factory/SseWriterFactory
 import type { RagContextBuilder } from "../../../rag/context/core/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../web/context/search/core/WebSearchContextBuilder.js";
+import type { SkillRegistry } from "../../../skills/core/SkillRegistry.js";
 import { AgentGraphHealthDescriptor } from "../../health/core/AgentGraphHealthDescriptor.js";
 import { AgentRequestIdResolver } from "../../request/core/AgentRequestIdResolver.js";
 import { AgentRuntimeComponents } from "../model/components/AgentRuntimeComponents.js";
@@ -32,7 +33,8 @@ export class AgentRuntime {
     ragContextBuilder?: RagContextBuilder,
     webFetchContextBuilder?: WebFetchContextBuilder,
     webSearchContextBuilder?: WebSearchContextBuilder,
-    openAiToolRegistry?: OpenAiToolRegistry
+    openAiToolRegistry?: OpenAiToolRegistry,
+    skillRegistry?: SkillRegistry
   ) {
     for (const model of config.openAiModels) {
       this.modelCatalog.register({
@@ -52,7 +54,8 @@ export class AgentRuntime {
       ragContextBuilder,
       webFetchContextBuilder,
       webSearchContextBuilder,
-      openAiToolRegistry
+      openAiToolRegistry,
+      skillRegistry
     );
   }
 

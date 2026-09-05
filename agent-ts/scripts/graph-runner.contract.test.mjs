@@ -46,3 +46,22 @@ test("graph runner leaves skills empty when no skill names are parsed", async ()
   assert.deepEqual(result.activeSkills, []);
   assert.equal(result.skillSystemPrompt, "");
 });
+
+test("graph runner can select skills through the prompt selector", async () => {
+  const registry = buildDefaultSkillRegistry();
+  let prompt = "";
+  const result = await new AgentGraphRunner(
+    {},
+    registry,
+    async (builtPrompt) => {
+      prompt = builtPrompt;
+      return '["knowledge_qa"]';
+    }
+  ).run({
+    messages: [{ role: "user", content: "帮我查知识库" }],
+    userQuery: "帮我查知识库"
+  });
+  assert.match(prompt, /技能选择器/);
+  assert.deepEqual(result.activeSkills, ["knowledge_qa"]);
+  assert.ok(result.skillSystemPrompt?.includes("rag_search"));
+});

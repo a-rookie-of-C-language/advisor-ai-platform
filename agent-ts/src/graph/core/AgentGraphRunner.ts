@@ -2,7 +2,7 @@ import type { GraphNodeName } from "../model/GraphNodeName.js";
 import { GRAPH_NODE_NAMES } from "../model/GraphNodeName.js";
 import type { GraphState } from "../model/GraphState.js";
 import type { SkillRegistry } from "../../skills/core/SkillRegistry.js";
-import { parseSkillNames } from "../helpers.js";
+import { buildSkillSelectionPrompt, parseSkillNames } from "../helpers.js";
 
 export type GraphNodeHandler = (state: GraphState, signal?: AbortSignal) => Promise<GraphState>;
 
@@ -14,7 +14,8 @@ export interface GraphRunEvent {
 export class AgentGraphRunner {
   constructor(
     private readonly handlers: Partial<Record<GraphNodeName, GraphNodeHandler>> = {},
-    private readonly skillRegistry?: SkillRegistry
+    private readonly skillRegistry?: SkillRegistry,
+    private readonly skillSelector?: (prompt: string) => Promise<string>
   ) {}
 
   async run(initial: GraphState, signal?: AbortSignal, onEvent?: (event: GraphRunEvent) => void): Promise<GraphState> {
@@ -26,7 +27,9 @@ export class AgentGraphRunner {
         const userQuery = String(state.userQuery ?? "").trim();
         const allSkills = this.skillRegistry.listAll();
         const knownNames = allSkills.map((skill) => skill.name);
-        const selectedNames = parseSkillNames(userQuery, knownNames);
+        const selectedNames = this.skillSelector
+          ? await this.selectSkills(userQuery, knownNames)
+          : parseSkillNames(userQuery, knownNames);
         const selected = allSkills.filter((skill) => selectedNames.includes(skill.name));
         state = {
           ...state,
@@ -38,5 +41,16 @@ export class AgentGraphRunner {
       onEvent?.({ node, status: "end" });
     }
     return state;
+  }
+
+  private async selectSkills(userQuery: string, knownNames: readonly string[]): Promise<string[]> {
+    const catalogPrompt = this.skillRegistry?.catalogPrompt() ?? "";
+    const prompt = buildSkillSelectionPrompt(catalogPrompt, userQuery);
+    try {
+      const responseText = await this.skillSelector?.(prompt);
+      return responseText ? parseSkillNames(responseText, knownNames) : [];
+    } catch {
+      return [];
+    }
   }
 }

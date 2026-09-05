@@ -151,3 +151,15 @@ export function parseSkillNames(text: string, knownNames: readonly string[] = []
   }
   return [];
 }
+
+export function buildSkillSelectionPrompt(catalogPrompt: string, userQuery: string): string {
+  return [
+    "你是一个技能选择器。请根据用户输入，从可用技能中选择一个或多个最合适的技能。",
+    "只返回被选中的技能名称列表，使用 JSON 数组格式，例如 [\"knowledge_qa\"]。",
+    "如果没有合适的技能，请返回空数组 []。",
+    "",
+    catalogPrompt,
+    "",
+    `用户输入: ${userQuery}`
+  ].join("\n");
+}

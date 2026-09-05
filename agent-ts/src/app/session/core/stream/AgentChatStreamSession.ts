@@ -8,6 +8,7 @@ import { AgentLoopFactory } from "../../../loop/factory/AgentLoopFactory.js";
 import type { AgentMemoryTaskCompletionSubmitter } from "../../../memory/execution/AgentMemoryTaskCompletionSubmitter.js";
 import type { AgentOpenAiToolFacade } from "../../../openAi/core/AgentOpenAiToolFacade.js";
 import type { AgentContextPipeline } from "../pipeline/AgentContextPipeline.js";
+import type { SkillRegistry } from "../../../../skills/core/SkillRegistry.js";
 import { AgentMissingOpenAiApiKeyFallbackGate } from "../../support/fallback/AgentMissingOpenAiApiKeyFallbackGate.js";
 import { AgentStreamErrorMessageResolver } from "../../support/error/AgentStreamErrorMessageResolver.js";
 import { InputSafetySanitizer } from "../../../../safety/input/InputSafetySanitizer.js";
@@ -48,7 +49,8 @@ export class AgentChatStreamSession {
     private readonly contextPipeline: AgentContextPipeline,
     private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter,
     private readonly openAiClient: OpenAIChatClient,
-    private readonly openAiToolFacade: AgentOpenAiToolFacade
+    private readonly openAiToolFacade: AgentOpenAiToolFacade,
+    private readonly skillRegistry?: SkillRegistry
   ) {
     this.contextCompactionService = new ContextCompactionService(
       config.contextWindowTokens,
@@ -73,6 +75,8 @@ export class AgentChatStreamSession {
         ...safeChatRequest,
         messages: this.failureMemorySupport.injectAvoidancePrompt(safeChatRequest.messages, failureQuery)
       };
+      const activeSkillNames = this.skillRegistry ? this.skillRegistry.listAll().map((skill) => skill.name) : [];
+      const skillPrompt = this.skillRegistry ? this.skillRegistry.briefPrompt(activeSkillNames) : "";
       const educationDomain = shouldForceEducationRag(failureQuery);
       const ragOnlyPreferred = preferRagOnly(failureQuery);
       const rawRoute = this.intentRouter.route(failureQuery, [
@@ -87,7 +91,9 @@ export class AgentChatStreamSession {
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       await writer.write("intent_route", "system", route.toEventPayload() as JsonObject);
       const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
-      const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
+      const modelMessages = this.contextCompactionService.compact(
+        skillPrompt ? [{ role: "system", content: skillPrompt }, ...contextMessages] : contextMessages
+      ).messages;
       const exploration = this.toolExplorer.explore(
         this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
@@ -95,6 +101,9 @@ export class AgentChatStreamSession {
       );
       const legacyRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
       const shouldEmitReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none");
+      if (exploration.reason !== "none") {
+        await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("tool_explorer_subagent"));
+      }
       if (shouldEmitReasoning) {
         await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...legacyRoute.categories], legacyRoute.matchedTools, legacyRoute.educationDomain));
       }

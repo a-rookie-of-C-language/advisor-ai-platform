@@ -1,7 +1,7 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { EvalCase } from "../model/EvalCase.js";
 import type { EvalDataset } from "../model/EvalDataset.js";
-import { EvalJudge } from "../judge/EvalJudge.js";
+import { EvalJudge, type EvalJudgeScore } from "../judge/EvalJudge.js";
 import { EvalDeepEval } from "../deepeval/EvalDeepEval.js";
 import { EvalReportBuilder } from "../report/EvalReportBuilder.js";
 import { toJsonable } from "../serialization/toJsonable.js";
@@ -99,7 +99,7 @@ export class EvalRunner {
 
   private async evalE2e(evalCase: EvalCase, actualAnswer: string): Promise<JsonObject> {
     if (!this.adapters.judgeE2e) {
-      return EvalJudge.judge(evalCase.query, evalCase.expectedAnswer ?? "", actualAnswer);
+      return EvalRunner.toJsonObject(await EvalJudge.judge(evalCase.query, evalCase.expectedAnswer ?? "", actualAnswer));
     }
     return this.adapters.judgeE2e(evalCase.query, evalCase.expectedAnswer ?? "", actualAnswer);
   }
@@ -224,5 +224,18 @@ export class EvalRunner {
       distribution[source] = (distribution[source] ?? 0) + 1;
     }
     return distribution;
+  }
+
+  private static toJsonObject(value: EvalJudgeScore): JsonObject {
+    const result: JsonObject = {
+      avg_score: value.avg_score
+    };
+    if (value.relevance !== undefined) result.relevance = value.relevance;
+    if (value.completeness !== undefined) result.completeness = value.completeness;
+    if (value.accuracy !== undefined) result.accuracy = value.accuracy;
+    if (value.fluency !== undefined) result.fluency = value.fluency;
+    if (value.reasoning !== undefined) result.reasoning = value.reasoning;
+    if (value.error !== undefined) result.error = value.error;
+    return result;
   }
 }
