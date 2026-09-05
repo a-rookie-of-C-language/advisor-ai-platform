@@ -27,9 +27,7 @@ export class AgentGraphRunner {
         const allSkills = this.skillRegistry.listAll();
         const knownNames = allSkills.map((skill) => skill.name);
         const selectedNames = parseSkillNames(userQuery, knownNames);
-        const selected = selectedNames.length > 0
-          ? allSkills.filter((skill) => selectedNames.includes(skill.name))
-          : allSkills.filter((skill) => userQuery.length > 0 && (skill.description.includes(userQuery) || skill.brief.includes(userQuery)));
+        const selected = allSkills.filter((skill) => selectedNames.includes(skill.name));
         state = {
           ...state,
           activeSkills: selected.map((skill) => skill.name),

@@ -36,3 +36,13 @@ test("graph runner selects skills by parsed names before falling back", async ()
   assert.deepEqual(result.activeSkills, ["web_research"]);
   assert.ok(result.skillSystemPrompt?.includes("用 web_search 搜索互联网"));
 });
+
+test("graph runner leaves skills empty when no skill names are parsed", async () => {
+  const registry = buildDefaultSkillRegistry();
+  const result = await new AgentGraphRunner({}, registry).run({
+    messages: [{ role: "user", content: "普通问题" }],
+    userQuery: "普通问题"
+  });
+  assert.deepEqual(result.activeSkills, []);
+  assert.equal(result.skillSystemPrompt, "");
+});
