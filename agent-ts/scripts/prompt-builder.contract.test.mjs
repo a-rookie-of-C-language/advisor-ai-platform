@@ -26,6 +26,9 @@ test("prompt builder mirrors python side prompt helpers", () => {
   assert.match(PromptBuilder.renderTaskPlanPrompt({ mode: "direct", summary: "ok" }), /执行计划/);
   assert.match(PromptBuilder.buildE2EJudgePrompt("q", "e", "a"), /评估专家/);
   assert.match(PromptBuilder.buildDeepEvalPrompt("q", "e", "a", ["ctx"]), /严格返回 JSON/);
+  assert.match(PromptBuilder.buildRouteReasoningPrompt(["retrieval", "search"], [], false), /知识库/);
+  assert.match(PromptBuilder.buildPlanReasoningPrompt({ mode: "direct", summary: "ok" }), /ok/);
+  assert.match(PromptBuilder.buildDelegateReasoningPrompt("task_planner_subagent"), /任务规划器/);
 });
 
 test("prompt builder assembles system prompts in python order", () => {
