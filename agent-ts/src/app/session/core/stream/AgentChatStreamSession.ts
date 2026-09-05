@@ -85,6 +85,7 @@ export class AgentChatStreamSession {
       ]);
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
+      await writer.write("intent_route", "system", route.toEventPayload() as JsonObject);
       const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
       const modelMessages = this.contextCompactionService.compact(contextMessages).messages;
       const exploration = this.toolExplorer.explore(

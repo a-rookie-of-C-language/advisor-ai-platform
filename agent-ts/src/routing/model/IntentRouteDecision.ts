@@ -9,4 +9,22 @@ export class IntentRouteDecision {
     readonly scores: Readonly<Record<string, number>> = {},
     readonly matchedTools: readonly string[] = []
   ) {}
+
+  toEventPayload(): Record<string, unknown> {
+    const categories = [...this.categories].sort();
+    return {
+      matched_by: this.matchedBy,
+      confidence: this.confidence,
+      fallback_reason: this.fallbackReason || "",
+      categories,
+      scores: this.scores,
+      reason: "",
+      matched_tools: [...this.matchedTools],
+      source: {
+        decision: this.matchedBy,
+        categories,
+        matched_tools: [...this.matchedTools]
+      }
+    };
+  }
 }
