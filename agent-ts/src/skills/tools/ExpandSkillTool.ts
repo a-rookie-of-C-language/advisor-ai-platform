@@ -10,7 +10,7 @@ export class ExpandSkillTool {
       type: "function",
       function: {
         name: "expand_skill",
-        description: "展开指定技能的完整系统提示词",
+        description: "展开指定技能的完整指令，获取更详细的执行指南。当 brief 指令不足以完成任务时调用。",
         parameters: {
           type: "object",
           properties: {
