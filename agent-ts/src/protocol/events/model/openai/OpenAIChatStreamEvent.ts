@@ -16,5 +16,6 @@ export type OpenAIChatStreamEvent =
       toolCallId: string;
       toolName: string;
       toolOutput: string;
+      attempt: number;
       success: boolean;
     };

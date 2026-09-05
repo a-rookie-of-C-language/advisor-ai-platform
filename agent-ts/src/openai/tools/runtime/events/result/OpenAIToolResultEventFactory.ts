@@ -11,6 +11,7 @@ export class OpenAIToolResultEventFactory {
       toolCallId: toolCall.id,
       toolName: toolCall.function.name,
       toolOutput: toolResult.output,
+      attempt: toolResult.attempt ?? 0,
       success: toolResult.success
     };
   }

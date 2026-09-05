@@ -13,6 +13,7 @@ export type AgentLoopToolResult = {
   toolCallId: string;
   toolName: string;
   output: string;
+  attempt?: number;
   success: boolean;
 };
 

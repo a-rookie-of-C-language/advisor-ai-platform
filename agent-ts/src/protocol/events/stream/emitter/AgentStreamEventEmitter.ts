@@ -16,11 +16,18 @@ export class AgentStreamEventEmitter {
     });
   }
 
-  async writeToolResult(toolCallId: string, toolName: string, toolOutput: string, success: boolean): Promise<void> {
+  async writeToolResult(
+    toolCallId: string,
+    toolName: string,
+    toolOutput: string,
+    attempt: number,
+    success: boolean
+  ): Promise<void> {
     await this.writer.write("tool_result", "tool", {
       tool_call_id: toolCallId,
       tool_name: toolName,
       tool_output: toolOutput,
+      attempt,
       success
     });
   }

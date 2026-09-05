@@ -35,7 +35,13 @@ export class AgentStreamEventWriter {
       await this.eventEmitter.writeToolCall(event.toolCallId, event.toolName, event.toolArgs);
       return;
     }
-    await this.eventEmitter.writeToolResult(event.toolCallId, event.toolName, event.toolOutput, event.success);
+    await this.eventEmitter.writeToolResult(
+      event.toolCallId,
+      event.toolName,
+      event.toolOutput,
+      event.attempt,
+      event.success
+    );
   }
 
   async flushSafetyFilter(): Promise<void> {

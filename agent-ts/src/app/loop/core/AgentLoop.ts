@@ -81,12 +81,13 @@ export class AgentLoop {
           const allowed = this.options.beforeToolCall
             ? await this.options.beforeToolCall({ toolCall, signal: this.options.signal })
             : true;
-          let result: AgentLoopToolResult;
+            let result: AgentLoopToolResult;
           if (allowed === false) {
             result = {
               toolCallId: toolCall.id,
               toolName: toolCall.name,
               output: JSON.stringify({ ok: false, status: "blocked", message: "tool blocked by policy", items: [] }),
+              attempt: 0,
               success: false
             };
           } else {
@@ -107,6 +108,7 @@ export class AgentLoop {
               toolCallId: toolCall.id,
               toolName: toolCall.name,
               output: toolResult.output,
+              attempt: 1,
               success: toolResult.success
             };
             if (this.options.afterToolCall) {
@@ -145,6 +147,7 @@ export class AgentLoop {
           toolCallId: toolCall.id,
           toolName: toolCall.name,
           toolOutput: result.output,
+          attempt: result.attempt ?? 0,
           success: result.success
         };
         await this.options.writer?.(writerEvent);
