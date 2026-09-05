@@ -1,5 +1,6 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import type { OpenAiToolExecutionResult } from "../../openai/tools/runtime/model/result/OpenAiToolExecutionResult.js";
+import { extractFirstUrl } from "../../graph/helpers.js";
 
 export const LEGACY_FORCE_FETCH_TOOL_NAME = "web_fetch";
 export const LEGACY_FORCE_FETCH_TOOL_CALL_ID = "web_fetch-1";
@@ -51,11 +52,6 @@ export function buildForceFetchContextPrompt(payload: JsonObject): string {
   const content = String(first.content || "").trim();
   if (!content) return "";
   return `请严格基于以下网页原文回答，并明确标注不确定处：\n${content.slice(0, LEGACY_FORCE_FETCH_MAX_CONTENT_LENGTH)}`;
-}
-
-function extractFirstUrl(text: string): string {
-  const match = /https?:\/\/[^\s)>"]+/u.exec(text || "");
-  return match?.[0] || "";
 }
 
 function parseToolOutput(rawOutput: string): JsonObject {
