@@ -44,7 +44,7 @@ test("task planner async plan prefers llm json and falls back on invalid output"
   const planner = new TaskPlanner(
     { openAiApiKey: "key" },
     {
-      chatWithJsonMode: async () =>
+      chatWithStructuredOutput: async () =>
         "{\"mode\":\"direct\",\"goal\":\"已规划\",\"summary\":\"来自模型\",\"stop_when\":\"完成\",\"sufficient\":true,\"required_tools\":[],\"steps\":[{\"action\":\"final\",\"reason\":\"done\",\"sufficient\":true,\"summary\":\"完成\"}],\"route_context\":{}}"
     }
   );
@@ -62,12 +62,11 @@ test("task planner async plan requests json mode", async () => {
   const planner = new TaskPlanner(
     { openAiApiKey: "key" },
     {
-      chatWithJsonMode: async (_messages, _signal) => {
+      chatWithStructuredOutput: async (_messages, schema, _signal) => {
+        assert.equal(schema.name, "task_plan");
+        assert.equal(schema.strict, false);
+        assert.equal(schema.schema.type, "object");
         return "{\"mode\":\"direct\",\"goal\":\"已规划\",\"summary\":\"来自模型\",\"stop_when\":\"完成\",\"sufficient\":true,\"required_tools\":[],\"steps\":[{\"action\":\"final\",\"reason\":\"done\",\"sufficient\":true,\"summary\":\"完成\"}],\"route_context\":{}}";
-      },
-      streamChat: async function* (_messages, _signal, responseFormat) {
-        assert.deepEqual(responseFormat, { type: "json_object" });
-        yield "unused";
       }
     }
   );

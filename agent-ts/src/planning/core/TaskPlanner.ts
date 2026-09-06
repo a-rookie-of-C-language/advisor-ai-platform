@@ -2,6 +2,7 @@ import type { JsonObject } from "../../common/json/types/JsonObject.js";
 import type { OpenAIChatTool } from "../../openai/chat/model/tool/OpenAIChatTool.js";
 import type { AgentConfig } from "../../config/model/core/AgentConfig.js";
 import { OpenAIChatClient } from "../../openai/chat/core/client/OpenAIChatClient.js";
+import type { OpenAIChatJsonSchema } from "../../openai/chat/completion/model/OpenAIChatJsonSchema.js";
 import type { ChatMessageDTO } from "../../common/model/ChatStreamRequest.js";
 import type { TaskPlan, TaskPlanInput, TaskPlanStep } from "../model/TaskPlan.js";
 
@@ -129,7 +130,7 @@ export class TaskPlanner {
   }
 
   private async collectPlanText(messages: ChatMessageDTO[]): Promise<string> {
-    return this.chatClient!.chatWithJsonMode(messages, undefined);
+    return this.chatClient!.chatWithStructuredOutput(messages, TaskPlanner.taskPlanJsonSchema(), undefined);
   }
 
   private parsePlanText(text: string): TaskPlan | null {
@@ -207,5 +208,26 @@ export class TaskPlanner {
       }
     }
     return result;
+  }
+
+  private static taskPlanJsonSchema(): OpenAIChatJsonSchema {
+    return {
+      name: "task_plan",
+      strict: false,
+      schema: {
+        type: "object",
+        properties: {
+          mode: { type: "string" },
+          goal: { type: "string" },
+          summary: { type: "string" },
+          stop_when: { type: "string" },
+          sufficient: { type: "boolean" },
+          required_tools: { type: "array", items: { type: "string" } },
+          steps: { type: "array" },
+          route_context: { type: "object" }
+        },
+        required: ["mode", "goal", "summary", "stop_when", "sufficient", "required_tools", "steps", "route_context"]
+      }
+    };
   }
 }

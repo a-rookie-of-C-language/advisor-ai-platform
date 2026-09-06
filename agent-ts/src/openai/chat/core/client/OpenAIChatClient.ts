@@ -14,6 +14,7 @@ export class OpenAIChatClient {
   private readonly eventStreamer: OpenAIChatEventStreamer;
   private readonly messageMapper = new OpenAIChatMessageMapper();
   private readonly toolRoundRunner = new OpenAIToolRoundRunner();
+  private jsonSchemaUnavailable = false;
 
   constructor(config: AgentConfig) {
     this.completionStreamer = new OpenAIChatCompletionStreamer(config);
@@ -50,11 +51,20 @@ export class OpenAIChatClient {
     schema: OpenAIChatJsonSchema,
     signal?: AbortSignal
   ): Promise<string> {
-    let responseText = "";
-    for await (const delta of this.streamChat(messages, signal, { type: "json_schema", json_schema: schema })) {
-      responseText += delta;
+    if (this.jsonSchemaUnavailable) {
+      return this.chatWithJsonMode(messages, signal);
     }
-    return responseText;
+
+    try {
+      let responseText = "";
+      for await (const delta of this.streamChat(messages, signal, { type: "json_schema", json_schema: schema })) {
+        responseText += delta;
+      }
+      return responseText;
+    } catch {
+      this.jsonSchemaUnavailable = true;
+      return this.chatWithJsonMode(messages, signal);
+    }
   }
 
   async *streamChatEvents(
