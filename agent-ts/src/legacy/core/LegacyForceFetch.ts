@@ -32,12 +32,6 @@ export async function executeLegacyForceFetch(
     events: [
       buildLegacyForceFetchUseEvent(url),
       resultEvent,
-      {
-        event: "sys_done",
-        payload: {
-          finish_reason: "stream_finished"
-        }
-      }
     ],
     contextPrompt: buildForceFetchContextPrompt(payload)
   };

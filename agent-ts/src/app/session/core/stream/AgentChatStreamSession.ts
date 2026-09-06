@@ -200,6 +200,17 @@ export class AgentChatStreamSession {
             dynamicPrompts: [fetchResult.contextPrompt]
           });
         }
+        for await (const event of this.openAiClient.streamChatEvents(modelMessages, [], undefined, writer.signal)) {
+          await eventWriter.write(event);
+        }
+        this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
+        await eventWriter.flushSafetyFilter();
+        if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
+          await eventWriter.writeMissingOpenAiApiKeyFallback();
+        }
+        await writer.done("stream_finished");
+        await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, eventWriter.answer);
+        return;
       }
       const loop = new AgentLoopFactory(
         this.config,
