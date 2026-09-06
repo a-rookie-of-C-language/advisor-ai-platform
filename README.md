@@ -25,7 +25,6 @@ Advisor AI Platform 是面向高校辅导员业务场景的 AI 平台，提供�
 | `backend/ai-gateway` | Rust 模型供应商网关，负责 provider 抽象、模型路由、限流和调用治理 |
 | `agent-ts` | 当前主运行时的 TypeScript Agent 控制层，负责 HTTP/SSE 接入、上下文构建、工具编排和运行时胶水 |
 | `agent-core` | Rust Agent 执行核心，负责 OpenAI-compatible 流式请求、SSE 解析、工具调用协议和执行状态机 |
-| `agent` | Python 参考实现，保留评测、skills、query_engine、历史流式流程和回归测试 |
 | `scripts` | 本地启动、联调、压测和配置下发脚本 |
 | `docs` | 架构、需求和代码优化记录等项目文档 |
 
@@ -55,7 +54,7 @@ d:\python\python.exe -m venv .venv
 如需使用 `podman-compose`：
 
 ```powershell
-agent\.venv\Scripts\python.exe -m pip install podman-compose
+.\.venv\Scripts\python.exe -m pip install podman-compose
 ```
 
 ### 基础环境变量
@@ -159,8 +158,6 @@ npm start
 ```powershell
 .\scripts\start-local-agent-daemon.ps1 -Runtime ts
 ```
-
-Python 侧主要用于评测、技能、查询引擎和历史实现对照，不作为当前主启动链路。
 
 ### 6. 启动前端
 

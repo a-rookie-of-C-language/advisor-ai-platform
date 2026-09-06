@@ -14,7 +14,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 JMETER_DIR="$ROOT/scripts/jmeter"
 JMX="$JMETER_DIR/agent-chat-stream.jmx"
 CASE_FILE="$JMETER_DIR/agent-chat-cases.csv"
-MOCK_SERVER="$JMETER_DIR/agent_jmeter_mock_server.py"
+MOCK_SERVER="$JMETER_DIR/agent_jmeter_mock_server.mjs"
 RESULT_ROOT="$JMETER_DIR/results"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 RESULT_DIR="$RESULT_ROOT/$MODE-$PROFILE-$TIMESTAMP"
@@ -120,11 +120,7 @@ if [[ -z "$BASE_URL" ]]; then
 fi
 
 if [[ "$MODE" == "mock" ]]; then
-  PYTHON="$ROOT/agent/.venv/bin/python"
-  if [[ ! -x "$PYTHON" ]]; then
-    PYTHON="python3"
-  fi
-  "$PYTHON" "$MOCK_SERVER" --host 127.0.0.1 --port "$MOCK_PORT" --token "$TOKEN" --latency-ms "$MOCK_LATENCY_MS" \
+  node "$MOCK_SERVER" --host 127.0.0.1 --port "$MOCK_PORT" --token "$TOKEN" --latency-ms "$MOCK_LATENCY_MS" \
     >"$RESULT_DIR/mock-server.out.log" 2>"$RESULT_DIR/mock-server.err.log" &
   MOCK_PID="$!"
   wait_http_health "$BASE_URL"

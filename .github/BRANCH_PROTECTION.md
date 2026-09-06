@@ -20,7 +20,7 @@
 - ✅ **Require branches to be up to date before merging**
 
 在 **Status checks that are required** 中添加：
-- `DeepEval Agent Evaluation`
+- `CI`
 
 #### 其他推荐设置
 
@@ -86,9 +86,9 @@
 在提交 PR 前，可以本地运行评估测试：
 
 ```bash
-cd agent
-source .venv/Scripts/activate
-DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE=300 python -m pytest tests/evaluation/test_evaluation.py -v
+cd agent-ts
+npm run check
+npm run test:contracts
 ```
 
 ---

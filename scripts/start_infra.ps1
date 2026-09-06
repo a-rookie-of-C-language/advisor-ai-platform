@@ -27,7 +27,7 @@ function Resolve-ComposeCli {
   if ($null -ne $command) {
     return $Cli
   }
-  $venvCompose = Join-Path $Root "agent\.venv\Scripts\podman-compose.exe"
+  $venvCompose = Join-Path $Root ".venv\Scripts\podman-compose.exe"
   if (Test-Path -LiteralPath $venvCompose) {
     return $venvCompose
   }
@@ -39,7 +39,7 @@ function Assert-ComposeCliAvailable {
   try {
     & $CliPath --version | Out-Null
   } catch {
-    throw "$CliPath 不可用。请先执行: agent\.venv\Scripts\python.exe -m pip install podman-compose"
+    throw "$CliPath 不可用。请先执行: .\.venv\Scripts\python.exe -m pip install podman-compose"
   }
 }
 

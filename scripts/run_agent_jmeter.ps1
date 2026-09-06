@@ -122,7 +122,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $jmeterDir = Join-Path $root "scripts\jmeter"
 $jmx = Join-Path $jmeterDir "agent-chat-stream.jmx"
 $caseFile = Join-Path $jmeterDir "agent-chat-cases.csv"
-$mockServer = Join-Path $jmeterDir "agent_jmeter_mock_server.py"
+$mockServer = Join-Path $jmeterDir "agent_jmeter_mock_server.mjs"
 $resultRoot = Join-Path $jmeterDir "results"
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $resultDir = Join-Path $resultRoot "$Mode-$Profile-$timestamp"
@@ -143,15 +143,10 @@ if (-not $BaseUrl) {
 
 try {
   if ($Mode -eq "mock") {
-    $python = Join-Path $root "agent\.venv\Scripts\python.exe"
-    if (-not (Test-Path -LiteralPath $python)) {
-      $python = "python"
-    }
-
     $mockOut = Join-Path $resultDir "mock-server.out.log"
     $mockErr = Join-Path $resultDir "mock-server.err.log"
     $mockProcess = Start-Process `
-      -FilePath $python `
+      -FilePath "node" `
       -ArgumentList @($mockServer, "--host", "127.0.0.1", "--port", "$MockPort", "--token", $Token, "--latency-ms", "$MockLatencyMs") `
       -RedirectStandardOutput $mockOut `
       -RedirectStandardError $mockErr `
