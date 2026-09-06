@@ -75,7 +75,7 @@ export class AgentChatStreamSession {
       new FailureMemoryStore(config.failureMemoryPath || ".agent-data/failure-memory.jsonl"),
       config.failureMemoryScoreThreshold ?? 7
     );
-    this.legacyMessagePreparer = new LegacyMessagePreparer(this.contextPipeline);
+    this.legacyMessagePreparer = new LegacyMessagePreparer(this.contextPipeline, this.contextCompactionService);
     this.taskPlanner = new TaskPlanner(config, openAiClient);
   }
 
@@ -105,11 +105,15 @@ export class AgentChatStreamSession {
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       const preparedMessages = await this.legacyMessagePreparer.prepare(safeChatRequest);
-      const compactResult = this.contextCompactionService.compact([...preparedMessages.modelMessages]);
-      this.logContextCompaction(compactResult.tokensReleased, compactResult.tokensBefore, compactResult.tokensAfter, safeChatRequest.sessionId ?? null);
+      this.logContextCompaction(
+        preparedMessages.compactionStats?.tokensReleased ?? 0,
+        preparedMessages.compactionStats?.tokensBefore ?? preparedMessages.modelMessages.length,
+        preparedMessages.compactionStats?.tokensAfter ?? preparedMessages.modelMessages.length,
+        safeChatRequest.sessionId ?? null
+      );
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
-        modelMessages: compactResult.messages,
+        modelMessages: preparedMessages.modelMessages,
         userQuery: failureQuery,
         traceId: chatRequest.traceId ?? null,
         turnId
