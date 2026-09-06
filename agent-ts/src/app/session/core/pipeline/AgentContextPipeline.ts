@@ -1,6 +1,5 @@
 import type { ChatStreamRequest } from "../../../../common/model/ChatStreamRequest.js";
 import type { MemoryContextBuilder } from "../../../../memory/context/core/MemoryContextBuilder.js";
-import type { RagContextBuilder } from "../../../../rag/context/core/RagContextBuilder.js";
 import type { WebFetchContextBuilder } from "../../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../../web/context/search/core/WebSearchContextBuilder.js";
 import type { IntentRouteDecision } from "../../../../routing/model/IntentRouteDecision.js";
@@ -8,7 +7,6 @@ import type { IntentRouteDecision } from "../../../../routing/model/IntentRouteD
 export class AgentContextPipeline {
   constructor(
     private readonly memoryContextBuilder?: MemoryContextBuilder,
-    private readonly ragContextBuilder?: RagContextBuilder,
     private readonly webFetchContextBuilder?: WebFetchContextBuilder,
     private readonly webSearchContextBuilder?: WebSearchContextBuilder
   ) {}
@@ -17,9 +15,6 @@ export class AgentContextPipeline {
     let messages = chatRequest.messages;
     if (this.memoryContextBuilder && this.shouldLoad(route, "memory_read", "memory_write")) {
       messages = await this.memoryContextBuilder.injectMemory({ ...chatRequest, messages });
-    }
-    if (this.ragContextBuilder && this.shouldLoad(route, "retrieval")) {
-      messages = await this.ragContextBuilder.injectRag({ ...chatRequest, messages });
     }
     if (this.webFetchContextBuilder) {
       messages = await this.webFetchContextBuilder.injectWebFetch({ ...chatRequest, messages });
@@ -42,9 +37,6 @@ export class AgentContextPipeline {
     let result = messages;
     if (this.memoryContextBuilder && this.shouldLoad(route, "memory_read", "memory_write")) {
       result = await this.memoryContextBuilder.injectMemory({ ...({ messages: result } as ChatStreamRequest), messages: result });
-    }
-    if (this.ragContextBuilder && this.shouldLoad(route, "retrieval")) {
-      result = await this.ragContextBuilder.injectRag({ ...({ messages: result } as ChatStreamRequest), messages: result });
     }
     if (this.webFetchContextBuilder) {
       result = await this.webFetchContextBuilder.injectWebFetch({ ...({ messages: result } as ChatStreamRequest), messages: result });

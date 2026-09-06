@@ -23,7 +23,6 @@ class ChatSessionMutationSupport {
     session.setUser(
         chatSessionSupport.toUserReference(chatSessionSupport.requireUser(currentUser)));
     session.setTitle("???");
-    session.setKbId(0L);
     LocalDateTime now = LocalDateTime.now();
     session.setCreatedAt(now);
     session.setUpdatedAt(now);
@@ -35,27 +34,6 @@ class ChatSessionMutationSupport {
     chatSessionDao.deleteById(session.getId());
   }
 
-  Map<String, Object> updateSessionKb(
-      Long sessionId, Long kbId, @Nullable UserPrincipal currentUser) {
-    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    if (kbId == null || kbId <= 0) {
-      session.setKbId(0L);
-    } else {
-      if (!chatSessionSupport.existsKnowledgeBase(kbId)) {
-        throw new NotFoundException("知识库不存在");
-      }
-      session.setKbId(kbId);
-    }
-    session.setUpdatedAt(LocalDateTime.now());
-    return chatSessionSupport.toSessionMap(chatSessionDao.save(session));
-  }
-
-  long getSessionKbId(Long sessionId, @Nullable UserPrincipal currentUser) {
-    ChatSessionDO session = getSessionForLoggedInUser(sessionId, currentUser);
-    Long kbId = session.getKbId();
-    return kbId == null ? 0L : kbId;
-  }
-
   ChatSessionDO getOwnedSession(Long sessionId, @Nullable UserPrincipal currentUser) {
     Long currentUserId = chatSessionSupport.requireUserId(currentUser);
     ChatSessionDO session = findSession(sessionId);
@@ -64,12 +42,6 @@ class ChatSessionMutationSupport {
       throw new ForbiddenException("无权访问该会话");
     }
     return session;
-  }
-
-  private ChatSessionDO getSessionForLoggedInUser(
-      Long sessionId, @Nullable UserPrincipal currentUser) {
-    chatSessionSupport.requireUserId(currentUser);
-    return findSession(sessionId);
   }
 
   private ChatSessionDO findSession(Long sessionId) {

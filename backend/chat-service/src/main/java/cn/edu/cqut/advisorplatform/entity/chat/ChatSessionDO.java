@@ -19,9 +19,6 @@ public class ChatSessionDO {
   @Column(nullable = false, length = 256)
   private String title = "新对话";
 
-  @Column(nullable = false)
-  private Long kbId = 0L;
-
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private UserDO user;

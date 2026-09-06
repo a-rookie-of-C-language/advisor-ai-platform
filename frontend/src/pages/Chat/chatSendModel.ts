@@ -67,7 +67,6 @@ export function appendOptimisticMessages(
     id: targetSession.id,
     title: titleText,
     updatedAt: targetSession.updatedAt,
-    kbId: targetSession.kbId,
     messages: [userMessage, assistantPlaceholder],
   }, ...mapped]
 }

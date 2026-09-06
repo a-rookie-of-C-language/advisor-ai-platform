@@ -24,7 +24,6 @@ export function toChatSession(data: ChatSessionDTO): ChatSession {
     id: data.id,
     title: data.title,
     updatedAt: data.updatedAt,
-    kbId: data.kbId ?? 0,
     messages: [],
   }
 }

@@ -13,10 +13,5 @@ public interface ChatService {
 
   void deleteSession(Long sessionId, @Nullable UserPrincipal currentUser);
 
-  Map<String, Object> updateSessionKb(
-      Long sessionId, Long kbId, @Nullable UserPrincipal currentUser);
-
   List<Map<String, Object>> listMessages(Long sessionId, @Nullable UserPrincipal currentUser);
-
-  long getSessionKbId(Long sessionId, @Nullable UserPrincipal currentUser);
 }

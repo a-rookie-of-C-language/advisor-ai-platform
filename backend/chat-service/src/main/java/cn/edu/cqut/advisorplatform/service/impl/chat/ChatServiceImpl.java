@@ -42,13 +42,6 @@ public class ChatServiceImpl implements ChatService {
   }
 
   @Override
-  @Transactional
-  public Map<String, Object> updateSessionKb(
-      Long sessionId, Long kbId, @Nullable UserPrincipal currentUser) {
-    return sessionMutationSupport.updateSessionKb(sessionId, kbId, currentUser);
-  }
-
-  @Override
   @Transactional(readOnly = true)
   public List<Map<String, Object>> listMessages(
       Long sessionId, @Nullable UserPrincipal currentUser) {
@@ -56,11 +49,5 @@ public class ChatServiceImpl implements ChatService {
     return chatMessageDao.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId).stream()
         .map(chatSessionSupport::toMessageMap)
         .toList();
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public long getSessionKbId(Long sessionId, @Nullable UserPrincipal currentUser) {
-    return sessionMutationSupport.getSessionKbId(sessionId, currentUser);
   }
 }

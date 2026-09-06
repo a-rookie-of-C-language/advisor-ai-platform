@@ -174,8 +174,7 @@ export class AgentChatStreamSession {
         chatRequest.traceId ?? null,
         turnId,
         safeChatRequest.userId ?? null,
-        safeChatRequest.sessionId ?? null,
-        safeChatRequest.kbId ?? null
+        safeChatRequest.sessionId ?? null
       );
       const failureAwareChatRequest = {
         ...safeChatRequest,
@@ -542,16 +541,14 @@ export class AgentChatStreamSession {
     traceId: string | null,
     turnId: string,
     userId: number | null,
-    sessionId: number | null,
-    kbId: number | null
+    sessionId: number | null
   ): void {
     console.info(
-      "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+      "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s",
       traceId,
       turnId,
       sessionId,
-      userId,
-      kbId
+      userId
     );
   }
 

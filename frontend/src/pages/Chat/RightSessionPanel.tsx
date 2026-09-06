@@ -1,6 +1,5 @@
-import { Button, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd'
+import { Button, Popconfirm, Space, Tooltip, Typography } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import type { ReactNode } from 'react'
 import styles from './ChatPage.module.css'
 
 const { Text, Title } = Typography
@@ -9,7 +8,6 @@ interface SessionItem {
   id: number
   title: string
   updatedAt: string
-  kbId: number
 }
 
 interface RightSessionPanelProps {
@@ -18,7 +16,6 @@ interface RightSessionPanelProps {
   onNewSession: () => void
   onSelectSession: (id: number) => void
   onDeleteSession: (id: number) => void
-  getKnowledgeBaseName: (kbId: number) => ReactNode
 }
 
 export default function RightSessionPanel(props: RightSessionPanelProps) {
@@ -28,7 +25,6 @@ export default function RightSessionPanel(props: RightSessionPanelProps) {
     onNewSession,
     onSelectSession,
     onDeleteSession,
-    getKnowledgeBaseName,
   } = props
 
   return (
@@ -64,9 +60,6 @@ export default function RightSessionPanel(props: RightSessionPanelProps) {
             <div className={styles.sessionTitle}>{session.title}</div>
             <div className={styles.sessionMeta}>
               <Space size={6} wrap>
-                <Tag color={session.kbId > 0 ? 'blue' : 'default'} style={{ marginInlineEnd: 0 }}>
-                  {getKnowledgeBaseName(session.kbId)}
-                </Tag>
                 <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{session.updatedAt}</Text>
               </Space>
               <Popconfirm

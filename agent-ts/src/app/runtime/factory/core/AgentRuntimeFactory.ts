@@ -35,7 +35,6 @@ export class AgentRuntimeFactory {
       dependencies.openAiClient,
       memoryComponents.contextBuilder,
       memoryComponents.taskSubmitter,
-      ragComponents.contextBuilder,
       webComponents.fetchContextBuilder,
       webComponents.searchContextBuilder,
       dependencies.openAiToolRegistry,

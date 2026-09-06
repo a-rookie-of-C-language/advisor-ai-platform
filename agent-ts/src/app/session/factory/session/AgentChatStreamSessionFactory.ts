@@ -4,7 +4,6 @@ import type { MemoryContextBuilder } from "../../../../memory/context/core/Memor
 import type { MemoryTaskSubmitter } from "../../../../memory/task/submitter/MemoryTaskSubmitter.js";
 import type { OpenAIChatClient } from "../../../../openai/chat/core/client/OpenAIChatClient.js";
 import type { OpenAiToolRegistry } from "../../../../openai/tools/registry/core/registry/OpenAiToolRegistry.js";
-import type { RagContextBuilder } from "../../../../rag/context/core/RagContextBuilder.js";
 import type { SkillRegistry } from "../../../../skills/core/SkillRegistry.js";
 import type { WebFetchContextBuilder } from "../../../../web/context/fetch/core/WebFetchContextBuilder.js";
 import type { WebSearchContextBuilder } from "../../../../web/context/search/core/WebSearchContextBuilder.js";
@@ -23,7 +22,6 @@ export class AgentChatStreamSessionFactory {
     openAiClient: OpenAIChatClient,
     memoryContextBuilder?: MemoryContextBuilder,
     memoryTaskSubmitter?: MemoryTaskSubmitter,
-    ragContextBuilder?: RagContextBuilder,
     webFetchContextBuilder?: WebFetchContextBuilder,
     webSearchContextBuilder?: WebSearchContextBuilder,
     openAiToolRegistry?: OpenAiToolRegistry,
@@ -31,7 +29,6 @@ export class AgentChatStreamSessionFactory {
   ): AgentChatStreamSession {
     const contextPipeline = this.contextPipelineFactory.create(
       memoryContextBuilder,
-      ragContextBuilder,
       webFetchContextBuilder,
       webSearchContextBuilder
     );

@@ -15,7 +15,6 @@ export type {
 export interface ChatSessionDTO {
   id: number
   title: string
-  kbId?: number
   updatedAt: string
 }
 

@@ -52,6 +52,5 @@ export interface ChatSession {
   id: number
   title: string
   updatedAt: string
-  kbId: number
   messages: ChatMessage[]
 }

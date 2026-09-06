@@ -1,9 +1,7 @@
 package cn.edu.cqut.advisorplatform.service.impl.chat;
 
-import cn.edu.cqut.advisorplatform.client.rag.RagServiceClient;
 import cn.edu.cqut.advisorplatform.common.exception.ForbiddenException;
 import cn.edu.cqut.advisorplatform.common.security.UserPrincipal;
-import cn.edu.cqut.advisorplatform.dto.response.ApiResponseDTO;
 import cn.edu.cqut.advisorplatform.entity.chat.ChatMessageDO;
 import cn.edu.cqut.advisorplatform.entity.chat.ChatSessionDO;
 import cn.edu.cqut.advisorplatform.entity.user.UserDO;
@@ -12,19 +10,14 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class ChatSessionSupport {
 
   private static final String DEFAULT_SESSION_TITLE = "???";
-  private static final long DEFAULT_KB_ID = 0L;
   private static final DateTimeFormatter TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-  private final RagServiceClient ragServiceClient;
 
   public Map<String, Object> toSessionMap(ChatSessionDO session) {
     LocalDateTime time =
@@ -33,9 +26,7 @@ public class ChatSessionSupport {
         session.getTitle() == null || session.getTitle().isBlank()
             ? DEFAULT_SESSION_TITLE
             : session.getTitle();
-    long kbId = session.getKbId() == null ? DEFAULT_KB_ID : session.getKbId();
-    return Map.of(
-        "id", session.getId(), "title", title, "kbId", kbId, "updatedAt", formatTime(time));
+    return Map.of("id", session.getId(), "title", title, "updatedAt", formatTime(time));
   }
 
   public Map<String, Object> toMessageMap(ChatMessageDO message) {
@@ -71,18 +62,6 @@ public class ChatSessionSupport {
       throw new ForbiddenException("未登录或登录已失效");
     }
     return userId;
-  }
-
-  public boolean existsKnowledgeBase(Long kbId) {
-    try {
-      ApiResponseDTO<Map<String, Boolean>> response = ragServiceClient.existsKnowledgeBase(kbId);
-      if (response == null || response.getData() == null) {
-        return false;
-      }
-      return Boolean.TRUE.equals(response.getData().get("exists"));
-    } catch (Exception ignored) {
-      return false;
-    }
   }
 
   private String formatTime(LocalDateTime value) {

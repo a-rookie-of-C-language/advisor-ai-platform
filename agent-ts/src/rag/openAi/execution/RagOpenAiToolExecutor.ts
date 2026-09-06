@@ -18,15 +18,22 @@ export class RagOpenAiToolExecutor {
   constructor(private readonly ragClient: RagApiClient) {}
 
   async execute(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
-    if (!request.kbId || request.kbId <= 0) {
-      throw new Error("未选择知识库，无法执行 rag_search");
+    const kbId = this.resolveKnowledgeBaseId(request);
+    if (!kbId) {
+      return this.resultFactory.create([]);
     }
 
     const query = OpenAiToolArgumentReader.readOptionalString(args, "query", this.latestUserQueryResolver.resolve(request));
     const topK = OpenAiToolTopKArgumentReader.read(args, 5);
-    const documents = await this.ragClient.listDocuments(request.kbId);
+    const documents = await this.ragClient.listDocuments(kbId);
     const readyDocuments = this.readyDocumentSelector.select(documents);
     const matchedDocuments = this.documentRanker.rank(readyDocuments, query).slice(0, topK);
     return this.resultFactory.create(matchedDocuments);
+  }
+
+  private resolveKnowledgeBaseId(request: ChatStreamRequest): number {
+    const anyRequest = request as ChatStreamRequest & { kbId?: number | null };
+    const kbId = anyRequest.kbId ?? 0;
+    return kbId > 0 ? kbId : 0;
   }
 }

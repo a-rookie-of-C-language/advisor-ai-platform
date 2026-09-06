@@ -9,7 +9,7 @@ export class MemoryWriteRequestReader {
   read(request: ChatStreamRequest, args: JsonObject): MemoryWriteRequest {
     return {
       userId: this.requireUserId(request),
-      kbId: request.kbId ?? 0,
+      kbId: 0,
       candidates: this.candidateReader.readCandidates(args)
     };
   }
