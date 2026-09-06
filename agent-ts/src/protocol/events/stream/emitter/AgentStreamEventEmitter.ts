@@ -2,10 +2,13 @@ import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
 import type { SseWriter } from "../../../sse/writer/SseWriter.js";
 
 export class AgentStreamEventEmitter {
-  constructor(private readonly writer: SseWriter) {}
+  constructor(
+    private readonly writer: SseWriter,
+    private readonly useDeltaEvent: boolean = false
+  ) {}
 
   async writeDelta(text: string): Promise<void> {
-    await this.writer.write("llm_data", "llm", { text });
+    await this.writer.write(this.useDeltaEvent ? "llm_delta" : "llm_data", "llm", { text });
   }
 
   async writeReasoningDelta(text: string): Promise<void> {

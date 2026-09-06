@@ -84,8 +84,8 @@ export class AgentChatStreamSession {
     let failureQuery = "";
     await writer.start();
     try {
-      const eventWriter = new AgentStreamEventWriter(writer);
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
+      const eventWriter = new AgentStreamEventWriter(writer, safeChatRequest.userId == null || safeChatRequest.sessionId == null);
       failureQuery = this.latestUserQueryResolver.resolve(safeChatRequest);
       const failureAwareChatRequest = {
         ...safeChatRequest,

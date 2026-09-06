@@ -9,8 +9,8 @@ export class AgentStreamEventWriter {
   private readonly eventEmitter: AgentStreamEventEmitter;
   private readonly safetyFilter = new StreamingRegexSafetyFilter();
 
-  constructor(writer: SseWriter) {
-    this.eventEmitter = new AgentStreamEventEmitter(writer);
+  constructor(writer: SseWriter, useDeltaEvent: boolean = false) {
+    this.eventEmitter = new AgentStreamEventEmitter(writer, useDeltaEvent);
   }
 
   get answer(): string {
