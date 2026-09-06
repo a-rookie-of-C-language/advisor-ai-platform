@@ -16,6 +16,13 @@ test("AgentCoreClient falls back to the serializer when streaming is disabled", 
   assert.match(serialized, /sys_done/);
 });
 
+test("Agent stream error resolver returns the python-shaped fixed message", async () => {
+  const { AgentStreamErrorMessageResolver } = await import("../dist/app/session/support/error/AgentStreamErrorMessageResolver.js");
+  const resolver = new AgentStreamErrorMessageResolver();
+  assert.equal(resolver.resolve(new Error("boom")), "服务内部错误，请稍后重试");
+  assert.equal(resolver.resolve("boom"), "服务内部错误，请稍后重试");
+});
+
 test("AgentChatStreamSession executes Rust tool calls and sends a second round", async () => {
   const requests = [];
   const server = createServer((request, response) => {
