@@ -130,7 +130,11 @@ export class AgentChatStreamSession {
     await writer.start();
     try {
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
-      eventWriter = new AgentStreamEventWriter(writer, safeChatRequest.userId == null || safeChatRequest.sessionId == null);
+      eventWriter = new AgentStreamEventWriter(
+        writer,
+        safeChatRequest.userId == null || safeChatRequest.sessionId == null,
+        this.config.debugStream
+      );
       failureQuery = this.latestUserQueryResolver.resolve(safeChatRequest);
       this.logStreamRequestContext(
         chatRequest.traceId ?? null,

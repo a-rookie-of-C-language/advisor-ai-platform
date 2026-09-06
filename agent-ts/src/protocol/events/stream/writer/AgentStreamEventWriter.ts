@@ -12,7 +12,11 @@ export class AgentStreamEventWriter {
   private readonly eventEmitter: AgentStreamEventEmitter;
   private readonly safetyFilter = new StreamingRegexSafetyFilter();
 
-  constructor(writer: SseWriter, useDeltaEvent: boolean = false) {
+  constructor(
+    writer: SseWriter,
+    useDeltaEvent: boolean = false,
+    private readonly debugEnabled: boolean = false
+  ) {
     this.eventEmitter = new AgentStreamEventEmitter(writer, useDeltaEvent);
   }
 
@@ -37,7 +41,9 @@ export class AgentStreamEventWriter {
       const safeText = this.safetyFilter.processChunk(event.text);
       if (safeText) {
         this.emittedDelta = true;
-        this.emittedDeltaCount += 1;
+        if (this.debugEnabled) {
+          this.emittedDeltaCount += 1;
+        }
         this.answerText += safeText;
         this.appendDebugPreview(safeText);
         await this.eventEmitter.writeDelta(safeText);
@@ -66,7 +72,9 @@ export class AgentStreamEventWriter {
     const safeText = this.safetyFilter.flush();
     if (!safeText) return;
     this.emittedDelta = true;
-    this.emittedDeltaCount += 1;
+    if (this.debugEnabled) {
+      this.emittedDeltaCount += 1;
+    }
     this.answerText += safeText;
     this.appendDebugPreview(safeText);
     await this.eventEmitter.writeDelta(safeText);
@@ -75,13 +83,18 @@ export class AgentStreamEventWriter {
   async writeMissingOpenAiApiKeyFallback(): Promise<void> {
     const answer = "TS agent 已启动，但当前未配置 OPENAI_API_KEY，无法调用模型。";
     this.emittedDelta = true;
-    this.emittedDeltaCount += 1;
+    if (this.debugEnabled) {
+      this.emittedDeltaCount += 1;
+    }
     this.answerText = answer;
     this.appendDebugPreview(answer);
     await this.eventEmitter.writeDelta(answer);
   }
 
   private appendDebugPreview(delta: string): void {
+    if (!this.debugEnabled) {
+      return;
+    }
     const previewLimit = 200;
     if (this.debugPreviewChars >= previewLimit) {
       return;
