@@ -46,7 +46,7 @@ export class AgentChatStreamSession {
   private readonly inputSafetySanitizer = new InputSafetySanitizer();
   private readonly latestUserQueryResolver = new LatestUserQueryResolver();
   private readonly intentRouter = new IntentRouter();
-  private readonly taskPlanner = new TaskPlanner();
+  private readonly taskPlanner: TaskPlanner;
   private readonly toolExplorer = new ToolExplorer();
   private readonly graphRunner: AgentGraphRunner;
   private readonly failureMemorySupport: FailureMemorySupport;
@@ -71,6 +71,7 @@ export class AgentChatStreamSession {
       new FailureMemoryStore(config.failureMemoryPath || ".agent-data/failure-memory.jsonl"),
       config.failureMemoryScoreThreshold ?? 7
     );
+    this.taskPlanner = new TaskPlanner(config, openAiClient);
     this.graphRunner = new AgentGraphRunner(
       {},
       skillRegistry,
@@ -127,7 +128,7 @@ export class AgentChatStreamSession {
           skillPrompts: selectedSkillState.skillSystemPrompt ? [selectedSkillState.skillSystemPrompt] : []
         })
       ).messages;
-      const taskPlan = this.taskPlanner.plan({
+      const taskPlan = await this.taskPlanner.planAsync({
         userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
         routeContext: buildPlannerRouteContext(route, legacyRoute.matchedTools, educationDomain || ragOnlyPreferred)

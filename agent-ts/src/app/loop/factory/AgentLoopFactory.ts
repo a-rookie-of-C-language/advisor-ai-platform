@@ -12,7 +12,7 @@ import { isProviderErrorCode } from "../../../provider/model/ProviderErrorCode.j
 import { TaskPlanner } from "../../../planning/core/TaskPlanner.js";
 
 export class AgentLoopFactory {
-  private readonly taskPlanner = new TaskPlanner();
+  private readonly taskPlanner: TaskPlanner;
 
   constructor(
     private readonly config: AgentConfig,
@@ -20,7 +20,9 @@ export class AgentLoopFactory {
     private readonly openAiClient: OpenAIChatClient,
     private readonly openAiToolFacade: AgentOpenAiToolFacade,
     private readonly contextPipeline: AgentContextPipeline
-  ) {}
+  ) {
+    this.taskPlanner = new TaskPlanner(config, openAiClient);
+  }
 
   create(chatRequest: ChatStreamRequest, options?: Partial<AgentLoopOptions>): AgentLoop {
     const factory = this;

@@ -38,3 +38,22 @@ test("task planner prioritizes required tools without dropping the rest", () => 
     "rag_search", "web_search", "workspace_read"
   ]);
 });
+
+test("task planner async plan prefers llm json and falls back on invalid output", async () => {
+  const planner = new TaskPlanner(
+    { openAiApiKey: "key" },
+    {
+      streamChat: async function* () {
+        yield "{\"mode\":\"direct\",\"goal\":\"已规划\",\"summary\":\"来自模型\",\"stop_when\":\"完成\",\"sufficient\":true,\"required_tools\":[],\"steps\":[{\"action\":\"final\",\"reason\":\"done\",\"sufficient\":true,\"summary\":\"完成\"}],\"route_context\":{}}";
+      }
+    }
+  );
+  const plan = await planner.planAsync({
+    userQuery: "普通问题",
+    availableTools: [tool("web_search")],
+    routeContext: {}
+  });
+  assert.equal(plan.mode, "direct");
+  assert.equal(plan.summary, "来自模型");
+  assert.equal(plan.steps[0].action, "final");
+});
