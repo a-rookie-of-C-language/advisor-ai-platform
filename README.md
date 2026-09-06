@@ -48,7 +48,7 @@ Advisor AI Platform 是面向高校辅导员业务场景的 AI 平台，提供�
 
 ```powershell
 d:\python\python.exe -m venv .venv
-.\agent\.venv\Scripts\activate
+.\.venv\Scripts\activate
 ```
 
 如需使用 `podman-compose`：

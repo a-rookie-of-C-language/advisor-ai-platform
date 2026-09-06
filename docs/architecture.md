@@ -9,7 +9,7 @@
 - Java 业务微服务：负责各业务域的数据、流程、鉴权与审计协作。
 - `agent-ts`：AI 控制层，负责聊天 HTTP/SSE 接入、模型编排、工具编排入口和运行时胶水。
 - `agent-core`：Rust 执行核心，负责 OpenAI-compatible 流式请求、SSE 分片解析、工具调用协议和执行状态机。
-- `agent`：旧版 Python Agent，迁移期间保留为兼容参考。
+- `agent`：Python Agent 对照实现，作为语义参照和兼容验证基线。
 - `backend/ai-gateway`：模型供应商网关，负责面向模型服务的 provider 抽象、模型路由、限流和调用治理。
 - 基础设施：PostgreSQL/pgvector、Redis、Kafka、Nacos、Jaeger、Prometheus、Grafana 等提供存储、注册配置、消息、追踪和监控能力。
 
