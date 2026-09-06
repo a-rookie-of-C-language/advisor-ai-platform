@@ -87,6 +87,7 @@ export class AgentChatStreamSession {
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
       const eventWriter = new AgentStreamEventWriter(writer, safeChatRequest.userId == null || safeChatRequest.sessionId == null);
       failureQuery = this.latestUserQueryResolver.resolve(safeChatRequest);
+      this.logStreamRequestContext(chatRequest.traceId ?? null, turnId, safeChatRequest.userId ?? null, safeChatRequest.sessionId ?? null);
       const failureAwareChatRequest = {
         ...safeChatRequest,
         messages: this.failureMemorySupport.injectAvoidancePrompt(safeChatRequest.messages, failureQuery)
@@ -401,5 +402,21 @@ export class AgentChatStreamSession {
     } catch {
       return "";
     }
+  }
+
+  private logStreamRequestContext(
+    traceId: string | null,
+    turnId: string,
+    userId: number | null,
+    sessionId: number | null
+  ): void {
+    console.info(
+      "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
+      traceId,
+      turnId,
+      sessionId,
+      userId,
+      null
+    );
   }
 }
