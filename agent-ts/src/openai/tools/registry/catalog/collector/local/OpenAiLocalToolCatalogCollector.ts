@@ -3,6 +3,7 @@ import type { RagOpenAiToolBridge } from "../../../../../../rag/openAi/bridge/Ra
 import type { WebOpenAiToolBridge } from "../../../../../../web/openAi/core/bridge/WebOpenAiToolBridge.js";
 import type { WorkspaceOpenAiToolBridge } from "../../../../../../workspace/tools/core/bridge/WorkspaceOpenAiToolBridge.js";
 import type { OpenAIChatTool } from "../../../../../chat/model/tool/OpenAIChatTool.js";
+import { createSwitchExecutionModeTool, createUpdateTodoTool } from "../../../tools/ToolDefinitionFactory.js";
 
 export class OpenAiLocalToolCatalogCollector {
   constructor(
@@ -17,6 +18,7 @@ export class OpenAiLocalToolCatalogCollector {
     tools.push(...(this.webOpenAiToolBridge?.listTools() || []));
     tools.push(...(this.ragOpenAiToolBridge?.listTools() || []));
     tools.push(...(this.memoryOpenAiToolBridge?.listTools() || []));
+    tools.push(createUpdateTodoTool(), createSwitchExecutionModeTool());
     return tools;
   }
 }
