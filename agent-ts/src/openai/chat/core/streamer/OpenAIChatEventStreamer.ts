@@ -4,6 +4,7 @@ import { OpenAIToolRoundGate } from "../../../tools/runtime/core/gate/OpenAITool
 import type { OpenAIToolExecutor, OpenAIToolRoundRunner } from "../../../tools/runtime/core/runner/OpenAIToolRoundRunner.js";
 import { OpenAIToolCallEventFactory } from "../../../tools/runtime/events/call/OpenAIToolCallEventFactory.js";
 import type { OpenAIChatCompletionStreamer } from "../../completion/core/OpenAIChatCompletionStreamer.js";
+import type { OpenAIChatResponseFormat } from "../../completion/model/OpenAIChatResponseFormat.js";
 import { OpenAIChatRoundEventFactory } from "../../events/round/OpenAIChatRoundEventFactory.js";
 import type { OpenAIChatMessageMapper } from "../../mapping/OpenAIChatMessageMapper.js";
 import type { OpenAIChatTool } from "../../model/tool/OpenAIChatTool.js";
@@ -24,14 +25,15 @@ export class OpenAIChatEventStreamer {
     messages: ChatMessageDTO[],
     tools: OpenAIChatTool[] = [],
     toolExecutor?: OpenAIToolExecutor,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    responseFormat?: OpenAIChatResponseFormat
   ): AsyncGenerator<OpenAIChatStreamEvent> {
     if (!this.openAiApiKey) {
       return;
     }
 
     const conversation = this.messageMapper.map(messages);
-    const firstRound = await this.completionStreamer.collectStream(conversation, tools, signal);
+    const firstRound = await this.completionStreamer.collectStream(conversation, tools, signal, responseFormat);
     for (const event of this.roundEventFactory.create(firstRound)) {
       yield event;
     }

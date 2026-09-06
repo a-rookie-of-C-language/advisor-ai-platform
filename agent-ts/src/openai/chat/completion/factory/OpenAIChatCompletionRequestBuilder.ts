@@ -1,12 +1,18 @@
 import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
 import type { OpenAIChatCompletionRequest } from "../model/OpenAIChatCompletionRequest.js";
+import type { OpenAIChatResponseFormat } from "../model/OpenAIChatResponseFormat.js";
 import type { OpenAIChatMessage } from "../../model/message/OpenAIChatMessage.js";
 import type { OpenAIChatTool } from "../../model/tool/OpenAIChatTool.js";
 
 export class OpenAIChatCompletionRequestBuilder {
   constructor(private readonly config: AgentConfig) {}
 
-  build(messages: OpenAIChatMessage[], tools: OpenAIChatTool[], signal: AbortSignal): OpenAIChatCompletionRequest {
+  build(
+    messages: OpenAIChatMessage[],
+    tools: OpenAIChatTool[],
+    signal: AbortSignal,
+    responseFormat?: OpenAIChatResponseFormat
+  ): OpenAIChatCompletionRequest {
     return {
       url: `${this.config.openAiBaseUrl}/chat/completions`,
       init: {
@@ -20,6 +26,7 @@ export class OpenAIChatCompletionRequestBuilder {
           messages,
           temperature: this.config.openAiTemperature,
           stream: true,
+          ...(responseFormat ? { response_format: responseFormat } : {}),
           ...(tools.length > 0 ? { tools, tool_choice: "auto" } : {})
         }),
         signal

@@ -59,6 +59,24 @@ test("task planner async plan prefers llm json and falls back on invalid output"
   assert.equal(plan.steps[0].action, "final");
 });
 
+test("task planner async plan requests json mode", async () => {
+  const planner = new TaskPlanner(
+    { openAiApiKey: "key" },
+    {
+      streamChat: async function* (_messages, _signal, responseFormat) {
+        assert.deepEqual(responseFormat, { type: "json_object" });
+        yield "{\"mode\":\"direct\",\"goal\":\"已规划\",\"summary\":\"来自模型\",\"stop_when\":\"完成\",\"sufficient\":true,\"required_tools\":[],\"steps\":[{\"action\":\"final\",\"reason\":\"done\",\"sufficient\":true,\"summary\":\"完成\"}],\"route_context\":{}}";
+      }
+    }
+  );
+  const plan = await planner.planAsync({
+    userQuery: "普通问题",
+    availableTools: [tool("web_search")],
+    routeContext: {}
+  });
+  assert.equal(plan.mode, "direct");
+});
+
 test("planned tools helpers normalize planned tool steps and context", () => {
   assert.equal(shouldUseDirectPlan({ mode: "direct" }), true);
   assert.equal(shouldUseDirectPlan({ mode: "plan_and_execute" }), false);

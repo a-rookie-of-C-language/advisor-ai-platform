@@ -2,6 +2,7 @@ import type { AgentConfig } from "../../../../config/model/core/AgentConfig.js";
 import { OpenAIChatCompletionHttpClient } from "../http/OpenAIChatCompletionHttpClient.js";
 import { OpenAIChatCompletionRequestBuilder } from "../factory/OpenAIChatCompletionRequestBuilder.js";
 import { OpenAIChatResponseBodyCollector } from "../reader/OpenAIChatResponseBodyCollector.js";
+import type { OpenAIChatResponseFormat } from "../model/OpenAIChatResponseFormat.js";
 import type { OpenAIChatMessage } from "../../model/message/OpenAIChatMessage.js";
 import type { OpenAIChatRoundResult } from "../../model/round/OpenAIChatRoundResult.js";
 import type { OpenAIChatTool } from "../../model/tool/OpenAIChatTool.js";
@@ -19,10 +20,11 @@ export class OpenAIChatCompletionStreamer {
   async collectStream(
     messages: OpenAIChatMessage[],
     tools: OpenAIChatTool[] = [],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    responseFormat?: OpenAIChatResponseFormat
   ): Promise<OpenAIChatRoundResult> {
     return this.httpClient.fetchStream(
-      signal => this.requestBuilder.build(messages, tools, signal),
+      signal => this.requestBuilder.build(messages, tools, signal, responseFormat),
       body => this.responseBodyCollector.collect(body),
       signal
     );
