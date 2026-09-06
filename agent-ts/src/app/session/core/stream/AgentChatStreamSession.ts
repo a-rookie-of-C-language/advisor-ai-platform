@@ -137,7 +137,8 @@ export class AgentChatStreamSession {
         availableTools,
         route.categories,
         taskPlan as unknown as JsonObject,
-        []
+        [],
+        safeChatRequest.messages
       );
       const exploredRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
       const routePayload = adjustRoutePayload(

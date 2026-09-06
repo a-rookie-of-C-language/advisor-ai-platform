@@ -9,7 +9,8 @@ export class ToolExplorer {
     tools: readonly OpenAIChatTool[],
     routeCategories: ReadonlySet<string>,
     taskPlan?: JsonObject,
-    observations: readonly JsonObject[] = []
+    observations: readonly JsonObject[] = [],
+    recentMessages: readonly { role: string; content: string }[] = []
   ): ToolExplorerResult {
     const normalized = query.trim().toLowerCase();
     const readOnlyTools = tools.filter((tool) => Boolean(tool.meta?.readOnly));
@@ -21,7 +22,15 @@ export class ToolExplorer {
 
     const plannedStep = this.selectPlannedStep(taskPlan, candidateTools, observations);
     if (plannedStep) {
+      if (plannedStep === "final") {
+        return this.buildResult([], "none", "");
+      }
       return this.buildResult([plannedStep], "route_match", "tool explorer matched planned step");
+    }
+
+    const contextualFollowup = this.selectContextualFollowup(query, candidateTools, recentMessages, observations);
+    if (contextualFollowup) {
+      return this.buildResult([contextualFollowup], "text_match", "tool explorer matched contextual follow-up");
     }
 
     const matched = candidateTools
@@ -45,7 +54,7 @@ export class ToolExplorer {
     taskPlan: JsonObject | undefined,
     availableTools: readonly OpenAIChatTool[],
     observations: readonly JsonObject[]
-  ): string | undefined {
+  ): string | "final" | undefined {
     if (!taskPlan || typeof taskPlan !== "object") {
       return undefined;
     }
@@ -59,7 +68,11 @@ export class ToolExplorer {
     for (const rawStep of rawSteps) {
       if (!rawStep || typeof rawStep !== "object" || Array.isArray(rawStep)) continue;
       const step = rawStep as Record<string, unknown>;
-      if (String(step.action ?? "").trim().toLowerCase() !== "call_tool") continue;
+      const action = String(step.action ?? "").trim().toLowerCase();
+      if (action === "final") {
+        return "final";
+      }
+      if (action !== "call_tool") continue;
       const toolName = String(step.tool_name ?? "").trim();
       if (!toolName || !allowed.has(toolName) || executed.has(toolName)) continue;
       return toolName;
@@ -88,5 +101,26 @@ export class ToolExplorer {
       toolCalls,
       sufficient: unique.length > 0
     };
+  }
+
+  private selectContextualFollowup(
+    query: string,
+    availableTools: readonly OpenAIChatTool[],
+    recentMessages: readonly { role: string; content: string }[],
+    observations: readonly JsonObject[]
+  ): string | undefined {
+    if (observations.length > 0) return undefined;
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return undefined;
+    const followupHints = ["具体", "哪些", "名单", "列表", "列出", "都有谁", "是谁"];
+    if (!followupHints.some((hint) => normalized.includes(hint))) return undefined;
+    const recentText = recentMessages
+      .slice(-6)
+      .map((message) => message.content || "")
+      .join("\n")
+      .toLowerCase();
+    if (!recentText.includes("学生")) return undefined;
+    const tool = availableTools.find((item) => item.function.name === "list_students" || item.function.name.endsWith("__list_students"));
+    return tool?.function.name;
   }
 }
