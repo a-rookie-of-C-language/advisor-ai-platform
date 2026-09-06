@@ -212,7 +212,7 @@ export class AgentChatStreamSession {
             exploredRoute.matchedTools,
             route.matchedTools
           );
-          await writer.write("intent_route", "system", routePayload);
+          await writer.write("sys_intent_route", "system", routePayload);
           const routeReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
             ? buildRouteReasoningPayload(
                 [...exploredRoute.categories],
