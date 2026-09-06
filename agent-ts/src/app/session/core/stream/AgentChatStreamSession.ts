@@ -29,6 +29,7 @@ import {
   preferRetrievalFallback
 } from "../../../../legacy/core/LegacyRouteSupport.js";
 import {
+  buildDelegateReasoningPayload,
   buildPlanReasoningPayload,
   buildRouteReasoningPayload,
   shouldEmitPlanningReasoning
@@ -201,19 +202,8 @@ export class AgentChatStreamSession {
           const planReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
             ? buildPlanReasoningPayload(taskPlan as unknown as JsonObject)
             : undefined;
-          if (exploration.reason !== "none") {
-            await writer.write("sys_reasoning", "system", {
-              stage: "delegate",
-              agent_name: "tool_explorer_subagent",
-              message: "委托工具探索器按计划补充证据，并整理可回答的依据。"
-            });
-          }
           if (planReasoning) {
-            await writer.write("sys_reasoning", "system", {
-              stage: "delegate",
-              agent_name: "task_planner_subagent",
-              message: "委托任务规划器生成更清晰的执行计划。"
-            });
+            await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));
             await writer.write("sys_tool_plan", "system", taskPlan as unknown as JsonObject);
             await writer.write("sys_reasoning", "system", planReasoning);
           }
@@ -227,6 +217,10 @@ export class AgentChatStreamSession {
           };
           return {
             ...state,
+            ragEnabled: Boolean(String(state.userQuery ?? "").trim()),
+            forceRag: false,
+            educationDomain,
+            webSearchEnabled: route.categories.has("search") || route.categories.has("retrieval"),
             routeCategories: [...exploredRoute.categories],
             matchedTools: exploredRoute.matchedTools,
             routePayload,
@@ -240,9 +234,14 @@ export class AgentChatStreamSession {
         },
         generate: async (state) => {
           const baseMessages = [...(state.modelMessages ?? state.messages)];
-          let modelMessages = this.contextCompactionService.compact(baseMessages).messages;
+          let modelMessages = [...baseMessages];
           const taskPlan = state.taskPlan;
           const exploration = state.exploration;
+          if (taskPlan) {
+            modelMessages = PromptBuilder.assembleMessages(modelMessages, {
+              dynamicPrompts: [PromptBuilder.renderTaskPlanPrompt(taskPlan as unknown as JsonObject)]
+            });
+          }
           if (taskPlan && exploration && exploration.reason !== "none" && !shouldUseDirectPlan(taskPlan)) {
             const explorerEvidence = exploration.evidence.map((item) => ({
               tool_name: item.tool_name,
