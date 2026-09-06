@@ -55,6 +55,14 @@ export class AgentChatStreamSession {
   private readonly toolExplorer = new ToolExplorer();
   private readonly failureMemorySupport: FailureMemorySupport;
   private readonly contextCompactionService: ContextCompactionService;
+  private lastCompactionStats: JsonObject = {
+    tokens_before: 0,
+    tokens_after: 0,
+    tokens_released: 0,
+    compacted: false,
+    dropped_messages: 0
+  };
+  private lastMemoryEnabled = false;
 
   constructor(
     private readonly openAiApiKey: string,
@@ -80,11 +88,11 @@ export class AgentChatStreamSession {
   }
 
   getContextCompactionSnapshot(): JsonObject {
-    return {
-      window_tokens: this.config.contextWindowTokens,
-      reserve_tokens: this.config.contextReserveTokens,
-      keep_last_messages: this.config.contextKeepLastMessages
-    };
+    return this.lastCompactionStats;
+  }
+
+  getMemoryEnabled(): boolean {
+    return this.lastMemoryEnabled;
   }
 
   getGraphHealthSnapshot(): JsonObject {
@@ -118,10 +126,11 @@ export class AgentChatStreamSession {
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
     const traceEvents: AgentLoopEvent[] = [];
     let failureQuery = "";
+    let eventWriter: AgentStreamEventWriter | undefined;
     await writer.start();
     try {
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
-      const eventWriter = new AgentStreamEventWriter(writer, safeChatRequest.userId == null || safeChatRequest.sessionId == null);
+      eventWriter = new AgentStreamEventWriter(writer, safeChatRequest.userId == null || safeChatRequest.sessionId == null);
       failureQuery = this.latestUserQueryResolver.resolve(safeChatRequest);
       this.logStreamRequestContext(
         chatRequest.traceId ?? null,
@@ -147,6 +156,14 @@ export class AgentChatStreamSession {
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       const preparedMessages = await this.legacyMessagePreparer.prepare(safeChatRequest);
+      this.lastMemoryEnabled = preparedMessages.memoryEnabled;
+      this.lastCompactionStats = {
+        tokens_before: preparedMessages.compactionStats?.tokensBefore ?? preparedMessages.modelMessages.length,
+        tokens_after: preparedMessages.compactionStats?.tokensAfter ?? preparedMessages.modelMessages.length,
+        tokens_released: preparedMessages.compactionStats?.tokensReleased ?? 0,
+        compacted: preparedMessages.compactionStats?.compacted ?? false,
+        dropped_messages: preparedMessages.compactionStats?.droppedMessages ?? 0
+      };
       this.logContextCompaction(
         preparedMessages.compactionStats?.tokensReleased ?? 0,
         preparedMessages.compactionStats?.tokensBefore ?? preparedMessages.modelMessages.length,
@@ -198,12 +215,27 @@ export class AgentChatStreamSession {
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
         await eventWriter.writeMissingOpenAiApiKeyFallback();
       }
+      if (this.config.debugStream) {
+        console.info(
+          "debug_stream ts done: deltas=%s, answer_preview=%s",
+          eventWriter.deltaCount,
+          eventWriter.debugPreview
+        );
+      }
       await writer.done("stream_finished");
       await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, finalAnswer);
     } catch (error) {
       this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       if (writer.signal?.aborted) {
         return;
+      }
+      if (this.config.debugStream) {
+        console.warn(
+          "debug_stream ts error: deltas=%s, answer_preview=%s, error=%s",
+          eventWriter?.deltaCount ?? 0,
+          eventWriter?.debugPreview ?? "",
+          error
+        );
       }
       await writer.error("internal_error", this.streamErrorMessageResolver.resolve(error), true);
     }

@@ -67,7 +67,7 @@ export class AgentRuntime {
 
   async graphHealth(): Promise<JsonObject> {
     return this.graphHealthDescriptor.describe({
-      memoryEnabled: this.memoryEnabled,
+      memoryEnabled: this.components.streamSession.getMemoryEnabled() || this.memoryEnabled,
       contextCompaction: this.components.streamSession.getContextCompactionSnapshot(),
       graph: this.components.streamSession.getGraphHealthSnapshot()
     });

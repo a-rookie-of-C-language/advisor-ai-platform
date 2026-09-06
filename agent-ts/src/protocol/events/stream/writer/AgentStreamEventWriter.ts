@@ -6,6 +6,9 @@ import { StreamingRegexSafetyFilter } from "../../../../safety/streaming/Streami
 export class AgentStreamEventWriter {
   private answerText = "";
   private emittedDelta = false;
+  private debugPreviewText = "";
+  private debugPreviewChars = 0;
+  private emittedDeltaCount = 0;
   private readonly eventEmitter: AgentStreamEventEmitter;
   private readonly safetyFilter = new StreamingRegexSafetyFilter();
 
@@ -14,11 +17,19 @@ export class AgentStreamEventWriter {
   }
 
   get answer(): string {
-    return this.answerText;
+    return this.answerText.trim();
   }
 
   get emitted(): boolean {
     return this.emittedDelta;
+  }
+
+  get debugPreview(): string {
+    return this.debugPreviewText;
+  }
+
+  get deltaCount(): number {
+    return this.emittedDeltaCount;
   }
 
   async write(event: OpenAIChatStreamEvent): Promise<void> {
@@ -26,7 +37,9 @@ export class AgentStreamEventWriter {
       const safeText = this.safetyFilter.processChunk(event.text);
       if (safeText) {
         this.emittedDelta = true;
+        this.emittedDeltaCount += 1;
         this.answerText += safeText;
+        this.appendDebugPreview(safeText);
         await this.eventEmitter.writeDelta(safeText);
       }
       return;
@@ -53,14 +66,32 @@ export class AgentStreamEventWriter {
     const safeText = this.safetyFilter.flush();
     if (!safeText) return;
     this.emittedDelta = true;
+    this.emittedDeltaCount += 1;
     this.answerText += safeText;
+    this.appendDebugPreview(safeText);
     await this.eventEmitter.writeDelta(safeText);
   }
 
   async writeMissingOpenAiApiKeyFallback(): Promise<void> {
     const answer = "TS agent 已启动，但当前未配置 OPENAI_API_KEY，无法调用模型。";
     this.emittedDelta = true;
+    this.emittedDeltaCount += 1;
     this.answerText = answer;
+    this.appendDebugPreview(answer);
     await this.eventEmitter.writeDelta(answer);
+  }
+
+  private appendDebugPreview(delta: string): void {
+    const previewLimit = 200;
+    if (this.debugPreviewChars >= previewLimit) {
+      return;
+    }
+    const remaining = previewLimit - this.debugPreviewChars;
+    const piece = delta.slice(0, remaining);
+    if (!piece) {
+      return;
+    }
+    this.debugPreviewText += piece;
+    this.debugPreviewChars += piece.length;
   }
 }

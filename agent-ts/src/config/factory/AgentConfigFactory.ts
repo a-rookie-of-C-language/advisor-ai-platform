@@ -19,6 +19,7 @@ export class AgentConfigFactory {
         .filter(Boolean),
       openAiTemperature: this.envReader.readFloat("OPENAI_TEMPERATURE", 0.2),
       openAiStructuredOutputMode: this.readStructuredOutputMode(),
+      debugStream: this.envReader.readBool("DEBUG_STREAM", false),
       requestTimeoutMs: this.envReader.readOpenAiTimeoutMs(),
       rustCoreEnabled: this.envReader.readBool("AGENT_RUST_CORE_ENABLED", true),
       rustCorePath: this.envReader.readOptionalString("AGENT_CORE_PATH"),
