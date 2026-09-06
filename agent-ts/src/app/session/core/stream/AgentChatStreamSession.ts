@@ -105,9 +105,11 @@ export class AgentChatStreamSession {
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
       const preparedMessages = await this.legacyMessagePreparer.prepare(safeChatRequest);
+      const compactResult = this.contextCompactionService.compact([...preparedMessages.modelMessages]);
+      this.logContextCompaction(compactResult.tokensReleased, compactResult.tokensBefore, compactResult.tokensAfter, safeChatRequest.sessionId ?? null);
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
-        modelMessages: preparedMessages.modelMessages,
+        modelMessages: compactResult.messages,
         userQuery: failureQuery,
         traceId: chatRequest.traceId ?? null,
         turnId
@@ -418,5 +420,17 @@ export class AgentChatStreamSession {
       userId,
       null
     );
+  }
+
+  private logContextCompaction(tokensReleased: number, tokensBefore: number, tokensAfter: number, sessionId: number | null): void {
+    if (tokensReleased > 0) {
+      console.info(
+        "context_compaction_released session_id=%s released=%s before=%s after=%s",
+        sessionId,
+        tokensReleased,
+        tokensBefore,
+        tokensAfter
+      );
+    }
   }
 }
