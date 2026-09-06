@@ -18,6 +18,7 @@ export class AgentConfigFactory {
         .map((model) => model.trim())
         .filter(Boolean),
       openAiTemperature: this.envReader.readFloat("OPENAI_TEMPERATURE", 0.2),
+      openAiStructuredOutputMode: this.readStructuredOutputMode(),
       requestTimeoutMs: this.envReader.readOpenAiTimeoutMs(),
       rustCoreEnabled: this.envReader.readBool("AGENT_RUST_CORE_ENABLED", true),
       rustCorePath: this.envReader.readOptionalString("AGENT_CORE_PATH"),
@@ -41,5 +42,13 @@ export class AgentConfigFactory {
       failureMemoryPath: this.envReader.readString("AGENT_FAILURE_MEMORY_PATH", ".agent-data/failure-memory.jsonl"),
       failureMemoryScoreThreshold: this.envReader.readInt("AGENT_FAILURE_MEMORY_SCORE_THRESHOLD", 7)
     };
+  }
+
+  private readStructuredOutputMode(): "disabled" | "json_object" | "json_schema" | "auto" {
+    const raw = String(this.envReader.readString("OPENAI_STRUCTURED_OUTPUT_MODE", "auto")).trim().toLowerCase();
+    if (raw === "disabled" || raw === "json_object" || raw === "json_schema" || raw === "auto") {
+      return raw;
+    }
+    return "auto";
   }
 }

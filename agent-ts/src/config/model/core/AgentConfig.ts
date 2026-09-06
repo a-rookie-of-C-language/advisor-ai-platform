@@ -10,6 +10,7 @@ export class AgentConfig {
   readonly openAiModel: string;
   readonly openAiModels: string[];
   readonly openAiTemperature: number;
+  readonly openAiStructuredOutputMode: "disabled" | "json_object" | "json_schema" | "auto";
   readonly requestTimeoutMs: number;
   readonly rustCoreEnabled: boolean;
   readonly rustCorePath: string | undefined;
@@ -42,6 +43,7 @@ export class AgentConfig {
     this.openAiModel = values.openAiModel;
     this.openAiModels = values.openAiModels;
     this.openAiTemperature = values.openAiTemperature;
+    this.openAiStructuredOutputMode = values.openAiStructuredOutputMode;
     this.requestTimeoutMs = values.requestTimeoutMs;
     this.rustCoreEnabled = values.rustCoreEnabled;
     this.rustCorePath = values.rustCorePath;

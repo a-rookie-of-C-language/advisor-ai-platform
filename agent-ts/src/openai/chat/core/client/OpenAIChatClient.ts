@@ -4,6 +4,7 @@ import type { OpenAIChatStreamEvent } from "../../../../protocol/events/model/op
 import { type OpenAIToolExecutor, OpenAIToolRoundRunner } from "../../../tools/runtime/core/runner/OpenAIToolRoundRunner.js";
 import { OpenAIChatCompletionStreamer } from "../../completion/core/OpenAIChatCompletionStreamer.js";
 import type { OpenAIChatJsonSchema } from "../../completion/model/OpenAIChatJsonSchema.js";
+import type { OpenAIChatStructuredOutputMode } from "../../completion/model/OpenAIChatStructuredOutputMode.js";
 import type { OpenAIChatResponseFormat } from "../../completion/model/OpenAIChatResponseFormat.js";
 import { OpenAIChatMessageMapper } from "../../mapping/OpenAIChatMessageMapper.js";
 import type { OpenAIChatTool } from "../../model/tool/OpenAIChatTool.js";
@@ -15,8 +16,10 @@ export class OpenAIChatClient {
   private readonly messageMapper = new OpenAIChatMessageMapper();
   private readonly toolRoundRunner = new OpenAIToolRoundRunner();
   private jsonSchemaUnavailable = false;
+  private readonly structuredOutputMode: OpenAIChatStructuredOutputMode;
 
   constructor(config: AgentConfig) {
+    this.structuredOutputMode = config.openAiStructuredOutputMode;
     this.completionStreamer = new OpenAIChatCompletionStreamer(config);
     this.eventStreamer = new OpenAIChatEventStreamer(
       config.openAiApiKey,
@@ -51,7 +54,13 @@ export class OpenAIChatClient {
     schema: OpenAIChatJsonSchema,
     signal?: AbortSignal
   ): Promise<string> {
-    if (this.jsonSchemaUnavailable) {
+    if (this.structuredOutputMode === "disabled") {
+      return this.chatWithJsonMode(messages, signal);
+    }
+    if (this.structuredOutputMode === "json_object") {
+      return this.chatWithJsonMode(messages, signal);
+    }
+    if (this.structuredOutputMode === "auto" && this.jsonSchemaUnavailable) {
       return this.chatWithJsonMode(messages, signal);
     }
 
@@ -62,7 +71,9 @@ export class OpenAIChatClient {
       }
       return responseText;
     } catch {
-      this.jsonSchemaUnavailable = true;
+      if (this.structuredOutputMode === "auto") {
+        this.jsonSchemaUnavailable = true;
+      }
       return this.chatWithJsonMode(messages, signal);
     }
   }

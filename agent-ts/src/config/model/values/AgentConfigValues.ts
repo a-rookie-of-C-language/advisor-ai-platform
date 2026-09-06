@@ -7,6 +7,7 @@ export interface AgentConfigValues {
   openAiModel: string;
   openAiModels: string[];
   openAiTemperature: number;
+  openAiStructuredOutputMode: "disabled" | "json_object" | "json_schema" | "auto";
   requestTimeoutMs: number;
   rustCoreEnabled: boolean;
   rustCorePath: string | undefined;
