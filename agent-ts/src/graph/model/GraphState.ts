@@ -1,4 +1,15 @@
 import type { ChatMessageDTO } from "../../common/model/ChatMessageDTO.js";
+import type { JsonObject } from "../../common/json/types/JsonTypes.js";
+import type { TaskPlan } from "../../planning/model/TaskPlan.js";
+
+export interface GraphExplorationState {
+  readonly summary: string;
+  readonly reason: "route_match" | "text_match" | "none";
+  readonly matchedTools: readonly string[];
+  readonly sufficient?: boolean;
+  readonly evidence: readonly { readonly tool_name: string; readonly status: string; readonly message: string; readonly items: readonly unknown[] }[];
+  readonly toolCalls: readonly { readonly tool_name: string; readonly arguments: Record<string, unknown>; readonly status: string; readonly message: string }[];
+}
 
 export interface GraphState {
   readonly messages: readonly ChatMessageDTO[];
@@ -16,7 +27,10 @@ export interface GraphState {
   readonly useTool?: boolean;
   readonly routeCategories?: readonly string[];
   readonly matchedTools?: readonly string[];
-  readonly taskPlan?: unknown;
+  readonly routePayload?: JsonObject;
+  readonly routeReasoning?: JsonObject;
+  readonly planReasoning?: JsonObject;
+  readonly taskPlan?: TaskPlan;
   readonly assistantAnswer?: string;
   readonly streamFailed?: boolean;
   readonly debugDeltaCount?: number;
@@ -25,4 +39,8 @@ export interface GraphState {
   readonly skillSelectionPrompt?: string;
   readonly activeSkills?: readonly string[];
   readonly skillSystemPrompt?: string;
+  readonly contextMessages?: readonly ChatMessageDTO[];
+  readonly exploration?: GraphExplorationState;
+  readonly forceFetchUrl?: string;
+  readonly streamCompleted?: boolean;
 }

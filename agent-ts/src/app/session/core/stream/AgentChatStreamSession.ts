@@ -29,7 +29,6 @@ import {
   preferRetrievalFallback
 } from "../../../../legacy/core/LegacyRouteSupport.js";
 import {
-  buildDelegateReasoningPayload,
   buildPlanReasoningPayload,
   buildRouteReasoningPayload,
   shouldEmitPlanningReasoning
@@ -38,7 +37,8 @@ import { executeLegacyForceFetch, resolveForceFetchUrl } from "../../../../legac
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
 import { buildExplorerContext } from "../../../../graph/helpers.js";
 import { AgentGraphRunner } from "../../../../graph/core/AgentGraphRunner.js";
-import type { GraphState } from "../../../../graph/model/GraphState.js";
+import type { GraphState, GraphExplorationState } from "../../../../graph/model/GraphState.js";
+import type { TaskPlan } from "../../../../planning/model/TaskPlan.js";
 import { shouldUseDirectPlan } from "../../../../planning/core/PlannedTools.js";
 
 export class AgentChatStreamSession {
@@ -49,7 +49,6 @@ export class AgentChatStreamSession {
   private readonly intentRouter = new IntentRouter();
   private readonly taskPlanner: TaskPlanner;
   private readonly toolExplorer = new ToolExplorer();
-  private readonly graphRunner: AgentGraphRunner;
   private readonly failureMemorySupport: FailureMemorySupport;
   private readonly contextCompactionService: ContextCompactionService;
 
@@ -73,23 +72,6 @@ export class AgentChatStreamSession {
       config.failureMemoryScoreThreshold ?? 7
     );
     this.taskPlanner = new TaskPlanner(config, openAiClient);
-    this.graphRunner = new AgentGraphRunner(
-      {},
-      skillRegistry,
-        skillRegistry
-        ? async (prompt, responseFormat) => {
-            const messages = [{ role: "user" as const, content: prompt }];
-            if (responseFormat?.type === "json_object") {
-              return this.openAiClient.chatWithJsonMode(messages, undefined);
-            }
-            let responseText = "";
-            for await (const delta of this.openAiClient.streamChat(messages, undefined, responseFormat)) {
-              responseText += delta;
-            }
-            return responseText;
-          }
-        : undefined
-    );
   }
 
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
@@ -116,133 +98,34 @@ export class AgentChatStreamSession {
       ]);
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
+      const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
+        contextMessages,
         userQuery: failureQuery,
         traceId: chatRequest.traceId ?? null,
         turnId
       };
-      const selectedSkillState = this.skillRegistry
-        ? await this.graphRunner.run(graphState)
-        : graphState;
-      const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
-      const legacyRoute = buildLegacyRouteContext(route, route.matchedTools, educationDomain);
-      let modelMessages = this.contextCompactionService.compact(
-        PromptBuilder.assembleMessages(contextMessages, {
-          skillPrompts: selectedSkillState.skillSystemPrompt ? [selectedSkillState.skillSystemPrompt] : []
-        })
-      ).messages;
-      const taskPlan = await this.taskPlanner.planAsync({
-        userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
-        availableTools,
-        routeContext: buildPlannerRouteContext(route, legacyRoute.matchedTools, educationDomain || ragOnlyPreferred)
-      });
-      const exploration = this.toolExplorer.explore(
-        this.latestUserQueryResolver.resolve(safeChatRequest),
-        availableTools,
-        route.categories,
-        taskPlan as unknown as JsonObject,
-        [],
-        safeChatRequest.messages
-      );
-      const exploredRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
-      const routePayload = adjustRoutePayload(
-        route.toEventPayload() as JsonObject,
+      const selectedSkillState = await this.runGraph(
+        graphState,
         route,
-        exploredRoute.matchedTools,
-        route.matchedTools
+        availableTools,
+        safeChatRequest,
+        educationDomain,
+        ragOnlyPreferred,
+        writer,
+        eventWriter,
+        traceEvents,
+        writer.signal
       );
-      await writer.write("intent_route", "system", routePayload);
-      const shouldEmitReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none");
-      if (exploration.reason !== "none") {
-        await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("tool_explorer_subagent"));
-      }
-      if (shouldEmitReasoning) {
-        await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...exploredRoute.categories], exploredRoute.matchedTools, exploredRoute.educationDomain));
-      }
-      if (!shouldUseDirectPlan(taskPlan) && exploration.reason !== "none") {
-        const explorerEvidence = exploration.evidence.map((item) => ({
-          tool_name: item.tool_name,
-          status: item.status,
-          message: item.message,
-          items: [...item.items]
-        })) as JsonObject[];
-        const explorerToolCalls = exploration.toolCalls.map((item) => ({ ...item })) as JsonObject[];
-        modelMessages = PromptBuilder.assembleMessages(modelMessages, {
-          dynamicPrompts: [buildExplorerContext({
-            summary: exploration.summary,
-            evidence: explorerEvidence,
-            toolCalls: explorerToolCalls
-          })]
-        });
-      }
-      if (shouldEmitReasoning) {
-        await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));
-        await writer.write("sys_tool_plan", "system", taskPlan as unknown as JsonObject);
-        await writer.write("sys_reasoning", "system", buildPlanReasoningPayload(taskPlan as unknown as JsonObject));
-      }
-      const forceFetchUrl = resolveForceFetchUrl(exploredRoute.matchedTools, failureQuery);
-      if (forceFetchUrl) {
-        const fetchResult = await executeLegacyForceFetch(forceFetchUrl, async (toolName, args) => {
-          const result = await this.openAiToolFacade.executeTool(safeChatRequest, toolName, args, writer.signal);
-          return { output: result.output, success: result.success };
-        });
-        await writer.write("tool_use", "tool", {
-          tool_name: "web_fetch",
-          tool_call_id: "web_fetch-1",
-          input: { url: forceFetchUrl, max_content_length: 4000 }
-        });
-        for (const event of fetchResult.events) {
-          if (event.event === "tool_use") continue;
-          const eventName = String(event.event);
-          await writer.write(eventName, "tool", {
-            tool_name: "web_fetch",
-            tool_call_id: "web_fetch-1",
-            payload: event.payload
-          });
-        }
-        if (fetchResult.contextPrompt) {
-          modelMessages = PromptBuilder.assembleMessages(modelMessages, {
-            dynamicPrompts: [fetchResult.contextPrompt]
-          });
-        }
-        for await (const event of this.openAiClient.streamChatEvents(modelMessages, [], undefined, writer.signal)) {
-          await eventWriter.write(event);
-        }
-        this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
-        await eventWriter.flushSafetyFilter();
-        if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
-          await eventWriter.writeMissingOpenAiApiKeyFallback();
-        }
-        await writer.done("stream_finished");
-        await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, eventWriter.answer);
-        return;
-      }
-      const loop = new AgentLoopFactory(
-        this.config,
-        this.core,
-        this.openAiClient,
-        this.openAiToolFacade,
-        this.contextPipeline
-      ).create(
-        { ...safeChatRequest, messages: modelMessages },
-        {
-          maxTurns: 3,
-          signal: writer.signal,
-          writer: (event) => eventWriter.write(event),
-          onEvent: (event) => { traceEvents.push(event); },
-          transformContext: (messages, signal) => this.contextPipeline.transform(messages, signal, route),
-          toolPlan: taskPlan
-        }
-      );
-      const loopResult = await loop.run();
+      const finalAnswer = selectedSkillState.assistantAnswer ?? "";
       this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       await eventWriter.flushSafetyFilter();
-      if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, loopResult.emitted)) {
+      if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
         await eventWriter.writeMissingOpenAiApiKeyFallback();
       }
       await writer.done("stream_finished");
-      await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, loopResult.answer);
+      await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, finalAnswer);
     } catch (error) {
       this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       if (writer.signal?.aborted) {
@@ -250,5 +133,171 @@ export class AgentChatStreamSession {
       }
       await writer.error("internal_error", this.streamErrorMessageResolver.resolve(error), true);
     }
+  }
+
+  private async runGraph(
+    initial: GraphState,
+    route: ReturnType<IntentRouter["route"]>,
+    availableTools: Awaited<ReturnType<AgentOpenAiToolFacade["listTools"]>>,
+    chatRequest: ChatStreamRequest,
+    educationDomain: boolean,
+    ragOnlyPreferred: boolean,
+    writer: SseWriter,
+    eventWriter: AgentStreamEventWriter,
+    traceEvents: AgentLoopEvent[],
+    signal?: AbortSignal
+  ): Promise<GraphState> {
+    const graphRunner = new AgentGraphRunner(
+      {
+        load_memory: async (state) => ({
+          ...state,
+          memoryEnabled: Boolean(state.userId != null && state.sessionId != null && state.userQuery)
+        }),
+        decide_tool: async (state) => {
+          const legacyRoute = buildLegacyRouteContext(route, route.matchedTools, educationDomain);
+          const taskPlan: TaskPlan = await this.taskPlanner.planAsync({
+            userQuery: String(state.userQuery ?? ""),
+            availableTools,
+            routeContext: buildPlannerRouteContext(route, legacyRoute.matchedTools, educationDomain || ragOnlyPreferred)
+          });
+          const exploration = this.toolExplorer.explore(
+            String(state.userQuery ?? ""),
+            availableTools,
+            route.categories,
+            taskPlan as unknown as JsonObject,
+            [],
+            chatRequest.messages
+          );
+          const exploredRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
+          const routePayload = adjustRoutePayload(
+            route.toEventPayload() as JsonObject,
+            route,
+            exploredRoute.matchedTools,
+            route.matchedTools
+          );
+          const routeReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
+            ? buildRouteReasoningPayload(
+                [...exploredRoute.categories],
+                exploredRoute.matchedTools,
+                educationDomain
+              )
+            : undefined;
+          const planReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
+            ? buildPlanReasoningPayload(taskPlan as unknown as JsonObject)
+            : undefined;
+          const explorationState: GraphExplorationState = {
+            summary: exploration.summary,
+            reason: exploration.reason,
+            matchedTools: exploration.matchedTools,
+            sufficient: exploration.sufficient,
+            evidence: exploration.evidence,
+            toolCalls: exploration.toolCalls
+          };
+          return {
+            ...state,
+            routeCategories: [...exploredRoute.categories],
+            matchedTools: exploredRoute.matchedTools,
+            routePayload,
+            routeReasoning,
+            planReasoning,
+            taskPlan,
+            exploration: explorationState,
+            forceFetchUrl: resolveForceFetchUrl(exploredRoute.matchedTools, String(state.userQuery ?? "")),
+            useTool: !shouldUseDirectPlan(taskPlan) && exploration.reason !== "none"
+          };
+        },
+        generate: async (state) => {
+          const baseMessages = [...(state.contextMessages ?? state.messages)];
+          const skillPrompts = state.skillSystemPrompt ? [state.skillSystemPrompt] : [];
+          let modelMessages = this.contextCompactionService.compact(
+            PromptBuilder.assembleMessages(baseMessages, { skillPrompts })
+          ).messages;
+          const taskPlan = state.taskPlan;
+          const exploration = state.exploration;
+          if (taskPlan && exploration && exploration.reason !== "none" && !shouldUseDirectPlan(taskPlan)) {
+            const explorerEvidence = exploration.evidence.map((item) => ({
+              tool_name: item.tool_name,
+              status: item.status,
+              message: item.message,
+              items: [...item.items]
+            })) as JsonObject[];
+            const explorerToolCalls = exploration.toolCalls.map((item) => ({ ...item })) as JsonObject[];
+            modelMessages = PromptBuilder.assembleMessages(modelMessages, {
+              dynamicPrompts: [buildExplorerContext({
+                summary: exploration.summary,
+                evidence: explorerEvidence,
+                toolCalls: explorerToolCalls
+              })]
+            });
+          }
+          const forceFetchUrl = state.forceFetchUrl ?? resolveForceFetchUrl(route.matchedTools, String(state.userQuery ?? ""));
+          if (forceFetchUrl) {
+            const fetchResult = await executeLegacyForceFetch(forceFetchUrl, async (toolName, args) => {
+              const result = await this.openAiToolFacade.executeTool(chatRequest, toolName, args, signal);
+              return { output: result.output, success: result.success };
+            });
+            await writer.write("tool_use", "tool", {
+              tool_name: "web_fetch",
+              tool_call_id: "web_fetch-1",
+              input: { url: forceFetchUrl, max_content_length: 4000 }
+            });
+            for (const event of fetchResult.events) {
+              if (event.event === "tool_use") continue;
+              const eventName = String(event.event);
+              await writer.write(eventName, "tool", {
+                tool_name: "web_fetch",
+                tool_call_id: "web_fetch-1",
+                payload: event.payload
+              });
+            }
+            if (fetchResult.contextPrompt) {
+              modelMessages = PromptBuilder.assembleMessages(modelMessages, {
+                dynamicPrompts: [fetchResult.contextPrompt]
+              });
+            }
+          }
+          const loop = new AgentLoopFactory(
+            this.config,
+            this.core,
+            this.openAiClient,
+            this.openAiToolFacade,
+            this.contextPipeline
+          ).create(
+            { ...chatRequest, messages: modelMessages },
+            {
+              maxTurns: 3,
+              signal,
+              writer: (event) => eventWriter.write(event),
+              onEvent: (event) => { traceEvents.push(event); },
+              transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal, route),
+              toolPlan: taskPlan
+            }
+          );
+          const loopResult = await loop.run();
+          return {
+            ...state,
+            modelMessages,
+            assistantAnswer: loopResult.answer
+          };
+        },
+        flush_memory: async (state) => state,
+        finalize: async (state) => ({ ...state, streamCompleted: true })
+      },
+      this.skillRegistry,
+      this.skillRegistry
+        ? async (prompt, responseFormat) => {
+            const messages = [{ role: "user" as const, content: prompt }];
+            if (responseFormat?.type === "json_object") {
+              return this.openAiClient.chatWithJsonMode(messages, signal);
+            }
+            let responseText = "";
+            for await (const delta of this.openAiClient.streamChat(messages, signal, responseFormat)) {
+              responseText += delta;
+            }
+            return responseText;
+          }
+        : undefined
+    );
+    return graphRunner.run(initial, signal);
   }
 }
