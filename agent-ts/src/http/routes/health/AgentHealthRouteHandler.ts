@@ -13,7 +13,7 @@ export class AgentHealthRouteHandler {
     }
 
     if (method === "GET" && url.pathname === "/graph/health") {
-      return { statusCode: 200, body: this.runtime.graphHealth() };
+      return { statusCode: 200, body: await this.runtime.graphHealth() };
     }
 
     return null;

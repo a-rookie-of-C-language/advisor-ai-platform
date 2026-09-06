@@ -2,8 +2,15 @@ import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import { GRAPH_NODE_NAMES } from "../../../graph/model/GraphNodeName.js";
 
 export class AgentGraphHealthDescriptor {
-  describe(): JsonObject {
+  describe(input: {
+    readonly memoryEnabled: boolean;
+    readonly contextCompaction: JsonObject;
+    readonly graph: JsonObject;
+  }): JsonObject {
     return {
+      memory_enabled: input.memoryEnabled,
+      context_compaction: input.contextCompaction,
+      graph: input.graph,
       compiled: true,
       checkpoint: "typescript-runtime",
       nodes: [

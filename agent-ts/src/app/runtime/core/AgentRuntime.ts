@@ -23,6 +23,7 @@ export class AgentRuntime {
   private readonly requestIdResolver = new AgentRequestIdResolver();
   private readonly sseWriterFactory = new SseWriterFactory();
   private readonly modelCatalog = new ProviderModelCatalog();
+  private readonly memoryEnabled: boolean;
 
   constructor(
     config: AgentConfig,
@@ -36,6 +37,7 @@ export class AgentRuntime {
     openAiToolRegistry?: OpenAiToolRegistry,
     skillRegistry?: SkillRegistry
   ) {
+    this.memoryEnabled = Boolean(memoryContextBuilder || memoryTaskSubmitter);
     for (const model of config.openAiModels) {
       this.modelCatalog.register({
         provider: "openai",
@@ -63,8 +65,12 @@ export class AgentRuntime {
     return this.core.health();
   }
 
-  graphHealth(): JsonObject {
-    return this.graphHealthDescriptor.describe();
+  async graphHealth(): Promise<JsonObject> {
+    return this.graphHealthDescriptor.describe({
+      memoryEnabled: this.memoryEnabled,
+      contextCompaction: this.components.streamSession.getContextCompactionSnapshot(),
+      graph: this.components.streamSession.getGraphHealthSnapshot()
+    });
   }
 
   models(): JsonObject {

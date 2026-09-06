@@ -79,6 +79,42 @@ export class AgentChatStreamSession {
     this.taskPlanner = new TaskPlanner(config, openAiClient);
   }
 
+  getContextCompactionSnapshot(): JsonObject {
+    return {
+      window_tokens: this.config.contextWindowTokens,
+      reserve_tokens: this.config.contextReserveTokens,
+      keep_last_messages: this.config.contextKeepLastMessages
+    };
+  }
+
+  getGraphHealthSnapshot(): JsonObject {
+    return {
+      compiled: true,
+      checkpoint: "typescript-runtime",
+      nodes: [
+        "validate_request",
+        "load_memory",
+        "load_rag",
+        "load_web_fetch",
+        "load_web_search",
+        "load_mcp_tools",
+        "load_workspace_tools",
+        "load_web_tools",
+        "load_rag_tools",
+        "load_memory_tools",
+        "generate",
+        "finalize"
+      ],
+      workflow_nodes: ["select_skill", "load_memory", "decide_tool", "generate", "flush_memory", "finalize"],
+      runtime: "typescript",
+      core: "rust"
+    };
+  }
+
+  getActionScoreSnapshot(): JsonObject {
+    return {};
+  }
+
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
     const traceEvents: AgentLoopEvent[] = [];
     let failureQuery = "";
@@ -87,7 +123,13 @@ export class AgentChatStreamSession {
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
       const eventWriter = new AgentStreamEventWriter(writer, safeChatRequest.userId == null || safeChatRequest.sessionId == null);
       failureQuery = this.latestUserQueryResolver.resolve(safeChatRequest);
-      this.logStreamRequestContext(chatRequest.traceId ?? null, turnId, safeChatRequest.userId ?? null, safeChatRequest.sessionId ?? null);
+      this.logStreamRequestContext(
+        chatRequest.traceId ?? null,
+        turnId,
+        safeChatRequest.userId ?? null,
+        safeChatRequest.sessionId ?? null,
+        safeChatRequest.kbId ?? null
+      );
       const failureAwareChatRequest = {
         ...safeChatRequest,
         messages: this.failureMemorySupport.injectAvoidancePrompt(safeChatRequest.messages, failureQuery)
@@ -414,7 +456,8 @@ export class AgentChatStreamSession {
     traceId: string | null,
     turnId: string,
     userId: number | null,
-    sessionId: number | null
+    sessionId: number | null,
+    kbId: number | null
   ): void {
     console.info(
       "stream_events start: trace_id=%s, turn_id=%s, session_id=%s, user_id=%s, kb_id=%s",
@@ -422,7 +465,7 @@ export class AgentChatStreamSession {
       turnId,
       sessionId,
       userId,
-      null
+      kbId
     );
   }
 
