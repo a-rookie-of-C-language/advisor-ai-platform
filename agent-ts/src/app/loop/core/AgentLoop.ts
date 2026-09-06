@@ -34,6 +34,8 @@ export class AgentLoop {
             emitted = true;
             answerText += event.text;
             await this.options.writer?.(event);
+          } else if (event.type === "reasoning_delta") {
+            await this.options.writer?.(event);
           }
         }
         if (!sawDelta) {
@@ -49,6 +51,8 @@ export class AgentLoop {
           if (event.type === "delta") {
             emitted = true;
             answerText += event.text;
+            await this.options.writer?.(event);
+          } else if (event.type === "reasoning_delta") {
             await this.options.writer?.(event);
           } else if (event.type === "tool_call") {
             toolCalls.push({ id: event.toolCallId, name: event.toolName, args: event.toolArgs });
