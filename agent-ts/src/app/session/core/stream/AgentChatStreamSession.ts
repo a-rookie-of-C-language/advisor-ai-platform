@@ -121,21 +121,29 @@ export class AgentChatStreamSession {
         ? await this.graphRunner.run(graphState)
         : graphState;
       const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
+      const legacyRoute = buildLegacyRouteContext(route, route.matchedTools, educationDomain);
       let modelMessages = this.contextCompactionService.compact(
         PromptBuilder.assembleMessages(contextMessages, {
           skillPrompts: selectedSkillState.skillSystemPrompt ? [selectedSkillState.skillSystemPrompt] : []
         })
       ).messages;
+      const taskPlan = this.taskPlanner.plan({
+        userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
+        availableTools,
+        routeContext: buildPlannerRouteContext(route, legacyRoute.matchedTools, educationDomain || ragOnlyPreferred)
+      });
       const exploration = this.toolExplorer.explore(
         this.latestUserQueryResolver.resolve(safeChatRequest),
         availableTools,
-        route.categories
+        route.categories,
+        taskPlan as unknown as JsonObject,
+        []
       );
-      const legacyRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
+      const exploredRoute = buildLegacyRouteContext(route, exploration.matchedTools, educationDomain);
       const routePayload = adjustRoutePayload(
         route.toEventPayload() as JsonObject,
         route,
-        legacyRoute.matchedTools,
+        exploredRoute.matchedTools,
         route.matchedTools
       );
       await writer.write("intent_route", "system", routePayload);
@@ -144,7 +152,7 @@ export class AgentChatStreamSession {
         await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("tool_explorer_subagent"));
       }
       if (shouldEmitReasoning) {
-        await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...legacyRoute.categories], legacyRoute.matchedTools, legacyRoute.educationDomain));
+        await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...exploredRoute.categories], exploredRoute.matchedTools, exploredRoute.educationDomain));
       }
       if (exploration.reason !== "none") {
         const explorerEvidence = exploration.evidence.map((item) => ({
@@ -162,17 +170,12 @@ export class AgentChatStreamSession {
           })]
         });
       }
-      const taskPlan = this.taskPlanner.plan({
-        userQuery: this.latestUserQueryResolver.resolve(safeChatRequest),
-        availableTools,
-        routeContext: buildPlannerRouteContext(route, legacyRoute.matchedTools, educationDomain || ragOnlyPreferred)
-      });
       if (shouldEmitReasoning) {
         await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));
         await writer.write("sys_tool_plan", "system", taskPlan as unknown as JsonObject);
         await writer.write("sys_reasoning", "system", buildPlanReasoningPayload(taskPlan as unknown as JsonObject));
       }
-      const forceFetchUrl = resolveForceFetchUrl(legacyRoute.matchedTools, failureQuery);
+      const forceFetchUrl = resolveForceFetchUrl(exploredRoute.matchedTools, failureQuery);
       if (forceFetchUrl) {
         const fetchResult = await executeLegacyForceFetch(forceFetchUrl, async (toolName, args) => {
           const result = await this.openAiToolFacade.executeTool(safeChatRequest, toolName, args, writer.signal);

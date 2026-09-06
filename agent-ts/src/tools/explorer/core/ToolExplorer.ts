@@ -1,45 +1,92 @@
 import type { OpenAIChatTool } from "../../../openai/chat/model/tool/OpenAIChatTool.js";
+import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 import { extractFirstUrl } from "../../../graph/helpers.js";
 import type { ToolExplorerResult } from "../model/ToolExplorerResult.js";
 
 export class ToolExplorer {
-  explore(query: string, tools: readonly OpenAIChatTool[], routeCategories: ReadonlySet<string>): ToolExplorerResult {
+  explore(
+    query: string,
+    tools: readonly OpenAIChatTool[],
+    routeCategories: ReadonlySet<string>,
+    taskPlan?: JsonObject,
+    observations: readonly JsonObject[] = []
+  ): ToolExplorerResult {
     const normalized = query.trim().toLowerCase();
+    const readOnlyTools = tools.filter((tool) => Boolean(tool.meta?.readOnly));
+    const candidateTools = readOnlyTools.length > 0 ? readOnlyTools : tools;
     const routeNames = new Set<string>();
     if (routeCategories.has("retrieval")) routeNames.add("rag_search");
     if (routeCategories.has("search")) routeNames.add("web_search");
     if (routeCategories.has("memory_read") || routeCategories.has("memory_write")) routeNames.add("memory");
 
-    const matched = tools
+    const plannedStep = this.selectPlannedStep(taskPlan, candidateTools, observations);
+    if (plannedStep) {
+      return this.buildResult([plannedStep], "route_match", "tool explorer matched planned step");
+    }
+
+    const matched = candidateTools
       .filter((tool) => {
         const name = tool.function.name.toLowerCase();
         const text = `${name} ${tool.function.description.toLowerCase()}`;
+        const searchHint = tool.meta?.searchHint ?? "";
         return [...routeNames].some((routeName) => name.includes(routeName)) ||
           (name.includes("web_fetch") && extractFirstUrl(query).length > 0) ||
-          (normalized.length > 0 && normalized.split(/\s+/u).some((token) => token.length > 1 && text.includes(token)));
+          (normalized.length > 0 && normalized.split(/\s+/u).some((token) => token.length > 1 && `${text} ${searchHint}`.includes(token)));
       })
       .map((tool) => tool.function.name);
 
     if (matched.length === 0) {
-      return { matchedTools: [], reason: "none", summary: "", evidence: [], toolCalls: [] };
+      return this.buildResult([], "none", "");
     }
-    const toolCalls = matched.map((toolName) => ({
+    return this.buildResult(matched, routeNames.size > 0 ? "route_match" : "text_match", "tool explorer matched tools");
+  }
+
+  private selectPlannedStep(
+    taskPlan: JsonObject | undefined,
+    availableTools: readonly OpenAIChatTool[],
+    observations: readonly JsonObject[]
+  ): string | undefined {
+    if (!taskPlan || typeof taskPlan !== "object") {
+      return undefined;
+    }
+    const rawSteps = Array.isArray(taskPlan.steps) ? taskPlan.steps : [];
+    const allowed = new Set(availableTools.map((tool) => tool.function.name));
+    const executed = new Set(
+      observations
+        .map((item) => String(item.tool_name ?? "").trim())
+        .filter(Boolean)
+    );
+    for (const rawStep of rawSteps) {
+      if (!rawStep || typeof rawStep !== "object" || Array.isArray(rawStep)) continue;
+      const step = rawStep as Record<string, unknown>;
+      if (String(step.action ?? "").trim().toLowerCase() !== "call_tool") continue;
+      const toolName = String(step.tool_name ?? "").trim();
+      if (!toolName || !allowed.has(toolName) || executed.has(toolName)) continue;
+      return toolName;
+    }
+    return undefined;
+  }
+
+  private buildResult(matched: readonly string[], reason: ToolExplorerResult["reason"], summary: string): ToolExplorerResult {
+    const unique = [...new Set(matched)];
+    const toolCalls = unique.map((toolName) => ({
       tool_name: toolName,
       arguments: {},
       status: "matched",
       message: "tool explorer matched candidate"
     }));
     return {
-      matchedTools: [...new Set(matched)],
-      reason: routeNames.size > 0 ? "route_match" : "text_match",
-      summary: matched.length > 0 ? "tool explorer matched tools" : "",
+      matchedTools: unique,
+      reason,
+      summary,
       evidence: toolCalls.map((call) => ({
         tool_name: call.tool_name,
         status: call.status,
         message: call.message,
         items: []
       })),
-      toolCalls
+      toolCalls,
+      sufficient: unique.length > 0
     };
   }
 }
