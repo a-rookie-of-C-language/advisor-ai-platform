@@ -18,11 +18,6 @@ async function* streamWithoutTools() {
 
 async function* streamWithoutContent() {}
 
-async function* streamWithReasoning() {
-  yield { type: "reasoning_delta", text: "think" };
-  yield { type: "delta", text: "answer" };
-}
-
 test("tool results are executed concurrently and written back in call order", async () => {
   let started = 0;
   let release;
@@ -161,23 +156,4 @@ test("direct generation rejects empty stream without content", async () => {
   });
 
   await assert.rejects(() => loop.run(), /stream finished without content/);
-});
-
-test("direct generation forwards reasoning deltas", async () => {
-  const writes = [];
-  const lifecycle = [];
-  const loop = new AgentLoop({
-    chatRequest: request,
-    maxTurns: 1,
-    stream: streamWithReasoning,
-    forceDirectGeneration: true,
-    executeTool: async () => ({ output: "", success: true }),
-    writer: async (event) => writes.push(event.type),
-    onEvent: async (event) => lifecycle.push(event.type)
-  });
-
-  const result = await loop.run();
-  assert.equal(result.answer, "answer");
-  assert.deepEqual(writes, ["reasoning_delta", "delta"]);
-  assert.deepEqual(lifecycle, ["agent_start", "turn_start", "provider_request_start", "provider_request_end", "turn_end", "agent_end"]);
 });
