@@ -28,11 +28,13 @@ class RagDocumentMutationSupport {
   private final RagEntityFactory entityFactory = new RagEntityFactory();
 
   RagDocumentResponseDTO uploadDocument(
-      Long kbId, MultipartFile file, @Nullable UserDO currentUser) {
+      Long knowledgeBaseId, MultipartFile file, @Nullable UserDO currentUser) {
     RagKnowledgeBaseDO kb =
-        knowledgeBaseDao.findById(kbId).orElseThrow(() -> new NotFoundException("知识库不存在"));
+        knowledgeBaseDao
+            .findById(knowledgeBaseId)
+            .orElseThrow(() -> new NotFoundException("知识库不存在"));
 
-    StoredRagDocumentFile storedFile = ragDocumentStorageSupport.store(kbId, file);
+    StoredRagDocumentFile storedFile = ragDocumentStorageSupport.store(knowledgeBaseId, file);
     RagDocumentDO saved = documentDao.save(createDocument(kb, storedFile, currentUser));
 
     kb.setDocCount(kb.getDocCount() + 1);

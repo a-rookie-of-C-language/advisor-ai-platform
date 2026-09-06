@@ -3,7 +3,7 @@ import type { JsonObject } from "../../../common/json/types/JsonTypes.js";
 export interface MemoryItem {
   id?: number;
   userId?: number;
-  kbId?: number;
+  knowledgeBaseId?: number;
   content: string;
   confidence?: number;
   score?: number;

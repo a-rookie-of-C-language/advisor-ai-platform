@@ -16,7 +16,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       """
             SELECT m FROM UserMemoryDO m
             WHERE m.userId = :userId
-              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND (:knowledgeBaseId = 0 OR m.knowledgeBaseId = :knowledgeBaseId)
               AND m.isDeleted = false
               AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
@@ -26,7 +26,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             """)
   List<UserMemoryDO> searchByScope(
       @Param("userId") Long userId,
-      @Param("kbId") Long kbId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
       @Param("query") String query,
       @Param("now") LocalDateTime now,
       Pageable pageable);
@@ -35,7 +35,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       """
             SELECT m FROM UserMemoryDO m
             WHERE m.userId = :userId
-              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND (:knowledgeBaseId = 0 OR m.knowledgeBaseId = :knowledgeBaseId)
               AND m.isDeleted = false
               AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
@@ -46,7 +46,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             """)
   List<UserMemoryDO> searchByScopeAndType(
       @Param("userId") Long userId,
-      @Param("kbId") Long kbId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
       @Param("query") String query,
       @Param("now") LocalDateTime now,
       @Param("memoryType") String memoryType,
@@ -58,7 +58,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
                     SELECT *
                     FROM user_memory
                     WHERE user_id = :userId
-                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND (:knowledgeBaseId = 0 OR kb_id = :knowledgeBaseId)
                       AND is_deleted = false
                       AND embedding IS NOT NULL
                       AND (embedding <=> CAST(:embedding AS vector)) <= :maxDistance
@@ -68,7 +68,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       nativeQuery = true)
   Optional<UserMemoryDO> findMostSimilarByVector(
       @Param("userId") Long userId,
-      @Param("kbId") Long kbId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
       @Param("embedding") String embedding,
       @Param("maxDistance") Double maxDistance);
 
@@ -78,7 +78,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
                     SELECT *
                     FROM user_memory
                     WHERE user_id = :userId
-                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND (:knowledgeBaseId = 0 OR kb_id = :knowledgeBaseId)
                       AND is_deleted = false
                       AND merged_into_id IS NULL
                       AND (valid_until IS NULL OR valid_until > NOW())
@@ -89,7 +89,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       nativeQuery = true)
   List<UserMemoryDO> searchByVector(
       @Param("userId") Long userId,
-      @Param("kbId") Long kbId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
       @Param("embedding") String embedding,
       @Param("topK") Integer topK);
 
@@ -99,7 +99,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
                     SELECT *
                     FROM user_memory
                     WHERE user_id = :userId
-                      AND (:kbId = 0 OR kb_id = :kbId)
+                      AND (:knowledgeBaseId = 0 OR kb_id = :knowledgeBaseId)
                       AND is_deleted = false
                       AND merged_into_id IS NULL
                       AND (valid_until IS NULL OR valid_until > NOW())
@@ -111,7 +111,7 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       nativeQuery = true)
   List<UserMemoryDO> searchByVectorAndType(
       @Param("userId") Long userId,
-      @Param("kbId") Long kbId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
       @Param("embedding") String embedding,
       @Param("topK") Integer topK,
       @Param("memoryType") String memoryType);
@@ -132,20 +132,22 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
       """
             SELECT COUNT(m) FROM UserMemoryDO m
             WHERE m.userId = :userId
-              AND m.kbId = :kbId
+              AND m.knowledgeBaseId = :knowledgeBaseId
               AND m.isDeleted = false
               AND m.mergedIntoId IS NULL
               AND (m.expiresAt IS NULL OR m.expiresAt > :now)
               AND (m.validUntil IS NULL OR m.validUntil > :now)
             """)
   long countActiveByUserAndKb(
-      @Param("userId") Long userId, @Param("kbId") Long kbId, @Param("now") LocalDateTime now);
+      @Param("userId") Long userId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
+      @Param("now") LocalDateTime now);
 
   @Query(
       """
             SELECT m FROM UserMemoryDO m
             WHERE m.userId = :userId
-              AND (:kbId = 0 OR m.kbId = :kbId)
+              AND (:knowledgeBaseId = 0 OR m.knowledgeBaseId = :knowledgeBaseId)
               AND m.isDeleted = false
               AND m.isCore = true
               AND m.mergedIntoId IS NULL
@@ -154,7 +156,9 @@ public interface UserMemoryDao extends JpaRepository<UserMemoryDO, Long> {
             ORDER BY m.confidence DESC, m.updatedAt DESC
             """)
   List<UserMemoryDO> findCoreMemories(
-      @Param("userId") Long userId, @Param("kbId") Long kbId, @Param("now") LocalDateTime now);
+      @Param("userId") Long userId,
+      @Param("knowledgeBaseId") Long knowledgeBaseId,
+      @Param("now") LocalDateTime now);
 
   @Query(
       """

@@ -3,7 +3,7 @@ import test from "node:test";
 import { EvalReportBuilder } from "../dist/evaluation/report/EvalReportBuilder.js";
 
 test("eval report builder aggregates deepeval scores", () => {
-  const report = EvalReportBuilder.create("demo", { kb_id: 1, top_k: 5 });
+  const report = EvalReportBuilder.create("demo", { knowledge_base_id: 1, top_k: 5 });
   EvalReportBuilder.addCaseResult(report, {
     retrieval: { "recall@5": 1, mrr: 0.5, "ndcg@5": 0.4 },
     annotation: { type_correct: true, authority_correct: false, effective_date_correct: true },

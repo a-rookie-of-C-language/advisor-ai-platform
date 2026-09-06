@@ -18,22 +18,22 @@ export class RagOpenAiToolExecutor {
   constructor(private readonly ragClient: RagApiClient) {}
 
   async execute(request: ChatStreamRequest, args: JsonObject): Promise<OpenAiToolExecutionResult> {
-    const kbId = this.resolveKnowledgeBaseId(request);
-    if (!kbId) {
+    const knowledgeBaseId = this.resolveKnowledgeBaseId(request);
+    if (!knowledgeBaseId) {
       return this.resultFactory.create([]);
     }
 
     const query = OpenAiToolArgumentReader.readOptionalString(args, "query", this.latestUserQueryResolver.resolve(request));
     const topK = OpenAiToolTopKArgumentReader.read(args, 5);
-    const documents = await this.ragClient.listDocuments(kbId);
+    const documents = await this.ragClient.listDocuments(knowledgeBaseId);
     const readyDocuments = this.readyDocumentSelector.select(documents);
     const matchedDocuments = this.documentRanker.rank(readyDocuments, query).slice(0, topK);
     return this.resultFactory.create(matchedDocuments);
   }
 
   private resolveKnowledgeBaseId(request: ChatStreamRequest): number {
-    const anyRequest = request as ChatStreamRequest & { kbId?: number | null };
-    const kbId = anyRequest.kbId ?? 0;
-    return kbId > 0 ? kbId : 0;
+    const anyRequest = request as ChatStreamRequest & { knowledgeBaseId?: number | null };
+    const knowledgeBaseId = anyRequest.knowledgeBaseId ?? 0;
+    return knowledgeBaseId > 0 ? knowledgeBaseId : 0;
   }
 }

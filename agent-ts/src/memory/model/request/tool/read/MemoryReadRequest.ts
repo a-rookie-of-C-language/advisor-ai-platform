@@ -1,6 +1,6 @@
 export interface MemoryReadRequest {
   userId: number;
-  kbId: number;
+  knowledgeBaseId: number;
   query: string;
   topK: number;
 }

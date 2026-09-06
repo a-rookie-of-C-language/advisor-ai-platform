@@ -12,7 +12,7 @@ public class MemoryTaskSubmitDTO {
 
   @NotNull private Long userId;
 
-  @NotNull private Long kbId;
+  @NotNull private Long knowledgeBaseId;
 
   @NotNull private Long sessionId;
 

@@ -36,14 +36,14 @@ export const ragApi = {
   deleteKnowledgeBase: (id: number) =>
     request.delete<unknown, ApiResponse<null>>(`/rag/knowledge-bases/${id}`),
 
-  listDocuments: (kbId: number) =>
-    request.get<unknown, ApiResponse<RagDocumentDTO[]>>(`/rag/knowledge-bases/${kbId}/documents`),
+  listDocuments: (knowledgeBaseId: number) =>
+    request.get<unknown, ApiResponse<RagDocumentDTO[]>>(`/rag/knowledge-bases/${knowledgeBaseId}/documents`),
 
-  uploadDocument: (kbId: number, file: File) => {
+  uploadDocument: (knowledgeBaseId: number, file: File) => {
     const formData = new FormData()
     formData.append('file', file)
     return request.post<unknown, ApiResponse<RagDocumentDTO>>(
-      `/rag/knowledge-bases/${kbId}/documents`,
+      `/rag/knowledge-bases/${knowledgeBaseId}/documents`,
       formData,
       {
         headers: {

@@ -26,7 +26,7 @@ public class PgVectorMemoryService implements MemoryVectorService {
 
   @Override
   public Optional<UserMemoryDO> findSimilar(
-      Long userId, Long kbId, double[] embedding, Double threshold) {
+      Long userId, Long knowledgeBaseId, double[] embedding, Double threshold) {
     if (embedding == null || embedding.length == 0) {
       return Optional.empty();
     }
@@ -35,35 +35,41 @@ public class PgVectorMemoryService implements MemoryVectorService {
     double maxDistance = Math.max(0.0, 1.0 - effectiveThreshold);
 
     log.debug(
-        "findSimilar: userId={}, kbId={}, similarity={}, maxDistance={}",
+        "findSimilar: userId={}, knowledgeBaseId={}, similarity={}, maxDistance={}",
         userId,
-        kbId,
+        knowledgeBaseId,
         effectiveThreshold,
         maxDistance);
-    return userMemoryDao.findMostSimilarByVector(userId, kbId, embeddingStr, maxDistance);
+    return userMemoryDao.findMostSimilarByVector(
+        userId, knowledgeBaseId, embeddingStr, maxDistance);
   }
 
   @Override
-  public List<UserMemoryDO> search(Long userId, Long kbId, double[] queryEmbedding, int topK) {
+  public List<UserMemoryDO> search(
+      Long userId, Long knowledgeBaseId, double[] queryEmbedding, int topK) {
     if (queryEmbedding == null || queryEmbedding.length == 0) {
       return List.of();
     }
     String embeddingStr = vectorToString(queryEmbedding);
-    log.debug("search: userId={}, kbId={}, topK={}", userId, kbId, topK);
-    return userMemoryDao.searchByVector(userId, kbId, embeddingStr, Math.max(1, topK));
+    log.debug("search: userId={}, knowledgeBaseId={}, topK={}", userId, knowledgeBaseId, topK);
+    return userMemoryDao.searchByVector(userId, knowledgeBaseId, embeddingStr, Math.max(1, topK));
   }
 
   @Override
   public List<UserMemoryDO> searchByType(
-      Long userId, Long kbId, double[] queryEmbedding, int topK, String memoryType) {
+      Long userId, Long knowledgeBaseId, double[] queryEmbedding, int topK, String memoryType) {
     if (queryEmbedding == null || queryEmbedding.length == 0) {
       return List.of();
     }
     String embeddingStr = vectorToString(queryEmbedding);
     log.debug(
-        "searchByType: userId={}, kbId={}, memoryType={}, topK={}", userId, kbId, memoryType, topK);
+        "searchByType: userId={}, knowledgeBaseId={}, memoryType={}, topK={}",
+        userId,
+        knowledgeBaseId,
+        memoryType,
+        topK);
     return userMemoryDao.searchByVectorAndType(
-        userId, kbId, embeddingStr, Math.max(1, topK), memoryType);
+        userId, knowledgeBaseId, embeddingStr, Math.max(1, topK), memoryType);
   }
 
   @Override

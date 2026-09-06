@@ -46,13 +46,13 @@ public class RagFileSupport {
     return isKnowledgeBaseOwner(doc.getKnowledgeBase(), currentUser);
   }
 
-  public Path resolveKnowledgeBaseDir(Long kbId) {
-    return resolveUploadBaseDir().resolve(kbId.toString()).normalize();
+  public Path resolveKnowledgeBaseDir(Long knowledgeBaseId) {
+    return resolveUploadBaseDir().resolve(knowledgeBaseId.toString()).normalize();
   }
 
-  public Path resolveDocumentPath(Long kbId, String safeFilename) {
+  public Path resolveDocumentPath(Long knowledgeBaseId, String safeFilename) {
     Path baseDir = resolveUploadBaseDir();
-    Path dir = resolveKnowledgeBaseDir(kbId);
+    Path dir = resolveKnowledgeBaseDir(knowledgeBaseId);
     Path filePath = dir.resolve(safeFilename).normalize();
     if (!filePath.startsWith(baseDir)) {
       throw new BadRequestException("非法文件路径");

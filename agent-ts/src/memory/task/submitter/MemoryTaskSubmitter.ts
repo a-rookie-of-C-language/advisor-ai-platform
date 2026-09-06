@@ -21,7 +21,7 @@ export class MemoryTaskSubmitter {
     try {
       await this.memoryClient.submitMemoryTask({
         userId: request.userId,
-        kbId: 0,
+        knowledgeBaseId: 0,
         sessionId: request.sessionId,
         turnId,
         userText,

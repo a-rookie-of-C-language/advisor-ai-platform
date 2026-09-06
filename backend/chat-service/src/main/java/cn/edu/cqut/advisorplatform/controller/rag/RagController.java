@@ -60,28 +60,28 @@ public class RagController {
 
   // ── 文档 ──
 
-  @GetMapping("/knowledge-bases/{kbId}/documents")
+  @GetMapping("/knowledge-bases/{knowledgeBaseId}/documents")
   @Auditable(
       module = AuditModule.RAG,
       action = AuditAction.QUERY,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<List<RagDocumentResponseDTO>> listDocuments(
-      @PathVariable Long kbId, @AuthenticationPrincipal UserDO currentUser) {
-    return ApiResponseDTO.success(ragService.listDocuments(kbId, currentUser));
+      @PathVariable Long knowledgeBaseId, @AuthenticationPrincipal UserDO currentUser) {
+    return ApiResponseDTO.success(ragService.listDocuments(knowledgeBaseId, currentUser));
   }
 
-  @PostMapping("/knowledge-bases/{kbId}/documents")
+  @PostMapping("/knowledge-bases/{knowledgeBaseId}/documents")
   @Auditable(
       module = AuditModule.RAG,
       action = AuditAction.UPLOAD_DOCUMENT,
       logRequestParams = true,
       logResponseData = false)
   public ApiResponseDTO<RagDocumentResponseDTO> uploadDocument(
-      @PathVariable Long kbId,
+      @PathVariable Long knowledgeBaseId,
       @RequestParam("file") MultipartFile file,
       @AuthenticationPrincipal @Nullable UserDO currentUser) {
-    return ApiResponseDTO.success(ragService.uploadDocument(kbId, file, currentUser));
+    return ApiResponseDTO.success(ragService.uploadDocument(knowledgeBaseId, file, currentUser));
   }
 
   @DeleteMapping("/documents/{id}")

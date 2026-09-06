@@ -65,9 +65,9 @@ public class RagServiceImpl implements RagService {
   }
 
   @Override
-  public List<RagDocumentResponseDTO> listDocuments(Long kbId, UserDO currentUser) {
-    knowledgeBaseDao.findById(kbId).orElseThrow(() -> new NotFoundException("知识库不存在"));
-    return documentDao.findByKnowledgeBaseIdOrderByCreatedAtDesc(kbId).stream()
+  public List<RagDocumentResponseDTO> listDocuments(Long knowledgeBaseId, UserDO currentUser) {
+    knowledgeBaseDao.findById(knowledgeBaseId).orElseThrow(() -> new NotFoundException("知识库不存在"));
+    return documentDao.findByKnowledgeBaseIdOrderByCreatedAtDesc(knowledgeBaseId).stream()
         .map(RagDocumentResponseDTO::from)
         .collect(Collectors.toList());
   }
@@ -75,8 +75,8 @@ public class RagServiceImpl implements RagService {
   @Override
   @Transactional
   public RagDocumentResponseDTO uploadDocument(
-      Long kbId, MultipartFile file, @Nullable UserDO currentUser) {
-    return documentMutationSupport.uploadDocument(kbId, file, currentUser);
+      Long knowledgeBaseId, MultipartFile file, @Nullable UserDO currentUser) {
+    return documentMutationSupport.uploadDocument(knowledgeBaseId, file, currentUser);
   }
 
   @Override

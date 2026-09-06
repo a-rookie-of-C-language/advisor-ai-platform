@@ -8,7 +8,7 @@ export class EvalDatasetLoader {
     const raw = await readFile(path, "utf-8");
     const parsed = JSON.parse(raw) as {
       name?: string;
-      kb_id?: number;
+      knowledge_base_id?: number;
       version?: string;
       cases?: Array<{
         id: string;
@@ -30,7 +30,7 @@ export class EvalDatasetLoader {
     return {
       name: parsed.name ?? "dataset",
       version: parsed.version ?? "",
-      kbId: parsed.kb_id ?? 0,
+      knowledgeBaseId: parsed.knowledge_base_id ?? 0,
       cases
     };
   }

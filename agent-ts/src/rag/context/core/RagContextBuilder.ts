@@ -10,14 +10,14 @@ export class RagContextBuilder {
   constructor(private readonly ragClient: RagApiClient) {}
 
   async injectRag(request: ChatStreamRequest): Promise<ChatMessageDTO[]> {
-    const kbId = this.resolveKnowledgeBaseId(request);
-    if (!kbId) {
+    const knowledgeBaseId = this.resolveKnowledgeBaseId(request);
+    if (!knowledgeBaseId) {
       return request.messages;
     }
 
     try {
-      const documents = await this.ragClient.listDocuments(kbId);
-      const prompt = this.promptRenderer.render(kbId, documents);
+      const documents = await this.ragClient.listDocuments(knowledgeBaseId);
+      const prompt = this.promptRenderer.render(knowledgeBaseId, documents);
       if (!prompt) {
         return request.messages;
       }
@@ -28,8 +28,8 @@ export class RagContextBuilder {
   }
 
   private resolveKnowledgeBaseId(request: ChatStreamRequest): number {
-    const anyRequest = request as ChatStreamRequest & { kbId?: number | null };
-    const kbId = anyRequest.kbId ?? 0;
-    return kbId > 0 ? kbId : 0;
+    const anyRequest = request as ChatStreamRequest & { knowledgeBaseId?: number | null };
+    const knowledgeBaseId = anyRequest.knowledgeBaseId ?? 0;
+    return knowledgeBaseId > 0 ? knowledgeBaseId : 0;
   }
 }

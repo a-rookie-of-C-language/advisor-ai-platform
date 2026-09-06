@@ -27,7 +27,7 @@ public class MemoryTaskDO {
   private Long userId;
 
   @Column(nullable = false)
-  private Long kbId;
+  private Long knowledgeBaseId;
 
   @Column(nullable = false)
   private Long sessionId;

@@ -48,19 +48,19 @@ public class RagController {
     return ApiResponseDTO.success();
   }
 
-  @GetMapping("/knowledge-bases/{kbId}/documents")
+  @GetMapping("/knowledge-bases/{knowledgeBaseId}/documents")
   public ApiResponseDTO<List<RagDocumentResponseDTO>> listDocuments(
-      @PathVariable("kbId") Long kbId,
+      @PathVariable("knowledgeBaseId") Long knowledgeBaseId,
       @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    return ApiResponseDTO.success(ragService.listDocuments(kbId, currentUser));
+    return ApiResponseDTO.success(ragService.listDocuments(knowledgeBaseId, currentUser));
   }
 
-  @PostMapping("/knowledge-bases/{kbId}/documents")
+  @PostMapping("/knowledge-bases/{knowledgeBaseId}/documents")
   public ApiResponseDTO<RagDocumentResponseDTO> uploadDocument(
-      @PathVariable("kbId") Long kbId,
+      @PathVariable("knowledgeBaseId") Long knowledgeBaseId,
       @RequestParam("file") MultipartFile file,
       @AuthenticationPrincipal @Nullable UserPrincipal currentUser) {
-    return ApiResponseDTO.success(ragService.uploadDocument(kbId, file, currentUser));
+    return ApiResponseDTO.success(ragService.uploadDocument(knowledgeBaseId, file, currentUser));
   }
 
   @DeleteMapping("/documents/{id}")

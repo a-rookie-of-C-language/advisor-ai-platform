@@ -23,7 +23,7 @@ public class UserMemoryDO {
   private Long userId;
 
   @Column(nullable = false)
-  private Long kbId;
+  private Long knowledgeBaseId;
 
   @Column(nullable = false, columnDefinition = "TEXT")
   private String content;

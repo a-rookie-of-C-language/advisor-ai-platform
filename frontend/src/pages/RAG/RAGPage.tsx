@@ -55,7 +55,7 @@ export default function RAGPage() {
   if (selectedKb) {
     return (
       <RagDocumentTable
-        kbId={selectedKb.id}
+        knowledgeBaseId={selectedKb.id}
         kbName={selectedKb.name}
         onBack={() => {
           setSelectedKb(null)

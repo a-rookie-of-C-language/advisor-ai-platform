@@ -18,7 +18,7 @@ export class MemoryReadRequestReader {
     }
     return {
       userId,
-      kbId: 0,
+      knowledgeBaseId: 0,
       query,
       topK: this.readTopK(args)
     };

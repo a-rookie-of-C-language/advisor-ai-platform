@@ -7,12 +7,13 @@ import java.util.Optional;
 public interface MemoryVectorService {
   String storeType();
 
-  Optional<UserMemoryDO> findSimilar(Long userId, Long kbId, double[] embedding, Double threshold);
+  Optional<UserMemoryDO> findSimilar(
+      Long userId, Long knowledgeBaseId, double[] embedding, Double threshold);
 
-  List<UserMemoryDO> search(Long userId, Long kbId, double[] queryEmbedding, int topK);
+  List<UserMemoryDO> search(Long userId, Long knowledgeBaseId, double[] queryEmbedding, int topK);
 
   List<UserMemoryDO> searchByType(
-      Long userId, Long kbId, double[] queryEmbedding, int topK, String memoryType);
+      Long userId, Long knowledgeBaseId, double[] queryEmbedding, int topK, String memoryType);
 
   void updateEmbedding(Long memoryId, double[] embedding);
 

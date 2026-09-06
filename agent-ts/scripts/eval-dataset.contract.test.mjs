@@ -14,7 +14,7 @@ test("eval dataset loader reads python-shaped json", async () => {
       JSON.stringify({
         name: "demo",
         version: "1.0",
-        kb_id: 12,
+        knowledge_base_id: 12,
         cases: [
           {
             id: "case-1",
@@ -31,7 +31,7 @@ test("eval dataset loader reads python-shaped json", async () => {
     const dataset = await EvalDatasetLoader.load(file);
     assert.equal(dataset.name, "demo");
     assert.equal(dataset.version, "1.0");
-    assert.equal(dataset.kbId, 12);
+    assert.equal(dataset.knowledgeBaseId, 12);
     assert.deepEqual(dataset.cases[0].expectedChunks, ["chunk-1"]);
     assert.equal(dataset.cases[0].expectedAnswer, "答案");
     assert.equal(dataset.cases[0].expectedAnnotation.type, "policy");

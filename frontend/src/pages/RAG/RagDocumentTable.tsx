@@ -15,13 +15,13 @@ import { useRagDocuments } from './useRagDocuments'
 const { Title, Paragraph } = Typography
 
 interface RagDocumentTableProps {
-  kbId: number
+  knowledgeBaseId: number
   kbName: string
   onBack: () => void
   onChanged: () => Promise<void>
 }
 
-export default function RagDocumentTable({ kbId, kbName, onBack, onChanged }: RagDocumentTableProps) {
+export default function RagDocumentTable({ knowledgeBaseId, kbName, onBack, onChanged }: RagDocumentTableProps) {
   const { message: messageApi } = App.useApp()
   const {
     docs,
@@ -33,7 +33,7 @@ export default function RagDocumentTable({ kbId, kbName, onBack, onChanged }: Ra
     uploadDocument,
     acceptFile,
     removeFile,
-  } = useRagDocuments({ kbId, messageApi, onChanged })
+  } = useRagDocuments({ knowledgeBaseId, messageApi, onChanged })
 
   const columns = createRagDocumentColumns((id) => void deleteDocument(id))
 

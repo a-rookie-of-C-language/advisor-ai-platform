@@ -16,7 +16,7 @@ export class MemoryReadOpenAiToolExecutor {
     const readRequest = this.readRequestReader.read(request, args);
     const items = await this.memoryClient.searchLongTerm(
       readRequest.userId,
-      readRequest.kbId,
+      readRequest.knowledgeBaseId,
       readRequest.query,
       readRequest.topK
     );

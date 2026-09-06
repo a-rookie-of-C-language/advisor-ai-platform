@@ -2,6 +2,6 @@ import type { MemoryCandidateInput } from "../../../input/MemoryCandidateInput.j
 
 export interface MemoryWriteRequest {
   userId: number;
-  kbId: number;
+  knowledgeBaseId: number;
   candidates: MemoryCandidateInput[];
 }

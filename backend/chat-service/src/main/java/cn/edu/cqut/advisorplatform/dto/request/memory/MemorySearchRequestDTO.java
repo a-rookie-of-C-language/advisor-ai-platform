@@ -12,7 +12,7 @@ public class MemorySearchRequestDTO {
 
   @NotNull private Long userId;
 
-  @NotNull private Long kbId;
+  @NotNull private Long knowledgeBaseId;
 
   @Nullable private String query = "";
 

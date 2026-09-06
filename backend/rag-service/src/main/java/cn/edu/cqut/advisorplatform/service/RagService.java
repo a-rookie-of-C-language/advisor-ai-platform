@@ -16,10 +16,11 @@ public interface RagService {
 
   void deleteKnowledgeBase(Long id, @Nullable UserPrincipal currentUser);
 
-  List<RagDocumentResponseDTO> listDocuments(Long kbId, @Nullable UserPrincipal currentUser);
+  List<RagDocumentResponseDTO> listDocuments(
+      Long knowledgeBaseId, @Nullable UserPrincipal currentUser);
 
   RagDocumentResponseDTO uploadDocument(
-      Long kbId, MultipartFile file, @Nullable UserPrincipal currentUser);
+      Long knowledgeBaseId, MultipartFile file, @Nullable UserPrincipal currentUser);
 
   void deleteDocument(Long id, @Nullable UserPrincipal currentUser);
 

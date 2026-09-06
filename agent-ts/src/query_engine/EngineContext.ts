@@ -4,7 +4,7 @@ export interface EngineContext {
   readonly messages: ChatMessageDTO[];
   readonly userId?: number | null;
   readonly sessionId?: number | null;
-  readonly kbId?: number | null;
+  readonly knowledgeBaseId?: number | null;
   readonly traceId?: string | null;
   readonly turnId?: string | null;
 }

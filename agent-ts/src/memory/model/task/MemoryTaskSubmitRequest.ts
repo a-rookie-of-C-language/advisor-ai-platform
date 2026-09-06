@@ -1,6 +1,6 @@
 export interface MemoryTaskSubmitRequest {
   userId: number;
-  kbId: number;
+  knowledgeBaseId: number;
   sessionId: number;
   turnId: string;
   userText: string;

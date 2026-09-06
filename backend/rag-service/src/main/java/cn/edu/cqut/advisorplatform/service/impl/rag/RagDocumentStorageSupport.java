@@ -16,7 +16,7 @@ public class RagDocumentStorageSupport {
 
   private final RagFileSupport ragFileSupport;
 
-  public StoredRagDocumentFile store(Long kbId, MultipartFile file, String uploadDir) {
+  public StoredRagDocumentFile store(Long knowledgeBaseId, MultipartFile file, String uploadDir) {
     Assert.notNull(file, () -> new BadRequestException("上传文件不能为空"));
     Assert.isTrue(!file.isEmpty(), () -> new BadRequestException("上传文件不能为空"));
 
@@ -27,7 +27,7 @@ public class RagDocumentStorageSupport {
 
     String fileType = ragFileSupport.extractExtension(safeFilename);
     var baseDir = ragFileSupport.resolveUploadBaseDir(uploadDir);
-    var dir = baseDir.resolve(kbId.toString()).normalize();
+    var dir = baseDir.resolve(knowledgeBaseId.toString()).normalize();
     var filePath = dir.resolve(safeFilename).normalize();
     if (!filePath.startsWith(baseDir)) {
       throw new BadRequestException("非法文件路径");

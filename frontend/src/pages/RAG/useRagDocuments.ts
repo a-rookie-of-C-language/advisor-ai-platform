@@ -10,12 +10,12 @@ interface RagDocumentMessageApi {
 }
 
 interface UseRagDocumentsParams {
-  kbId: number
+  knowledgeBaseId: number
   messageApi: RagDocumentMessageApi
   onChanged: () => Promise<void>
 }
 
-export function useRagDocuments({ kbId, messageApi, onChanged }: UseRagDocumentsParams) {
+export function useRagDocuments({ knowledgeBaseId, messageApi, onChanged }: UseRagDocumentsParams) {
   const [docs, setDocs] = useState<RagDocumentDTO[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -25,14 +25,14 @@ export function useRagDocuments({ kbId, messageApi, onChanged }: UseRagDocuments
   const loadDocuments = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await ragApi.listDocuments(kbId)
+      const res = await ragApi.listDocuments(knowledgeBaseId)
       setDocs(res.data)
     } catch (error) {
       messageApi.error(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
-  }, [kbId, messageApi])
+  }, [knowledgeBaseId, messageApi])
 
   useEffect(() => {
     void loadDocuments()
@@ -60,7 +60,7 @@ export function useRagDocuments({ kbId, messageApi, onChanged }: UseRagDocuments
 
     setUploading(true)
     try {
-      await ragApi.uploadDocument(kbId, selectedFile)
+      await ragApi.uploadDocument(knowledgeBaseId, selectedFile)
       messageApi.success('文件上传成功，正在索引中')
       setFileList([])
       setSelectedFile(null)

@@ -20,14 +20,14 @@ export interface EvalFusionCandidate {
 }
 
 export interface EvalRunnerAdapters {
-  readonly ragSearch?: (query: string, kbId: number, topK: number) => Promise<readonly EvalRetrievedChunk[]>;
+  readonly ragSearch?: (query: string, knowledgeBaseId: number, topK: number) => Promise<readonly EvalRetrievedChunk[]>;
   readonly annotate?: (query: string, retrievedChunks: readonly EvalRetrievedChunk[]) => Promise<JsonObject>;
   readonly compareFusion?: (
     query: string,
-    kbId: number,
+    knowledgeBaseId: number,
     topK: number
   ) => Promise<{ before: readonly EvalFusionCandidate[]; after: readonly EvalFusionCandidate[] }>;
-  readonly getAgentAnswer?: (query: string, kbId: number) => Promise<string>;
+  readonly getAgentAnswer?: (query: string, knowledgeBaseId: number) => Promise<string>;
   readonly judgeE2e?: (query: string, expectedAnswer: string, actualAnswer: string) => Promise<JsonObject>;
   readonly deepeval?: (
     query: string,
@@ -45,7 +45,7 @@ export class EvalRunner {
   ) {}
 
   async runAll(): Promise<JsonObject> {
-    const report = EvalReportBuilder.create(this.dataset.name, { kb_id: this.dataset.kbId, top_k: this.topK });
+    const report = EvalReportBuilder.create(this.dataset.name, { knowledge_base_id: this.dataset.knowledgeBaseId, top_k: this.topK });
     for (const evalCase of this.dataset.cases) {
       const caseResult: JsonObject = {
         id: evalCase.id,
@@ -93,7 +93,7 @@ export class EvalRunner {
     if (!this.adapters.compareFusion) {
       return this.fusionScoreComparison([], []);
     }
-    const candidates = await this.adapters.compareFusion(evalCase.query, this.dataset.kbId, this.topK);
+    const candidates = await this.adapters.compareFusion(evalCase.query, this.dataset.knowledgeBaseId, this.topK);
     return this.fusionScoreComparison(candidates.before, candidates.after);
   }
 
@@ -129,14 +129,14 @@ export class EvalRunner {
     if (!this.adapters.ragSearch) {
       return [];
     }
-    return this.adapters.ragSearch(query, this.dataset.kbId, this.topK);
+    return this.adapters.ragSearch(query, this.dataset.knowledgeBaseId, this.topK);
   }
 
   private async getAgentAnswer(evalCase: EvalCase): Promise<string> {
     if (!this.adapters.getAgentAnswer) {
       return "";
     }
-    return this.adapters.getAgentAnswer(evalCase.query, this.dataset.kbId);
+    return this.adapters.getAgentAnswer(evalCase.query, this.dataset.knowledgeBaseId);
   }
 
   private recallAtK(retrieved: readonly string[], expected: readonly string[], k: number): number {

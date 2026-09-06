@@ -28,8 +28,8 @@ async function main(): Promise<void> {
 
   const outputPath = readArg("output", "eval_report.json") ?? "eval_report.json";
   const topK = Number(readArg("top-k", "5") ?? "5");
-  const kbIdArg = readArg("kb-id");
-  const kbId = kbIdArg ? Number(kbIdArg) : undefined;
+  const knowledgeBaseIdArg = readArg("knowledge-base-id");
+  const knowledgeBaseId = knowledgeBaseIdArg ? Number(knowledgeBaseIdArg) : undefined;
 
   const dataset = await EvalDatasetLoader.load(datasetPath);
   const config = AgentConfig.fromEnv();
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
   const runner = new EvalRunner(dataset, topK, {
     ragSearch: async (_query, targetKbId, requestedTopK) => {
       if (!ragClient) return [];
-      const actualKbId = kbId ?? targetKbId;
+      const actualKbId = knowledgeBaseId ?? targetKbId;
       if (!actualKbId || actualKbId <= 0) return [];
       const documents = await ragClient.searchDocuments(actualKbId, _query, requestedTopK);
       return documents.map((document, index) => ({

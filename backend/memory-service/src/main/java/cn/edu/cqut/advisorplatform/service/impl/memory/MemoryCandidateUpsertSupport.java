@@ -66,9 +66,9 @@ public class MemoryCandidateUpsertSupport {
         accepted++;
       } catch (Exception exc) {
         log.warn(
-            "memory_write_failed userId={}, kbId={}, contentHash={}",
+            "memory_write_failed userId={}, knowledgeBaseId={}, contentHash={}",
             request.getUserId(),
-            request.getKbId(),
+            request.getKnowledgeBaseId(),
             Integer.toHexString(normalizedContent.hashCode()),
             exc);
         rejected++;
@@ -76,9 +76,9 @@ public class MemoryCandidateUpsertSupport {
     }
 
     log.info(
-        "memory_write_done userId={}, kbId={}, accepted={}, rejected={}, elapsedMs={}",
+        "memory_write_done userId={}, knowledgeBaseId={}, accepted={}, rejected={}, elapsedMs={}",
         request.getUserId(),
-        request.getKbId(),
+        request.getKnowledgeBaseId(),
         accepted,
         rejected,
         System.currentTimeMillis() - startedAt);
@@ -96,7 +96,7 @@ public class MemoryCandidateUpsertSupport {
     if (vectorService != null) {
       Optional<UserMemoryDO> similar =
           vectorService.findSimilar(
-              request.getUserId(), request.getKbId(), embedding, SIMILARITY_THRESHOLD);
+              request.getUserId(), request.getKnowledgeBaseId(), embedding, SIMILARITY_THRESHOLD);
       if (similar.isPresent()) {
         entityFactory.updateSimilarMemory(similar.get(), candidate, normalizedContent, confidence);
         UserMemoryDO row = userMemoryDao.save(similar.get());

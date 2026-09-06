@@ -10,7 +10,7 @@ public class MemoryCandidateUpsertRequestDTO {
 
   @NotNull private Long userId;
 
-  @NotNull private Long kbId;
+  @NotNull private Long knowledgeBaseId;
 
   @Nullable private List<MemoryCandidateItemDTO> candidates;
 }

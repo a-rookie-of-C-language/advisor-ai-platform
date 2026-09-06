@@ -7,7 +7,7 @@ test("eval runner computes python-shaped metrics", async () => {
     {
       name: "demo",
       version: "1.0",
-      kbId: 7,
+      knowledgeBaseId: 7,
       cases: [
         {
           id: "case-1",

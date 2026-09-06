@@ -21,6 +21,7 @@ class UserMemoryDaoTest {
 
     Query query = method.getAnnotation(Query.class);
     assertThat(query).isNotNull();
-    assertThat(query.value()).contains("(:kbId = 0 OR m.kbId = :kbId)");
+    assertThat(query.value())
+        .contains("(:knowledgeBaseId = 0 OR m.knowledgeBaseId = :knowledgeBaseId)");
   }
 }

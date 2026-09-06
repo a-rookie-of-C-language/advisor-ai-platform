@@ -19,7 +19,7 @@ public class ChatSessionDO {
   private String title = "新对话";
 
   @Column(nullable = false)
-  private Long kbId = 0L;
+  private Long knowledgeBaseId = 0L;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")

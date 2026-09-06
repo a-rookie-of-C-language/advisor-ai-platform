@@ -3,10 +3,10 @@ import type { MemoryCandidateUpsertRequest } from "../../../model/request/api/Me
 import type { MemoryTaskSubmitRequest } from "../../../model/task/MemoryTaskSubmitRequest.js";
 
 export class MemoryApiPostRequestFactory {
-  createLongTermSearch(userId: number, kbId: number, query: string, topK: number): RequestInit {
+  createLongTermSearch(userId: number, knowledgeBaseId: number, query: string, topK: number): RequestInit {
     return this.createJsonPost({
       userId,
-      kbId,
+      knowledgeBaseId,
       query,
       topK,
       mode: "hybrid"
