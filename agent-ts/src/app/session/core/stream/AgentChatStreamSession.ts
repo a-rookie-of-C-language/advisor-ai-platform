@@ -39,6 +39,7 @@ import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helper
 import { buildExplorerContext } from "../../../../graph/helpers.js";
 import { AgentGraphRunner } from "../../../../graph/core/AgentGraphRunner.js";
 import type { GraphState } from "../../../../graph/model/GraphState.js";
+import { shouldUseDirectPlan } from "../../../../planning/core/PlannedTools.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -156,7 +157,7 @@ export class AgentChatStreamSession {
       if (shouldEmitReasoning) {
         await writer.write("sys_reasoning", "system", buildRouteReasoningPayload([...exploredRoute.categories], exploredRoute.matchedTools, exploredRoute.educationDomain));
       }
-      if (exploration.reason !== "none") {
+      if (!shouldUseDirectPlan(taskPlan) && exploration.reason !== "none") {
         const explorerEvidence = exploration.evidence.map((item) => ({
           tool_name: item.tool_name,
           status: item.status,

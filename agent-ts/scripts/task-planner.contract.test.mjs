@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { TaskPlanner } from "../dist/planning/core/TaskPlanner.js";
+import { buildPlannedToolContext, plannedToolSteps, shouldUseDirectPlan } from "../dist/planning/core/PlannedTools.js";
 
 const tool = (name) => ({ type: "function", function: { name, description: name, parameters: {} } });
 
@@ -56,4 +57,21 @@ test("task planner async plan prefers llm json and falls back on invalid output"
   assert.equal(plan.mode, "direct");
   assert.equal(plan.summary, "来自模型");
   assert.equal(plan.steps[0].action, "final");
+});
+
+test("planned tools helpers normalize planned tool steps and context", () => {
+  assert.equal(shouldUseDirectPlan({ mode: "direct" }), true);
+  assert.equal(shouldUseDirectPlan({ mode: "plan_and_execute" }), false);
+  assert.deepEqual(plannedToolSteps({
+    steps: [
+      { action: "call_tool", tool_name: "rag_search", arguments: { query: "q" }, reason: "查资料" },
+      { action: "final", summary: "done" },
+      { action: "call_tool", tool_name: "" }
+    ]
+  }), [
+    { toolName: "rag_search", arguments: { query: "q" }, reason: "查资料" }
+  ]);
+  assert.match(buildPlannedToolContext([
+    { tool_name: "rag_search", status: "hit", message: "ok", items: [{ snippet: "证据" }] }
+  ]), /按任务计划顺序执行工具/);
 });
