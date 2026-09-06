@@ -98,10 +98,8 @@ export class AgentChatStreamSession {
       ]);
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
-      const contextMessages = await this.contextPipeline.build(failureAwareChatRequest, route);
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
-        contextMessages,
         userQuery: failureQuery,
         traceId: chatRequest.traceId ?? null,
         turnId
@@ -151,7 +149,16 @@ export class AgentChatStreamSession {
       {
         load_memory: async (state) => ({
           ...state,
-          memoryEnabled: Boolean(state.userId != null && state.sessionId != null && state.userQuery)
+          memoryEnabled: Boolean(state.userId != null && state.sessionId != null && state.userQuery),
+          modelMessages: this.contextCompactionService.compact(
+            await this.contextPipeline.build(
+              {
+                ...chatRequest,
+                messages: [...state.messages]
+              },
+              route
+            )
+          ).messages as ChatStreamRequest["messages"]
         }),
         decide_tool: async (state) => {
           const legacyRoute = buildLegacyRouteContext(route, route.matchedTools, educationDomain);
@@ -175,6 +182,7 @@ export class AgentChatStreamSession {
             exploredRoute.matchedTools,
             route.matchedTools
           );
+          await writer.write("intent_route", "system", routePayload);
           const routeReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
             ? buildRouteReasoningPayload(
                 [...exploredRoute.categories],
@@ -182,9 +190,28 @@ export class AgentChatStreamSession {
                 educationDomain
               )
             : undefined;
+          if (routeReasoning) {
+            await writer.write("sys_reasoning", "system", routeReasoning);
+          }
           const planReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
             ? buildPlanReasoningPayload(taskPlan as unknown as JsonObject)
             : undefined;
+          if (exploration.reason !== "none") {
+            await writer.write("sys_reasoning", "system", {
+              stage: "delegate",
+              agent_name: "tool_explorer_subagent",
+              message: "委托工具探索器按计划补充证据，并整理可回答的依据。"
+            });
+          }
+          if (planReasoning) {
+            await writer.write("sys_reasoning", "system", {
+              stage: "delegate",
+              agent_name: "task_planner_subagent",
+              message: "委托任务规划器生成更清晰的执行计划。"
+            });
+            await writer.write("sys_tool_plan", "system", taskPlan as unknown as JsonObject);
+            await writer.write("sys_reasoning", "system", planReasoning);
+          }
           const explorationState: GraphExplorationState = {
             summary: exploration.summary,
             reason: exploration.reason,
@@ -207,7 +234,7 @@ export class AgentChatStreamSession {
           };
         },
         generate: async (state) => {
-          const baseMessages = [...(state.contextMessages ?? state.messages)];
+          const baseMessages = [...(state.modelMessages ?? state.messages)];
           const skillPrompts = state.skillSystemPrompt ? [state.skillSystemPrompt] : [];
           let modelMessages = this.contextCompactionService.compact(
             PromptBuilder.assembleMessages(baseMessages, { skillPrompts })

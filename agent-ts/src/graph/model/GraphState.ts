@@ -39,7 +39,6 @@ export interface GraphState {
   readonly skillSelectionPrompt?: string;
   readonly activeSkills?: readonly string[];
   readonly skillSystemPrompt?: string;
-  readonly contextMessages?: readonly ChatMessageDTO[];
   readonly exploration?: GraphExplorationState;
   readonly forceFetchUrl?: string;
   readonly streamCompleted?: boolean;
