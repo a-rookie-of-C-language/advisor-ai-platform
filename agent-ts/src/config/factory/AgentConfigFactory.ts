@@ -41,7 +41,7 @@ export class AgentConfigFactory {
       contextReserveTokens: this.envReader.readInt("AGENT_CONTEXT_RESERVE_TOKENS", 2000),
       contextKeepLastMessages: this.envReader.readInt("AGENT_CONTEXT_KEEP_LAST_MESSAGES", 12),
       failureMemoryPath: this.envReader.readString("AGENT_FAILURE_MEMORY_PATH", ".agent-data/failure-memory.jsonl"),
-      failureMemoryScoreThreshold: this.envReader.readInt("AGENT_FAILURE_MEMORY_SCORE_THRESHOLD", 7)
+      failureMemoryScoreThreshold: this.envReader.readInt("AGENT_FAILURE_MEMORY_SCORE_THRESHOLD", 70)
     };
   }
 

@@ -20,8 +20,8 @@ import { ToolExplorer } from "../../../../tools/explorer/core/ToolExplorer.js";
 import { PromptBuilder } from "../../../../prompt/PromptBuilder.js";
 import { FailureMemoryStore } from "../../../../memory/failure/core/FailureMemoryStore.js";
 import { FailureMemorySupport } from "../../../../memory/failure/core/FailureMemorySupport.js";
+import { FailureMemoryTraceRecorder } from "../../../../memory/failure/core/FailureMemoryTraceRecorder.js";
 import type { JsonObject } from "../../../../common/json/types/JsonTypes.js";
-import type { AgentLoopEvent } from "../../../loop/model/AgentLoopOptions.js";
 import {
   adjustRoutePayload,
   buildLegacyRouteContext,
@@ -84,7 +84,7 @@ export class AgentChatStreamSession {
     );
     this.failureMemorySupport = new FailureMemorySupport(
       new FailureMemoryStore(config.failureMemoryPath || ".agent-data/failure-memory.jsonl"),
-      config.failureMemoryScoreThreshold ?? 7
+      config.failureMemoryScoreThreshold ?? 70
     );
     this.legacyMessagePreparer = new LegacyMessagePreparer(this.contextPipeline, this.contextCompactionService);
     this.taskPlanner = new TaskPlanner(config, openAiClient);
@@ -128,7 +128,7 @@ export class AgentChatStreamSession {
   }
 
   async stream(chatRequest: ChatStreamRequest, turnId: string, writer: SseWriter): Promise<void> {
-    const traceEvents: AgentLoopEvent[] = [];
+    const traceRecorder = new FailureMemoryTraceRecorder();
     let failureQuery = "";
     let eventWriter: AgentStreamEventWriter | undefined;
     let progressVisible = false;
@@ -144,6 +144,7 @@ export class AgentChatStreamSession {
             progressVisible = true;
             streamProgressReporter.stop();
           }
+          traceRecorder.record(event, source, payload);
           await writer.write(event, source, payload);
         },
         async done(finishReason) {
@@ -230,7 +231,6 @@ export class AgentChatStreamSession {
         ragOnlyPreferred,
         streamWriter,
         eventWriter,
-        traceEvents,
         streamWriter.signal
       );
       let finalAnswer = selectedSkillState.assistantAnswer ?? "";
@@ -250,11 +250,10 @@ export class AgentChatStreamSession {
           route,
           safeChatRequest,
           eventWriter,
-          traceEvents,
           streamWriter.signal
         );
       }
-      this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
+      this.failureMemorySupport.evaluateAndRecord(failureQuery, traceRecorder.events, turnId);
       await eventWriter.flushSafetyFilter();
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
         await eventWriter.writeMissingOpenAiApiKeyFallback();
@@ -270,7 +269,7 @@ export class AgentChatStreamSession {
       await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, finalAnswer);
     } catch (error) {
       this.streamProgressReporter.stop();
-      this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
+      this.failureMemorySupport.evaluateAndRecord(failureQuery, traceRecorder.events, turnId);
       if (writer.signal?.aborted) {
         return;
       }
@@ -297,7 +296,6 @@ export class AgentChatStreamSession {
     ragOnlyPreferred: boolean,
     writer: SseWriter,
     eventWriter: AgentStreamEventWriter,
-    traceEvents: AgentLoopEvent[],
     signal?: AbortSignal
   ): Promise<GraphState> {
     const graphRunner = new AgentGraphRunner(
@@ -472,7 +470,7 @@ export class AgentChatStreamSession {
               maxTurns: 3,
               signal,
               writer: loopWriter,
-              onEvent: (event) => { traceEvents.push(event); },
+              onEvent: (_event) => {},
               transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal, route),
               toolPlan: taskPlan
             }
@@ -511,8 +509,7 @@ export class AgentChatStreamSession {
     route: ReturnType<IntentRouter["route"]>,
     chatRequest: ChatStreamRequest,
     eventWriter: AgentStreamEventWriter,
-    traceEvents: AgentLoopEvent[],
-    signal?: AbortSignal
+      signal?: AbortSignal
   ): Promise<string> {
     try {
       const loop = new AgentLoopFactory(
@@ -527,7 +524,7 @@ export class AgentChatStreamSession {
           maxTurns: 3,
           signal,
           writer: (event) => eventWriter.write(event),
-          onEvent: (event) => { traceEvents.push(event); },
+          onEvent: (_event) => {},
           transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal, route)
         }
       );
