@@ -28,15 +28,34 @@ export class AgentLoop {
       const toolCalls: AgentLoopToolCall[] = [];
       if (this.options.forceDirectGeneration) {
         let sawDelta = false;
-        for await (const event of this.options.stream(conversation, this.options.signal)) {
-          if (event.type === "delta") {
-            sawDelta = true;
-            emitted = true;
-            answerText += event.text;
-            await this.options.writer?.(event);
-          } else if (event.type === "reasoning_delta") {
-            await this.options.writer?.(event);
+        const providerStartedAt = Date.now();
+        await onEvent?.({ type: "provider_request_start", turn: turns });
+        try {
+          for await (const event of this.options.stream(conversation, this.options.signal)) {
+            if (event.type === "delta") {
+              sawDelta = true;
+              emitted = true;
+              answerText += event.text;
+              await this.options.writer?.(event);
+            } else if (event.type === "reasoning_delta") {
+              await this.options.writer?.(event);
+            }
           }
+          await onEvent?.({
+            type: "provider_request_end",
+            turn: turns,
+            status: "success",
+            durationMs: Date.now() - providerStartedAt
+          });
+        } catch (error) {
+          await onEvent?.({
+            type: "provider_request_end",
+            turn: turns,
+            status: this.options.signal?.aborted ? "aborted" : "error",
+            durationMs: Date.now() - providerStartedAt,
+            errorCode: this.errorCode(error)
+          });
+          throw error;
         }
         if (!sawDelta) {
           throw new Error("stream finished without content");
