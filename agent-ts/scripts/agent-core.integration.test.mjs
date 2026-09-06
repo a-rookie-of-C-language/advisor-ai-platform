@@ -255,6 +255,49 @@ test("AgentChatStreamSession emits legacy reasoning for education queries", asyn
   assert.equal(writes[writes.length - 1].event, "done");
 });
 
+test("SseWriter start emits python-shaped sys_start payload", async () => {
+  const writes = [];
+  const writer = {
+    signal: undefined,
+    start: async () => {},
+    write: async (event, source, payload) => {
+      writes.push({ event, source, payload });
+    },
+    done: async () => {},
+    error: async () => {}
+  };
+  const session = new AgentChatStreamSession(
+    "integration-key",
+    {
+      openAiApiKey: "integration-key",
+      openAiBaseUrl: "http://127.0.0.1:65535",
+      openAiModel: "integration-model",
+      openAiTemperature: 0.2,
+      requestTimeoutMs: 1_000,
+      contextWindowTokens: 2048,
+      contextReserveTokens: 256,
+      contextKeepLastMessages: 6,
+      failureMemoryPath: ".agent-data/failure-memory.jsonl",
+      failureMemoryScoreThreshold: 70
+    },
+    { canStream() { return false; } },
+    { async build() { return [{ role: "user", content: "hello" }]; }, async transform(messages) { return messages; } },
+    { async submit() {} },
+    {
+      async *streamChatEvents() {
+        yield { type: "delta", text: "ok" };
+      }
+    },
+    { async listTools() { return []; }, async executeTool() { return { output: "", success: true }; } }
+  );
+
+  await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
+  const startEvent = writes.find((item) => item.event === "sys_start");
+  assert.ok(startEvent);
+  assert.equal(startEvent.payload.message, "stream_started");
+  assert.equal("runtime" in startEvent.payload, false);
+});
+
 test("AgentChatStreamSession aborts a running TS fallback stream", async () => {
   let requestAborted = false;
   const controller = new AbortController();

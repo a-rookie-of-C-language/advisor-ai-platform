@@ -24,7 +24,7 @@ export class SseWriter {
       Connection: "keep-alive",
       "X-Accel-Buffering": "no"
     });
-    await this.write("sys_start", "system", { message: "stream_started", runtime: "typescript" });
+    await this.write("sys_start", "system", { message: "stream_started" });
   }
 
   async write(event: string, source: string, payload: JsonObject): Promise<void> {
