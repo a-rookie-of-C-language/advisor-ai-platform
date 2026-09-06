@@ -174,6 +174,13 @@ export class AgentChatStreamSession {
         preparedMessages.compactionStats?.tokensAfter ?? preparedMessages.modelMessages.length,
         safeChatRequest.sessionId ?? null
       );
+      if (preparedMessages.compactionStats?.compacted) {
+        console.info(
+          "context_autocompact_done session_id=%s transcript=%s",
+          safeChatRequest.sessionId ?? null,
+          ""
+        );
+      }
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
         modelMessages: preparedMessages.modelMessages,
@@ -408,6 +415,13 @@ export class AgentChatStreamSession {
               modelMessages = PromptBuilder.assembleMessages(modelMessages, {
                 dynamicPrompts: [fetchResult.contextPrompt]
               });
+            }
+            if (this.config.debugStream && eventWriter) {
+              console.info(
+                "debug_stream python done: deltas=%s, answer_preview=%s",
+                eventWriter.deltaCount,
+                eventWriter.debugPreview
+              );
             }
           }
           const loop = new AgentLoopFactory(
