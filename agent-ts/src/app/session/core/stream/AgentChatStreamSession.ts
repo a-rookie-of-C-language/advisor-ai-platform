@@ -309,7 +309,7 @@ export class AgentChatStreamSession {
           };
         },
         flush_memory: async (state) => state,
-        finalize: async (state) => ({ ...state, streamCompleted: true })
+        finalize: async (state) => state
       },
       this.skillRegistry,
       this.skillRegistry

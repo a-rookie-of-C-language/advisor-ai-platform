@@ -41,5 +41,4 @@ export interface GraphState {
   readonly skillSystemPrompt?: string;
   readonly exploration?: GraphExplorationState;
   readonly forceFetchUrl?: string;
-  readonly streamCompleted?: boolean;
 }
