@@ -32,7 +32,7 @@ export class SkillRegistry {
     for (const name of names) {
       const skill = this.get(name);
       if (skill) {
-        parts.push(skill.brief);
+        parts.push(`[${skill.name}] ${skill.brief}`);
       }
     }
     return parts.join("\n");

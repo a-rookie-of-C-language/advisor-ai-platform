@@ -65,3 +65,8 @@ test("graph runner can select skills through the prompt selector", async () => {
   assert.deepEqual(result.activeSkills, ["knowledge_qa"]);
   assert.ok(result.skillSystemPrompt?.includes("rag_search"));
 });
+
+test("skill registry prefixes briefs with skill names", () => {
+  const registry = buildDefaultSkillRegistry();
+  assert.match(registry.briefPrompt(["knowledge_qa"]), /rag_search/);
+});
