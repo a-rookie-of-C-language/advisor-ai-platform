@@ -79,6 +79,9 @@ export class AgentChatStreamSession {
         skillRegistry
         ? async (prompt, responseFormat) => {
             const messages = [{ role: "user" as const, content: prompt }];
+            if (responseFormat?.type === "json_object") {
+              return this.openAiClient.chatWithJsonMode(messages, undefined);
+            }
             let responseText = "";
             for await (const delta of this.openAiClient.streamChat(messages, undefined, responseFormat)) {
               responseText += delta;

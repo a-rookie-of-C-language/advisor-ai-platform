@@ -129,11 +129,7 @@ export class TaskPlanner {
   }
 
   private async collectPlanText(messages: ChatMessageDTO[]): Promise<string> {
-    let responseText = "";
-    for await (const delta of this.chatClient!.streamChat(messages, undefined, { type: "json_object" })) {
-      responseText += delta;
-    }
-    return responseText;
+    return this.chatClient!.chatWithJsonMode(messages, undefined);
   }
 
   private parsePlanText(text: string): TaskPlan | null {

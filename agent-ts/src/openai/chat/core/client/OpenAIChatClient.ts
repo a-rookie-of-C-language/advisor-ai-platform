@@ -36,6 +36,18 @@ export class OpenAIChatClient {
     }
   }
 
+  async chatWithJsonMode(messages: ChatMessageDTO[], signal?: AbortSignal): Promise<string> {
+    let responseText = "";
+    for await (const delta of this.streamChat(messages, signal, { type: "json_object" })) {
+      responseText += delta;
+    }
+    return responseText;
+  }
+
+  async chatWithStructuredOutput(messages: ChatMessageDTO[], signal?: AbortSignal): Promise<string> {
+    return this.chatWithJsonMode(messages, signal);
+  }
+
   async *streamChatEvents(
     messages: ChatMessageDTO[],
     tools: OpenAIChatTool[] = [],
