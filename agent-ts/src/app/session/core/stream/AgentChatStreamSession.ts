@@ -133,11 +133,11 @@ export class AgentChatStreamSession {
     let eventWriter: AgentStreamEventWriter | undefined;
     let progressVisible = false;
     const streamProgressReporter = this.streamProgressReporter;
-    await writer.start();
     try {
       const streamWriter: SseWriter = {
         async start() {
           await writer.start();
+          traceRecorder.record("sys_start", "system", { message: "stream_started" });
         },
         async write(event, source, payload) {
           if (event === "llm_data" || event === "llm_delta" || event === "delta") {
@@ -159,6 +159,7 @@ export class AgentChatStreamSession {
           return writer.signal;
         }
       } as SseWriter;
+      await streamWriter.start();
       streamProgressReporter.start(streamWriter, () => !progressVisible && !(writer.signal?.aborted), chatRequest.traceId ?? null);
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
       eventWriter = new AgentStreamEventWriter(
