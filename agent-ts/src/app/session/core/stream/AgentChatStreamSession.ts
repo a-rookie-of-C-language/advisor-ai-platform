@@ -192,6 +192,7 @@ export class AgentChatStreamSession {
           ).messages as ChatStreamRequest["messages"]
         }),
         decide_tool: async (state) => {
+          let graphContentEmitted = Boolean(state.graphContentEmitted);
           const legacyRoute = buildLegacyRouteContext(route, route.matchedTools, educationDomain);
           const taskPlan: TaskPlan = await this.taskPlanner.planAsync({
             userQuery: String(state.userQuery ?? ""),
@@ -213,6 +214,7 @@ export class AgentChatStreamSession {
             exploredRoute.matchedTools,
             route.matchedTools
           );
+          graphContentEmitted = true;
           await writer.write("sys_intent_route", "system", routePayload);
           const routeReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
             ? buildRouteReasoningPayload(
@@ -222,14 +224,18 @@ export class AgentChatStreamSession {
               )
             : undefined;
           if (routeReasoning) {
+            graphContentEmitted = true;
             await writer.write("sys_reasoning", "system", routeReasoning);
           }
           const planReasoning = shouldEmitPlanningReasoning(educationDomain, exploration.reason !== "none")
             ? buildPlanReasoningPayload(taskPlan as unknown as JsonObject)
             : undefined;
           if (planReasoning) {
+            graphContentEmitted = true;
             await writer.write("sys_reasoning", "system", buildDelegateReasoningPayload("task_planner_subagent"));
+            graphContentEmitted = true;
             await writer.write("sys_tool_plan", "system", taskPlan as unknown as JsonObject);
+            graphContentEmitted = true;
             await writer.write("sys_reasoning", "system", planReasoning);
           }
           const explorationState: GraphExplorationState = {
@@ -254,7 +260,8 @@ export class AgentChatStreamSession {
             taskPlan,
             exploration: explorationState,
             forceFetchUrl: resolveForceFetchUrl(exploredRoute.matchedTools, String(state.userQuery ?? "")),
-            useTool: !shouldUseDirectPlan(taskPlan) && exploration.reason !== "none"
+            useTool: !shouldUseDirectPlan(taskPlan) && exploration.reason !== "none",
+            graphContentEmitted
           };
         },
         generate: async (state) => {
@@ -262,7 +269,7 @@ export class AgentChatStreamSession {
           let modelMessages = [...baseMessages];
           const taskPlan = state.taskPlan;
           const exploration = state.exploration;
-          let graphContentEmitted = false;
+          let graphContentEmitted = Boolean(state.graphContentEmitted);
           if (taskPlan) {
             modelMessages = PromptBuilder.assembleMessages(modelMessages, {
               dynamicPrompts: [PromptBuilder.renderTaskPlanPrompt(taskPlan as unknown as JsonObject)]
