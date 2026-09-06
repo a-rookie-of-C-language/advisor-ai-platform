@@ -1,6 +1,7 @@
 import type { JsonObject } from "../../common/json/types/JsonTypes.js";
 import { PromptBuilder } from "../../prompt/PromptBuilder.js";
 import type { EvalConfigValues } from "../../config/model/values/EvalConfigValues.js";
+import { EvalBackendProbe } from "../probe/EvalBackendProbe.js";
 
 type MetricScore = {
   readonly score: number;
@@ -37,7 +38,15 @@ export class EvalDeepEval {
         method: "deepeval"
       };
     }
-    const external = await this.tryExternalEvaluate(query, expectedAnswer, actualAnswer, retrievalContext, config);
+    const probedConfig = await this.probeConfig(config);
+    if (probedConfig.available === false) {
+      return {
+        error: "no_deepeval_provider",
+        avg_score: 0,
+        method: "deepeval"
+      };
+    }
+    const external = await this.tryExternalEvaluate(query, expectedAnswer, actualAnswer, retrievalContext, probedConfig);
     if (external) {
       return external;
     }
@@ -91,6 +100,17 @@ export class EvalDeepEval {
     } catch {
       return null;
     }
+  }
+
+  private static async probeConfig(config: EvalDeepEvalConfig): Promise<EvalDeepEvalConfig & { available?: boolean }> {
+    if (config.available === false) {
+      return config;
+    }
+    const probe = await EvalBackendProbe.probe(config.baseUrl ?? "", config.apiKey ?? "", config.model ?? "");
+    return {
+      ...config,
+      available: probe.available
+    };
   }
 
   private static coerceMetrics(payload: JsonObject): Record<string, MetricScore> {
