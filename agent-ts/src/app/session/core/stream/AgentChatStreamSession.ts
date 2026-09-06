@@ -149,10 +149,12 @@ export class AgentChatStreamSession {
         },
         async done(finishReason) {
           streamProgressReporter.stop();
+          traceRecorder.record("sys_done", "system", { finish_reason: finishReason });
           await writer.done(finishReason);
         },
         async error(code, message, retryable) {
           streamProgressReporter.stop();
+          traceRecorder.record("sys_error", "system", { code, message, retryable });
           await writer.error(code, message, retryable);
         },
         get signal() {
