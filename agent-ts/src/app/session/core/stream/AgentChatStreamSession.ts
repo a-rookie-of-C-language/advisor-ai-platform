@@ -40,6 +40,7 @@ import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helper
 import { buildExplorerContext } from "../../../../graph/helpers.js";
 import { AgentGraphRunner } from "../../../../graph/core/AgentGraphRunner.js";
 import type { GraphState, GraphExplorationState } from "../../../../graph/model/GraphState.js";
+import type { AgentLoopOptions } from "../../../loop/model/AgentLoopOptions.js";
 import type { TaskPlan } from "../../../../planning/model/TaskPlan.js";
 import { shouldUseDirectPlan } from "../../../../planning/core/PlannedTools.js";
 
@@ -283,6 +284,12 @@ export class AgentChatStreamSession {
               })]
             });
           }
+          const loopWriter = async (event: Parameters<NonNullable<AgentLoopOptions["writer"]>>[0]) => {
+            if (event.type === "delta" || event.type === "reasoning_delta") {
+              graphContentEmitted = true;
+            }
+            await eventWriter.write(event);
+          };
           const forceFetchUrl = state.forceFetchUrl ?? resolveForceFetchUrl(route.matchedTools, String(state.userQuery ?? ""));
           if (forceFetchUrl) {
             const fetchResult = await executeLegacyForceFetch(forceFetchUrl, async (toolName, args) => {
@@ -321,7 +328,7 @@ export class AgentChatStreamSession {
             {
               maxTurns: 3,
               signal,
-              writer: (event) => eventWriter.write(event),
+              writer: loopWriter,
               onEvent: (event) => { traceEvents.push(event); },
               transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal, route),
               toolPlan: taskPlan
