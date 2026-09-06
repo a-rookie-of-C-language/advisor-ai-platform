@@ -123,7 +123,7 @@ export class AgentChatStreamSession {
         writer.signal
       );
       let finalAnswer = selectedSkillState.assistantAnswer ?? "";
-      if (!finalAnswer.trim()) {
+      if (!selectedSkillState.graphContentEmitted) {
         const fallbackGraphState: GraphState = {
           messages: failureAwareChatRequest.messages,
           modelMessages: preparedMessages.modelMessages,
@@ -261,6 +261,7 @@ export class AgentChatStreamSession {
           let modelMessages = [...baseMessages];
           const taskPlan = state.taskPlan;
           const exploration = state.exploration;
+          let graphContentEmitted = false;
           if (taskPlan) {
             modelMessages = PromptBuilder.assembleMessages(modelMessages, {
               dynamicPrompts: [PromptBuilder.renderTaskPlanPrompt(taskPlan as unknown as JsonObject)]
@@ -288,6 +289,7 @@ export class AgentChatStreamSession {
               const result = await this.openAiToolFacade.executeTool(chatRequest, toolName, args, signal);
               return { output: result.output, success: result.success };
             });
+            graphContentEmitted = true;
             await writer.write("tool_use", "tool", {
               tool_name: "web_fetch",
               tool_call_id: "web_fetch-1",
@@ -329,7 +331,8 @@ export class AgentChatStreamSession {
           return {
             ...state,
             modelMessages,
-            assistantAnswer: loopResult.answer
+            assistantAnswer: loopResult.answer,
+            graphContentEmitted: graphContentEmitted || loopResult.emitted
           };
         },
         flush_memory: async (state) => state,

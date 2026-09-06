@@ -33,6 +33,7 @@ export interface GraphState {
   readonly taskPlan?: TaskPlan;
   readonly assistantAnswer?: string;
   readonly streamFailed?: boolean;
+  readonly graphContentEmitted?: boolean;
   readonly debugDeltaCount?: number;
   readonly debugPreview?: string;
   readonly llmChunkCount?: number;
