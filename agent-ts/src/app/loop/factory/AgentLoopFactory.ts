@@ -10,6 +10,7 @@ import type { AgentLoopOptions } from "../model/AgentLoopOptions.js";
 import { ProviderError } from "../../../provider/model/ProviderError.js";
 import { isProviderErrorCode } from "../../../provider/model/ProviderErrorCode.js";
 import { TaskPlanner } from "../../../planning/core/TaskPlanner.js";
+import { buildPlannedToolContext, plannedToolSteps } from "../../../planning/core/PlannedTools.js";
 
 export class AgentLoopFactory {
   private readonly taskPlanner: TaskPlanner;
@@ -105,6 +106,42 @@ export class AgentLoopFactory {
     ) => factory.openAiToolFacade.executeTool(currentChatRequest, toolName, args, signal);
     const transformContext = async (messages: ChatStreamRequest["messages"], signal?: AbortSignal) =>
       factory.contextPipeline.transform(messages, signal);
-    return new AgentLoop({ stream: streamFn, executeTool, chatRequest, transformContext, maxTurns: 3, ...options });
+    const plannedSteps = plannedToolSteps(options?.toolPlan);
+    const forceDirectGeneration = Boolean(options?.forceDirectGeneration || plannedSteps.length > 0);
+    const mergedTransformContext = async (messages: ChatStreamRequest["messages"], signal?: AbortSignal) => {
+      const transformed = await transformContext(messages, signal);
+      if (plannedSteps.length === 0) {
+        return transformed;
+      }
+      const plannedObservations = await Promise.all(
+        plannedSteps.map(async (step, index) => ({
+          tool_name: step.toolName,
+          status: "planned",
+          message: step.reason || "planned tool step",
+          items: [
+            {
+              type: "text",
+              text: `planned step #${index + 1}: ${step.toolName}`
+            }
+          ]
+        }))
+      );
+      return [
+        {
+          role: "system",
+          content: buildPlannedToolContext(plannedObservations)
+        },
+        ...transformed
+      ];
+    };
+    return new AgentLoop({
+      stream: streamFn,
+      executeTool,
+      chatRequest,
+      transformContext: mergedTransformContext,
+      maxTurns: 3,
+      forceDirectGeneration,
+      ...options
+    });
   }
 }

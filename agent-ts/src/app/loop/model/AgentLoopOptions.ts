@@ -77,6 +77,7 @@ export interface AgentLoopOptions {
   signal?: AbortSignal;
   onEvent?: (event: AgentLoopEvent) => void | Promise<void>;
   toolPlan?: TaskPlan;
+  forceDirectGeneration?: boolean;
 }
 
 export interface AgentLoopResult {

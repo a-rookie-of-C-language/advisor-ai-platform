@@ -26,6 +26,17 @@ export class AgentLoop {
       turns++;
       await onEvent?.({ type: "turn_start", turn: turns });
       const toolCalls: AgentLoopToolCall[] = [];
+      if (this.options.forceDirectGeneration) {
+        for await (const event of this.options.stream(conversation, this.options.signal)) {
+          if (event.type === "delta") {
+            emitted = true;
+            answerText += event.text;
+            await this.options.writer?.(event);
+          }
+        }
+        await onEvent?.({ type: "turn_end", turn: turns });
+        break;
+      }
       const providerStartedAt = Date.now();
       await onEvent?.({ type: "provider_request_start", turn: turns });
       try {
