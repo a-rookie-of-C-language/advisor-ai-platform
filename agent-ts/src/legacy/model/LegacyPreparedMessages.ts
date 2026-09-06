@@ -10,5 +10,8 @@ export interface LegacyPreparedMessages {
     readonly tokensReleased: number;
     readonly compacted: boolean;
     readonly droppedMessages: number;
+    readonly autoCompacted: boolean;
+    readonly transcriptPath: string;
+    readonly latencyMs: number;
   };
 }

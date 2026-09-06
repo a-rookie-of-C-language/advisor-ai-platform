@@ -7,4 +7,7 @@ export interface ContextCompactionResult {
   tokensReleased: number;
   compacted: boolean;
   droppedMessages: number;
+  autoCompacted: boolean;
+  transcriptPath: string;
+  latencyMs: number;
 }

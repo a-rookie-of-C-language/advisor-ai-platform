@@ -1,7 +1,10 @@
 import type { ChatMessageDTO } from "../../../common/model/ChatMessageDTO.js";
 import type { ContextCompactionResult } from "../model/ContextCompactionResult.js";
+import { ContextTranscriptStore } from "./ContextTranscriptStore.js";
 
 export class ContextCompactionService {
+  private readonly transcriptStore = new ContextTranscriptStore(".agent-data/context-transcripts");
+
   constructor(
     private readonly contextWindowTokens: number,
     private readonly reserveTokens: number,
@@ -9,6 +12,7 @@ export class ContextCompactionService {
   ) {}
 
   compact(messages: ChatMessageDTO[]): ContextCompactionResult {
+    const startedAt = Date.now();
     const tokensBefore = this.estimateTokens(messages);
     const budget = Math.max(1, this.contextWindowTokens - this.reserveTokens);
     if (tokensBefore <= budget) {
@@ -18,7 +22,10 @@ export class ContextCompactionService {
         tokensAfter: tokensBefore,
         tokensReleased: 0,
         compacted: false,
-        droppedMessages: 0
+        droppedMessages: 0,
+        autoCompacted: false,
+        transcriptPath: "",
+        latencyMs: Date.now() - startedAt
       };
     }
 
@@ -26,6 +33,7 @@ export class ContextCompactionService {
     const nonSystemMessages = messages.filter((message) => message.role !== "system");
     const recentMessages = nonSystemMessages.slice(-Math.max(1, this.keepLastMessages));
     const droppedMessages = nonSystemMessages.length - recentMessages.length;
+    const transcriptPath = this.transcriptStore.save(null, messages);
     const compactedMessages: ChatMessageDTO[] = [
       ...systemMessages,
       ...(droppedMessages > 0
@@ -43,7 +51,10 @@ export class ContextCompactionService {
       tokensAfter,
       tokensReleased: Math.max(0, tokensBefore - tokensAfter),
       compacted: true,
-      droppedMessages
+      droppedMessages,
+      autoCompacted: true,
+      transcriptPath,
+      latencyMs: Date.now() - startedAt
     };
   }
 

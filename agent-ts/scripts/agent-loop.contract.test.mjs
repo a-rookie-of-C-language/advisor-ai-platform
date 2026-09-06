@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { AgentLoop } from "../dist/app/loop/core/AgentLoop.js";
 import { RegexSafetyFilter } from "../dist/safety/regex/RegexSafetyFilter.js";
 import { StreamingRegexSafetyFilter } from "../dist/safety/streaming/StreamingRegexSafetyFilter.js";
@@ -144,6 +147,30 @@ test("context compaction preserves system and recent messages with token statist
   assert.match(result.messages[1].content, /历史上下文已压缩/);
   assert.equal(result.messages.at(-1)?.content, "latest answer");
   assert.ok(result.tokensReleased > 0);
+});
+
+test("context compaction persists transcript and exposes python-like stats", () => {
+  const baseDir = mkdtempSync(join(tmpdir(), "advisor-ai-ts-compaction-"));
+  const originalCwd = process.cwd();
+  process.chdir(baseDir);
+  try {
+    const compactor = new ContextCompactionService(20, 4, 2);
+    const result = compactor.compact([
+      { role: "user", content: "old question with enough text" },
+      { role: "assistant", content: "old answer with enough text" },
+      { role: "user", content: "latest question" }
+    ]);
+
+    assert.equal(result.autoCompacted, true);
+    assert.equal(result.transcriptPath.includes("session_unknown_"), true);
+    assert.equal(result.latencyMs >= 0, true);
+    const transcript = readFileSync(result.transcriptPath, "utf8").trim().split("\n");
+    assert.equal(transcript.length, 3);
+    assert.equal(JSON.parse(transcript[0]).content, "old question with enough text");
+  } finally {
+    process.chdir(originalCwd);
+    rmSync(baseDir, { recursive: true, force: true });
+  }
 });
 
 test("direct generation rejects empty stream without content", async () => {

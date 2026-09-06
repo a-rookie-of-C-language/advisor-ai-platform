@@ -166,7 +166,10 @@ export class AgentChatStreamSession {
         tokens_after: preparedMessages.compactionStats?.tokensAfter ?? preparedMessages.modelMessages.length,
         tokens_released: preparedMessages.compactionStats?.tokensReleased ?? 0,
         compacted: preparedMessages.compactionStats?.compacted ?? false,
-        dropped_messages: preparedMessages.compactionStats?.droppedMessages ?? 0
+        dropped_messages: preparedMessages.compactionStats?.droppedMessages ?? 0,
+        auto_compacted: preparedMessages.compactionStats?.autoCompacted ?? false,
+        transcript_path: preparedMessages.compactionStats?.transcriptPath ?? "",
+        latency_ms: preparedMessages.compactionStats?.latencyMs ?? 0
       };
       this.logContextCompaction(
         preparedMessages.compactionStats?.tokensReleased ?? 0,
@@ -178,7 +181,7 @@ export class AgentChatStreamSession {
         console.info(
           "context_autocompact_done session_id=%s transcript=%s",
           safeChatRequest.sessionId ?? null,
-          ""
+          preparedMessages.compactionStats?.transcriptPath ?? ""
         );
       }
       const graphState: GraphState = {

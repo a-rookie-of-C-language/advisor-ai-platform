@@ -25,7 +25,10 @@ export class LegacyMessagePreparer {
         tokensAfter: compactResult.tokensAfter,
         tokensReleased: compactResult.tokensReleased,
         compacted: compactResult.compacted,
-        droppedMessages: compactResult.droppedMessages
+        droppedMessages: compactResult.droppedMessages,
+        autoCompacted: compactResult.autoCompacted,
+        transcriptPath: compactResult.transcriptPath,
+        latencyMs: compactResult.latencyMs
       }
     };
   }
