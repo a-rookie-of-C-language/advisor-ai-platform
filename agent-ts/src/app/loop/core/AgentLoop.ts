@@ -27,12 +27,17 @@ export class AgentLoop {
       await onEvent?.({ type: "turn_start", turn: turns });
       const toolCalls: AgentLoopToolCall[] = [];
       if (this.options.forceDirectGeneration) {
+        let sawDelta = false;
         for await (const event of this.options.stream(conversation, this.options.signal)) {
           if (event.type === "delta") {
+            sawDelta = true;
             emitted = true;
             answerText += event.text;
             await this.options.writer?.(event);
           }
+        }
+        if (!sawDelta) {
+          throw new Error("stream finished without content");
         }
         await onEvent?.({ type: "turn_end", turn: turns });
         break;

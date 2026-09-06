@@ -16,6 +16,8 @@ async function* streamWithoutTools() {
   yield { type: "delta", text: "done" };
 }
 
+async function* streamWithoutContent() {}
+
 test("tool results are executed concurrently and written back in call order", async () => {
   let started = 0;
   let release;
@@ -142,4 +144,16 @@ test("context compaction preserves system and recent messages with token statist
   assert.match(result.messages[1].content, /历史上下文已压缩/);
   assert.equal(result.messages.at(-1)?.content, "latest answer");
   assert.ok(result.tokensReleased > 0);
+});
+
+test("direct generation rejects empty stream without content", async () => {
+  const loop = new AgentLoop({
+    chatRequest: request,
+    maxTurns: 1,
+    stream: streamWithoutContent,
+    forceDirectGeneration: true,
+    executeTool: async () => ({ output: "", success: true })
+  });
+
+  await assert.rejects(() => loop.run(), /stream finished without content/);
 });
