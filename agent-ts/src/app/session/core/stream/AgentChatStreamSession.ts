@@ -76,11 +76,11 @@ export class AgentChatStreamSession {
     this.graphRunner = new AgentGraphRunner(
       {},
       skillRegistry,
-      skillRegistry
-        ? async (prompt) => {
+        skillRegistry
+        ? async (prompt, responseFormat) => {
             const messages = [{ role: "user" as const, content: prompt }];
             let responseText = "";
-            for await (const delta of this.openAiClient.streamChat(messages, undefined)) {
+            for await (const delta of this.openAiClient.streamChat(messages, undefined, responseFormat)) {
               responseText += delta;
             }
             return responseText;

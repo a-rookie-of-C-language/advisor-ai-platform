@@ -3,8 +3,10 @@ import { GRAPH_NODE_NAMES } from "../model/GraphNodeName.js";
 import type { GraphState } from "../model/GraphState.js";
 import type { SkillRegistry } from "../../skills/core/SkillRegistry.js";
 import { buildSkillSelectionPrompt, parseSkillNames } from "../helpers.js";
+import type { OpenAIChatResponseFormat } from "../../openai/chat/completion/model/OpenAIChatResponseFormat.js";
 
 export type GraphNodeHandler = (state: GraphState, signal?: AbortSignal) => Promise<GraphState>;
+export type SkillSelector = (prompt: string, responseFormat?: OpenAIChatResponseFormat) => Promise<string>;
 
 export interface GraphRunEvent {
   readonly node: GraphNodeName;
@@ -15,7 +17,7 @@ export class AgentGraphRunner {
   constructor(
     private readonly handlers: Partial<Record<GraphNodeName, GraphNodeHandler>> = {},
     private readonly skillRegistry?: SkillRegistry,
-    private readonly skillSelector?: (prompt: string) => Promise<string>
+    private readonly skillSelector?: SkillSelector
   ) {}
 
   async run(initial: GraphState, signal?: AbortSignal, onEvent?: (event: GraphRunEvent) => void): Promise<GraphState> {
@@ -48,7 +50,7 @@ export class AgentGraphRunner {
 
   private async selectSkills(prompt: string, knownNames: readonly string[]): Promise<string[]> {
     try {
-      const responseText = await this.skillSelector?.(prompt);
+      const responseText = await this.skillSelector?.(prompt, { type: "json_object" });
       return responseText ? parseSkillNames(responseText, knownNames) : [];
     } catch {
       return [];
