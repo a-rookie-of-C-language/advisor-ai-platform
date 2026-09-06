@@ -43,6 +43,7 @@ import type { GraphState, GraphExplorationState } from "../../../../graph/model/
 import type { AgentLoopOptions } from "../../../loop/model/AgentLoopOptions.js";
 import type { TaskPlan } from "../../../../planning/model/TaskPlan.js";
 import { shouldUseDirectPlan } from "../../../../planning/core/PlannedTools.js";
+import { StreamProgressReporter } from "../../../../protocol/events/stream/progress/StreamProgressReporter.js";
 
 export class AgentChatStreamSession {
   private readonly missingOpenAiApiKeyFallbackGate = new AgentMissingOpenAiApiKeyFallbackGate();
@@ -55,6 +56,7 @@ export class AgentChatStreamSession {
   private readonly toolExplorer = new ToolExplorer();
   private readonly failureMemorySupport: FailureMemorySupport;
   private readonly contextCompactionService: ContextCompactionService;
+  private readonly streamProgressReporter = new StreamProgressReporter();
   private lastCompactionStats: JsonObject = {
     tokens_before: 0,
     tokens_after: 0,
@@ -127,11 +129,37 @@ export class AgentChatStreamSession {
     const traceEvents: AgentLoopEvent[] = [];
     let failureQuery = "";
     let eventWriter: AgentStreamEventWriter | undefined;
+    let progressVisible = false;
+    const streamProgressReporter = this.streamProgressReporter;
     await writer.start();
     try {
+      const streamWriter: SseWriter = {
+        async start() {
+          await writer.start();
+        },
+        async write(event, source, payload) {
+          if (event !== "sys_start" && event !== "sys_progress" && event !== "sys_done" && event !== "sys_error") {
+            progressVisible = true;
+            streamProgressReporter.stop();
+          }
+          await writer.write(event, source, payload);
+        },
+        async done(finishReason) {
+          streamProgressReporter.stop();
+          await writer.done(finishReason);
+        },
+        async error(code, message, retryable) {
+          streamProgressReporter.stop();
+          await writer.error(code, message, retryable);
+        },
+        get signal() {
+          return writer.signal;
+        }
+      } as SseWriter;
+      streamProgressReporter.start(streamWriter, () => !progressVisible && !(writer.signal?.aborted), chatRequest.traceId ?? null);
       const safeChatRequest = this.inputSafetySanitizer.sanitize(chatRequest);
       eventWriter = new AgentStreamEventWriter(
-        writer,
+        streamWriter,
         safeChatRequest.userId == null || safeChatRequest.sessionId == null,
         this.config.debugStream
       );
@@ -198,10 +226,10 @@ export class AgentChatStreamSession {
         safeChatRequest,
         educationDomain,
         ragOnlyPreferred,
-        writer,
+        streamWriter,
         eventWriter,
         traceEvents,
-        writer.signal
+        streamWriter.signal
       );
       let finalAnswer = selectedSkillState.assistantAnswer ?? "";
       if (!selectedSkillState.graphContentEmitted) {
@@ -221,7 +249,7 @@ export class AgentChatStreamSession {
           safeChatRequest,
           eventWriter,
           traceEvents,
-          writer.signal
+          streamWriter.signal
         );
       }
       this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
@@ -236,9 +264,10 @@ export class AgentChatStreamSession {
           eventWriter.debugPreview
         );
       }
-      await writer.done("stream_finished");
+      await streamWriter.done("stream_finished");
       await this.memoryTaskCompletionSubmitter.submit(chatRequest, turnId, finalAnswer);
     } catch (error) {
+      this.streamProgressReporter.stop();
       this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       if (writer.signal?.aborted) {
         return;
@@ -252,6 +281,8 @@ export class AgentChatStreamSession {
         );
       }
       await writer.error("internal_error", this.streamErrorMessageResolver.resolve(error), true);
+    } finally {
+      this.streamProgressReporter.stop();
     }
   }
 
