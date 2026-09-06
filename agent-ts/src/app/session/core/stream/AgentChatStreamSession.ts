@@ -151,12 +151,17 @@ export class AgentChatStreamSession {
           ...state,
           memoryEnabled: Boolean(state.userId != null && state.sessionId != null && state.userQuery),
           modelMessages: this.contextCompactionService.compact(
-            await this.contextPipeline.build(
+            PromptBuilder.assembleMessages(
+              await this.contextPipeline.build(
+                {
+                  ...chatRequest,
+                  messages: [...state.messages]
+                },
+                route
+              ),
               {
-                ...chatRequest,
-                messages: [...state.messages]
-              },
-              route
+                skillPrompts: state.skillSystemPrompt ? [state.skillSystemPrompt] : []
+              }
             )
           ).messages as ChatStreamRequest["messages"]
         }),
@@ -235,10 +240,7 @@ export class AgentChatStreamSession {
         },
         generate: async (state) => {
           const baseMessages = [...(state.modelMessages ?? state.messages)];
-          const skillPrompts = state.skillSystemPrompt ? [state.skillSystemPrompt] : [];
-          let modelMessages = this.contextCompactionService.compact(
-            PromptBuilder.assembleMessages(baseMessages, { skillPrompts })
-          ).messages;
+          let modelMessages = this.contextCompactionService.compact(baseMessages).messages;
           const taskPlan = state.taskPlan;
           const exploration = state.exploration;
           if (taskPlan && exploration && exploration.reason !== "none" && !shouldUseDirectPlan(taskPlan)) {
