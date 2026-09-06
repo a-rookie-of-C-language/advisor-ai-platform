@@ -401,23 +401,22 @@ cd agent
 
 ## 八、关键文件索引
 
-### Python 侧
+### Agent 侧
 
 | 文件 | 用途 |
 |------|------|
-| `context/memory/core/MemoryItem.py` | 记忆条目数据模型 |
-| `context/memory/core/MemoryCandidate.py` | 候选记忆数据模型 |
-| `context/memory/core/MemoryDecision.py` | 决策结果数据模型 |
-| `context/memory/core/MemoryContext.py` | 记忆上下文容器 |
-| `context/memory/core/governance.py` | 记忆治理（去重、TTL、衰减） |
-| `context/memory/pipeline/decision_engine.py` | 混合决策引擎 |
-| `context/memory/pipeline/writeback.py` | 记忆写回 |
-| `context/memory/pipeline/retrieval.py` | 记忆检索 |
-| `context/memory/pipeline/orchestrator.py` | 记忆编排器 |
-| `context/memory/pipeline/work_memory.py` | 工作记忆组装 |
-| `context/memory/memory_injector.py` | 记忆注入 Prompt |
-| `context/memory/api/memory_api_client.py` | Memory API 客户端 |
-| `context/memory/api/memory_api_mappers.py` | 响应解析 |
+| `agent-ts/src/memory/model/entity/MemoryItem.ts` | 记忆条目数据模型 |
+| `agent-ts/src/memory/model/input/MemoryCandidateInput.ts` | 候选记忆输入模型 |
+| `agent-ts/src/memory/failure/model/FailureMemoryItem.ts` | 失败记忆条目数据模型 |
+| `agent-ts/src/memory/context/core/MemoryContextBuilder.ts` | 记忆上下文构建 |
+| `agent-ts/src/memory/context/loading/MemoryContextLoader.ts` | 记忆加载 |
+| `agent-ts/src/memory/context/injection/MemoryContextMessageInjector.ts` | 记忆注入 Prompt |
+| `agent-ts/src/memory/context/gate/MemoryContextRequestGate.ts` | 记忆请求门控 |
+| `agent-ts/src/memory/context/rendering/prompt/MemoryPromptRenderer.ts` | 记忆 Prompt 渲染 |
+| `agent-ts/src/memory/context/rendering/message/MemorySystemMessageFactory.ts` | 记忆系统消息构造 |
+| `agent-ts/src/memory/api/core/MemoryApiClient.ts` | Memory API 客户端 |
+| `agent-ts/src/memory/api/http/MemoryApiHttpClient.ts` | Memory API HTTP 传输 |
+| `agent-ts/src/memory/api/factory/request/MemoryApiPostRequestFactory.ts` | 请求构造 |
 
 ### Java 侧
 
