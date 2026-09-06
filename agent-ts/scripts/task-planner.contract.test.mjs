@@ -75,3 +75,8 @@ test("planned tools helpers normalize planned tool steps and context", () => {
     { tool_name: "rag_search", status: "hit", message: "ok", items: [{ snippet: "证据" }] }
   ]), /按任务计划顺序执行工具/);
 });
+
+test("planned tools helpers keep direct plans direct", () => {
+  assert.equal(shouldUseDirectPlan({ mode: "direct" }), true);
+  assert.equal(shouldUseDirectPlan({ mode: "plan_and_execute" }), false);
+});
