@@ -11,36 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-python:
-    name: Python (venv + ruff)
+  lint-agent:
+    name: Agent (TypeScript)
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: agent
+        working-directory: agent-ts
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: agent-ts/package-lock.json
 
-      - name: Create project venv
-        run: python -m venv .venv
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Install dependencies in venv
-        shell: bash
-        run: |
-          set -e
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run ruff in venv
-        shell: bash
-        run: |
-          set -e
-          source .venv/bin/activate
-          ruff check .
+      - name: TypeScript check
+        run: npm run check
 
   lint-frontend:
     name: Frontend (ESLint)

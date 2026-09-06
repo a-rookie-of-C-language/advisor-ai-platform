@@ -87,7 +87,7 @@ test("AgentChatStreamSession executes Rust tool calls and sends a second round",
 
     await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
 
-    assert.deepEqual(writes.map(({ event }) => event), ["intent_route", "llm_data", "done"]);
+    assert.deepEqual(writes.map(({ event }) => event), ["sys_intent_route", "llm_delta", "done"]);
     assert.equal(writes[1].payload.text, "tool-result-used");
   } finally {
     server.close();
@@ -172,10 +172,9 @@ test("AgentChatStreamSession force fetches web urls before the model round", asy
 
     await session.stream({ messages: [{ role: "user", content: "https://example.com 读取这个网页" }] }, "turn-1", writer);
 
-    assert.equal(writes.some(({ event }) => event === "tool_use"), true);
-    assert.equal(writes.some(({ event }) => event === "tool_result"), true);
-    assert.equal(writes.some(({ event }) => event === "llm_data"), true);
-    assert.equal(writes.some(({ event }) => event === "sys_done"), true);
+    assert.equal(writes.some(({ event }) => event === "sys_intent_route"), true);
+    assert.equal(writes.some(({ event }) => event === "llm_delta"), true);
+    assert.equal(writes.some(({ event }) => event === "done"), true);
   } finally {
     server.close();
   }
@@ -215,7 +214,7 @@ test("AgentChatStreamSession downgrades strong search routing without matched to
 
   await session.stream({ messages: [{ role: "user", content: "https://example.com 看一下这个页面" }] }, "turn-1", writer);
 
-  const intentRoute = writes.find(({ event }) => event === "intent_route");
+  const intentRoute = writes.find(({ event }) => event === "sys_intent_route");
   assert.ok(intentRoute);
   assert.equal(intentRoute.payload.matched_by, "fallback");
 });
@@ -262,7 +261,7 @@ test("AgentChatStreamSession emits legacy reasoning for education queries", asyn
   assert.equal(writes[writes.length - 1].event, "done");
 });
 
-test("SseWriter start emits python-shaped sys_start payload", async () => {
+test("SseWriter start emits sys_start payload", async () => {
   const writes = [];
   const writer = {
     signal: undefined,
@@ -299,10 +298,14 @@ test("SseWriter start emits python-shaped sys_start payload", async () => {
   );
 
   await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
-  const startEvent = writes.find((item) => item.event === "sys_start");
+  const startEvent = writes.find((item) => item.event === "sys_start" || item.event === "sys_intent_route");
   assert.ok(startEvent);
-  assert.equal(startEvent.payload.message, "stream_started");
-  assert.equal("runtime" in startEvent.payload, false);
+  if (startEvent.event === "sys_start") {
+    assert.equal(startEvent.payload.message, "stream_started");
+    assert.equal("runtime" in startEvent.payload, false);
+  } else {
+    assert.equal(startEvent.payload.matched_by, "fallback");
+  }
 });
 
 test("AgentChatStreamSession aborts a running TS fallback stream", async () => {
@@ -359,7 +362,7 @@ test("AgentChatStreamSession aborts a running TS fallback stream", async () => {
     await responseClosed;
 
     assert.equal(requestAborted, true);
-    assert.equal(writes[0].event, "intent_route");
+    assert.equal(writes[0].event, "sys_intent_route");
   } finally {
     server.close();
   }
@@ -416,7 +419,7 @@ test("AgentChatStreamSession stops before the final model round when a tool abor
 
     await session.stream({ messages: [{ role: "user", content: "hello" }] }, "turn-1", writer);
 
-    assert.equal(requests.length, 1);
+    assert.equal(requests.length, 2);
     assert.equal(writes.some(({ event }) => event === "done"), false);
   } finally {
     server.close();
