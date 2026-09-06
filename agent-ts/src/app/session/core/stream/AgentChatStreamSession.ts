@@ -35,6 +35,7 @@ import {
   shouldEmitPlanningReasoning
 } from "../../../../legacy/core/LegacyReasoning.js";
 import { executeLegacyForceFetch, resolveForceFetchUrl } from "../../../../legacy/core/LegacyForceFetch.js";
+import { LegacyMessagePreparer } from "../../../../legacy/core/LegacyMessagePreparer.js";
 import { preferRagOnly, shouldForceEducationRag } from "../../../../graph/helpers.js";
 import { buildExplorerContext } from "../../../../graph/helpers.js";
 import { AgentGraphRunner } from "../../../../graph/core/AgentGraphRunner.js";
@@ -48,6 +49,7 @@ export class AgentChatStreamSession {
   private readonly inputSafetySanitizer = new InputSafetySanitizer();
   private readonly latestUserQueryResolver = new LatestUserQueryResolver();
   private readonly intentRouter = new IntentRouter();
+  private readonly legacyMessagePreparer: LegacyMessagePreparer;
   private readonly taskPlanner: TaskPlanner;
   private readonly toolExplorer = new ToolExplorer();
   private readonly failureMemorySupport: FailureMemorySupport;
@@ -72,6 +74,7 @@ export class AgentChatStreamSession {
       new FailureMemoryStore(config.failureMemoryPath || ".agent-data/failure-memory.jsonl"),
       config.failureMemoryScoreThreshold ?? 7
     );
+    this.legacyMessagePreparer = new LegacyMessagePreparer(this.contextPipeline);
     this.taskPlanner = new TaskPlanner(config, openAiClient);
   }
 
@@ -99,8 +102,10 @@ export class AgentChatStreamSession {
       ]);
       const availableTools = await this.openAiToolFacade.listTools();
       const route = preferRetrievalFallback(rawRoute, availableTools.some((tool) => tool.function.name === "rag_search"));
+      const preparedMessages = await this.legacyMessagePreparer.prepare(safeChatRequest);
       const graphState: GraphState = {
         messages: failureAwareChatRequest.messages,
+        modelMessages: preparedMessages.modelMessages,
         userQuery: failureQuery,
         traceId: chatRequest.traceId ?? null,
         turnId
@@ -117,7 +122,25 @@ export class AgentChatStreamSession {
         traceEvents,
         writer.signal
       );
-      const finalAnswer = selectedSkillState.assistantAnswer ?? "";
+      let finalAnswer = selectedSkillState.assistantAnswer ?? "";
+      if (!finalAnswer.trim()) {
+        const fallbackGraphState: GraphState = {
+          messages: failureAwareChatRequest.messages,
+          modelMessages: preparedMessages.modelMessages,
+          userQuery: preparedMessages.userQuery,
+          userId: safeChatRequest.userId ?? null,
+          sessionId: safeChatRequest.sessionId ?? null,
+          traceId: chatRequest.traceId ?? null,
+          turnId,
+          memoryEnabled: preparedMessages.memoryEnabled
+        };
+        finalAnswer = await this.runLegacyFallback(
+          fallbackGraphState,
+          safeChatRequest,
+          traceEvents,
+          writer.signal
+        );
+      }
       this.failureMemorySupport.evaluateAndRecord(failureQuery, traceEvents, turnId);
       await eventWriter.flushSafetyFilter();
       if (this.missingOpenAiApiKeyFallbackGate.shouldWrite(this.openAiApiKey, eventWriter.emitted)) {
@@ -327,5 +350,35 @@ export class AgentChatStreamSession {
         : undefined
     );
     return graphRunner.run(initial, signal);
+  }
+
+  private async runLegacyFallback(
+    state: GraphState,
+    chatRequest: ChatStreamRequest,
+    traceEvents: AgentLoopEvent[],
+    signal?: AbortSignal
+  ): Promise<string> {
+    try {
+      const loop = new AgentLoopFactory(
+        this.config,
+        this.core,
+        this.openAiClient,
+        this.openAiToolFacade,
+        this.contextPipeline
+      ).create(
+        { ...chatRequest, messages: [...(state.modelMessages ?? state.messages)] },
+        {
+          maxTurns: 3,
+          signal,
+          writer: async () => {},
+          onEvent: (event) => { traceEvents.push(event); },
+          transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal)
+        }
+      );
+      const loopResult = await loop.run();
+      return loopResult.answer;
+    } catch {
+      return "";
+    }
   }
 }
