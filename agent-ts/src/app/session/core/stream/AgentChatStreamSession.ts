@@ -137,6 +137,7 @@ export class AgentChatStreamSession {
         };
         finalAnswer = await this.runLegacyFallback(
           fallbackGraphState,
+          route,
           safeChatRequest,
           eventWriter,
           traceEvents,
@@ -372,6 +373,7 @@ export class AgentChatStreamSession {
 
   private async runLegacyFallback(
     state: GraphState,
+    route: ReturnType<IntentRouter["route"]>,
     chatRequest: ChatStreamRequest,
     eventWriter: AgentStreamEventWriter,
     traceEvents: AgentLoopEvent[],
@@ -391,7 +393,7 @@ export class AgentChatStreamSession {
           signal,
           writer: (event) => eventWriter.write(event),
           onEvent: (event) => { traceEvents.push(event); },
-          transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal)
+          transformContext: (messages, loopSignal) => this.contextPipeline.transform(messages, loopSignal, route)
         }
       );
       const loopResult = await loop.run();
