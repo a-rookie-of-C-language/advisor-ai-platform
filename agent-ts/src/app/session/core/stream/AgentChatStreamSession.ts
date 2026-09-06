@@ -56,7 +56,7 @@ export class AgentChatStreamSession {
   private readonly toolExplorer = new ToolExplorer();
   private readonly failureMemorySupport: FailureMemorySupport;
   private readonly contextCompactionService: ContextCompactionService;
-  private readonly streamProgressReporter = new StreamProgressReporter();
+  private readonly streamProgressReporter: StreamProgressReporter;
   private lastCompactionStats: JsonObject = {
     tokens_before: 0,
     tokens_after: 0,
@@ -74,7 +74,8 @@ export class AgentChatStreamSession {
     private readonly memoryTaskCompletionSubmitter: AgentMemoryTaskCompletionSubmitter,
     private readonly openAiClient: OpenAIChatClient,
     private readonly openAiToolFacade: AgentOpenAiToolFacade,
-    private readonly skillRegistry?: SkillRegistry
+    private readonly skillRegistry?: SkillRegistry,
+    streamProgressReporter?: StreamProgressReporter
   ) {
     this.contextCompactionService = new ContextCompactionService(
       config.contextWindowTokens,
@@ -87,6 +88,7 @@ export class AgentChatStreamSession {
     );
     this.legacyMessagePreparer = new LegacyMessagePreparer(this.contextPipeline, this.contextCompactionService);
     this.taskPlanner = new TaskPlanner(config, openAiClient);
+    this.streamProgressReporter = streamProgressReporter ?? new StreamProgressReporter();
   }
 
   getContextCompactionSnapshot(): JsonObject {
@@ -138,7 +140,7 @@ export class AgentChatStreamSession {
           await writer.start();
         },
         async write(event, source, payload) {
-          if (event !== "sys_start" && event !== "sys_progress" && event !== "sys_done" && event !== "sys_error") {
+          if (event === "llm_data" || event === "llm_delta" || event === "delta") {
             progressVisible = true;
             streamProgressReporter.stop();
           }

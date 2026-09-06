@@ -43,8 +43,7 @@ export class StreamProgressReporter {
     try {
       await writer.write("sys_progress", "system", {
         message: this.message,
-        elapsed_sec: this.elapsedSeconds,
-        trace_id: traceId ?? ""
+        elapsed_sec: this.elapsedSeconds
       });
     } catch {
       this.stop();

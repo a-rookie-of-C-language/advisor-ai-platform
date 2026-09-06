@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { AgentChatStreamSession } from "../dist/app/session/core/stream/AgentChatStreamSession.js";
+import { StreamProgressReporter } from "../dist/protocol/events/stream/progress/StreamProgressReporter.js";
 
 test("legacy stream emits tool explorer reasoning when exploration matches", async () => {
   const events = [];
@@ -37,7 +38,9 @@ test("legacy stream emits tool explorer reasoning when exploration matches", asy
         { type: "function", function: { name: "rag_search", description: "rag_search", parameters: {} } }
       ],
       executeTool: async () => ({ output: "", success: true })
-    }
+    },
+    undefined,
+    new StreamProgressReporter(1)
   );
 
   const writer = {
@@ -91,7 +94,9 @@ test("legacy stream emits sys_progress before first content when initial work is
     {
       listTools: async () => [],
       executeTool: async () => ({ output: "", success: true })
-    }
+    },
+    undefined,
+    new StreamProgressReporter(1)
   );
 
   const writer = {
